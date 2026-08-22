@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to a PR makes the first run irrelevant, so cancel it rather
+# than paying for both and waiting on the stale one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: file:./dev.db
+      # CI-only value. Real deployments must set their own; the app refuses to
+      # start in production without one.
+      DIVVY_SECRET: ci-only-secret-not-used-for-anything-real
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installs exactly the lockfile, and its postinstall generates
+      # the Prisma client the typecheck depends on.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # Also applies migrations, which creates the SQLite database the smoke
+      # test then runs against.
+      - name: Build
+        run: npm run build
+
+      # The end-to-end pass is the one that would catch a broken balance or a
+      # hole in access control, so it runs against a real server over real
+      # HTTP rather than against mocks.
+      - name: Start server
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000/; then
+              echo "server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not start within 30s"
+          exit 1
+
+      - name: End-to-end smoke test
+        run: node scripts/smoke.mjs http://localhost:3000
