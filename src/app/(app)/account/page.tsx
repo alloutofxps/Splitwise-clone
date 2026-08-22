@@ -1,0 +1,531 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  Check,
+  Copy,
+  Download,
+  Heart,
+  KeyRound,
+  LogOut,
+  Monitor,
+  Moon,
+  Plus,
+  Sun,
+  TriangleAlert,
+  Wallet,
+  X,
+} from "lucide-react";
+import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
+import { Avatar } from "@/components/ui/avatar";
+import { Button, Segmented, Skeleton, cn, haptic } from "@/components/ui/primitives";
+import { useToast } from "@/components/ui/toast";
+import { CurrencyPicker } from "@/components/expense/currency-picker";
+import { MyCodeSheet } from "@/components/friends/my-code-sheet";
+import { useTheme } from "@/components/theme";
+import { useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
+import { api, ApiError } from "@/lib/client/api";
+import { clear as clearOutbox, pending } from "@/lib/client/outbox";
+import { PAYMENT_KINDS } from "@/lib/payments";
+import { AVATAR_COLORS } from "@/lib/avatar";
+import type { PaymentMethodDto } from "@/lib/types";
+
+export default function AccountPage() {
+  const { data, isLoading } = useDashboard();
+  const { theme, setTheme } = useTheme();
+  const toast = useToast();
+  const router = useRouter();
+  const client = useQueryClient();
+  const updateProfile = useUpdateProfile();
+
+  const [name, setName] = React.useState("");
+  const [currencyOpen, setCurrencyOpen] = React.useState(false);
+  const [myCode, setMyCode] = React.useState(false);
+  const [recovery, setRecovery] = React.useState(false);
+  const [payments, setPayments] = React.useState(false);
+  const [confirmSignOut, setConfirmSignOut] = React.useState(false);
+
+  React.useEffect(() => {
+    if (data) setName(data.me.displayName);
+  }, [data]);
+
+  if (isLoading || !data) {
+    return (
+      <div className="pt-8">
+        <Skeleton className="h-24 w-full rounded-[--radius-xl]" />
+      </div>
+    );
+  }
+
+  const me = data.me;
+
+  const signOut = async () => {
+    const queued = await pending();
+    if (queued.length > 0) {
+      toast({
+        tone: "error",
+        title: "Not yet — there are unsynced changes",
+        description: `${queued.length} change${queued.length === 1 ? "" : "s"} still need to reach the server. Reconnect first.`,
+      });
+      setConfirmSignOut(false);
+      return;
+    }
+
+    await api.del("/api/identity");
+    await clearOutbox();
+    client.clear();
+    router.refresh();
+  };
+
+  return (
+    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Account</h1>
+
+      {/* Profile ----------------------------------------------------------- */}
+      <section className="rounded-[--radius-xl] border border-line bg-surface p-5 shadow-card">
+        <div className="flex items-center gap-4">
+          <Avatar person={me} size="lg" />
+          <div className="min-w-0 flex-1">
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value.slice(0, 60))}
+              onBlur={() => {
+                const trimmed = name.trim();
+                if (trimmed && trimmed !== me.displayName) {
+                  updateProfile.mutate({ displayName: trimmed });
+                } else if (!trimmed) {
+                  setName(me.displayName);
+                }
+              }}
+              onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+              aria-label="Your name"
+              className="w-full rounded-[--radius-sm] bg-transparent text-[19px] font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+            />
+            <p className="mt-0.5 text-[13px] text-subtle">
+              Member since{" "}
+              {new Date(me.createdAt).toLocaleDateString(undefined, {
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {AVATAR_COLORS.map((color) => (
+            <button
+              key={color}
+              onClick={() => {
+                haptic();
+                updateProfile.mutate({ avatarColor: color });
+              }}
+              aria-label={`Use the ${color} avatar colour`}
+              className={cn(
+                "size-7 rounded-full transition active:scale-90",
+                me.avatarColor === color && "ring-2 ring-brand ring-offset-2 ring-offset-[--surface]",
+              )}
+              style={{ background: `var(--avatar-${color})` }}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Preferences -------------------------------------------------------- */}
+      <section className="mt-5">
+        <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          Preferences
+        </h2>
+
+        <div className="space-y-1.5">
+          <Row
+            icon={<Wallet className="size-[18px]" />}
+            label="Default currency"
+            value={me.defaultCurrency}
+            onClick={() => setCurrencyOpen(true)}
+          />
+          <Row
+            icon={<KeyRound className="size-[18px]" />}
+            label="Your invite code"
+            value={me.inviteCode}
+            onClick={() => setMyCode(true)}
+          />
+          <Row
+            icon={<Wallet className="size-[18px]" />}
+            label="How people can pay you"
+            value={
+              me.paymentMethods.length > 0
+                ? `${me.paymentMethods.length} saved`
+                : "Not set up"
+            }
+            onClick={() => setPayments(true)}
+          />
+        </div>
+
+        <div className="mt-3 rounded-[--radius-lg] border border-line bg-surface p-3.5">
+          <p className="mb-2.5 text-[13px] font-semibold text-text">Appearance</p>
+          <Segmented
+            value={theme}
+            onChange={setTheme}
+            options={[
+              { value: "light", label: <span className="flex items-center justify-center gap-1.5"><Sun className="size-3.5" />Light</span> },
+              { value: "dark", label: <span className="flex items-center justify-center gap-1.5"><Moon className="size-3.5" />Dark</span> },
+              { value: "system", label: <span className="flex items-center justify-center gap-1.5"><Monitor className="size-3.5" />Auto</span> },
+            ]}
+          />
+        </div>
+      </section>
+
+      {/* Data --------------------------------------------------------------- */}
+      <section className="mt-5">
+        <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          Your data
+        </h2>
+        <div className="space-y-1.5">
+          <Row
+            icon={<KeyRound className="size-[18px]" />}
+            label="Recovery key"
+            value="Manage"
+            onClick={() => setRecovery(true)}
+          />
+          <Row
+            icon={<LogOut className="size-[18px]" />}
+            label="Sign out on this device"
+            tone="danger"
+            onClick={() => setConfirmSignOut(true)}
+          />
+        </div>
+      </section>
+
+      <footer className="mt-8 pb-4 text-center">
+        <p className="flex items-center justify-center gap-1.5 text-[12px] text-subtle">
+          Divvy · every feature, free
+          <Heart className="size-3" />
+        </p>
+        <p className="mt-1 text-[11px] text-subtle">
+          No accounts, no ads, no tracking, no paywall.
+        </p>
+      </footer>
+
+      {/* Sheets ------------------------------------------------------------- */}
+      <CurrencyPicker
+        open={currencyOpen}
+        onClose={() => setCurrencyOpen(false)}
+        value={me.defaultCurrency}
+        onChange={(currency) => {
+          updateProfile.mutate({ defaultCurrency: currency });
+          setCurrencyOpen(false);
+        }}
+      />
+
+      <MyCodeSheet open={myCode} onClose={() => setMyCode(false)} me={me} />
+
+      <RecoverySheet open={recovery} onClose={() => setRecovery(false)} />
+
+      <PaymentMethodsSheet
+        open={payments}
+        onClose={() => setPayments(false)}
+        methods={me.paymentMethods}
+        onChanged={() => client.invalidateQueries({ queryKey: keys.dashboard })}
+      />
+
+      <ConfirmSheet
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        onConfirm={signOut}
+        title="Sign out on this device?"
+        description="Your data stays on the server. You will need your recovery key to get back in — make sure you have it saved."
+        confirmLabel="Sign out"
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function Row({
+  icon,
+  label,
+  value,
+  onClick,
+  tone = "default",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value?: string;
+  onClick: () => void;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <button
+      onClick={() => {
+        haptic();
+        onClick();
+      }}
+      className="flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+    >
+      <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
+        {icon}
+      </span>
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[14px] font-semibold",
+          tone === "danger" ? "text-negative-text" : "text-text",
+        )}
+      >
+        {label}
+      </span>
+      {value ? (
+        <span className="shrink-0 truncate text-[13px] font-semibold text-subtle">{value}</span>
+      ) : null}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Recovery key management.
+ *
+ * There is no "show my key" here, and that is not an oversight: the server only
+ * ever stored a SHA-256 of it. The honest options are to generate a new one -
+ * which invalidates the old - or nothing. The copy says so plainly rather than
+ * letting someone discover it at the worst moment.
+ */
+function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useToast();
+  const [key, setKey] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setKey(null);
+  }, [open]);
+
+  const rotate = async () => {
+    setBusy(true);
+    try {
+      const result = await api.post<{ recoveryKey: string }>("/api/identity/recovery");
+      setKey(result.recoveryKey);
+      haptic([8, 30, 8]);
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not generate a key",
+        description: error instanceof ApiError ? error.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2400);
+      toast({ tone: "success", title: "Copied" });
+    } catch {
+      toast({ tone: "info", title: "Copy it by hand" });
+    }
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Recovery key">
+      <div className="px-5 pb-6">
+        {key ? (
+          <>
+            <div className="rounded-[--radius-lg] border border-line bg-surface-2 p-4">
+              <p
+                className="break-all font-mono text-[13px] leading-relaxed text-text"
+                style={{ userSelect: "all", WebkitUserSelect: "all" }}
+              >
+                {key}
+              </p>
+            </div>
+            <Button
+              variant={copied ? "positive" : "primary"}
+              fullWidth
+              className="mt-3"
+              onClick={copy}
+              icon={copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />}
+            >
+              {copied ? "Copied" : "Copy key"}
+            </Button>
+            <p className="mt-4 rounded-[--radius-md] bg-warning-soft p-3.5 text-[13px] leading-relaxed text-text">
+              Save this now. Any older key has stopped working, and this one is
+              not retrievable later — the server only keeps a hash of it.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[15px] leading-relaxed text-muted">
+              Your recovery key is the only way to open this account on another
+              device. Divvy stores a one-way hash of it, so it cannot be shown to
+              you again — it can only be replaced.
+            </p>
+
+            <div className="mt-5 flex gap-3 rounded-[--radius-md] bg-negative-soft p-3.5">
+              <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
+              <p className="text-[13px] leading-relaxed text-negative-text">
+                Generating a new key immediately invalidates the old one. Any
+                other device signed in with it will be locked out.
+              </p>
+            </div>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              className="mt-5"
+              loading={busy}
+              onClick={rotate}
+            >
+              Generate a new recovery key
+            </Button>
+          </>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function PaymentMethodsSheet({
+  open,
+  onClose,
+  methods,
+  onChanged,
+}: {
+  open: boolean;
+  onClose: () => void;
+  methods: PaymentMethodDto[];
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [kind, setKind] = React.useState(PAYMENT_KINDS[0].value);
+  const [value, setValue] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  const selected = PAYMENT_KINDS.find((entry) => entry.value === kind)!;
+
+  const add = async () => {
+    if (!value.trim()) return;
+    setBusy(true);
+    try {
+      await api.post("/api/identity/payment-methods", { kind, value: value.trim() });
+      setValue("");
+      onChanged();
+      haptic();
+      toast({ tone: "success", title: "Saved" });
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not save that",
+        description: error instanceof ApiError ? error.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    haptic();
+    await api.del(`/api/identity/payment-methods/${id}`);
+    onChanged();
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} tall title="How people can pay you">
+      <div className="px-5 pb-6">
+        <p className="text-[14px] leading-relaxed text-muted">
+          Divvy never handles money. These handles just give your friends a
+          tappable shortcut into their own banking app when they settle up.
+        </p>
+
+        {methods.length > 0 ? (
+          <ul className="mt-4 space-y-1.5">
+            {methods.map((method) => {
+              const entry = PAYMENT_KINDS.find((k) => k.value === method.kind);
+              return (
+                <li
+                  key={method.id}
+                  className="flex items-center gap-3 rounded-[--radius-md] border border-line bg-surface px-3 py-2.5"
+                >
+                  <span className="text-[18px]">{entry?.emoji ?? "💸"}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold text-text">
+                      {entry?.label ?? method.kind}
+                    </span>
+                    <span className="block truncate text-[12px] text-subtle">
+                      {method.value}
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => remove(method.id)}
+                    aria-label={`Remove ${entry?.label ?? method.kind}`}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        <div className="mt-5 rounded-[--radius-lg] border border-line bg-surface p-3.5">
+          <p className="mb-2.5 text-[13px] font-semibold text-text">Add a method</p>
+
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+            {PAYMENT_KINDS.map((entry) => (
+              <button
+                key={entry.value}
+                onClick={() => {
+                  haptic();
+                  setKind(entry.value);
+                }}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                  kind === entry.value
+                    ? "border-brand bg-brand text-white"
+                    : "border-line bg-surface-2 text-muted",
+                )}
+              >
+                <span>{entry.emoji}</span>
+                {entry.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-2 flex gap-2">
+            <input
+              value={value}
+              onChange={(event) => setValue(event.target.value.slice(0, 140))}
+              onKeyDown={(event) => event.key === "Enter" && add()}
+              placeholder={selected.placeholder}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+            />
+            <button
+              onClick={add}
+              disabled={!value.trim() || busy}
+              aria-label="Add payment method"
+              className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-brand text-white transition active:scale-90 disabled:opacity-40"
+            >
+              <Plus className="size-5" />
+            </button>
+          </div>
+
+          {selected.hint ? (
+            <p className="mt-2 text-[12px] leading-relaxed text-subtle">{selected.hint}</p>
+          ) : null}
+        </div>
+      </div>
+    </Sheet>
+  );
+}

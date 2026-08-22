@@ -1,0 +1,445 @@
+/**
+ * End-to-end smoke test.
+ *
+ * Drives the real HTTP API the way the app does: three people set up, one
+ * creates a group with a placeholder member, they file expenses using every
+ * split mode, one of them joins by claiming the placeholder, and everybody
+ * settles up.
+ *
+ * The assertions are about the properties that have to hold no matter what:
+ *   - net balances across a group always sum to exactly zero;
+ *   - every split conserves the total to the minor unit;
+ *   - claiming a placeholder preserves the debts already filed against it;
+ *   - settling the plan leaves everyone at zero.
+ *
+ * Run against a server started with `npm start` (or `npm run dev`):
+ *   node scripts/smoke.mjs [baseUrl]
+ */
+
+const BASE = process.argv[2] ?? "http://localhost:3000";
+
+let passed = 0;
+let failed = 0;
+
+function check(name, condition, detail) {
+  if (condition) {
+    passed++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    failed++;
+    console.error(`  ✗ ${name}${detail ? ` — ${detail}` : ""}`);
+  }
+}
+
+/** A person is just a cookie jar, which is the whole point of the auth model. */
+function makeClient() {
+  let cookie = "";
+  return {
+    get cookie() {
+      return cookie;
+    },
+    async call(path, options = {}) {
+      const response = await fetch(`${BASE}${path}`, {
+        method: options.method ?? "GET",
+        headers: {
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(cookie ? { Cookie: cookie } : {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        redirect: "manual",
+      });
+
+      const setCookie = response.headers.get("set-cookie");
+      if (setCookie) {
+        const match = /divvy_id=([^;]*)/.exec(setCookie);
+        if (match) cookie = `divvy_id=${match[1]}`;
+      }
+
+      const text = await response.text();
+      let json;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = text;
+      }
+
+      if (!response.ok && !options.allowError) {
+        throw new Error(
+          `${options.method ?? "GET"} ${path} -> ${response.status}: ${
+            typeof json === "object" ? JSON.stringify(json) : json
+          }`,
+        );
+      }
+      return { status: response.status, body: json };
+    },
+  };
+}
+
+const sum = (values) => values.reduce((total, value) => total + BigInt(value), 0n);
+
+async function main() {
+  console.log(`\nDivvy smoke test against ${BASE}\n`);
+
+  // -- Identities -----------------------------------------------------------
+  console.log("Identity");
+  const priya = makeClient();
+  const ravi = makeClient();
+  const tom = makeClient();
+
+  const priyaSetup = await priya.call("/api/identity", {
+    method: "POST",
+    body: { displayName: "Priya", defaultCurrency: "EUR" },
+  });
+  check("creates an identity with no signup", priyaSetup.status === 201);
+  check("returns a recovery key exactly once", Boolean(priyaSetup.body.recoveryKey));
+  const priyaKey = priyaSetup.body.recoveryKey;
+  const priyaId = priyaSetup.body.me.id;
+
+  await ravi.call("/api/identity", { method: "POST", body: { displayName: "Ravi" } });
+  await tom.call("/api/identity", { method: "POST", body: { displayName: "Tom" } });
+  const raviId = (await ravi.call("/api/identity")).body.me.id;
+  const tomId = (await tom.call("/api/identity")).body.me.id;
+
+  const anonymous = makeClient();
+  const unauthorised = await anonymous.call("/api/dashboard", { allowError: true });
+  check("rejects an unknown device with 401", unauthorised.status === 401);
+
+  // Restoring on a "new device" must land on the same person.
+  const restored = makeClient();
+  const restore = await restored.call("/api/identity/restore", {
+    method: "POST",
+    body: { recoveryKey: priyaKey },
+  });
+  check("restores the same identity from a recovery key", restore.body.me.id === priyaId);
+
+  // -- Group with a placeholder --------------------------------------------
+  console.log("\nGroups");
+  const created = await priya.call("/api/groups", {
+    method: "POST",
+    body: {
+      name: "Lisbon 2026",
+      kind: "trip",
+      emoji: "🏝️",
+      currency: "EUR",
+      simplifyDebts: true,
+      // Sam has not installed anything yet, and should not need to.
+      placeholderNames: ["Sam"],
+    },
+  });
+  check("creates a group", created.status === 201);
+  const groupId = created.body.group.id;
+  const inviteCode = created.body.group.inviteCode;
+  check("issues a readable invite code", /^[a-z]+-[a-z]+-\d+$/.test(inviteCode), inviteCode);
+
+  await priya.call(`/api/groups/${groupId}/members`, {
+    method: "POST",
+    body: { inviteCode: (await ravi.call("/api/identity")).body.me.inviteCode },
+  });
+
+  let group = (await priya.call(`/api/groups/${groupId}`)).body.group;
+  const samId = group.members.find((m) => m.displayName === "Sam").id;
+  check("group has three members", group.members.length === 3, String(group.members.length));
+  check("placeholder is flagged as a ghost", group.members.find((m) => m.id === samId).isGhost);
+
+  // -- Expenses, one per split mode ----------------------------------------
+  console.log("\nSplit modes");
+
+  // EQUAL: 100.00 three ways -> 33.34 / 33.33 / 33.33, payer absorbs the cent.
+  const equal = await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId,
+      description: "Dinner",
+      amount: "10000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "10000" }],
+      splits: [
+        { personId: priyaId, amount: "3334", included: true },
+        { personId: raviId, amount: "3333", included: true },
+        { personId: samId, amount: "3333", included: true },
+      ],
+    },
+  });
+  check("files an equal split", equal.status === 201);
+  check(
+    "equal split conserves the total",
+    sum(equal.body.expense.splits.map((s) => s.amount)) === 10000n,
+  );
+
+  // Server must reject a split that does not add up — the one invariant that
+  // would silently corrupt every balance downstream.
+  const broken = await priya.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      groupId,
+      description: "Broken",
+      amount: "10000",
+      currency: "EUR",
+      splitMode: "EXACT",
+      payers: [{ personId: priyaId, amount: "10000" }],
+      splits: [{ personId: priyaId, amount: "4000" }, { personId: raviId, amount: "4000" }],
+    },
+  });
+  check("rejects a split that does not add up", broken.status === 422, String(broken.status));
+
+  const brokenPayer = await priya.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      groupId,
+      description: "Broken payer",
+      amount: "10000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "9000" }],
+      splits: [{ personId: priyaId, amount: "10000" }],
+    },
+  });
+  check("rejects payers that do not add up", brokenPayer.status === 422);
+
+  // SHARES: Ravi counts double.
+  await ravi.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId,
+      description: "Taxi",
+      amount: "4000",
+      currency: "EUR",
+      splitMode: "SHARES",
+      payers: [{ personId: raviId, amount: "4000" }],
+      splits: [
+        { personId: priyaId, amount: "1000", included: true, weight: 1 },
+        { personId: raviId, amount: "2000", included: true, weight: 2 },
+        { personId: samId, amount: "1000", included: true, weight: 1 },
+      ],
+    },
+  });
+
+  // ITEMIZED: a receipt, with tax shared by consumption.
+  await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId,
+      description: "Lunch receipt",
+      amount: "5000",
+      currency: "EUR",
+      splitMode: "ITEMIZED",
+      payers: [{ personId: priyaId, amount: "5000" }],
+      splits: [
+        { personId: priyaId, amount: "3750", included: true },
+        { personId: samId, amount: "1250", included: true },
+      ],
+      items: [
+        { name: "Steak", amount: "3000", participantIds: [priyaId] },
+        { name: "Soup", amount: "1000", participantIds: [samId] },
+      ],
+    },
+  });
+
+  // Multi-currency: a GBP expense inside a EUR group.
+  const fx = await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId,
+      description: "Airport transfer",
+      amount: "6000",
+      currency: "GBP",
+      exchangeRate: "1.18",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "6000" }],
+      splits: [
+        { personId: priyaId, amount: "2000", included: true },
+        { personId: raviId, amount: "2000", included: true },
+        { personId: samId, amount: "2000", included: true },
+      ],
+    },
+  });
+  check(
+    "converts a foreign-currency expense into the group currency",
+    fx.body.expense.convertedAmount === "7080",
+    `got ${fx.body.expense.convertedAmount}, expected 7080`,
+  );
+
+  const missingRate = await priya.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      groupId,
+      description: "No rate",
+      amount: "1000",
+      currency: "JPY",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "1000" }],
+      splits: [{ personId: priyaId, amount: "1000", included: true }],
+    },
+  });
+  check("requires a rate for a foreign currency", missingRate.status === 422);
+
+  // -- Balances -------------------------------------------------------------
+  console.log("\nBalances");
+  group = (await priya.call(`/api/groups/${groupId}`)).body.group;
+  const nets = Object.values(group.balances.net);
+  check("net balances sum to exactly zero", sum(nets) === 0n, `sum=${sum(nets)}`);
+  check(
+    "simplified plan needs at most n-1 transfers",
+    group.balances.simplified.length <= group.members.length - 1,
+  );
+
+  // The simplified plan must reproduce the same net position for everyone.
+  const replay = new Map();
+  for (const edge of group.balances.simplified) {
+    replay.set(edge.fromPersonId, (replay.get(edge.fromPersonId) ?? 0n) - BigInt(edge.amount));
+    replay.set(edge.toPersonId, (replay.get(edge.toPersonId) ?? 0n) + BigInt(edge.amount));
+  }
+  const replayMatches = Object.entries(group.balances.net).every(
+    ([personId, value]) => (replay.get(personId) ?? 0n) === BigInt(value),
+  );
+  check("simplified plan reproduces every net position", replayMatches);
+
+  const samNetBefore = BigInt(group.balances.net[samId] ?? "0");
+  check("the placeholder has accrued real debt", samNetBefore !== 0n, `net=${samNetBefore}`);
+
+  // -- Claiming the placeholder --------------------------------------------
+  console.log("\nClaiming a placeholder");
+  const preview = await tom.call(`/api/invite/${inviteCode}`);
+  check(
+    "invite preview lists unclaimed names",
+    preview.body.group.unclaimedMembers.some((m) => m.id === samId),
+  );
+
+  await tom.call(`/api/invite/${inviteCode}/join`, {
+    method: "POST",
+    body: { claimPersonId: samId },
+  });
+
+  group = (await priya.call(`/api/groups/${groupId}`)).body.group;
+  check("group still has three members after the merge", group.members.length === 3);
+  check("the ghost is gone", !group.members.some((m) => m.id === samId));
+  check(
+    "the claimer inherited the ghost's exact balance",
+    BigInt(group.balances.net[tomId] ?? "0") === samNetBefore,
+    `${group.balances.net[tomId]} vs ${samNetBefore}`,
+  );
+  check("balances still sum to zero after the merge", sum(Object.values(group.balances.net)) === 0n);
+
+  // -- Idempotent replay ----------------------------------------------------
+  console.log("\nOffline replay");
+  const payload = {
+    id: "exp_smoke_replay_test",
+    groupId,
+    description: "Replayed coffee",
+    amount: "600",
+    currency: "EUR",
+    splitMode: "EQUAL",
+    payers: [{ personId: priyaId, amount: "600" }],
+    splits: [
+      { personId: priyaId, amount: "300", included: true },
+      { personId: raviId, amount: "300", included: true },
+    ],
+  };
+  const first = await priya.call("/api/expenses", { method: "POST", body: payload });
+  const second = await priya.call("/api/expenses", { method: "POST", body: payload });
+  check("a replayed mutation returns the same row", first.body.expense.id === second.body.expense.id);
+
+  const ledger = (await priya.call(`/api/groups/${groupId}/expenses`)).body;
+  const replayCount = ledger.items.filter(
+    (item) => item.expense?.description === "Replayed coffee",
+  ).length;
+  check("a replayed mutation is not filed twice", replayCount === 1, `found ${replayCount}`);
+
+  // -- Settling up ----------------------------------------------------------
+  console.log("\nSettling up");
+  group = (await priya.call(`/api/groups/${groupId}`)).body.group;
+  const clients = { [priyaId]: priya, [raviId]: ravi, [tomId]: tom };
+
+  for (const edge of group.balances.simplified) {
+    const payer = clients[edge.fromPersonId] ?? priya;
+    await payer.call("/api/settlements", {
+      method: "POST",
+      body: {
+        groupId,
+        fromPersonId: edge.fromPersonId,
+        toPersonId: edge.toPersonId,
+        amount: edge.amount,
+        currency: "EUR",
+        method: "Bank transfer",
+      },
+    });
+  }
+
+  group = (await priya.call(`/api/groups/${groupId}`)).body.group;
+  const allZero = Object.values(group.balances.net).every((value) => BigInt(value) === 0n);
+  check("settling the plan leaves everyone at zero", allZero, JSON.stringify(group.balances.net));
+  check("nothing outstanding remains", group.balances.simplified.length === 0);
+
+  // -- Access control -------------------------------------------------------
+  console.log("\nAccess control");
+  const outsider = makeClient();
+  await outsider.call("/api/identity", {
+    method: "POST",
+    body: { displayName: "Stranger" },
+  });
+  const denied = await outsider.call(`/api/groups/${groupId}`, { allowError: true });
+  check("a non-member cannot read the group", denied.status === 403, String(denied.status));
+
+  const deniedExpense = await outsider.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      groupId,
+      description: "Sneaky",
+      amount: "1000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "1000" }],
+      splits: [{ personId: priyaId, amount: "1000", included: true }],
+    },
+  });
+  check("a non-member cannot file into the group", deniedExpense.status === 403);
+
+  // -- Reporting ------------------------------------------------------------
+  console.log("\nReporting");
+  const stats = (await priya.call(`/api/groups/${groupId}/stats`)).body.stats;
+  check("stats report every expense", stats.expenseCount >= 5, `count=${stats.expenseCount}`);
+  check("category totals are present", stats.byCategory.length > 0);
+  check(
+    "category totals reconcile with the group total",
+    sum(stats.byCategory.map((row) => row.total)) === BigInt(stats.totalSpend),
+  );
+
+  const csv = await fetch(`${BASE}/api/groups/${groupId}/export`, {
+    headers: { Cookie: priya.cookie },
+  });
+  const csvText = await csv.text();
+  check("CSV export is served", csv.status === 200);
+  check("CSV has a header row", csvText.includes("Date,Type,Description"));
+  check("CSV includes the payments", csvText.includes("Payment"));
+
+  const search = (await priya.call("/api/search?q=Dinner")).body;
+  check("search finds an expense", search.items.length > 0);
+
+  const activity = (await priya.call("/api/activity")).body;
+  check("activity feed is populated", activity.items.length > 0);
+  check(
+    "activity records the settlements",
+    activity.items.some((item) => item.type === "settlement.created"),
+  );
+
+  // -- Deleting a settled group --------------------------------------------
+  console.log("\nLifecycle");
+  const deleted = await priya.call(`/api/groups/${groupId}`, {
+    method: "DELETE",
+    allowError: true,
+  });
+  check("a settled group can be deleted", deleted.status === 200, String(deleted.status));
+
+  console.log(`\n${passed} passed, ${failed} failed\n`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
+main().catch((error) => {
+  console.error("\nSmoke test crashed:", error.message);
+  process.exit(1);
+});

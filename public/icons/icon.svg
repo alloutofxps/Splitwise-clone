@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Divvy">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c6bf0"/>
+      <stop offset="100%" stop-color="#5340d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#g)"/>
+  <!--
+    A "D" for Divvy, with the bowl's counter opened into two stacked notches -
+    one bill, divided. The gap between the stem and the notches is deliberately
+    wide so the glyph stays legible at 16px instead of blurring into a blob.
+  -->
+  <g fill="#fff">
+    <path d="M128 148h94c62 0 106 42 106 108s-44 108-106 108h-94a12 12 0 0 1-12-12V160a12 12 0 0 1 12-12Zm60 60v96h34c30 0 48-19 48-48s-18-48-48-48h-34Z"/>
+    <circle cx="382" cy="212" r="30"/>
+    <circle cx="382" cy="300" r="30"/>
+  </g>
+</svg>
