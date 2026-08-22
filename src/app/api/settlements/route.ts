@@ -4,7 +4,7 @@ import { requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { convert } from "@/lib/money";
 import { newId } from "@/lib/ids";
-import { areFriends, friendshipPair, requireGroupAccess } from "@/server/access";
+import { areFriends, requireGroupAccess } from "@/server/access";
 import { settlementDto } from "@/server/read";
 import { isUniqueViolation, recordActivity } from "@/server/write";
 
@@ -66,14 +66,12 @@ export const POST = route(async (request: Request) => {
     }
     const other =
       input.fromPersonId === session.person.id ? input.toPersonId : input.fromPersonId;
+    // No implicit friendship here: `areFriends` passing already means the row
+    // exists, and creating one when it does not would let a person id stand in
+    // for the invite code that is supposed to be the consent.
     if (!(await areFriends(session.person.id, other))) {
       throw new ValidationError("You can only settle up with people you have added.");
     }
-    await prisma.friendship.upsert({
-      where: { personAId_personBId: friendshipPair(session.person.id, other) },
-      create: friendshipPair(session.person.id, other),
-      update: {},
-    });
   }
 
   if (settlementCurrency !== input.currency && !input.exchangeRate) {

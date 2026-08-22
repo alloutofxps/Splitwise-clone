@@ -377,10 +377,11 @@ async function main() {
   // -- Access control -------------------------------------------------------
   console.log("\nAccess control");
   const outsider = makeClient();
-  await outsider.call("/api/identity", {
+  const outsiderSetup = await outsider.call("/api/identity", {
     method: "POST",
     body: { displayName: "Stranger" },
   });
+  const outsiderId = outsiderSetup.body.me.id;
   const denied = await outsider.call(`/api/groups/${groupId}`, { allowError: true });
   check("a non-member cannot read the group", denied.status === 403, String(denied.status));
 
@@ -398,6 +399,157 @@ async function main() {
     },
   });
   check("a non-member cannot file into the group", deniedExpense.status === 403);
+
+  // A direct expense used to create the friendship *before* checking whether
+  // the caller was entitled to involve that person, which made the check
+  // self-satisfying: a person id was enough to attach a debt to a stranger.
+  const deniedDirect = await outsider.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      friendId: priyaId,
+      description: "Unsolicited",
+      amount: "5000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: outsiderId, amount: "5000" }],
+      splits: [
+        { personId: outsiderId, amount: "2500", included: true },
+        { personId: priyaId, amount: "2500", included: true },
+      ],
+    },
+  });
+  check(
+    "a stranger cannot file a direct expense against someone",
+    deniedDirect.status === 403,
+    String(deniedDirect.status),
+  );
+
+  const strangerFriends = (await outsider.call("/api/friends")).body.friends;
+  check(
+    "the refused expense left no friendship behind",
+    !strangerFriends.some((friend) => friend.id === priyaId),
+    JSON.stringify(strangerFriends.map((f) => f.name)),
+  );
+
+  const deniedSettlement = await outsider.call("/api/settlements", {
+    method: "POST",
+    allowError: true,
+    body: {
+      fromPersonId: priyaId,
+      toPersonId: outsiderId,
+      amount: "5000",
+      currency: "EUR",
+    },
+  });
+  check(
+    "a stranger cannot record a payment from someone",
+    deniedSettlement.status >= 400,
+    String(deniedSettlement.status),
+  );
+
+  // -- Pagination -----------------------------------------------------------
+  //
+  // The regression this guards: the ledger merges two tables and used to page
+  // on `date` alone with a strict `<`. Rows sharing the boundary timestamp were
+  // trimmed off page one and then filtered out of page two, so they vanished
+  // from history entirely while still counting towards every balance.
+  console.log("\nPagination");
+
+  const paging = await priya.call("/api/groups", {
+    method: "POST",
+    body: {
+      name: "Same Day",
+      kind: "event",
+      emoji: "📅",
+      currency: "EUR",
+      simplifyDebts: false,
+      placeholderNames: [],
+    },
+  });
+  const pagingGroupId = paging.body.group.id;
+  await priya.call(`/api/groups/${pagingGroupId}/members`, {
+    method: "POST",
+    body: { inviteCode: (await ravi.call("/api/identity")).body.me.inviteCode },
+  });
+
+  // Every row on the same instant, which is what makes the tiebreak load-bearing.
+  const sameInstant = "2026-05-01T12:00:00.000Z";
+  const PAGE_SIZE = 40;
+  const rowCount = PAGE_SIZE + 5;
+
+  for (let index = 0; index < rowCount; index++) {
+    await priya.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: pagingGroupId,
+        description: `Round ${index}`,
+        amount: "1000",
+        currency: "EUR",
+        splitMode: "EQUAL",
+        date: sameInstant,
+        payers: [{ personId: priyaId, amount: "1000" }],
+        splits: [
+          { personId: priyaId, amount: "500", included: true },
+          { personId: raviId, amount: "500", included: true },
+        ],
+      },
+    });
+  }
+
+  // A settlement on the same instant too: it is the row type most likely to be
+  // swallowed, because it comes from the other table.
+  await priya.call("/api/settlements", {
+    method: "POST",
+    body: {
+      groupId: pagingGroupId,
+      fromPersonId: raviId,
+      toPersonId: priyaId,
+      amount: "2500",
+      currency: "EUR",
+      date: sameInstant,
+    },
+  });
+
+  const expected = rowCount + 1;
+
+  const firstPage = (await priya.call(`/api/groups/${pagingGroupId}/expenses`)).body;
+  check("first page is full", firstPage.items.length === PAGE_SIZE, String(firstPage.items.length));
+  check("first page offers a cursor", Boolean(firstPage.nextCursor), String(firstPage.nextCursor));
+
+  const seen = new Map();
+  let cursor = null;
+  let pages = 0;
+  do {
+    const suffix = cursor ? `?before=${encodeURIComponent(cursor)}` : "";
+    const body = (await priya.call(`/api/groups/${pagingGroupId}/expenses${suffix}`)).body;
+    for (const item of body.items) seen.set(item.id, (seen.get(item.id) ?? 0) + 1);
+    cursor = body.nextCursor;
+    pages++;
+  } while (cursor && pages < 10);
+
+  check("paging terminates", cursor === null, `stopped after ${pages} pages`);
+  check(
+    "every row on the same timestamp is reachable",
+    seen.size === expected,
+    `saw ${seen.size} of ${expected}`,
+  );
+  check(
+    "no row is served twice across pages",
+    [...seen.values()].every((count) => count === 1),
+  );
+  check(
+    "the settlement survives the merge",
+    [...seen.keys()].some((id) => id.startsWith("stl")),
+  );
+
+  // A mangled cursor is a client mistake, not a server error: it should fall
+  // back to the first page rather than 500.
+  const junk = await priya.call(
+    `/api/groups/${pagingGroupId}/expenses?before=not-a-date`,
+    { allowError: true },
+  );
+  check("a junk cursor falls back to the first page", junk.status === 200, String(junk.status));
 
   // -- Reporting ------------------------------------------------------------
   console.log("\nReporting");

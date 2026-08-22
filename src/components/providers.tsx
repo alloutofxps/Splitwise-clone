@@ -36,7 +36,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // another's render.
   const [client] = React.useState(makeClient);
 
-  React.useEffect(() => startAutoFlush(), []);
+  // A flush that delivered or refused anything leaves the cache out of step
+  // with the server: it writes through `request` rather than through the query
+  // cache, so nothing else would ever notice. Refetching drops a row the server
+  // refused - and the balance that came with it - while the offline banner
+  // keeps the explanation on screen.
+  React.useEffect(
+    () => startAutoFlush(() => void client.invalidateQueries()),
+    [client],
+  );
 
   return (
     <QueryClientProvider client={client}>

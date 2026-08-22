@@ -13,7 +13,7 @@
 
 import { prisma } from "@/lib/db";
 import { computeBalances, type BalanceEvent, type BalanceSheet } from "@/lib/balances";
-import { apportion } from "@/lib/split";
+import { convertedBreakdown } from "@/lib/split";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import type {
   ActivityDto,
@@ -53,43 +53,10 @@ type ExpenseRow = Prisma.ExpenseGetPayload<{ include: typeof expenseInclude }>;
 
 export const EXPENSE_INCLUDE = expenseInclude;
 
-// ---------------------------------------------------------------------------
-// Currency-safe breakdown
-// ---------------------------------------------------------------------------
-
-export interface ConvertedBreakdown {
-  paid: { personId: string; amount: bigint }[];
-  owed: { personId: string; amount: bigint }[];
-}
-
-/**
- * Converts an expense's payers and splits into the settlement currency such
- * that each side sums to exactly `convertedAmount`.
- *
- * For a same-currency expense this is the identity, because the weights already
- * sum to the total.
- */
-export function convertedBreakdown(expense: {
-  convertedAmount: bigint;
-  payers: { personId: string; amount: bigint }[];
-  splits: { personId: string; amount: bigint }[];
-}): ConvertedBreakdown {
-  const activeSplits = expense.splits.filter((s) => s.amount !== 0n);
-
-  const paidAmounts = apportion(
-    expense.convertedAmount,
-    expense.payers.map((p) => Number(p.amount)),
-  );
-  const owedAmounts = apportion(
-    expense.convertedAmount,
-    activeSplits.map((s) => Number(s.amount)),
-  );
-
-  return {
-    paid: expense.payers.map((p, i) => ({ personId: p.personId, amount: paidAmounts[i] })),
-    owed: activeSplits.map((s, i) => ({ personId: s.personId, amount: owedAmounts[i] })),
-  };
-}
+// Re-exported because two route handlers import it from here. The definition
+// moved to `lib/split` so the client can compute an optimistic balance with the
+// same arithmetic the server uses.
+export { convertedBreakdown, type ConvertedBreakdown } from "@/lib/split";
 
 // ---------------------------------------------------------------------------
 // Balances
@@ -433,24 +400,28 @@ export async function groupSummaries(personId: string): Promise<GroupSummaryDto[
       where: { groupId: { in: groupIds } },
       _max: { createdAt: true },
     }),
-    Promise.all(
-      memberships.map(async (membership) => ({
-        groupId: membership.groupId,
-        count: await prisma.activity.count({
-          where: {
-            groupId: membership.groupId,
-            createdAt: { gt: membership.lastReadActivityAt },
-            actorPersonId: { not: personId },
-          },
-        }),
-      })),
-    ),
+    // Every group has its own read cursor, so this cannot be a single `count`
+    // with one cutoff - but it does not need a query per group either. The OR
+    // carries each group's cutoff as its own branch, and the groupBy collapses
+    // the whole thing into one row per group.
+    prisma.activity.groupBy({
+      by: ["groupId"],
+      where: {
+        actorPersonId: { not: personId },
+        OR: memberships.map((membership) => ({
+          groupId: membership.groupId,
+          createdAt: { gt: membership.lastReadActivityAt },
+        })),
+      },
+      _count: { _all: true },
+    }),
   ]);
 
   const lastActivityByGroup = new Map(
     latestActivity.map((row) => [row.groupId, row._max.createdAt]),
   );
-  const unreadByGroup = new Map(unread.map((row) => [row.groupId, row.count]));
+  // A group with nothing unread produces no row at all, hence the ?? 0 below.
+  const unreadByGroup = new Map(unread.map((row) => [row.groupId, row._count._all]));
 
   const sheets = await Promise.all(groupIds.map((id) => groupBalanceSheet(id)));
 

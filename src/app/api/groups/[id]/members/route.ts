@@ -3,9 +3,11 @@ import { json, readBody, route, text } from "@/lib/api";
 import { requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { colorForName } from "@/lib/avatar";
+import { normalizeInviteCode } from "@/lib/codes";
 import { requireGroupAccess } from "@/server/access";
 import { personDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
+import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,10 +34,19 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const input = await readBody(request, schema);
 
   if (input.inviteCode) {
+    limitByAddress(request, "member-add-by-code", CODE_LOOKUP);
+
     const person = await prisma.person.findUnique({
-      where: { inviteCode: input.inviteCode.trim().toLowerCase() },
+      // Same normalisation as everywhere else a code is typed, so "MANGO TIGER
+      // 42" pasted here reaches the same person it would on the join screen.
+      where: { inviteCode: normalizeInviteCode(input.inviteCode) },
     });
-    if (!person) throw new ValidationError("No one has that personal code.");
+    // A placeholder's code is an internal handle, not something to be redeemed:
+    // it belongs to whichever group created it, and pulling it into a second
+    // group would silently entangle two sets of balances.
+    if (!person || person.isGhost) {
+      throw new ValidationError("No one has that personal code.");
+    }
 
     const existing = await prisma.membership.findUnique({
       where: { groupId_personId: { groupId: id, personId: person.id } },

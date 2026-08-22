@@ -4,7 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Camera, ChevronDown, NotebookPen, Users } from "lucide-react";
 import { Sheet } from "../ui/sheet";
-import { AmountInput } from "../ui/money";
+import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -63,7 +63,10 @@ interface Draft {
 export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerProps) {
   const { data } = useDashboard();
   const toast = useToast();
-  const create = useCreateExpense();
+  // `data?.me` is undefined on the very first render, before the dashboard has
+  // loaded. The hook falls back to a pessimistic write in that case, which is
+  // correct: the composer cannot be opened until the dashboard is in hand.
+  const create = useCreateExpense(data?.me?.id);
   const update = useUpdateExpense(expense?.id ?? "");
 
   const [panel, setPanel] = React.useState<
@@ -121,8 +124,32 @@ export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerPro
   const canSave = blockers.length === 0;
   const saving = create.isPending || update.isPending;
 
+  /**
+   * Applies a change, keeping a lone payer's amount equal to the total.
+   *
+   * With one payer there is nothing to decide - they paid all of it - so
+   * carrying a separate figure only creates a way for the two to disagree.
+   * They used to: the amount was typed here and the payer's share stayed at
+   * zero, so "Payments must add up to the total" blocked every expense entered
+   * through the default path until the user opened the payer sheet and typed
+   * the same number again.
+   *
+   * Several payers is a genuine choice, and the mismatch warning is doing real
+   * work there, so those are left exactly as entered.
+   */
   const patch = (changes: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...changes } : current));
+    setDraft((current) => {
+      if (!current) return current;
+      const next = { ...current, ...changes };
+      const payers = changes.payers ?? next.payers;
+      if (payers.length === 1) {
+        const total = next.amount ?? 0n;
+        if (payers[0].amount !== total) {
+          next.payers = [{ ...payers[0], amount: total }];
+        }
+      }
+      return next;
+    });
 
   const save = async () => {
     if (!canSave || saving) return;
@@ -240,12 +267,12 @@ export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerPro
               <ChevronDown className="size-3" />
             </button>
 
-            <AmountInput
+            <AmountPad
               value={draft.amount}
               onChange={(value) => patch({ amount: value })}
               currency={draft.currency}
-              size="hero"
-              autoFocus={!expense}
+              onSubmit={() => void save()}
+              className="w-full"
             />
 
             {group && group.currency !== draft.currency ? (

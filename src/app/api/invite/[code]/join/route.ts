@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { friendshipPair } from "@/server/access";
 import { personDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
+import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -30,6 +31,8 @@ const schema = z.object({
  * unclaimed, so two people racing to claim the same Sam cannot both win.
  */
 export const POST = route(async (request: Request, { params }: Params) => {
+  limitByAddress(request, "invite-join", CODE_LOOKUP);
+
   const { code } = await params;
   const session = await requireSession();
   const me = session.person;

@@ -1,6 +1,7 @@
 import { json, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
+import { beforeCursor, encodeCursor, parseCursor } from "@/server/cursor";
 import { activityDto } from "@/server/read";
 
 const PAGE_SIZE = 50;
@@ -15,7 +16,7 @@ const PAGE_SIZE = 50;
 export const GET = route(async (request: Request) => {
   const session = await requireSession();
   const url = new URL(request.url);
-  const before = url.searchParams.get("before");
+  const cursor = parseCursor(url.searchParams.get("before"));
 
   const memberships = await prisma.membership.findMany({
     where: { personId: session.person.id, leftAt: null },
@@ -29,7 +30,11 @@ export const GET = route(async (request: Request) => {
 
   const activities = await prisma.activity.findMany({
     where: {
-      ...(before ? { createdAt: { lt: new Date(before) } } : {}),
+      // (createdAt, id), not createdAt alone. A single app-open can write
+      // several activity rows inside the same millisecond - a recurrence
+      // catching up on three months does exactly that - and a bare `lt` cursor
+      // drops every one of them but the first at a page boundary.
+      AND: beforeCursor("createdAt", cursor),
       OR: [
         { groupId: { in: groupIds } },
         // Direct expenses have no group, so they are matched through the
@@ -55,16 +60,21 @@ export const GET = route(async (request: Request) => {
       ],
     },
     include: { group: { select: { name: true, emoji: true } } },
-    orderBy: { createdAt: "desc" },
-    take: PAGE_SIZE,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: PAGE_SIZE + 1,
   });
 
-  const items = activities.map((activity) =>
+  const page = activities.slice(0, PAGE_SIZE);
+  const hasMore = activities.length > PAGE_SIZE;
+
+  const items = page.map((activity) =>
     activityDto(activity, activity.groupId ? lastReadByGroup.get(activity.groupId) ?? null : null),
   );
 
+  const last = page[page.length - 1];
+
   return json({
     items,
-    nextCursor: items.length === PAGE_SIZE ? items[items.length - 1].createdAt : null,
+    nextCursor: hasMore && last ? encodeCursor(last.createdAt, last.id) : null,
   });
 });

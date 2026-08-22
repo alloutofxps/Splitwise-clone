@@ -15,7 +15,11 @@ open the app, type your name, and share an invite code.
 Three decisions shape everything else.
 
 **Invite codes instead of login.** A person is created on first launch and bound
-to the device by a signed, httpOnly cookie. The server stores only a SHA-256 of
+to the device by a signed, httpOnly cookie. Group codes are three short words so
+they survive being read across a dinner table, which means entropy is not what
+protects them: every endpoint that resolves a code is rate-limited per address
+instead (see `src/server/rate-limit.ts`, which is honest about what per-process
+counters do and do not cover). The server stores only a SHA-256 of
 the secret; the raw value is shown once as a *recovery key*, which is the only
 way to restore the same identity on another device. The tradeoff is explicit:
 whoever holds the recovery key is that person. That is the security model of a
@@ -63,7 +67,9 @@ catch up on months nobody opened the app.
 view of the same numbers.
 
 **Everywhere** — installable PWA for iOS and Android · works offline, including
-adding expenses · light and dark themes · no ads, no tracking, no analytics.
+adding expenses · a built-in amount keypad, so the split preview is never hidden
+behind the system keyboard · light and dark themes · no ads, no tracking, no
+analytics.
 
 ---
 
@@ -134,8 +140,8 @@ first checks, point a cron at `POST /api/recurrences/run`.
 
 ```
 src/lib/          money, split algorithms, balance engine — no framework, fully tested
-src/server/       read/write services, access control, recurrence
-src/app/api/      35 route handlers
+src/server/       read/write services, access control, recurrence, pagination
+src/app/api/      34 route handlers
 src/components/   design system and feature UI
 prisma/           schema, migrations, seed
 scripts/          smoke.mjs (end-to-end), shots.mjs (visual verification)
@@ -160,17 +166,33 @@ violates that would quietly corrupt every balance the group ever sees.
 row's id before sending, so a mutation replayed from the IndexedDB outbox
 collides on the primary key and the server returns the existing row instead of
 filing the dinner twice. This is why ids come from the client and not the
-database.
+database — and it is also what lets a new expense appear on screen before the
+server has seen it, since the optimistic row and the confirmed row are the same
+row. A mutation the server refuses outright cannot stay in the queue (it would
+block everything behind it), so it moves to a dead-letter store and is shown in
+the offline banner with the server's reason, rather than disappearing.
+
+**Feeds page on (timestamp, id), never on the timestamp alone.** Several
+expenses entered on the same evening share a date to the millisecond, and a
+cursor of "everything strictly older than the last row" drops the ones that
+straddle a page boundary — off page one because they were trimmed, off page two
+because they are not strictly older. Because balances are derived from the rows
+rather than from the feed, the arithmetic stays right while the history quietly
+loses a payment. `src/server/cursor.ts` carries the tiebreak, and the smoke test
+pages a group whose rows all share one timestamp.
 
 ### Verification
 
-- `src/lib/__tests__/` — 56 unit tests, including randomised property checks
-  that no split or apportionment ever loses a minor unit and that debt
-  simplification always reproduces the same net position in at most n−1
-  transfers.
-- `scripts/smoke.mjs` — 39 assertions driving the real HTTP API: three people,
+- `src/lib/__tests__/` and `src/server/__tests__/` — 73 unit tests, including
+  randomised property checks that no split or apportionment ever loses a minor
+  unit, that debt simplification always reproduces the same net position in at
+  most n−1 transfers, and that folding one event at a time into a balance sheet
+  gives the same answer as recomputing the history (which is what lets the
+  client show a new expense's effect before the server confirms it).
+- `scripts/smoke.mjs` — 49 assertions driving the real HTTP API: three people,
   every split mode, a placeholder claimed mid-trip, multi-currency conversion,
-  replayed mutations, settling to zero, and access control.
+  replayed mutations, settling to zero, access control, and paging a ledger
+  whose rows all share one timestamp.
 - `scripts/shots.mjs` — captures every screen in both themes at a phone
   viewport, and reports any console or page error.
 

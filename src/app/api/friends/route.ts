@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { friendshipPair } from "@/server/access";
 import { personDto } from "@/server/read";
 import { friendDtos } from "@/server/me";
+import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
 
 export const GET = route(async () => {
   const session = await requireSession();
@@ -24,6 +25,11 @@ const schema = z.object({
  * them only enables splitting: it exposes no history either way.
  */
 export const POST = route(async (request: Request) => {
+  // A personal code is two words, so it is guessable in the same way a group
+  // code is - and guessing one right means being able to file debts against
+  // that person.
+  limitByAddress(request, "friend-add", CODE_LOOKUP);
+
   const session = await requireSession();
   const { inviteCode } = await readBody(request, schema);
 

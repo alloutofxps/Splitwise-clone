@@ -133,7 +133,7 @@ export async function runDueRecurrences(now = new Date()): Promise<number> {
       }
 
       try {
-        await createExpense({
+        const { created } = await createExpense({
           id: occurrenceId,
           groupId: recurrence.groupId,
           description: recurrence.description,
@@ -160,18 +160,24 @@ export async function runDueRecurrences(now = new Date()): Promise<number> {
           attachments: [],
         });
 
-        await recordActivity({
-          type: "recurrence.fired",
-          actorPersonId: recurrence.createdByPersonId,
-          groupId: recurrence.groupId,
-          expenseId: occurrenceId,
-          data: {
-            description: recurrence.description,
-            amount: recurrence.amount.toString(),
-            currency: recurrence.currency,
-          },
-        });
-        posted++;
+        // Two tabs opening the app at once both walk the same catch-up range,
+        // and the second one is absorbed by the idempotency path above. Only
+        // the run that actually wrote the row gets to announce it, otherwise
+        // the feed shows rent posting twice on a month it posted once.
+        if (created) {
+          await recordActivity({
+            type: "recurrence.fired",
+            actorPersonId: recurrence.createdByPersonId,
+            groupId: recurrence.groupId,
+            expenseId: occurrenceId,
+            data: {
+              description: recurrence.description,
+              amount: recurrence.amount.toString(),
+              currency: recurrence.currency,
+            },
+          });
+          posted++;
+        }
       } catch (error) {
         // One broken recurrence must not stop the others from posting.
         console.error("[divvy] recurrence failed to post", recurrence.id, error);

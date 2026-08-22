@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Paperclip, Pencil, Send, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Send, Trash2, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
@@ -12,6 +12,7 @@ import { ExpenseComposer } from "./composer";
 import {
   useAddComment,
   useComments,
+  useDeleteAttachment,
   useDeleteExpense,
   useExpense,
 } from "@/lib/client/queries";
@@ -42,15 +43,18 @@ export function ExpenseDetailSheet({
   const { data: comments } = useComments(expenseId ?? undefined);
   const addComment = useAddComment(expenseId ?? "");
   const deleteExpense = useDeleteExpense();
+  const deleteAttachment = useDeleteAttachment(expenseId ?? "");
 
   const [editing, setEditing] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [confirmRemoveReceipt, setConfirmRemoveReceipt] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
 
   React.useEffect(() => {
     if (!expenseId) {
       setEditing(false);
       setConfirmDelete(false);
+      setConfirmRemoveReceipt(null);
       setDraft("");
     }
   }, [expenseId]);
@@ -65,6 +69,22 @@ export function ExpenseDetailSheet({
       onClose();
     } catch {
       toast({ tone: "error", title: "Could not delete that" });
+    }
+  };
+
+  const removeReceipt = async () => {
+    if (!expense || !confirmRemoveReceipt) return;
+    try {
+      await deleteAttachment.mutateAsync({
+        id: confirmRemoveReceipt,
+        groupId: expense.groupId,
+      });
+      haptic([10, 40, 10]);
+      toast({ tone: "success", title: "Receipt removed" });
+    } catch {
+      toast({ tone: "error", title: "Could not remove that receipt" });
+    } finally {
+      setConfirmRemoveReceipt(null);
     }
   };
 
@@ -240,7 +260,7 @@ export function ExpenseDetailSheet({
                 <SectionLabel>Receipts</SectionLabel>
                 <ul className="grid grid-cols-3 gap-2">
                   {expense.attachments.map((attachment) => (
-                    <li key={attachment.id}>
+                    <li key={attachment.id} className="relative">
                       <a
                         href={attachment.url}
                         target="_blank"
@@ -261,6 +281,25 @@ export function ExpenseDetailSheet({
                           </span>
                         )}
                       </a>
+                      {/*
+                        Sits outside the link rather than inside it, so tapping
+                        the receipt opens it and only the corner removes it. A
+                        44px target would cover a third of a thumbnail, so this
+                        one is smaller by design and the confirm step below is
+                        what actually protects against a fat finger.
+                      */}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${attachment.filename}`}
+                        disabled={deleteAttachment.isPending}
+                        onClick={() => {
+                          haptic();
+                          setConfirmRemoveReceipt(attachment.id);
+                        }}
+                        className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full border border-line bg-surface shadow-card text-muted transition active:scale-90 disabled:opacity-40"
+                      >
+                        <X className="size-3.5" />
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -384,6 +423,16 @@ export function ExpenseDetailSheet({
         title="Delete this expense?"
         description="Everyone's balance in this group will be recalculated without it."
         confirmLabel="Delete"
+      />
+
+      <ConfirmSheet
+        open={Boolean(confirmRemoveReceipt)}
+        onClose={() => setConfirmRemoveReceipt(null)}
+        onConfirm={removeReceipt}
+        loading={deleteAttachment.isPending}
+        title="Remove this receipt?"
+        description="The image is deleted from the server. The expense and everyone's balances stay exactly as they are."
+        confirmLabel="Remove"
       />
     </>
   );

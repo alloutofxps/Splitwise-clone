@@ -303,8 +303,12 @@ export interface ExpenseInput {
     participantIds: string[];
   }[];
   attachments?: { filename: string; mimeType: string; dataUrl: string }[];
-  /** Client-generated id, so a replayed offline mutation is not duplicated. */
-  idempotencyKey?: string;
+  /**
+   * Client-generated row id, so a replayed offline mutation collides on the
+   * primary key instead of filing a second copy. Left optional because the
+   * mutation hook mints one when the caller does not.
+   */
+  id?: string;
 }
 
 export interface SettlementInput {
@@ -317,5 +321,6 @@ export interface SettlementInput {
   date?: string;
   note?: string | null;
   method?: string | null;
-  idempotencyKey?: string;
+  /** As on `ExpenseInput`: the client-generated row id. */
+  id?: string;
 }

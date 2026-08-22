@@ -2,6 +2,7 @@ import { json, route } from "@/lib/api";
 import { ForbiddenError, NotFoundError, requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { areFriends } from "@/server/access";
+import { compareDesc } from "@/server/cursor";
 import {
   EXPENSE_INCLUDE,
   balanceSheetDto,
@@ -87,18 +88,23 @@ export const GET = route(async (_request: Request, { params }: Params) => {
     }),
   ]);
 
+  // Same shape as the group ledger, id included: this list is not paged today,
+  // but the two are read through one `LedgerEntry` type and a row without an id
+  // would be the thing that breaks on the day it is.
   const items = [
     ...expenses.map((expense) => ({
       kind: "expense" as const,
+      id: expense.id,
       date: expense.date.toISOString(),
       expense: expenseDto(expense, me),
     })),
     ...settlements.map((settlement) => ({
       kind: "settlement" as const,
+      id: settlement.id,
       date: settlement.date.toISOString(),
       settlement: settlementDto(settlement),
     })),
-  ].sort((a, b) => (a.date < b.date ? 1 : -1));
+  ].sort(compareDesc);
 
   return json({
     person: personDto(person),

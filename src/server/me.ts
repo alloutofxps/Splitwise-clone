@@ -40,13 +40,34 @@ export async function friendDtos(personId: string): Promise<FriendDto[]> {
 
   if (friendships.length === 0) return [];
 
-  const sheets = await directBalanceSheets(personId);
+  const others = friendships.map((friendship) =>
+    friendship.personAId === personId ? friendship.personB : friendship.personA,
+  );
+
+  const [sheets, sharedMemberships] = await Promise.all([
+    directBalanceSheets(personId),
+    // One query for every friend's shared groups rather than one per friend.
+    // The list is small on a phone and enormous on a housemate account that has
+    // been running for two years, which is exactly the account that notices.
+    prisma.membership.findMany({
+      where: {
+        personId: { in: others.map((other) => other.id) },
+        leftAt: null,
+        group: { memberships: { some: { personId, leftAt: null } } },
+      },
+      select: { personId: true, groupId: true },
+    }),
+  ]);
+
+  const sharedByFriend = new Map<string, string[]>();
+  for (const membership of sharedMemberships) {
+    const list = sharedByFriend.get(membership.personId);
+    if (list) list.push(membership.groupId);
+    else sharedByFriend.set(membership.personId, [membership.groupId]);
+  }
 
   const friends: FriendDto[] = [];
-  for (const friendship of friendships) {
-    const other =
-      friendship.personAId === personId ? friendship.personB : friendship.personA;
-
+  for (const other of others) {
     const net: Record<string, string> = {};
     for (const [currency, sheet] of sheets) {
       // The edge between exactly these two people, in this currency.
@@ -60,19 +81,10 @@ export async function friendDtos(personId: string): Promise<FriendDto[]> {
       if (value !== 0n) net[currency] = value.toString();
     }
 
-    const sharedGroups = await prisma.membership.findMany({
-      where: {
-        personId: other.id,
-        leftAt: null,
-        group: { memberships: { some: { personId, leftAt: null } } },
-      },
-      select: { groupId: true },
-    });
-
     friends.push({
       person: personDto(other),
       net,
-      sharedGroupIds: sharedGroups.map((g) => g.groupId),
+      sharedGroupIds: sharedByFriend.get(other.id) ?? [],
       lastActivityAt: null,
     });
   }

@@ -209,7 +209,8 @@ export async function updateExpense(input: ExpenseWriteInput) {
 
     await writeItems(tx, expense.id, input.items);
     // Attachments are additive on edit: an edit that did not touch the photos
-    // should not silently drop them. Removal has its own endpoint.
+    // should not silently drop them. Taking one off is DELETE
+    // /api/attachments/[id].
     await writeAttachments(tx, expense.id, input.attachments);
     return expense;
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateNet,
+  applyEvent,
   computeBalances,
   personalBalance,
   simplifyDebts,
@@ -212,5 +213,138 @@ describe("aggregateNet", () => {
       "alice",
     );
     expect(totals.has("EUR")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe("applyEvent", () => {
+  const sorted = (edges: { fromPersonId: string; toPersonId: string; amount: bigint }[]) =>
+    [...edges].sort((a, b) =>
+      a.fromPersonId !== b.fromPersonId
+        ? a.fromPersonId < b.fromPersonId
+          ? -1
+          : 1
+        : a.toPersonId < b.toPersonId
+          ? -1
+          : a.toPersonId > b.toPersonId
+            ? 1
+            : 0,
+    );
+
+  const same = (a: ReturnType<typeof computeBalances>, b: ReturnType<typeof computeBalances>) => {
+    expect([...a.net].sort()).toEqual([...b.net].sort());
+    expect(sorted(a.pairwise)).toEqual(sorted(b.pairwise));
+    expect(sorted(a.simplified)).toEqual(sorted(b.simplified));
+    expect(a.totalSpend).toBe(b.totalSpend);
+  };
+
+  it("matches a full recompute for a single expense", () => {
+    const history = [expense("e1", [["alice", 3000n]], [["alice", 1000n], ["bob", 2000n]])];
+    const next = expense("e2", [["bob", 900n]], [["alice", 300n], ["bob", 600n]]);
+
+    same(applyEvent(computeBalances(history), next), computeBalances([...history, next]));
+  });
+
+  it("matches a full recompute for a settlement", () => {
+    const history = [expense("e1", [["alice", 3000n]], [["alice", 1000n], ["bob", 2000n]])];
+    const next: BalanceEvent = {
+      kind: "settlement",
+      id: "s1",
+      fromPersonId: "bob",
+      toPersonId: "alice",
+      amount: 2000n,
+    };
+
+    same(applyEvent(computeBalances(history), next), computeBalances([...history, next]));
+    // The settlement clears the debt exactly, so the pair must disappear rather
+    // than linger as a zero edge - which is the case a naive patch gets wrong.
+    expect(applyEvent(computeBalances(history), next).pairwise).toHaveLength(0);
+  });
+
+  it("starts correctly from an empty sheet", () => {
+    const only = expense("e1", [["alice", 500n]], [["bob", 500n]]);
+    same(applyEvent(computeBalances([]), only), computeBalances([only]));
+  });
+
+  it("does not mutate the sheet it was given", () => {
+    const before = computeBalances([
+      expense("e1", [["alice", 3000n]], [["alice", 1000n], ["bob", 2000n]]),
+    ]);
+    const netBefore = new Map(before.net);
+    const pairwiseBefore = JSON.stringify(sorted(before.pairwise), (_k, v) =>
+      typeof v === "bigint" ? v.toString() : v,
+    );
+
+    applyEvent(before, expense("e2", [["bob", 900n]], [["alice", 900n]]));
+
+    expect([...before.net]).toEqual([...netBefore]);
+    expect(
+      JSON.stringify(sorted(before.pairwise), (_k, v) =>
+        typeof v === "bigint" ? v.toString() : v,
+      ),
+    ).toBe(pairwiseBefore);
+  });
+
+  /**
+   * The property the optimistic UI rests on: folding events one at a time
+   * through `applyEvent` is indistinguishable from computing the whole history
+   * at once. If this ever fails, the client is showing a balance the server
+   * will disagree with.
+   */
+  it("folding one event at a time equals computing the batch", () => {
+    let seed = 7;
+    const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const people = ["alice", "bob", "cara", "dev", "eve"];
+
+    for (let trial = 0; trial < 60; trial++) {
+      const events: BalanceEvent[] = [];
+      const count = 1 + Math.floor(rand() * 8);
+
+      for (let index = 0; index < count; index++) {
+        if (rand() < 0.3 && events.length > 0) {
+          const from = people[Math.floor(rand() * people.length)];
+          let to = people[Math.floor(rand() * people.length)];
+          if (to === from) to = people[(people.indexOf(from) + 1) % people.length];
+          events.push({
+            kind: "settlement",
+            id: `s${trial}-${index}`,
+            fromPersonId: from,
+            toPersonId: to,
+            amount: BigInt(1 + Math.floor(rand() * 5000)),
+          });
+          continue;
+        }
+
+        // Several payers and a split that is exactly conservative, which is the
+        // invariant the API enforces on every row it accepts.
+        const payerCount = 1 + Math.floor(rand() * 2);
+        const total = BigInt(100 + Math.floor(rand() * 20000));
+        const paid: { personId: string; amount: bigint }[] = [];
+        let left = total;
+        for (let p = 0; p < payerCount; p++) {
+          const share = p === payerCount - 1 ? left : left / 2n;
+          paid.push({ personId: people[Math.floor(rand() * people.length)], amount: share });
+          left -= share;
+        }
+
+        const owerCount = 1 + Math.floor(rand() * 4);
+        const owed: { personId: string; amount: bigint }[] = [];
+        let remaining = total;
+        for (let o = 0; o < owerCount; o++) {
+          const share = o === owerCount - 1 ? remaining : remaining / BigInt(owerCount - o);
+          owed.push({ personId: people[o], amount: share });
+          remaining -= share;
+        }
+
+        events.push({ kind: "expense", id: `e${trial}-${index}`, paid, owed });
+      }
+
+      const folded = events.reduce(
+        (sheet, event) => applyEvent(sheet, event),
+        computeBalances([]),
+      );
+      same(folded, computeBalances(events));
+    }
   });
 });

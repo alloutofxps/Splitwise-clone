@@ -3,6 +3,7 @@ import { NotFoundError } from "@/lib/identity";
 import { normalizeInviteCode } from "@/lib/codes";
 import { prisma } from "@/lib/db";
 import { personDto } from "@/server/read";
+import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -17,7 +18,11 @@ type Params = { params: Promise<{ code: string }> };
  * Deliberately readable without an identity, so a link opened from a chat works
  * before the app has been set up.
  */
-export const GET = route(async (_request: Request, { params }: Params) => {
+export const GET = route(async (request: Request, { params }: Params) => {
+  // The cheapest oracle in the app: it answers "is this a real code?" without
+  // an identity. Limited hardest for that reason.
+  limitByAddress(request, "invite-preview", CODE_LOOKUP);
+
   const { code } = await params;
   const normalized = normalizeInviteCode(code);
 

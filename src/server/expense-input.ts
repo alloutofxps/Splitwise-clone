@@ -4,7 +4,7 @@ import { ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { SPLIT_MODES } from "@/lib/split";
 import { CATEGORY_BY_ID, DEFAULT_CATEGORY_ID } from "@/lib/categories";
-import { assertCanInvolve, friendshipPair } from "./access";
+import { assertCanInvolve } from "./access";
 import { decodeDataUrl, type ExpenseWriteInput } from "./write";
 
 export const expenseInputSchema = z.object({
@@ -92,16 +92,16 @@ export async function prepareExpense(
     settlementCurrency = group.currency;
   }
 
-  // A direct expense implicitly connects the two people, so a first shared
-  // dinner does not require adding each other as a separate step.
-  if (!groupId && input.friendId && input.friendId !== actorId) {
-    await prisma.friendship.upsert({
-      where: { personAId_personBId: friendshipPair(actorId, input.friendId) },
-      create: friendshipPair(actorId, input.friendId),
-      update: {},
-    });
-  }
-
+  // Authorisation comes before anything that writes.
+  //
+  // This used to create the friendship first, on the theory that a first shared
+  // dinner should not require adding each other as a separate step. That made
+  // the check below self-satisfying: `assertCanInvolve` asks whether the two
+  // people are connected, so manufacturing the connection first meant any
+  // caller holding a person id - which is not a secret, it appears in every
+  // group member list - could file a debt against a stranger. Friendship is
+  // consent, and the only thing that establishes it is knowing someone's invite
+  // code (see POST /api/friends).
   const involved = [
     ...input.payers.map((p) => p.personId),
     ...input.splits.filter((s) => s.amount !== 0n || s.included !== false).map((s) => s.personId),

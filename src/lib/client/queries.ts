@@ -15,6 +15,7 @@
  */
 
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -22,6 +23,15 @@ import {
 } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
 import { enqueue } from "./outbox";
+import {
+  applyOptimisticWrite,
+  expenseEvent,
+  optimisticExpense,
+  optimisticSettlement,
+  rollback,
+  settlementEvent,
+  type Snapshot,
+} from "./optimistic";
 import { newId } from "@/lib/ids";
 import type {
   ActivityDto,
@@ -87,26 +97,51 @@ export function useGroup(id: string | undefined) {
 
 export interface LedgerEntry {
   kind: "expense" | "settlement";
+  /** Unique across both tables; the second half of the pagination key. */
+  id: string;
   date: string;
   expense?: ExpenseDto;
   settlement?: SettlementDto;
+  /**
+   * Written by the client before the server has confirmed it. Never sent by the
+   * API - the refetch that follows replaces the row and the flag with it.
+   */
+  pending?: boolean;
 }
 
-export function useGroupLedger(id: string | undefined, filters?: { q?: string; category?: string; person?: string }) {
+interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+/**
+ * The group ledger, paged.
+ *
+ * Infinite rather than a single fetch because the server only ever returns a
+ * page: without this the app silently showed the first forty entries and
+ * nothing else, which on an active group looks exactly like data loss.
+ */
+export function useGroupLedger(
+  id: string | undefined,
+  filters?: { q?: string; category?: string; person?: string },
+) {
   const params = new URLSearchParams();
   if (filters?.q) params.set("q", filters.q);
   if (filters?.category) params.set("category", filters.category);
   if (filters?.person) params.set("person", filters.person);
-  const suffix = params.toString() ? `?${params}` : "";
+  const base = params.toString();
 
-  return useQuery({
-    queryKey: [...keys.groupLedger(id ?? ""), suffix],
+  return useInfiniteQuery({
+    queryKey: [...keys.groupLedger(id ?? ""), base],
     enabled: Boolean(id),
-    queryFn: ({ signal }) =>
-      api.get<{ items: LedgerEntry[]; nextCursor: string | null }>(
-        `/api/groups/${id}/expenses${suffix}`,
-        signal,
-      ),
+    initialPageParam: null as string | null,
+    queryFn: ({ signal, pageParam }) => {
+      const next = new URLSearchParams(base);
+      if (pageParam) next.set("before", pageParam);
+      const suffix = next.toString() ? `?${next}` : "";
+      return api.get<Page<LedgerEntry>>(`/api/groups/${id}/expenses${suffix}`, signal);
+    },
+    getNextPageParam: (last) => last.nextCursor,
     staleTime: 5_000,
   });
 }
@@ -122,10 +157,15 @@ export function useGroupStats(id: string | undefined) {
 }
 
 export function useActivity() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: keys.activity,
-    queryFn: ({ signal }) =>
-      api.get<{ items: ActivityDto[]; nextCursor: string | null }>("/api/activity", signal),
+    initialPageParam: null as string | null,
+    queryFn: ({ signal, pageParam }) =>
+      api.get<Page<ActivityDto>>(
+        pageParam ? `/api/activity?before=${encodeURIComponent(pageParam)}` : "/api/activity",
+        signal,
+      ),
+    getNextPageParam: (last) => last.nextCursor,
     staleTime: 10_000,
   });
 }
@@ -241,12 +281,29 @@ function invalidateLedger(client: QueryClient, groupId?: string | null) {
 // Writes
 // ---------------------------------------------------------------------------
 
-export function useCreateExpense() {
+/**
+ * Files an expense.
+ *
+ * Optimistic: the row and every balance it moves are written to the cache
+ * before the request goes out, and the mutation carries the snapshot needed to
+ * undo that if the server refuses. The id is generated here rather than by the
+ * database, which is what makes the optimistic row and the confirmed row the
+ * same row - and what makes an offline replay idempotent.
+ *
+ * Being offline is not a failure: the mutation queues and resolves successfully,
+ * so the optimistic state stays exactly where it is.
+ */
+export function useCreateExpense(meId?: string) {
   const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (input: ExpenseInput & { id?: string }) => {
-      const id = input.id ?? newId("exp");
+  return useMutation<
+    ExpenseDto | null,
+    Error,
+    ExpenseInput & { id?: string },
+    { snapshot?: Snapshot }
+  >({
+    mutationFn: async (input) => {
+      const id = writeId(input, "exp");
       const body = { ...input, id };
 
       try {
@@ -268,7 +325,50 @@ export function useCreateExpense() {
         throw error;
       }
     },
-    onSuccess: (_expense, input) => {
+
+    onMutate: async (input) => {
+      // Without a viewer id there is no way to say whose balance moved, so the
+      // write stays pessimistic rather than guessing.
+      if (!meId) return {};
+      const id = writeId(input, "exp");
+
+      await client.cancelQueries({ queryKey: keys.dashboard });
+      if (input.groupId) {
+        await client.cancelQueries({ queryKey: ["group", input.groupId] });
+      }
+
+      const group = input.groupId
+        ? client.getQueryData<GroupDetailDto>(keys.group(input.groupId))
+        : undefined;
+
+      const currency = group?.currency ?? input.currency;
+      const expense = optimisticExpense({ ...input, id }, meId, currency);
+
+      return {
+        snapshot: applyOptimisticWrite(client, {
+          groupId: input.groupId,
+          currency,
+          entry: {
+            kind: "expense",
+            id: expense.id,
+            date: expense.date,
+            expense,
+            pending: true,
+          },
+          event: expenseEvent(expense),
+          meId,
+        }),
+      };
+    },
+
+    onError: (_error, _input, context) => rollback(client, context?.snapshot),
+
+    // A null result means the write is sitting in the outbox, not on the
+    // server. Refetching then would replace the optimistic row with a server
+    // response that does not contain it yet, and the expense would vanish from
+    // the screen while still queued. The flush invalidates once it lands.
+    onSettled: (expense, error, input) => {
+      if (expense === null && !error) return;
       invalidateLedger(client, input.groupId);
     },
   });
@@ -331,12 +431,13 @@ export function useDeleteExpense() {
   });
 }
 
-export function useCreateSettlement() {
+/** Records a payment, with the same optimistic treatment as an expense. */
+export function useCreateSettlement(meId?: string) {
   const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (input: SettlementInput) => {
-      const id = newId("stl");
+  return useMutation<SettlementDto | null, Error, SettlementInput, { snapshot?: Snapshot }>({
+    mutationFn: async (input) => {
+      const id = writeId(input, "stl");
       const body = { ...input, id };
       try {
         const result = await api.post<{ settlement: SettlementDto }>("/api/settlements", body);
@@ -355,8 +456,65 @@ export function useCreateSettlement() {
         throw error;
       }
     },
-    onSuccess: (_result, input) => invalidateLedger(client, input.groupId),
+
+    onMutate: async (input) => {
+      if (!meId) return {};
+
+      await client.cancelQueries({ queryKey: keys.dashboard });
+      if (input.groupId) {
+        await client.cancelQueries({ queryKey: ["group", input.groupId] });
+      }
+
+      const group = input.groupId
+        ? client.getQueryData<GroupDetailDto>(keys.group(input.groupId))
+        : undefined;
+
+      const currency = group?.currency ?? input.currency;
+      const settlement = optimisticSettlement(
+        { ...input, id: writeId(input, "stl") },
+        meId,
+        currency,
+      );
+
+      return {
+        snapshot: applyOptimisticWrite(client, {
+          groupId: input.groupId,
+          currency,
+          entry: {
+            kind: "settlement",
+            id: settlement.id,
+            date: settlement.date,
+            settlement,
+            pending: true,
+          },
+          event: settlementEvent(settlement),
+          meId,
+        }),
+      };
+    },
+
+    onError: (_error, _input, context) => rollback(client, context?.snapshot),
+    // As above: a queued write must not be reconciled against a server that has
+    // not seen it.
+    onSettled: (settlement, error, input) => {
+      if (settlement === null && !error) return;
+      invalidateLedger(client, input.groupId);
+    },
   });
+}
+
+/**
+ * One id per submission, stable across `onMutate` and `mutationFn`.
+ *
+ * React Query runs those in that order against the same variables object, so
+ * the id is minted once and stashed on it. Generating one in each place would
+ * file the optimistic row under an id the server never sees, leaving a
+ * duplicate on screen until the refetch cleared it - and would break the
+ * idempotency the offline outbox depends on.
+ */
+function writeId<T extends { id?: string }>(input: T, prefix: string): string {
+  if (!input.id) input.id = newId(prefix);
+  return input.id;
 }
 
 export function useDeleteSettlement() {
@@ -365,6 +523,26 @@ export function useDeleteSettlement() {
     mutationFn: ({ id }: { id: string; groupId?: string | null }) =>
       api.del(`/api/settlements/${id}`),
     onSuccess: (_result, variables) => invalidateLedger(client, variables.groupId),
+  });
+}
+
+/**
+ * Removes a receipt from an expense.
+ *
+ * Not queued for offline replay: the photo is still visible until the request
+ * lands, and pretending a removal happened while the bytes are still on the
+ * server is the wrong way to fail for something whose whole purpose is getting
+ * a card number off a shared screen.
+ */
+export function useDeleteAttachment(expenseId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string; groupId?: string | null }) =>
+      api.del(`/api/attachments/${id}`),
+    onSuccess: (_result, variables) => {
+      void client.invalidateQueries({ queryKey: keys.expense(expenseId) });
+      invalidateLedger(client, variables.groupId);
+    },
   });
 }
 

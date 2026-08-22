@@ -444,3 +444,46 @@ function round1(value: number): number {
 function formatGap(minor: bigint): string {
   return abs(minor).toString();
 }
+
+// ---------------------------------------------------------------------------
+// Currency-safe breakdown
+// ---------------------------------------------------------------------------
+
+export interface ConvertedBreakdown {
+  paid: { personId: string; amount: bigint }[];
+  owed: { personId: string; amount: bigint }[];
+}
+
+/**
+ * Converts an expense's payers and splits into the settlement currency such
+ * that each side sums to exactly `convertedAmount`.
+ *
+ * For a same-currency expense this is the identity, because the weights already
+ * sum to the total.
+ *
+ * Lives here rather than beside the read layer because the client needs it too:
+ * showing a new expense's effect on a balance before the server answers means
+ * doing this conversion locally, and doing it a second way would put the
+ * optimistic number and the real one on different arithmetic.
+ */
+export function convertedBreakdown(expense: {
+  convertedAmount: bigint;
+  payers: { personId: string; amount: bigint }[];
+  splits: { personId: string; amount: bigint }[];
+}): ConvertedBreakdown {
+  const activeSplits = expense.splits.filter((s) => s.amount !== 0n);
+
+  const paidAmounts = apportion(
+    expense.convertedAmount,
+    expense.payers.map((p) => Number(p.amount)),
+  );
+  const owedAmounts = apportion(
+    expense.convertedAmount,
+    activeSplits.map((s) => Number(s.amount)),
+  );
+
+  return {
+    paid: expense.payers.map((p, i) => ({ personId: p.personId, amount: paidAmounts[i] })),
+    owed: activeSplits.map((s, i) => ({ personId: s.personId, amount: owedAmounts[i] })),
+  };
+}

@@ -47,7 +47,7 @@ export function SettleUpSheet({
   directCurrency?: string;
 }) {
   const toast = useToast();
-  const settle = useCreateSettlement();
+  const settle = useCreateSettlement(meId);
 
   const currency = group?.currency ?? directCurrency ?? "USD";
 

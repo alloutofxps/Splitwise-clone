@@ -4,6 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpFromLine, Download, Plus, RefreshCw, Share, X } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
+import { readStored, writeStored } from "@/lib/client/storage";
 
 /**
  * Installation and updates.
@@ -146,10 +147,10 @@ function InstallPrompt() {
       (window.navigator as { standalone?: boolean }).standalone === true;
     if (installed) return;
 
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (readStored(DISMISSED_KEY)) return;
 
-    const visits = Number(localStorage.getItem(VISITS_KEY) ?? "0") + 1;
-    localStorage.setItem(VISITS_KEY, String(visits));
+    const visits = Number(readStored(VISITS_KEY) ?? "0") + 1;
+    writeStored(VISITS_KEY, String(visits));
     if (visits < VISITS_BEFORE_ASKING) return;
 
     const onBeforeInstall = (event: Event) => {
@@ -179,7 +180,7 @@ function InstallPrompt() {
 
   const dismiss = () => {
     haptic();
-    localStorage.setItem(DISMISSED_KEY, "1");
+    writeStored(DISMISSED_KEY, "1");
     setVisible(false);
   };
 
@@ -188,7 +189,7 @@ function InstallPrompt() {
     haptic();
     await deferred.prompt();
     const { outcome } = await deferred.userChoice;
-    if (outcome === "accepted") localStorage.setItem(DISMISSED_KEY, "1");
+    if (outcome === "accepted") writeStored(DISMISSED_KEY, "1");
     setVisible(false);
     setDeferred(null);
   };

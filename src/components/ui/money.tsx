@@ -120,7 +120,7 @@ export function AmountInput({
   }, [value, currency]);
 
   const handleChange = (next: string) => {
-    const masked = mask(next, decimals);
+    const masked = maskAmount(next, decimals);
     setText(masked);
     onChange(masked === "" ? null : parseAmount(masked, currency));
   };
@@ -193,8 +193,12 @@ export function AmountInput({
  * Allows one separator, caps the fraction at the currency's precision, and
  * strips everything else. A zero-decimal currency rejects the separator
  * outright, so there is no way to type "1200.5" worth of yen.
+ *
+ * Exported so the in-app numpad enforces exactly these rules. Two
+ * implementations of "what counts as a typed amount" would eventually disagree,
+ * and the place they would disagree is a currency nobody on the team uses.
  */
-function mask(input: string, decimals: number): string {
+export function maskAmount(input: string, decimals: number): string {
   let cleaned = input.replace(/[^\d.,]/g, "").replace(/,/g, ".");
 
   const first = cleaned.indexOf(".");

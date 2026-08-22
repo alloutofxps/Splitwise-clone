@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { readStored, removeStored, writeStored } from "@/lib/client/storage";
 
 type Theme = "light" | "dark" | "system";
 
@@ -26,7 +27,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolved, setResolved] = React.useState<"light" | "dark">("light");
 
   React.useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = readStored(STORAGE_KEY) as Theme | null;
     if (stored === "light" || stored === "dark") setThemeState(stored);
   }, []);
 
@@ -54,8 +55,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = React.useCallback((next: Theme) => {
     setThemeState(next);
-    if (next === "system") localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, next);
+    if (next === "system") removeStored(STORAGE_KEY);
+    else writeStored(STORAGE_KEY, next);
   }, []);
 
   const value = React.useMemo(

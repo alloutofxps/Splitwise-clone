@@ -12,6 +12,7 @@ import { z, ZodError, type ZodType } from "zod";
 import {
   ForbiddenError,
   NotFoundError,
+  RateLimitError,
   UnauthorizedError,
   ValidationError,
 } from "./identity";
@@ -75,6 +76,15 @@ export function route<Args extends unknown[]>(
       }
       if (error instanceof NotFoundError) {
         return errorResponse(404, { error: error.message, code: "not_found" });
+      }
+      if (error instanceof RateLimitError) {
+        return json(
+          { error: error.message, code: "rate_limited" },
+          {
+            status: 429,
+            headers: { "Retry-After": String(error.retryAfterSeconds) },
+          },
+        );
       }
       if (error instanceof ValidationError) {
         return errorResponse(422, {

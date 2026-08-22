@@ -6,6 +6,7 @@ import { ArrowLeftRight, Paperclip, MessageSquare, Receipt, Search, X } from "lu
 import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
+import { LoadMore } from "../ui/load-more";
 import { Button } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { ExpenseDetailSheet } from "../expense/detail-sheet";
@@ -48,7 +49,8 @@ export function GroupLedger({
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading } = useGroupLedger(groupId, { q: debounced || undefined });
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useGroupLedger(groupId, { q: debounced || undefined });
 
   if (isLoading) {
     return (
@@ -60,7 +62,7 @@ export function GroupLedger({
     );
   }
 
-  const items = data?.items ?? [];
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
   const groups = groupByDay(items);
 
   return (
@@ -95,7 +97,9 @@ export function GroupLedger({
         ) : (
           <>
             <p className="flex-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
-              {items.length > 0 ? `${items.length} entries` : "Nothing yet"}
+              {items.length > 0
+                ? `${items.length}${hasNextPage ? "+" : ""} entries`
+                : "Nothing yet"}
             </p>
             <button
               onClick={() => {
@@ -145,6 +149,7 @@ export function GroupLedger({
                         expense={entry.expense}
                         meId={meId}
                         people={people}
+                        pending={entry.pending}
                         onOpen={() => setOpenExpenseId(entry.expense!.id)}
                       />
                     </li>
@@ -154,6 +159,7 @@ export function GroupLedger({
                         settlement={entry.settlement}
                         meId={meId}
                         people={people}
+                        pending={entry.pending}
                       />
                     </li>
                   ) : null,
@@ -161,6 +167,12 @@ export function GroupLedger({
               </ul>
             </section>
           ))}
+          <LoadMore
+            hasMore={hasNextPage}
+            loading={isFetchingNextPage}
+            onLoad={() => void fetchNextPage()}
+            label="Load older entries"
+          />
         </div>
       )}
 
@@ -182,12 +194,15 @@ export function ExpenseRow({
   people,
   onOpen,
   showGroup,
+  pending,
 }: {
   expense: NonNullable<LedgerEntry["expense"]>;
   meId: string;
   people: Map<string, PersonDto>;
   onOpen: () => void;
   showGroup?: string;
+  /** Written optimistically; the server has not confirmed it yet. */
+  pending?: boolean;
 }) {
   const category = categoryById(expense.categoryId);
   const net = BigInt(expense.yourNet);
@@ -206,7 +221,14 @@ export function ExpenseRow({
         haptic();
         onOpen();
       }}
-      className="flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
+      className={cn(
+        "flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
+        // Faded rather than spinner-topped: the row is real and its numbers are
+        // already correct, so the only thing being signalled is that the server
+        // has not acknowledged it. A spinner would suggest it might not be
+        // there yet, which is the opposite of what we want people to believe.
+        pending && "opacity-60",
+      )}
     >
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md]"
@@ -259,16 +281,23 @@ function SettlementRow({
   settlement,
   meId,
   people,
+  pending,
 }: {
   settlement: NonNullable<LedgerEntry["settlement"]>;
   meId: string;
   people: Map<string, PersonDto>;
+  pending?: boolean;
 }) {
   const from = people.get(settlement.fromPersonId);
   const to = people.get(settlement.toPersonId);
 
   return (
-    <div className="flex items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5">
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5",
+        pending && "opacity-60",
+      )}
+    >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md] bg-positive-soft text-positive-text">
         <ArrowLeftRight className="size-[18px]" />
       </span>

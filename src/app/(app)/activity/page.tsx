@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState, Skeleton, cn } from "@/components/ui/primitives";
+import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { useActivity, useDashboard } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
@@ -32,7 +33,7 @@ import type { ActivityDto, PersonDto } from "@/lib/types";
  * looking for what changed.
  */
 export default function ActivityPage() {
-  const { data, isLoading } = useActivity();
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useActivity();
   const { data: dashboard } = useDashboard();
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
 
@@ -54,7 +55,7 @@ export default function ActivityPage() {
     );
   }
 
-  const items = data?.items ?? [];
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
@@ -80,6 +81,13 @@ export default function ActivityPage() {
           ))}
         </ul>
       )}
+
+      <LoadMore
+        hasMore={hasNextPage}
+        loading={isFetchingNextPage}
+        onLoad={() => void fetchNextPage()}
+        label="Load older activity"
+      />
 
       <ExpenseDetailSheet
         expenseId={openExpenseId}

@@ -134,6 +134,19 @@ export class NotFoundError extends Error {
   }
 }
 
+/**
+ * Thrown when a caller has used up an endpoint's allowance. Carries the number
+ * of seconds until the next attempt so the route wrapper can set Retry-After.
+ */
+export class RateLimitError extends Error {
+  retryAfterSeconds: number;
+  constructor(retryAfterSeconds: number, message = "Too many attempts. Wait a moment and try again.") {
+    super(message);
+    this.name = "RateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
 export class ValidationError extends Error {
   details: string[];
   constructor(details: string[] | string) {

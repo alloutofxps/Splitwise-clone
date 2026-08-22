@@ -53,8 +53,13 @@ function pick<T>(items: T[]): T {
  *
  * Roughly 48 x 62 x 90 = 268k combinations. That is deliberately small enough
  * to stay memorable and is not a secret on its own - codes are shared over
- * chat, and joining a group only lets you see that group. Brute-forcing is
- * blocked by rate limiting on the join endpoint rather than by entropy.
+ * chat, and joining a group only lets you see that group.
+ *
+ * Entropy is therefore not what protects them: `server/rate-limit.ts` is,
+ * applied to every endpoint that resolves a code (preview, join, friend-add,
+ * add-by-code). At 20 attempts per ten minutes a full sweep of the space takes
+ * years per source address. Read the caveats there before scaling the app to
+ * more than one process - the counters are per-process.
  */
 export function generateInviteCode(): string {
   const number = 10 + (randomBytes(2).readUInt16BE(0) % 90);
