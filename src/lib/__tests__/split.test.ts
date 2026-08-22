@@ -8,7 +8,7 @@ describe("apportion", () => {
   it("always sums to the total", () => {
     for (const total of [0n, 1n, 7n, 100n, 1000n, 99999n]) {
       for (const n of [1, 2, 3, 5, 7, 11]) {
-        const parts = apportion(total, new Array(n).fill(1));
+        const parts = apportion(total, Array.from({ length: n }, () => 1));
         expect(sum(parts)).toBe(total);
       }
     }

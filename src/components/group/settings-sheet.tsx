@@ -3,18 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, LogOut, Plus, Repeat, Trash2, UserPlus, X } from "lucide-react";
+import { Archive, Download, LogOut, Repeat, Trash2, UserPlus, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
-import { Button, Switch, cn, haptic } from "../ui/primitives";
+import { Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { RecurringSheet } from "./recurring-sheet";
-import {
-  useAddMember,
-  useRemoveMember,
-  useUpdateGroup,
-  keys,
-} from "@/lib/client/queries";
+import { useAddMember, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import type { GroupDetailDto } from "@/lib/types";
 
@@ -192,7 +187,8 @@ export function GroupSettingsSheet({
                       <button
                         onClick={() => {
                           haptic();
-                          remove(member.id, member.displayName);
+                          // Handled inside `remove`, which toasts either way.
+                          void remove(member.id, member.displayName);
                         }}
                         aria-label={`Remove ${member.displayName}`}
                         disabled={net !== 0n}
@@ -218,14 +214,14 @@ export function GroupSettingsSheet({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    add();
+                    void add();
                   }
                 }}
                 placeholder="Add someone by name"
                 className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
               />
               <button
-                onClick={add}
+                onClick={() => void add()}
                 disabled={!newName.trim() || addMember.isPending}
                 aria-label="Add member"
                 className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-surface-2 text-muted transition active:scale-90 disabled:opacity-40"
@@ -249,7 +245,11 @@ export function GroupSettingsSheet({
               description="Every expense and payment"
               onClick={() => {
                 haptic();
-                window.location.href = `/api/groups/${group.id}/export`;
+                // Absolute, and a full navigation rather than a router push:
+                // this is a file download, not a page.
+                window.location.assign(
+                  new URL(`/api/groups/${group.id}/export`, window.location.origin),
+                );
               }}
             />
             <ActionRow
@@ -300,7 +300,7 @@ export function GroupSettingsSheet({
       <ConfirmSheet
         open={confirmLeave}
         onClose={() => setConfirmLeave(false)}
-        onConfirm={leave}
+        onConfirm={() => void leave()}
         title={`Leave ${group.name}?`}
         description="Your past expenses stay in the group so everyone else's history still adds up."
         confirmLabel="Leave"
@@ -309,7 +309,7 @@ export function GroupSettingsSheet({
       <ConfirmSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={destroy}
+        onConfirm={() => void destroy()}
         title={`Delete ${group.name}?`}
         description="This removes every expense in the group for everyone in it, permanently. Archiving keeps the history instead."
         confirmLabel="Delete for everyone"

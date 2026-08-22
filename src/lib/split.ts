@@ -85,6 +85,11 @@ export interface SplitResult {
  * Ties (which are the common case for an equal split) are broken by
  * `priority` — lower sorts first — so the caller can put payers at the front.
  */
+/** `n` equal weights. Typed, unlike `new Array(n).fill(1)`, which is `any[]`. */
+function evenWeights(n: number): number[] {
+  return Array.from({ length: n }, () => 1);
+}
+
 export function apportion(
   total: bigint,
   weights: number[],
@@ -97,7 +102,7 @@ export function apportion(
   if (totalWeight <= 0) {
     // Degenerate input (all weights zero): fall back to an even hand-out so we
     // still return something that sums to `total`.
-    return apportion(total, new Array(n).fill(1), priority);
+    return apportion(total, evenWeights(n), priority);
   }
 
   const negative = total < 0n;
@@ -108,7 +113,7 @@ export function apportion(
   const SCALE = 1_000_000;
   const intWeights = weights.map((w) => BigInt(Math.round(Math.max(0, w) * SCALE)));
   const weightSum = sum(intWeights);
-  if (weightSum === 0n) return apportion(total, new Array(n).fill(1), priority);
+  if (weightSum === 0n) return apportion(total, evenWeights(n), priority);
 
   const base: bigint[] = [];
   const remainders: bigint[] = [];
@@ -180,7 +185,13 @@ export function resolveSplit(input: SplitInput): SplitResult {
     case "ITEMIZED":
       return withErrors(itemizedSplit(total, participants, input.items ?? [], payerIds), errors);
     default:
-      return { splits: [], errors: [`Unknown split mode "${mode}".`] };
+      // Unreachable while `mode` is a SplitMode, but the API takes this value
+      // from a request body: a client sending a mode this build does not know
+      // must get an error rather than an empty split that silently balances.
+      return {
+        splits: [],
+        errors: [`Unknown split mode "${String(mode)}".`],
+      };
   }
 }
 

@@ -218,6 +218,10 @@ describe("aggregateNet", () => {
 
 // ---------------------------------------------------------------------------
 
+/** JSON.stringify throws on BigInt, so amounts are compared as strings. */
+const bigintSafe = (_key: string, value: unknown): unknown =>
+  typeof value === "bigint" ? value.toString() : value;
+
 describe("applyEvent", () => {
   const sorted = (edges: { fromPersonId: string; toPersonId: string; amount: bigint }[]) =>
     [...edges].sort((a, b) =>
@@ -272,18 +276,12 @@ describe("applyEvent", () => {
       expense("e1", [["alice", 3000n]], [["alice", 1000n], ["bob", 2000n]]),
     ]);
     const netBefore = new Map(before.net);
-    const pairwiseBefore = JSON.stringify(sorted(before.pairwise), (_k, v) =>
-      typeof v === "bigint" ? v.toString() : v,
-    );
+    const pairwiseBefore = JSON.stringify(sorted(before.pairwise), bigintSafe);
 
     applyEvent(before, expense("e2", [["bob", 900n]], [["alice", 900n]]));
 
     expect([...before.net]).toEqual([...netBefore]);
-    expect(
-      JSON.stringify(sorted(before.pairwise), (_k, v) =>
-        typeof v === "bigint" ? v.toString() : v,
-      ),
-    ).toBe(pairwiseBefore);
+    expect(JSON.stringify(sorted(before.pairwise), bigintSafe)).toBe(pairwiseBefore);
   });
 
   /**

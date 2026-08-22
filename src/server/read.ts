@@ -342,7 +342,7 @@ export function activityDto(
   },
   lastReadAt: Date | null,
 ): ActivityDto {
-  let data: Record<string, unknown> = {};
+  let data: Record<string, unknown>;
   try {
     data = JSON.parse(row.data) as Record<string, unknown>;
   } catch {

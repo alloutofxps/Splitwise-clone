@@ -99,7 +99,7 @@ export function OfflineBanner() {
 
                 {online && queue.length > 0 ? (
                   <button
-                    onClick={retry}
+                    onClick={() => void retry()}
                     disabled={retrying}
                     className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-bold text-brand transition active:scale-95 disabled:opacity-50"
                   >

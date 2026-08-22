@@ -245,7 +245,7 @@ function InstallPrompt() {
               </ol>
             ) : (
               <button
-                onClick={install}
+                onClick={() => void install()}
                 className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[--radius-md] bg-brand text-[15px] font-semibold text-white transition active:scale-[0.98]"
               >
                 <Download className="size-[18px]" />

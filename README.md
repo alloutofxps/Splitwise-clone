@@ -90,8 +90,13 @@ to sign in as the demo user.
 ```bash
 npm test                      # unit tests for the money and split engines
 npm run typecheck
+npm run lint
 node scripts/smoke.mjs        # end-to-end API test against a running server
 ```
+
+Lint runs clean of errors. The warnings it does report are all
+`react-hooks/set-state-in-effect`, and `eslint.config.mjs` explains site by site
+why each is deliberate rather than pending.
 
 ### Configuration
 

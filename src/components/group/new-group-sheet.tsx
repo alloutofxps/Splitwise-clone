@@ -110,7 +110,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             fullWidth
             disabled={!name.trim()}
             loading={createGroup.isPending}
-            onClick={submit}
+            onClick={() => void submit()}
           >
             Create group
           </Button>

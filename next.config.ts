@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "12mb" },
   },
+  // `async` with nothing to await, because `NextConfig` types `headers` as
+  // returning a promise and this is the shape Next's own documentation uses.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async headers() {
     return [
       {

@@ -142,7 +142,7 @@ export function SettleUpSheet({
             fullWidth
             disabled={!amount || amount <= 0n}
             loading={settle.isPending}
-            onClick={submit}
+            onClick={() => void submit()}
           >
             Record this payment
           </Button>
@@ -439,7 +439,7 @@ function PayThem({
                 </a>
               ) : (
                 <button
-                  onClick={() => copy(entry.value)}
+                  onClick={() => void copy(entry.value)}
                   className="flex w-full items-center gap-3 rounded-[--radius-md] bg-surface-2 px-3 py-2.5 text-left transition active:scale-[0.985]"
                 >
                   <span className="text-[16px]">{kind?.emoji ?? "💸"}</span>

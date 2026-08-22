@@ -107,7 +107,10 @@ export const GET = route(async (_request: Request, { params }: Params) => {
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
   const filename = `${slugify(group.name)}-divvy-${new Date().toISOString().slice(0, 10)}.csv`;
 
-  return new Response(`﻿${csv}`, {
+  // Written as an escape rather than a literal: an invisible U+FEFF sitting at
+  // the start of a template string is indistinguishable from a stray paste, and
+  // the next person to tidy it away would break Excel without knowing why.
+  return new Response(`\uFEFF${csv}`, {
     headers: {
       // The BOM makes Excel open UTF-8 correctly instead of mangling accents.
       "Content-Type": "text/csv; charset=utf-8",

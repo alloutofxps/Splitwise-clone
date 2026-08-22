@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { BarChart3, Table2 } from "lucide-react";
-import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
 import { EmptyState, Segmented, Skeleton, cn } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";

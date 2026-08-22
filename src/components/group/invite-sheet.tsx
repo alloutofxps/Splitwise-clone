@@ -111,7 +111,7 @@ export function InviteSheet({
             variant="primary"
             size="lg"
             fullWidth
-            onClick={share}
+            onClick={() => void share()}
             icon={<Share2 className="size-[18px]" />}
           >
             Share invite
@@ -121,14 +121,14 @@ export function InviteSheet({
             <Button
               variant="secondary"
               fullWidth
-              onClick={() => copy(code)}
+              onClick={() => void copy(code)}
               icon={
                 copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />
               }
             >
               {copied ? "Copied" : "Copy code"}
             </Button>
-            <Button variant="secondary" fullWidth onClick={() => copy(url)}>
+            <Button variant="secondary" fullWidth onClick={() => void copy(url)}>
               Copy link
             </Button>
           </div>
@@ -144,7 +144,7 @@ export function InviteSheet({
             </span>
           </p>
           <button
-            onClick={rotate}
+            onClick={() => void rotate()}
             disabled={rotating}
             className="mt-2.5 flex items-center gap-1.5 text-[12px] font-bold text-brand transition active:scale-95 disabled:opacity-50"
           >

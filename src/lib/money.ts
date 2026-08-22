@@ -151,7 +151,10 @@ export function parseAmount(input: string, code: string): bigint | null {
 
   let negative = false;
   if (s.startsWith("-")) negative = true;
-  s = s.replace(/[+\-]/g, "");
+  // `-` last in the class is a literal, so no escape is needed here. It stays
+  // escaped on line 149, where it sits between `,` and `+` and would otherwise
+  // read as a range.
+  s = s.replace(/[+-]/g, "");
   if (!s) return null;
 
   const decimalSepIndex = findDecimalSeparator(s, decimalsFor(code));

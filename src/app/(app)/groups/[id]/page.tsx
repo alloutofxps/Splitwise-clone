@@ -4,9 +4,9 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, Plus, Settings2, Share2 } from "lucide-react";
-import { Amount, BalanceHeadline } from "@/components/ui/money";
-import { Avatar, AvatarStack } from "@/components/ui/avatar";
-import { Button, EmptyState, Segmented, Skeleton, cn, haptic } from "@/components/ui/primitives";
+import { BalanceHeadline } from "@/components/ui/money";
+import { AvatarStack } from "@/components/ui/avatar";
+import { Button, Segmented, Skeleton, haptic } from "@/components/ui/primitives";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
 import { GroupCharts } from "@/components/group/charts";
@@ -162,7 +162,6 @@ export default function GroupPage() {
           {tab === "expenses" ? (
             <GroupLedger
               groupId={groupId}
-              currency={group.currency}
               meId={meId}
               people={people}
               onAdd={() => composer.open(groupId)}

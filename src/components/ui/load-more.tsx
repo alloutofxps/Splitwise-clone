@@ -29,12 +29,20 @@ export function LoadMore({
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
-  // Held in a ref so the observer does not need re-creating every time the
+  // Held in refs so the observer does not need re-creating every time the
   // pending state flips, which would tear down and rebuild it mid-scroll.
+  //
+  // Written in an effect rather than during render: a render can be thrown away
+  // and re-run under concurrent React, and a ref mutated by the discarded one
+  // keeps the value it was given. Committed renders are the only ones that may
+  // touch a ref.
   const load = React.useRef(onLoad);
-  load.current = onLoad;
   const ready = React.useRef(false);
-  ready.current = hasMore && !loading;
+
+  React.useEffect(() => {
+    load.current = onLoad;
+    ready.current = hasMore && !loading;
+  });
 
   React.useEffect(() => {
     const node = ref.current;

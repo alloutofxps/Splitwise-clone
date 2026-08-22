@@ -19,6 +19,12 @@ export default function OfflinePage() {
         you have already opened still works, and anything you add now will sync
         when you reconnect.
       </p>
+      {/*
+        A plain anchor rather than next/link, deliberately: a client-side
+        navigation would be served by the same service worker that just failed
+        to reach the network. A real page load is the retry.
+      */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
         href="/"
         className="mx-auto mt-6 flex h-11 items-center justify-center rounded-[--radius-md] bg-brand px-5 text-[15px] font-semibold text-white"

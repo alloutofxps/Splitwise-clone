@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Camera, FileText, ImagePlus, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
-import { Button, cn, haptic } from "../ui/primitives";
+import { Button, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 
 export interface PendingAttachment {
@@ -88,7 +88,7 @@ export function ReceiptPicker({
           // Opens the camera directly on a phone rather than the file browser.
           capture="environment"
           className="hidden"
-          onChange={(event) => handleFiles(event.target.files)}
+          onChange={(event) => void handleFiles(event.target.files)}
         />
         <input
           ref={libraryRef}
@@ -96,7 +96,7 @@ export function ReceiptPicker({
           accept="image/*,application/pdf"
           multiple
           className="hidden"
-          onChange={(event) => handleFiles(event.target.files)}
+          onChange={(event) => void handleFiles(event.target.files)}
         />
 
         <div className="flex gap-2.5">

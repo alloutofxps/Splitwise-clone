@@ -4,7 +4,6 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { ArrowLeftRight, Paperclip, MessageSquare, Receipt, Search, X } from "lucide-react";
 import { Amount } from "../ui/money";
-import { Avatar } from "../ui/avatar";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
 import { LoadMore } from "../ui/load-more";
 import { Button } from "../ui/primitives";
@@ -25,16 +24,18 @@ import type { PersonDto } from "@/lib/types";
  *
  * Each row leads with the one number the reader wants: what *they* got out of
  * it. Not the total - the total is secondary information on a shared bill.
+ *
+ * No group currency is passed in: every row renders in the currency it was
+ * entered in, because a trip can hold a euro dinner and a rupee taxi, and
+ * relabelling either with the group's settlement currency would be a lie.
  */
 export function GroupLedger({
   groupId,
-  currency,
   meId,
   people,
   onAdd,
 }: {
   groupId: string;
-  currency: string;
   meId: string;
   people: Map<string, PersonDto>;
   onAdd: () => void;

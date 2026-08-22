@@ -84,7 +84,7 @@ export function JoinSheet({
     let cancelled = false;
     setChecking(true);
 
-    const timer = setTimeout(async () => {
+    const look = async () => {
       try {
         const result = await api.get<Preview>(`/api/invite/${encodeURIComponent(normalized)}`);
         if (!cancelled) {
@@ -99,7 +99,13 @@ export function JoinSheet({
       } finally {
         if (!cancelled) setChecking(false);
       }
-    }, 350);
+    };
+
+    // `setTimeout` wants a void-returning callback, and handing it an async
+    // function means nothing is holding the promise: every outcome is already
+    // handled inside `look`, so `void` says that rather than leaving it to be
+    // read as an oversight.
+    const timer = setTimeout(() => void look(), 350);
 
     return () => {
       cancelled = true;
@@ -144,7 +150,7 @@ export function JoinSheet({
       title="Join with a code"
       footer={
         preview ? (
-          <Button variant="primary" size="lg" fullWidth loading={joining} onClick={join}>
+          <Button variant="primary" size="lg" fullWidth loading={joining} onClick={() => void join()}>
             {preview.kind === "group"
               ? claimId
                 ? `Join as ${preview.group.unclaimedMembers.find((m) => m.id === claimId)?.displayName}`

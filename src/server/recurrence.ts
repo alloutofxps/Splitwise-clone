@@ -85,7 +85,7 @@ interface TemplateEntry {
 
 function parseTemplate(value: string): TemplateEntry[] {
   try {
-    const parsed = JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? (parsed as TemplateEntry[]) : [];
   } catch {
     return [];

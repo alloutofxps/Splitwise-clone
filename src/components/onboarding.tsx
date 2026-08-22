@@ -18,7 +18,7 @@ import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
-import { AVATAR_COLORS, colorForName, initials } from "@/lib/avatar";
+import { colorForName, initials } from "@/lib/avatar";
 import { CURRENCIES } from "@/lib/money";
 import type { MeDto } from "@/lib/types";
 
@@ -247,7 +247,7 @@ function ProfileStep({
         <input
           value={name}
           onChange={(event) => setName(event.target.value.slice(0, 60))}
-          onKeyDown={(event) => event.key === "Enter" && submit()}
+          onKeyDown={(event) => void (event.key === "Enter" && submit())}
           placeholder="Priya"
           autoFocus
           autoComplete="given-name"
@@ -283,7 +283,7 @@ function ProfileStep({
           fullWidth
           loading={saving}
           disabled={!canSubmit}
-          onClick={submit}
+          onClick={() => void submit()}
         >
           Continue
         </Button>
@@ -376,7 +376,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
         size="md"
         fullWidth
         className="mt-3"
-        onClick={copy}
+        onClick={() => void copy()}
         icon={copied ? <Check className="size-[18px]" /> : <Copy className="size-[18px]" />}
       >
         {copied ? "Copied" : "Copy key"}
@@ -485,7 +485,7 @@ function RestoreStep({ onBack }: { onBack: () => void }) {
           fullWidth
           loading={busy}
           disabled={!key.trim()}
-          onClick={submit}
+          onClick={() => void submit()}
         >
           Restore my account
         </Button>

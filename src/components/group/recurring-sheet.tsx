@@ -142,7 +142,7 @@ export function RecurringSheet({
 
                     <div className="flex shrink-0 gap-1">
                       <button
-                        onClick={() => toggle(recurrence.id, !recurrence.active)}
+                        onClick={() => void toggle(recurrence.id, !recurrence.active)}
                         aria-label={recurrence.active ? "Pause" : "Resume"}
                         className="flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2"
                       >
@@ -153,7 +153,7 @@ export function RecurringSheet({
                         )}
                       </button>
                       <button
-                        onClick={() => remove(recurrence.id)}
+                        onClick={() => void remove(recurrence.id)}
                         aria-label="Stop repeating"
                         className="flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
                       >
@@ -173,7 +173,7 @@ export function RecurringSheet({
         onClose={() => setCreating(false)}
         group={group}
         meId={meId}
-        onCreated={refresh}
+        onCreated={() => void refresh()}
       />
     </>
   );
@@ -263,7 +263,7 @@ function NewRecurrenceSheet({
           fullWidth
           loading={saving}
           disabled={!description.trim() || !amount || amount <= 0n}
-          onClick={submit}
+          onClick={() => void submit()}
         >
           Start repeating
         </Button>

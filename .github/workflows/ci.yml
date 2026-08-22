@@ -37,6 +37,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Errors fail the build; the handful of warnings are documented in
+      # eslint.config.mjs and are deliberate, so they are visible in the log
+      # without blocking.
+      - name: Lint
+        run: npm run lint
+
       - name: Unit tests
         run: npm test
 

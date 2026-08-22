@@ -418,7 +418,7 @@ export function ExpenseDetailSheet({
       <ConfirmSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={remove}
+        onConfirm={() => void remove()}
         loading={deleteExpense.isPending}
         title="Delete this expense?"
         description="Everyone's balance in this group will be recalculated without it."
@@ -428,7 +428,7 @@ export function ExpenseDetailSheet({
       <ConfirmSheet
         open={Boolean(confirmRemoveReceipt)}
         onClose={() => setConfirmRemoveReceipt(null)}
-        onConfirm={removeReceipt}
+        onConfirm={() => void removeReceipt()}
         loading={deleteAttachment.isPending}
         title="Remove this receipt?"
         description="The image is deleted from the server. The expense and everyone's balances stay exactly as they are."

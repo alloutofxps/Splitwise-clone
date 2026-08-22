@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Copy,
-  Download,
   Heart,
   KeyRound,
   LogOut,
@@ -227,13 +226,13 @@ export default function AccountPage() {
         open={payments}
         onClose={() => setPayments(false)}
         methods={me.paymentMethods}
-        onChanged={() => client.invalidateQueries({ queryKey: keys.dashboard })}
+        onChanged={() => void client.invalidateQueries({ queryKey: keys.dashboard })}
       />
 
       <ConfirmSheet
         open={confirmSignOut}
         onClose={() => setConfirmSignOut(false)}
-        onConfirm={signOut}
+        onConfirm={() => void signOut()}
         title="Sign out on this device?"
         description="Your data stays on the server. You will need your recovery key to get back in — make sure you have it saved."
         confirmLabel="Sign out"
@@ -349,7 +348,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
               variant={copied ? "positive" : "primary"}
               fullWidth
               className="mt-3"
-              onClick={copy}
+              onClick={() => void copy()}
               icon={copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />}
             >
               {copied ? "Copied" : "Copy key"}
@@ -380,7 +379,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
               fullWidth
               className="mt-5"
               loading={busy}
-              onClick={rotate}
+              onClick={() => void rotate()}
             >
               Generate a new recovery key
             </Button>
@@ -464,7 +463,7 @@ function PaymentMethodsSheet({
                     </span>
                   </span>
                   <button
-                    onClick={() => remove(method.id)}
+                    onClick={() => void remove(method.id)}
                     aria-label={`Remove ${entry?.label ?? method.kind}`}
                     className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
                   >
@@ -504,7 +503,7 @@ function PaymentMethodsSheet({
             <input
               value={value}
               onChange={(event) => setValue(event.target.value.slice(0, 140))}
-              onKeyDown={(event) => event.key === "Enter" && add()}
+              onKeyDown={(event) => void (event.key === "Enter" && add())}
               placeholder={selected.placeholder}
               autoCapitalize="none"
               autoCorrect="off"
@@ -512,7 +511,7 @@ function PaymentMethodsSheet({
               className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
             />
             <button
-              onClick={add}
+              onClick={() => void add()}
               disabled={!value.trim() || busy}
               aria-label="Add payment method"
               className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-brand text-white transition active:scale-90 disabled:opacity-40"

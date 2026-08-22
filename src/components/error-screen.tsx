@@ -42,7 +42,16 @@ export function ErrorScreen({
         <Button variant="primary" icon={<RefreshCw size={16} />} onClick={reset}>
           Try again
         </Button>
-        <Button variant="secondary" onClick={() => window.location.assign("/")}>
+        {/*
+          A full page load, not a router push: the React tree is the thing that
+          just broke, and a client-side navigation would reuse it. The URL is
+          built absolute because Next patches history and resolves a bare "/"
+          against the router's idea of the current route rather than the origin.
+        */}
+        <Button
+          variant="secondary"
+          onClick={() => window.location.assign(window.location.origin)}
+        >
           Go home
         </Button>
       </div>

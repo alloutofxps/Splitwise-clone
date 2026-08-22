@@ -12,7 +12,6 @@ import {
   Users,
   Receipt,
 } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
 import { EmptyState, Skeleton, cn } from "@/components/ui/primitives";
 import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
@@ -191,7 +190,7 @@ function describe(
   const data = activity.data;
   const amount =
     data.amount && data.currency
-      ? formatMoney(BigInt(data.amount as string), data.currency as string)
+      ? formatMoney(BigInt(data.amount), data.currency)
       : null;
 
   const strong = (text: string) => <strong className="font-semibold">{text}</strong>;
@@ -210,7 +209,7 @@ function describe(
       };
 
     case "expense.updated": {
-      const changes = Array.isArray(data.changes) ? (data.changes as string[]) : [];
+      const changes = Array.isArray(data.changes) ? (data.changes) : [];
       return {
         icon: <Pencil className="size-[16px]" />,
         tone: "neutral",
@@ -267,9 +266,14 @@ function describe(
         sentence: (
           <>
             {strong(actorName)} commented on {strong(String(data.description ?? "an expense"))}
-            {data.preview ? (
+            {/*
+              `ActivityData` is an open bag of `unknown`, so this is checked
+              rather than coerced: a payload shape that changed under us should
+              drop the quote line, not render "[object Object]" inside quotes.
+            */}
+            {typeof data.preview === "string" && data.preview ? (
               <span className="mt-0.5 block truncate text-[13px] text-muted">
-                &ldquo;{String(data.preview)}&rdquo;
+                &ldquo;{data.preview}&rdquo;
               </span>
             ) : null}
           </>

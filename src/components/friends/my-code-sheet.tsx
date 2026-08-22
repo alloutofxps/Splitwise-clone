@@ -72,7 +72,7 @@ export function MyCodeSheet({
             variant="primary"
             size="lg"
             fullWidth
-            onClick={share}
+            onClick={() => void share()}
             icon={<Share2 className="size-[18px]" />}
           >
             Share my code
@@ -80,7 +80,7 @@ export function MyCodeSheet({
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => copy(me.inviteCode)}
+            onClick={() => void copy(me.inviteCode)}
             icon={copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />}
           >
             {copied ? "Copied" : "Copy code"}

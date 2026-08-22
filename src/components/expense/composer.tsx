@@ -242,7 +242,7 @@ export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerPro
               fullWidth
               disabled={!canSave}
               loading={saving}
-              onClick={save}
+              onClick={() => void save()}
             >
               {expense ? "Save changes" : "Add expense"}
             </Button>

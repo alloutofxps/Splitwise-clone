@@ -61,7 +61,9 @@ export default function JoinPage() {
   React.useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
+    // Both branches settle inside, so nothing is left to reject; `void` says
+    // the promise is deliberately unheld rather than forgotten.
+    void Promise.all([
       api
         .get<GroupPreview | PersonPreview>(`/api/invite/${encodeURIComponent(code)}`)
         .catch((caught: unknown) => {
@@ -281,7 +283,7 @@ export default function JoinPage() {
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value.slice(0, 60))}
-                  onKeyDown={(event) => event.key === "Enter" && createAndJoin()}
+                  onKeyDown={(event) => void (event.key === "Enter" && createAndJoin())}
                   placeholder="Priya"
                   autoFocus
                   enterKeyHint="go"
@@ -304,7 +306,7 @@ export default function JoinPage() {
           fullWidth
           loading={joining}
           disabled={!me && !name.trim()}
-          onClick={() => (me ? join(claimId) : createAndJoin())}
+          onClick={() => void (me ? join(claimId) : createAndJoin())}
         >
           {preview.kind === "group"
             ? claimId
