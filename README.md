@@ -64,7 +64,8 @@ upload · comments · full activity feed · ★ search across every group ·
 catch up on months nobody opened the app.
 
 **Reporting** — ★ spending by month, by category and by person, with a table
-view of the same numbers.
+view of the same numbers · ★ budgets, scoped to a group and/or a category, and
+counted against *your share* rather than the group's total.
 
 **Everywhere** — installable PWA for iOS and Android · works offline, including
 adding expenses · a built-in amount keypad, so the split preview is never hidden

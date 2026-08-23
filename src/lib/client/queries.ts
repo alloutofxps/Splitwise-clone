@@ -558,6 +558,30 @@ export function useAddComment(expenseId: string) {
   });
 }
 
+/**
+ * Sets or clears a budget.
+ *
+ * PUT rather than POST because a budget is identified by its *scope* - the
+ * person, group, category and period together - not by a row id. Setting one
+ * twice for the same scope replaces it, and an amount of zero removes it, which
+ * is what the delete affordance sends.
+ */
+export function useSetBudget() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      groupId?: string | null;
+      categoryId?: string | null;
+      amount: string;
+      currency: string;
+      period: BudgetDto["period"];
+    }) => api.put("/api/budgets", input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.budgets });
+    },
+  });
+}
+
 export function useCreateGroup() {
   const client = useQueryClient();
   return useMutation({

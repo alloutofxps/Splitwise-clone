@@ -13,6 +13,7 @@ import {
   Moon,
   Plus,
   Sun,
+  Target,
   TriangleAlert,
   Wallet,
   X,
@@ -23,8 +24,9 @@ import { Button, Segmented, Skeleton, cn, haptic } from "@/components/ui/primiti
 import { useToast } from "@/components/ui/toast";
 import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
+import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { useTheme } from "@/components/theme";
-import { useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
+import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import { clear as clearOutbox, pending } from "@/lib/client/outbox";
 import { PAYMENT_KINDS } from "@/lib/payments";
@@ -33,6 +35,7 @@ import type { PaymentMethodDto } from "@/lib/types";
 
 export default function AccountPage() {
   const { data, isLoading } = useDashboard();
+  const { data: budgets } = useBudgets();
   const { theme, setTheme } = useTheme();
   const toast = useToast();
   const router = useRouter();
@@ -44,6 +47,7 @@ export default function AccountPage() {
   const [myCode, setMyCode] = React.useState(false);
   const [recovery, setRecovery] = React.useState(false);
   const [payments, setPayments] = React.useState(false);
+  const [budgetsOpen, setBudgets] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -160,6 +164,16 @@ export default function AccountPage() {
             }
             onClick={() => setPayments(true)}
           />
+          <Row
+            icon={<Target className="size-[18px]" />}
+            label="Budgets"
+            value={
+              budgets && budgets.length > 0
+                ? `${budgets.length} set`
+                : "None yet"
+            }
+            onClick={() => setBudgets(true)}
+          />
         </div>
 
         <div className="mt-3 rounded-[--radius-lg] border border-line bg-surface p-3.5">
@@ -219,6 +233,8 @@ export default function AccountPage() {
       />
 
       <MyCodeSheet open={myCode} onClose={() => setMyCode(false)} me={me} />
+
+      <BudgetsSheet open={budgetsOpen} onClose={() => setBudgets(false)} />
 
       <RecoverySheet open={recovery} onClose={() => setRecovery(false)} />
 
