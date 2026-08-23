@@ -12,7 +12,8 @@ import { SplitEditor } from "./split-editor";
 import { CategoryPicker } from "./category-picker";
 import { PayerPicker } from "./payer-picker";
 import { CurrencyPicker } from "./currency-picker";
-import { ReceiptPicker, type PendingAttachment } from "./receipt-picker";
+import { ReceiptPicker } from "./receipt-picker";
+import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
 import { useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
 import { convert, toDecimalString } from "@/lib/money";
@@ -43,6 +44,16 @@ export interface ComposerProps {
   groupId?: string;
   /** Editing an existing expense rather than creating one. */
   expense?: ExpenseDto;
+  /**
+   * Receipts the composer should open with, from the OS share sheet.
+   *
+   * Applied to a new expense only. Sharing a photo into an *edit* would be an
+   * odd thing to have meant, and silently attaching it to whichever expense
+   * happened to be open would be worse than ignoring it.
+   */
+  initialAttachments?: PendingAttachment[];
+  /** A description to start from, e.g. the text that came with a share. */
+  initialDescription?: string;
 }
 
 interface Draft {
@@ -61,7 +72,14 @@ interface Draft {
   exchangeRate: string;
 }
 
-export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerProps) {
+export function ExpenseComposer({
+  open,
+  onClose,
+  groupId,
+  expense,
+  initialAttachments,
+  initialDescription,
+}: ComposerProps) {
   const { data } = useDashboard();
   const toast = useToast();
   // `data?.me` is undefined on the very first render, before the dashboard has
@@ -96,12 +114,21 @@ export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerPro
   // is built once, when it should be.
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
-    setDraft(
-      expense
-        ? draftFromExpense(expense)
-        : freshDraft(me.id, groupId ?? null, me.defaultCurrency, data),
-    );
-    setPanel(null);
+    if (expense) {
+      setDraft(draftFromExpense(expense));
+      setPanel(null);
+      return;
+    }
+
+    const draft = freshDraft(me.id, groupId ?? null, me.defaultCurrency, data);
+    setDraft({
+      ...draft,
+      description: initialDescription?.trim() || draft.description,
+      attachments: initialAttachments ?? draft.attachments,
+    });
+    // Open straight onto the receipts if that is what was shared, so the person
+    // can see the photo actually arrived rather than having to go looking.
+    setPanel(initialAttachments && initialAttachments.length > 0 ? "receipt" : null);
   });
 
   if (!data || !me || !draft) {

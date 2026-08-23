@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpFromLine, Download, Plus, RefreshCw, Share, X } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
 import { readStored, writeStored } from "@/lib/client/storage";
+import { requestPersistence } from "@/lib/client/persistence";
+import { PrivacyScreen } from "./privacy-screen";
 
 /**
  * Installation and updates.
@@ -33,7 +35,9 @@ export function PwaProvider() {
   return (
     <>
       <ServiceWorkerManager />
+      <StoragePersistence />
       <InstallPrompt />
+      <PrivacyScreen />
     </>
   );
 }
@@ -59,7 +63,14 @@ function ServiceWorkerManager() {
 
     const register = async () => {
       try {
-        registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        // The build id in the query string is what makes an update detectable:
+        // the browser compares the worker script byte for byte, and a script at
+        // a URL that never changes is never re-fetched past its cache lifetime.
+        // The worker reads it back out of its own location to name its caches.
+        registration = await navigator.serviceWorker.register(
+          `/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}`,
+          { scope: "/" },
+        );
 
         // A worker already waiting means the page was loaded from the old one.
         if (registration.waiting) setWaiting(registration.waiting);
@@ -129,6 +140,33 @@ function ServiceWorkerManager() {
       </motion.div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Asks the browser not to evict us.
+ *
+ * The offline outbox holds writes that exist nowhere else until the network
+ * returns, so an eviction under storage pressure loses an expense the user
+ * typed and watched appear. This is the only lever the platform offers.
+ *
+ * Asked on every launch rather than once: Chrome grants it only after the app
+ * clears an engagement bar that a first-run visitor has not, and being
+ * installed is itself part of that bar - so the run that would have been
+ * refused in week one succeeds in week two. There is no prompt in Chrome or
+ * Safari, and the one Firefox shows is not repeated once answered.
+ *
+ * Nothing renders and nothing is reported. A refusal makes eviction possible,
+ * not imminent, and an app that nagged about a permission the user cannot
+ * usefully act on would be worse than one that asks quietly and moves on.
+ */
+function StoragePersistence() {
+  React.useEffect(() => {
+    void requestPersistence();
+  }, []);
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------

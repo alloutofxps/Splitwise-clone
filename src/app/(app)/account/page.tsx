@@ -6,6 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Copy,
+  Database,
+  Download,
+  EyeOff,
   Heart,
   KeyRound,
   LogOut,
@@ -20,7 +23,7 @@ import {
 } from "lucide-react";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { Avatar } from "@/components/ui/avatar";
-import { Button, Segmented, Skeleton, cn, haptic } from "@/components/ui/primitives";
+import { Button, Segmented, Skeleton, Switch, cn, haptic } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
@@ -29,6 +32,8 @@ import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import { clear as clearOutbox, pending } from "@/lib/client/outbox";
+import { usePrivacyScreenSetting } from "@/components/privacy-screen";
+import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
 import { AVATAR_COLORS } from "@/lib/avatar";
 import type { PaymentMethodDto } from "@/lib/types";
@@ -41,6 +46,7 @@ export default function AccountPage() {
   const router = useRouter();
   const client = useQueryClient();
   const updateProfile = useUpdateProfile();
+  const [privacyScreen, setPrivacyScreen] = usePrivacyScreenSetting();
 
   const [name, setName] = React.useState("");
   const [currencyOpen, setCurrencyOpen] = React.useState(false);
@@ -176,6 +182,25 @@ export default function AccountPage() {
           />
         </div>
 
+        <div className="mt-1.5 flex items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3">
+          <span className="shrink-0 text-muted">
+            <EyeOff className="size-[18px]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-text">Privacy screen</span>
+            <span className="mt-0.5 block text-[12px] leading-snug text-subtle">
+              Cover the screen when you switch apps, so balances stay out of the
+              app switcher. It is a curtain, not a lock — anyone holding an
+              unlocked phone can still open Divvy.
+            </span>
+          </span>
+          <Switch
+            checked={privacyScreen}
+            onChange={setPrivacyScreen}
+            label="Cover the screen when the app is in the background"
+          />
+        </div>
+
         <div className="mt-3 rounded-[--radius-lg] border border-line bg-surface p-3.5">
           <p className="mb-2.5 text-[13px] font-semibold text-text">Appearance</p>
           <Segmented
@@ -203,12 +228,32 @@ export default function AccountPage() {
             onClick={() => setRecovery(true)}
           />
           <Row
+            icon={<Download className="size-[18px]" />}
+            label="Download a backup"
+            value="JSON"
+            onClick={() => {
+              // Absolute, and a full navigation rather than a router push:
+              // this is a file download, not a page. The response carries
+              // Content-Disposition, so the browser hands it to the OS
+              // download handler rather than trying to render it.
+              window.location.assign(new URL("/api/export", window.location.origin));
+            }}
+          />
+          <Row
             icon={<LogOut className="size-[18px]" />}
             label="Sign out on this device"
             tone="danger"
             onClick={() => setConfirmSignOut(true)}
           />
         </div>
+
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-subtle">
+          The backup holds every group, expense and payment you can see, with
+          the amounts as text so nothing is rounded. Receipts are listed but not
+          included.
+        </p>
+
+        <StorageRow />
       </section>
 
       <footer className="mt-8 pb-4 text-center">
@@ -255,6 +300,59 @@ export default function AccountPage() {
       />
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * What the browser has promised about the data on this device.
+ *
+ * Worth stating, because the answer is not the same everywhere and the
+ * consequence is real: without persistence, a phone running low on space may
+ * evict the offline queue, and a queued expense exists nowhere else. Shown as a
+ * fact rather than as a problem to solve — there is no second button to press
+ * if the browser said no, beyond installing the app, which is exactly what the
+ * copy suggests.
+ */
+function StorageRow() {
+  const [status, setStatus] = React.useState<StorageStatus | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void storageStatus().then((result) => {
+      if (!cancelled) setStatus(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!status?.supported) return null;
+
+  return (
+    <div className="mt-1.5 flex items-start gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3">
+      <span className="shrink-0 pt-0.5 text-muted">
+        <Database className="size-[18px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold text-text">
+          {status.persisted ? "Kept on this device" : "Not protected from cleanup"}
+        </p>
+        <p className="mt-0.5 text-[12px] leading-snug text-subtle">
+          {status.persisted
+            ? "This browser has agreed not to clear Divvy's offline data to reclaim space."
+            : "This browser may clear Divvy's offline data if the device runs low on space. Installing the app usually earns the guarantee."}
+          {status.usage !== null ? ` Using ${formatBytes(status.usage)}.` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ---------------------------------------------------------------------------

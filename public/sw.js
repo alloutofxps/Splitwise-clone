@@ -26,10 +26,31 @@
  * dinner twice.
  */
 
-const VERSION = "divvy-v1";
+/**
+ * The build this worker belongs to.
+ *
+ * Read from the script's own URL, which the app registers as `/sw.js?v=<build>`.
+ * A hard-coded constant would be a bug that only appears on the second deploy:
+ * the cache names would never change, so an API response cached against last
+ * week's schema would outlive the code that could read it, and no amount of
+ * reloading would clear it. Deriving it from the URL also guarantees the
+ * browser sees a byte-different script and runs its update check at all.
+ */
+const VERSION = `divvy-${new URL(self.location.href).searchParams.get("v") || "dev"}`;
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const API_CACHE = `${VERSION}-api`;
+
+/**
+ * Where a share from the OS is parked between the POST and the GET that follows
+ * it. Deliberately unversioned: a share in flight during an update must survive
+ * the activate that drops every other cache. Kept in step with
+ * `src/lib/client/share-target.ts`, which reads it.
+ */
+const SHARE_CACHE = "divvy-share";
+const SHARE_INDEX = "/__shared/index.json";
+const SHARE_PREFIX = "/__shared/file-";
+const MAX_SHARED_FILES = 6;
 
 /** Enough to boot the app offline; everything else fills in as it is visited. */
 const SHELL_URLS = ["/", "/offline", "/manifest.webmanifest", "/icons/icon-192.png"];
@@ -40,8 +61,15 @@ self.addEventListener("install", (event) => {
       const cache = await caches.open(SHELL_CACHE);
       // Individually, so one 404 during a deploy cannot fail the whole install.
       await Promise.allSettled(SHELL_URLS.map((url) => cache.add(url)));
-      // Take over immediately rather than waiting for every tab to close.
-      await self.skipWaiting();
+      // Deliberately no skipWaiting() here.
+      //
+      // Taking over immediately would replace the running app's worker while
+      // someone is halfway through entering an expense, and — because the
+      // client reloads on controllerchange — would throw that entry away. It
+      // also made the "a new version is ready" toast unreachable: a worker that
+      // skips waiting never enters the waiting state the toast is bound to. The
+      // update is offered instead, and the message handler below performs it
+      // when the user accepts.
     })(),
   );
 });
@@ -51,7 +79,9 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const names = await caches.keys();
       await Promise.all(
-        names.filter((name) => !name.startsWith(VERSION)).map((name) => caches.delete(name)),
+        names
+          .filter((name) => !name.startsWith(VERSION) && name !== SHARE_CACHE)
+          .map((name) => caches.delete(name)),
       );
       // Enable navigation preload where supported: it starts the network
       // request in parallel with worker startup instead of after it.
@@ -69,11 +99,17 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
+  const url = new URL(request.url);
+
+  // The share target is the one POST this worker handles, and it must be
+  // checked before the method guard below.
+  if (request.method === "POST" && url.pathname === "/share-target") {
+    event.respondWith(handleShare(event));
+    return;
+  }
 
   // Only GET is cacheable. Writes go through the app's outbox.
   if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
 
   // Never touch cross-origin requests, or the exchange-rate lookup ends up
   // served from a stale cache days later.
@@ -190,4 +226,72 @@ async function cachePut(cacheName, request, response) {
     // Quota exceeded, or the response was already consumed. Not fatal - the
     // request already succeeded; only the caching of it failed.
   }
+}
+
+// ---------------------------------------------------------------------------
+// Share target
+// ---------------------------------------------------------------------------
+
+/**
+ * Receives a receipt shared from the OS.
+ *
+ * The share arrives as a real POST navigation, whose body the destination page
+ * cannot read — so the payload is parked in a cache and the browser is sent on
+ * to a plain GET that the app boots from and picks the files up on.
+ *
+ * The redirect is issued whatever happens. A share that fails to park still has
+ * to land somewhere sensible: opening an empty composer is a recoverable
+ * annoyance, whereas a browser error page on a POST it cannot retry is not.
+ */
+async function handleShare(event) {
+  try {
+    const form = await event.request.formData();
+    const cache = await caches.open(SHARE_CACHE);
+
+    // Drop anything left from an earlier share before writing this one, or an
+    // abandoned stash would be merged into the next receipt.
+    await Promise.all((await cache.keys()).map((request) => cache.delete(request)));
+
+    const shared = form
+      .getAll("receipts")
+      .filter((value) => typeof value === "object" && value !== null && "size" in value && value.size > 0)
+      .slice(0, MAX_SHARED_FILES);
+
+    const files = [];
+
+    for (let index = 0; index < shared.length; index += 1) {
+      const file = shared[index];
+      const key = `${SHARE_PREFIX}${index}`;
+      await cache.put(
+        key,
+        new Response(file, {
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+        }),
+      );
+      files.push({
+        key,
+        name: file.name || `receipt-${index + 1}`,
+        type: file.type || "application/octet-stream",
+      });
+    }
+
+    await cache.put(
+      SHARE_INDEX,
+      new Response(
+        JSON.stringify({
+          files,
+          title: String(form.get("title") ?? ""),
+          text: String(form.get("text") ?? ""),
+          url: String(form.get("url") ?? ""),
+          at: Date.now(),
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  } catch {
+    // Quota exhausted, or a payload this browser will not hand over. The
+    // composer opens empty rather than the share failing outright.
+  }
+
+  return Response.redirect("/?share=1", 303);
 }

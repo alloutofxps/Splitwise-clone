@@ -9,6 +9,10 @@ import { useDashboard } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
 import { Skeleton } from "@/components/ui/primitives";
 import { ComposerContext } from "@/components/expense/composer-context";
+import { useLaunchIntent } from "@/components/launch-intent";
+import { useToast } from "@/components/ui/toast";
+import { setBadge } from "@/lib/client/badge";
+import type { PendingAttachment } from "@/lib/client/attachments";
 
 /**
  * The gate between "no identity yet" and the app proper.
@@ -24,9 +28,53 @@ import { ComposerContext } from "@/components/expense/composer-context";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data, isLoading, error } = useDashboard();
   const pathname = usePathname();
-  const [composer, setComposer] = React.useState<{ open: boolean; groupId?: string }>({
-    open: false,
-  });
+  const toast = useToast();
+  // Gated on having an identity: the share relay is one-shot, so reading it on
+  // a device that is about to be shown onboarding would consume the receipt to
+  // open a composer that does not exist yet.
+  const intent = useLaunchIntent(Boolean(data));
+  const [composer, setComposer] = React.useState<{
+    open: boolean;
+    groupId?: string;
+    attachments?: PendingAttachment[];
+    description?: string;
+  }>({ open: false });
+
+  /**
+   * The home-screen badge.
+   *
+   * Set from whatever the dashboard last said, which is current as of the last
+   * time the app was open and stale after that. That is the honest guarantee
+   * for "things happened while you were away", and the reason nothing
+   * time-critical is put on it. `setBadge` is a no-op where the API is absent.
+   */
+  React.useEffect(() => {
+    if (data) setBadge(data.unreadActivityCount);
+  }, [data]);
+
+  /**
+   * A launch that meant "add an expense" — the app shortcut, or a receipt
+   * shared in from the camera roll.
+   *
+   * Gated on the dashboard, because the composer builds its draft from it and
+   * opening before it lands would show an empty sheet. The intent is read once
+   * and its query string erased, so this cannot fire twice for one launch.
+   */
+  const intentHandled = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!intent.compose || !data || intentHandled.current) return;
+    // Latched, because this effect also depends on `data` and the dashboard
+    // refetches on every window focus - without the latch, closing the composer
+    // and switching apps would reopen it.
+    intentHandled.current = true;
+    setComposer({
+      open: true,
+      attachments: intent.attachments,
+      description: intent.description,
+    });
+    if (intent.notice) toast({ tone: "error", title: intent.notice });
+  }, [intent, data, toast]);
 
   /**
    * Opening the composer with no explicit group falls back to the group the
@@ -72,6 +120,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ExpenseComposer
         open={composer.open}
         groupId={composer.groupId}
+        initialAttachments={composer.attachments}
+        initialDescription={composer.description}
         onClose={() => setComposer({ open: false })}
       />
     </ComposerContext.Provider>

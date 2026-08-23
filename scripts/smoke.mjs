@@ -955,6 +955,133 @@ async function main() {
   check("CSV has a header row", csvText.includes("Date,Type,Description"));
   check("CSV includes the payments", csvText.includes("Payment"));
 
+  // -- The JSON backup ------------------------------------------------------
+  console.log("\nBackup export");
+  const backupResponse = await fetch(`${BASE}/api/export`, {
+    headers: { Cookie: priya.cookie },
+  });
+  check("JSON export is served", backupResponse.status === 200, String(backupResponse.status));
+  check(
+    "JSON export is offered as a download",
+    (backupResponse.headers.get("content-disposition") ?? "").includes("attachment"),
+  );
+
+  const backup = JSON.parse(await backupResponse.text());
+  check("backup declares its format and version", backup.format === "divvy.backup" && backup.version === 1);
+  check("backup names the account", backup.account.id === priyaId);
+  check("backup carries the groups", backup.groups.length > 0);
+  check("backup carries the expenses", backup.expenses.length > 0);
+  check(
+    "backup carries the settlements",
+    backup.settlements.length > 0,
+    String(backup.settlements.length),
+  );
+  check(
+    "backup lists every person it references",
+    backup.expenses
+      .flatMap((expense) => [
+        ...expense.payers.map((payer) => payer.personId),
+        ...expense.splits.map((split) => split.personId),
+      ])
+      .every((personId) => backup.people.some((person) => person.id === personId)),
+  );
+  check(
+    "backup keeps money as strings, never JSON numbers",
+    backup.expenses.every(
+      (expense) =>
+        typeof expense.amount === "string" &&
+        expense.payers.every((payer) => typeof payer.amount === "string") &&
+        expense.splits.every((split) => typeof split.amount === "string"),
+    ),
+  );
+  check(
+    "backup expense amounts still reconcile",
+    backup.expenses
+      .filter((expense) => !expense.deletedAt)
+      .every((expense) => {
+        const paid = expense.payers.reduce((total, payer) => total + Number(payer.amount), 0);
+        return Math.abs(paid - Number(expense.amount)) < 0.005;
+      }),
+  );
+  check(
+    "backup omits the recovery key",
+    !JSON.stringify(backup).toLowerCase().includes("tokenhash") &&
+      backup.account.recoveryKey === undefined,
+  );
+  check(
+    "backup lists receipts without inlining their bytes",
+    backup.expenses.every((expense) =>
+      expense.attachments.every(
+        (attachment) => attachment.data === undefined && attachment.url.startsWith("/api/attachments/"),
+      ),
+    ),
+  );
+
+  const strangerBackup = await fetch(`${BASE}/api/export`);
+  check(
+    "the backup needs an identity",
+    strangerBackup.status === 401,
+    String(strangerBackup.status),
+  );
+
+  const strangerScope = makeClient();
+  await strangerScope.call("/api/identity", {
+    method: "POST",
+    body: { displayName: "Passer-by" },
+  });
+  const scoped = await fetch(`${BASE}/api/export`, {
+    headers: { Cookie: strangerScope.cookie },
+  });
+  const scopedBackup = JSON.parse(await scoped.text());
+  check(
+    "a backup only contains what its owner can see",
+    scopedBackup.groups.length === 0 && scopedBackup.expenses.length === 0,
+    `${scopedBackup.groups.length} groups, ${scopedBackup.expenses.length} expenses`,
+  );
+
+  // -- Share target ---------------------------------------------------------
+  console.log("\nShare target");
+  const shareForm = new FormData();
+  shareForm.append("title", "Dinner");
+  shareForm.append(
+    "receipts",
+    new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: "image/jpeg" }),
+    "receipt.jpg",
+  );
+  const shared = await fetch(`${BASE}/share-target`, {
+    method: "POST",
+    body: shareForm,
+    redirect: "manual",
+  });
+  check(
+    "a share with no worker redirects instead of erroring",
+    shared.status === 303,
+    String(shared.status),
+  );
+  check(
+    "the fallback share tells the app it lost the file",
+    (shared.headers.get("location") ?? "").includes("share=unavailable"),
+    shared.headers.get("location") ?? "",
+  );
+
+  const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json();
+  check("the manifest declares a share target", manifest.share_target?.action === "/share-target");
+  check(
+    "the share target accepts images and PDFs",
+    manifest.share_target.params.files[0].accept.includes("image/*"),
+  );
+  check("the manifest claims its own links", manifest.handle_links === "preferred");
+  check(
+    "a link opens the tab that is already there",
+    manifest.launch_handler?.client_mode === "navigate-existing",
+  );
+  check(
+    "there is a maskable icon at both launcher sizes",
+    ["192x192", "512x512"].every((size) =>
+      manifest.icons.some((icon) => icon.purpose === "maskable" && icon.sizes === size),
+    ),
+  );
+
   const search = (await priya.call("/api/search?q=Dinner")).body;
   check("search finds an expense", search.items.length > 0);
 

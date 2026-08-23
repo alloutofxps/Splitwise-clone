@@ -459,6 +459,43 @@
  * fade or a slide that carries no information on its own - so removing it costs
  * the user nothing.
  */
+/* --------------------------------------------------------------------------
+   The privacy curtain
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  /*
+   * Always mounted, so revealing it is a style recalculation rather than a
+   * mount and a paint. See src/components/privacy-screen.tsx - that distinction
+   * is what decides whether the curtain makes it into the OS snapshot at all.
+   *
+   * Solid rather than a backdrop blur: `backdrop-filter` is expensive, and a
+   * blurred balance sheet is still a balance sheet at a glance.
+   */
+  .privacy-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    opacity: 0;
+    pointer-events: none;
+    /*
+     * The fade is on the way out only. Animating in would put the first frames
+     * of the transition - the legible ones - into the snapshot.
+     */
+    transition: opacity 160ms ease-out;
+  }
+
+  html.divvy-private .privacy-veil {
+    opacity: 1;
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

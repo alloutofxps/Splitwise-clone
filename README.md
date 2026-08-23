@@ -74,9 +74,16 @@ view of the same numbers · ★ budgets, scoped to a group and/or a category, an
 counted against *your share* rather than the group's total.
 
 **Everywhere** — installable PWA for iOS and Android · works offline, including
-adding expenses · a built-in amount keypad, so the split preview is never hidden
-behind the system keyboard · light and dark themes · no ads, no tracking, no
-analytics.
+adding expenses · share a receipt straight from the camera roll into a new
+expense · a home-screen shortcut into the composer, and a badge showing what
+happened while you were away · a built-in amount keypad, so the split preview is
+never hidden behind the system keyboard · light and dark themes · no ads, no
+tracking, no analytics.
+
+**Your data** — ★ CSV export per group, for a spreadsheet · a whole-account JSON
+backup, with every amount as text so nothing is rounded · a privacy curtain that
+covers the screen when you switch apps, so balances stay out of the app
+switcher.
 
 ---
 
@@ -156,7 +163,7 @@ src/server/       read/write services, access control, recurrence, pagination
 src/app/api/      34 route handlers
 src/components/   design system and feature UI
 prisma/           schema, migrations, seed
-scripts/          smoke.mjs (end-to-end), shots.mjs (visual verification)
+scripts/          smoke.mjs (end-to-end), pwa-check.mjs (browser), shots.mjs (visual)
 ```
 
 Three things in here are worth knowing about before changing anything.
@@ -193,18 +200,80 @@ rather than from the feed, the arithmetic stays right while the history quietly
 loses a payment. `src/server/cursor.ts` carries the tiebreak, and the smoke test
 pages a group whose rows all share one timestamp.
 
+### Platform capabilities, and the two that were left out
+
+The OS hooks this app uses are the ones an expense splitter actually has a use
+for. Each is feature-detected and each degrades to exactly what the app did
+before it existed.
+
+**The share target** is the most useful of them. A receipt photographed by the
+banking app, or a bill emailed as a PDF, can be shared straight into a new
+expense. It cannot be done in a page alone: the OS performs a real `POST`
+navigation, and a page cannot read the body of the navigation that created it.
+So the service worker intercepts the POST, parks the files in a cache, and
+redirects to a plain GET that the app boots from and collects them on
+(`public/sw.js` and `src/lib/client/share-target.ts`). The handshake is
+one-shot — read and delete in the same call — so a refresh cannot attach the
+same receipt twice, and it is not read at all until there is an identity,
+because consuming it to open a composer that a brand-new device cannot yet show
+would destroy the photo.
+
+**Persistent storage** is requested on every launch. The offline outbox holds
+writes that exist nowhere else until the network returns, so eviction under
+storage pressure is silent loss of something the user typed and watched appear.
+Chrome grants it only after an engagement bar that a first-run visitor has not
+cleared, which is why it is asked repeatedly rather than once.
+
+**Updates are offered, never taken.** A new worker parks in `waiting` and the
+app shows a toast; the reload happens when the user accepts it. The worker
+deliberately does *not* call `skipWaiting()` during install — doing so replaces
+the running app mid-expense and, because the client reloads on
+`controllerchange`, throws that entry away. Cache names carry the build id,
+read by the worker out of its own `?v=` query, so an API response shaped by
+last week's code cannot outlive it.
+
+**The badge** shows unread activity from the last time the app was open, and
+nothing time-critical is put on it, because that is the only guarantee an app
+with no push infrastructure can honestly make.
+
+Two capabilities were considered and rejected.
+
+**The Contacts Picker** would import a name the user can already type. Divvy
+stores no phone numbers or email addresses at all — identity *is* an invite
+code — so there is nothing for a contact record to match against, and the API
+is Chromium-on-Android only.
+
+**A biometric or PIN lock** was rejected because it would advertise a
+protection this architecture does not provide. A purely local gate cannot
+defend data that stays readable in IndexedDB, behind an identity cookie, to
+anyone holding the unlocked device; and a forgotten PIN would lock someone out
+of an app whose entire premise is that there is no login. What the threat
+actually justifies — keeping balances out of the app switcher and off the
+shoulder next to you — is the privacy curtain in
+`src/components/privacy-screen.tsx`, which is described to the user as a
+curtain rather than a lock.
+
 ### Verification
 
-- `src/lib/__tests__/` and `src/server/__tests__/` — 73 unit tests, including
+- `src/lib/__tests__/`, `src/lib/client/__tests__/` and `src/server/__tests__/` —
+  105 unit tests, including
   randomised property checks that no split or apportionment ever loses a minor
   unit, that debt simplification always reproduces the same net position in at
   most n−1 transfers, and that folding one event at a time into a balance sheet
   gives the same answer as recomputing the history (which is what lets the
   client show a new expense's effect before the server confirms it).
-- `scripts/smoke.mjs` — 49 assertions driving the real HTTP API: three people,
+- `scripts/smoke.mjs` — 116 assertions driving the real HTTP API: three people,
   every split mode, a placeholder claimed mid-trip, multi-currency conversion,
-  replayed mutations, settling to zero, access control, and paging a ledger
-  whose rows all share one timestamp.
+  replayed mutations, settling to zero, access control, paging a ledger whose
+  rows all share one timestamp, and a backup export that reconciles and stays
+  scoped to its owner.
+- `scripts/pwa-check.mjs` — 32 assertions in a real browser against a
+  production build, for the things that cannot be read off the source: that the
+  worker actually intercepts an OS share and the composer picks the photo up,
+  that a share arriving before onboarding is *not* consumed, that a new build
+  parks in `waiting` and shows the update toast rather than reloading the page
+  out from under a half-typed expense, and that the privacy curtain is opaque
+  the instant its class is set.
 - `scripts/shots.mjs` — captures every screen in both themes at a phone
   viewport, and reports any console or page error.
 
