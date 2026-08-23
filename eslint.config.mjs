@@ -79,22 +79,30 @@ export default tseslint.config(
       // are what this is for.
       "react-hooks/exhaustive-deps": "warn",
 
-      // A warning, not an error, after reading all 25 of the sites it flags.
-      // They fall into three groups and none is a bug:
+      // A warning rather than an error, after reading every site it flags.
+      //
+      // The first pass through these dismissed them all as deliberate. That was
+      // wrong about one group: the sheets that reset their draft in an effect
+      // when they open. Rebuilding state in an effect means the rebuild is
+      // keyed on the effect's dependencies, and the composer's included the
+      // dashboard query result - so a refetch while the sheet was open (a
+      // groupmate adds an expense, the connection blips) rebuilt the draft and
+      // wiped whatever was half-typed. Measured, then fixed: those now reset
+      // during render via `useResetOnOpen`, which is React's documented answer.
+      //
+      // What is left is genuinely deliberate:
       //
       //   - reads of browser-only state (localStorage, `mounted` flags before a
-      //     portal renders). These cannot move into render without breaking
-      //     server rendering, so the rule has no fix to offer;
-      //   - resetting a sheet's draft when it opens. React would rather this
-      //     were a `key` prop, which is a real improvement and a real refactor
-      //     of every sheet in the app;
+      //     portal renders), which cannot move into render without breaking
+      //     server rendering;
+      //   - resets that run on *close* rather than open, where nothing is
+      //     painted in between;
       //   - reconciling a locally-edited string with an external value, in the
-      //     amount field and the keypad. Both are commented in place, and both
-      //     were tuned against a real browser so they do not fight a user
-      //     mid-keystroke; restructuring them for a lint rule would risk the
-      //     behaviour for no defect.
+      //     amount field, the keypad and the split editor. Each is commented in
+      //     place and was tuned against a real browser so it does not fight a
+      //     user mid-keystroke.
       //
-      // Left visible rather than switched off, so a *new* one gets noticed.
+      // Left visible rather than switched off. It earned that.
       "react-hooks/set-state-in-effect": "warn",
     },
   },

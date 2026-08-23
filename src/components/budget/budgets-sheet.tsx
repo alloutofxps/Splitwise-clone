@@ -11,6 +11,7 @@ import { useBudgets, useDashboard, useSetBudget } from "@/lib/client/queries";
 import { CATEGORIES, categoryById } from "@/lib/categories";
 import { formatMoney } from "@/lib/money";
 import type { BudgetDto } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 type Period = BudgetDto["period"];
 
@@ -37,6 +38,9 @@ export function BudgetsSheet({ open, onClose }: { open: boolean; onClose: () => 
   const { data: dashboard } = useDashboard();
   const [adding, setAdding] = React.useState(false);
 
+  // On close rather than on open, so the editor is not left mounted behind a
+  // shut sheet. Nothing is painted during that transition, so an effect is the
+  // right tool here - unlike the reset-on-open cases, which would flash.
   React.useEffect(() => {
     if (!open) setAdding(false);
   }, [open]);
@@ -226,14 +230,12 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
   const [groupId, setGroupId] = React.useState<string | null>(null);
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (open) {
-      setAmount(null);
-      setPeriod("MONTHLY");
-      setGroupId(null);
-      setCategoryId(null);
-    }
-  }, [open]);
+  useResetOnOpen(open, () => {
+    setAmount(null);
+    setPeriod("MONTHLY");
+    setGroupId(null);
+    setCategoryId(null);
+  });
 
   const currency = dashboard?.me.defaultCurrency ?? "USD";
   const canSave = (amount ?? 0n) > 0n;

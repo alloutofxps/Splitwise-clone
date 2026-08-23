@@ -11,6 +11,7 @@ import { useToast } from "../ui/toast";
 import { api, ApiError } from "@/lib/client/api";
 import { normalizeInviteCode } from "@/lib/invite-code";
 import type { PersonDto } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 interface GroupPreview {
   kind: "group";
@@ -62,14 +63,12 @@ export function JoinSheet({
   const [claimId, setClaimId] = React.useState<string | null>(null);
   const [notFound, setNotFound] = React.useState(false);
 
-  React.useEffect(() => {
-    if (open) {
-      setCode(initialCode ?? "");
-      setPreview(null);
-      setClaimId(null);
-      setNotFound(false);
-    }
-  }, [open, initialCode]);
+  useResetOnOpen(open, () => {
+    setCode(initialCode ?? "");
+    setPreview(null);
+    setClaimId(null);
+    setNotFound(false);
+  });
 
   // Look the code up as it is typed, debounced. Nobody should have to press a
   // "check" button to find out whether they typed the code correctly.

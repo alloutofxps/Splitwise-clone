@@ -314,6 +314,9 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
   const [busy, setBusy] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
+  // Cleared on *close* rather than on open: the key is a secret, and leaving
+  // it in state after the sheet shuts keeps it in a heap snapshot for no
+  // reason. Nothing paints it in that gap, so an effect is fine here.
   React.useEffect(() => {
     if (!open) setKey(null);
   }, [open]);

@@ -12,6 +12,7 @@ import { RecurringSheet } from "./recurring-sheet";
 import { useAddMember, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import type { GroupDetailDto } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
  * Group settings.
@@ -46,12 +47,10 @@ export function GroupSettingsSheet({
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [recurring, setRecurring] = React.useState(false);
 
-  React.useEffect(() => {
-    if (open) {
-      setName(group.name);
-      setNewName("");
-    }
-  }, [open, group.name]);
+  useResetOnOpen(open, () => {
+    setName(group.name);
+    setNewName("");
+  });
 
   const commitName = () => {
     const trimmed = name.trim();

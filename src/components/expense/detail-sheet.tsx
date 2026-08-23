@@ -50,6 +50,9 @@ export function ExpenseDetailSheet({
   const [confirmRemoveReceipt, setConfirmRemoveReceipt] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
 
+  // Cleared when the sheet closes, not when it opens: the detail sheet renders
+  // from a query rather than from a draft, so there is nothing stale to flash,
+  // and doing it on close keeps a half-written comment from reappearing.
   React.useEffect(() => {
     if (!expenseId) {
       setEditing(false);

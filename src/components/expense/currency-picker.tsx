@@ -5,6 +5,7 @@ import { Check, Search } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { cn, haptic } from "../ui/primitives";
 import { CURRENCIES } from "@/lib/money";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
  * Currency picker.
@@ -26,9 +27,7 @@ export function CurrencyPicker({
 }) {
   const [query, setQuery] = React.useState("");
 
-  React.useEffect(() => {
-    if (open) setQuery("");
-  }, [open]);
+  useResetOnOpen(open, () => setQuery(""));
 
   const term = query.trim().toLowerCase();
   const results = term

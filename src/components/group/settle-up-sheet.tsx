@@ -12,6 +12,7 @@ import { toDecimalString } from "@/lib/money";
 import { ApiError } from "@/lib/client/api";
 import { paymentLink, PAYMENT_KINDS } from "@/lib/payments";
 import type { GroupDetailDto, PaymentMethodDto, PersonDto } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
  * Settling up.
@@ -71,8 +72,7 @@ export function SettleUpSheet({
   const [method, setMethod] = React.useState<string | null>(null);
   const [note, setNote] = React.useState("");
 
-  React.useEffect(() => {
-    if (!open) return;
+  useResetOnOpen(open, () => {
     setNote("");
     setMethod(null);
 
@@ -96,7 +96,7 @@ export function SettleUpSheet({
       setSelected(null);
       setAmount(null);
     }
-  }, [open, suggestions, fixedPersonId, meId]);
+  });
 
   const other = selected
     ? people.get(selected.fromPersonId === meId ? selected.toPersonId : selected.fromPersonId)

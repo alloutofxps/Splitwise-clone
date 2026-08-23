@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { CurrencyPicker } from "../expense/currency-picker";
@@ -46,8 +47,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
   const [draftName, setDraftName] = React.useState("");
   const [currencyOpen, setCurrencyOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!open) return;
+  useResetOnOpen(open, () => {
     setName("");
     setKind("trip");
     setEmoji("🏝️");
@@ -55,7 +55,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
     setSimplify(true);
     setNames([]);
     setDraftName("");
-  }, [open, data?.me.defaultCurrency]);
+  });
 
   const addName = () => {
     const trimmed = draftName.trim();

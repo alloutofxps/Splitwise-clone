@@ -13,6 +13,7 @@ import { apportion } from "@/lib/split";
 import { formatMoney } from "@/lib/money";
 import { suggestCategory, DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import { RECURRENCE_FREQUENCIES, type GroupDetailDto, type RecurrenceFrequency } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
  * Repeating expenses.
@@ -202,14 +203,13 @@ function NewRecurrenceSheet({
   const [startDate, setStartDate] = React.useState(() => nextFirstOfMonth());
   const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!open) return;
+  useResetOnOpen(open, () => {
     setDescription("");
     setAmount(null);
     setFrequency("MONTHLY");
     setPayerId(meId);
     setStartDate(nextFirstOfMonth());
-  }, [open, meId]);
+  });
 
   const memberIds = group.members.map((member) => member.id);
   const shares = amount ? apportion(amount, memberIds.map(() => 1), memberIds.map((id) => (id === payerId ? 0 : 1))) : [];

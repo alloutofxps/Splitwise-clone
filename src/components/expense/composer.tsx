@@ -21,6 +21,7 @@ import { suggestCategory, DEFAULT_CATEGORY_ID, categoryById } from "@/lib/catego
 import { ApiError } from "@/lib/client/api";
 import { newId } from "@/lib/ids";
 import type { ExpenseDto, PersonDto } from "@/lib/types";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
  * The expense composer.
@@ -81,13 +82,27 @@ export function ExpenseComposer({ open, onClose, groupId, expense }: ComposerPro
 
   const [draft, setDraft] = React.useState<Draft | null>(null);
 
-  // Rebuild the draft whenever the sheet opens, so a cancelled entry never
-  // leaks into the next one.
-  React.useEffect(() => {
-    if (!open || !me || !data) return;
-    setDraft(expense ? draftFromExpense(expense) : freshDraft(me.id, groupId ?? null, me.defaultCurrency, data));
+  // Rebuild the draft when the sheet opens, so a cancelled entry never leaks
+  // into the next one.
+  //
+  // Gated on the dashboard being loaded as well as on `open`, because the draft
+  // is built from it - reopening before it arrives would otherwise leave the
+  // previous draft on screen.
+  //
+  // This was an effect with `data` in its dependency list, which had a worse
+  // failure than the stale frame: `useDashboard` refetches on window focus, so
+  // returning to a backgrounded phone rebuilt the draft and wiped whatever was
+  // half-typed into it. Keying on the open transition instead means the draft
+  // is built once, when it should be.
+  useResetOnOpen(open && Boolean(me && data), () => {
+    if (!me || !data) return;
+    setDraft(
+      expense
+        ? draftFromExpense(expense)
+        : freshDraft(me.id, groupId ?? null, me.defaultCurrency, data),
+    );
     setPanel(null);
-  }, [open, expense, groupId, me, data]);
+  });
 
   if (!data || !me || !draft) {
     return <Sheet open={open} onClose={onClose} title="Add an expense" tall />;
