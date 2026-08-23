@@ -577,6 +577,12 @@ async function main() {
     method: "POST",
     body: { inviteCode: (await ravi.call("/api/identity")).body.me.inviteCode },
   });
+  // Tom joins too but stays out of every expense below, so the nudge assertions
+  // have a genuine bystander - a group member who is party to neither side.
+  await priya.call(`/api/groups/${homeId}/members`, {
+    method: "POST",
+    body: { inviteCode: (await tom.call("/api/identity")).body.me.inviteCode },
+  });
 
   // -- Attachments ----------------------------------------------------------
   //
@@ -867,6 +873,68 @@ async function main() {
     "person, category and search combine rather than overwrite",
     combined.length === 1 && combined[0].expense?.description === "Solo laundry",
     `${combined.length} rows`,
+  );
+
+  // -- Nudges ---------------------------------------------------------------
+  //
+  // "Remind" is the one feature in an expense app that turns into harassment if
+  // the rules are loose, so every rule is asserted rather than assumed.
+  console.log("\nNudges");
+
+  // Ravi owes Priya in the household group (she fronted the rent).
+  const nudged = await priya.call("/api/nudges", {
+    method: "POST",
+    body: { personId: raviId, groupId: homeId },
+  });
+  check("the person owed can send a reminder", nudged.status === 201, String(nudged.status));
+  check("the reminder carries the real debt", BigInt(nudged.body.amount) > 0n, nudged.body.amount);
+
+  const nudgedAgain = await priya.call("/api/nudges", {
+    method: "POST",
+    allowError: true,
+    body: { personId: raviId, groupId: homeId },
+  });
+  check("a second reminder the same day is refused", nudgedAgain.status === 422, String(nudgedAgain.status));
+
+  // The debtor cannot flip it around: Ravi owes Priya, not the other way.
+  const wrongWay = await ravi.call("/api/nudges", {
+    method: "POST",
+    allowError: true,
+    body: { personId: priyaId, groupId: homeId },
+  });
+  check("you cannot nudge somebody who owes you nothing", wrongWay.status === 422, String(wrongWay.status));
+
+  const self = await priya.call("/api/nudges", {
+    method: "POST",
+    allowError: true,
+    body: { personId: priyaId, groupId: homeId },
+  });
+  check("you cannot nudge yourself", self.status === 422);
+
+  const byStranger = await outsider.call("/api/nudges", {
+    method: "POST",
+    allowError: true,
+    body: { personId: raviId, groupId: homeId },
+  });
+  check("a non-member cannot nudge into the group", byStranger.status === 403, String(byStranger.status));
+
+  // A nudge is addressed, not broadcast: it reaches the two people it concerns
+  // and nobody else, even though the debt is a group one.
+  const raviFeed = (await ravi.call("/api/activity")).body.items;
+  const priyaFeed = (await priya.call("/api/activity")).body.items;
+  const tomFeed = (await tom.call("/api/activity")).body.items;
+
+  check(
+    "the reminder reaches the person who owes",
+    raviFeed.some((item) => item.type === "nudge.sent"),
+  );
+  check(
+    "the sender sees it in their own feed",
+    priyaFeed.some((item) => item.type === "nudge.sent"),
+  );
+  check(
+    "nobody else in the group sees it",
+    !tomFeed.some((item) => item.type === "nudge.sent"),
   );
 
   // -- Reporting ------------------------------------------------------------

@@ -167,6 +167,8 @@ export interface ActivityDto {
   actorPersonId: string;
   expenseId: string | null;
   settlementId: string | null;
+  /** Set only for entries addressed to one person, such as a nudge. */
+  targetPersonId: string | null;
   data: ActivityData;
   createdAt: string;
   isUnread: boolean;

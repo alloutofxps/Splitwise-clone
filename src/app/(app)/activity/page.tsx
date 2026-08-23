@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   MessageSquare,
   Pencil,
+  BellRing,
   Repeat,
   Trash2,
   UserPlus,
@@ -215,6 +216,7 @@ function ActivityRow({
           tone === "negative" && "bg-negative-soft text-negative-text",
           tone === "neutral" && "bg-surface-2 text-muted",
           tone === "brand" && "bg-brand-soft text-brand-soft-text",
+          tone === "warning" && "bg-warning-soft text-text",
         )}
       >
         {icon}
@@ -269,7 +271,11 @@ function describe(
   actorName: string,
   meId: string,
   people: Map<string, PersonDto>,
-): { icon: React.ReactNode; tone: "positive" | "negative" | "neutral" | "brand"; sentence: React.ReactNode } {
+): {
+  icon: React.ReactNode;
+  tone: "positive" | "negative" | "neutral" | "brand" | "warning";
+  sentence: React.ReactNode;
+} {
   const data = activity.data;
   const amount =
     data.amount && data.currency
@@ -409,6 +415,28 @@ function describe(
           </>
         ),
       };
+
+    case "nudge.sent": {
+      const target = people.get(activity.targetPersonId ?? "");
+      // Reads differently depending on which end you are: "you reminded Ravi"
+      // is a record, "Ravi reminded you" is a prompt.
+      return {
+        icon: <BellRing className="size-[16px]" />,
+        tone: "warning",
+        sentence:
+          activity.targetPersonId === meId ? (
+            <>
+              {strong(actorName)} reminded you about
+              {amount ? <> <span className="tabular">{amount}</span></> : <> a balance</>}
+            </>
+          ) : (
+            <>
+              You reminded {strong(target?.displayName ?? "someone")}
+              {amount ? <> about <span className="tabular">{amount}</span></> : null}
+            </>
+          ),
+      };
+    }
 
     case "group.created":
       return {

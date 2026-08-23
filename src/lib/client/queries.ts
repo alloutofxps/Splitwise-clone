@@ -582,6 +582,25 @@ export function useSetBudget() {
   });
 }
 
+/**
+ * Reminds somebody about a debt.
+ *
+ * Not queued for offline replay and deliberately not optimistic: the server
+ * decides whether the debt exists and whether one has already been sent today,
+ * and showing "reminded" for something the server then refuses would be worse
+ * than waiting for the answer.
+ */
+export function useNudge() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { personId: string; groupId?: string | null }) =>
+      api.post<{ amount: string; currency: string }>("/api/nudges", input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.activity });
+    },
+  });
+}
+
 export function useCreateGroup() {
   const client = useQueryClient();
   return useMutation({

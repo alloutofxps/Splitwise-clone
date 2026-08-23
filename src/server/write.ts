@@ -317,6 +317,8 @@ export async function recordActivity(input: {
   groupId?: string | null;
   expenseId?: string | null;
   settlementId?: string | null;
+  /** Set only for entries addressed to one person, such as a nudge. */
+  targetPersonId?: string | null;
   data?: ActivityData;
 }) {
   return prisma.activity.create({
@@ -326,6 +328,7 @@ export async function recordActivity(input: {
       groupId: input.groupId ?? null,
       expenseId: input.expenseId ?? null,
       settlementId: input.settlementId ?? null,
+      targetPersonId: input.targetPersonId ?? null,
       data: JSON.stringify(input.data ?? {}),
     },
   });

@@ -59,9 +59,15 @@ switched off · debt simplification (min-cash-flow) as a per-group toggle ·
 archiving.
 
 **Records** — ★ receipt photos and PDFs, downscaled in the browser before
-upload · comments · full activity feed · ★ search across every group ·
-★ CSV export · recurring expenses that post themselves, dated correctly, and
-catch up on months nobody opened the app.
+upload (and removable) · comments · full activity feed, bucketed by day and
+filterable by group · ★ search across every group, plus per-person and
+per-category filtering inside one · ★ CSV export · recurring expenses that post
+themselves, dated correctly, and catch up on months nobody opened the app.
+
+**Reminders** — ★ nudge somebody who owes you, once a day, and only about a debt
+the ledger actually shows. It arrives in their activity feed rather than by
+email or push: there are no email addresses in the schema, and web push needs a
+deployed origin and a VAPID keypair that a self-hosted app cannot assume.
 
 **Reporting** — ★ spending by month, by category and by person, with a table
 view of the same numbers · ★ budgets, scoped to a group and/or a category, and

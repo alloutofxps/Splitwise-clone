@@ -36,7 +36,17 @@ export const GET = route(async (request: Request) => {
       // drops every one of them but the first at a page boundary.
       AND: beforeCursor("createdAt", cursor),
       OR: [
-        { groupId: { in: groupIds } },
+        // A nudge concerns two people even when the debt is a group one, so it
+        // is addressed rather than broadcast: only its sender and its recipient
+        // ever see it. Listed first so the group clause below cannot leak one
+        // into everybody else's feed.
+        { targetPersonId: session.person.id },
+        {
+          groupId: { in: groupIds },
+          // Everything else in a group is group-wide by nature.
+          targetPersonId: null,
+        },
+        { actorPersonId: session.person.id, targetPersonId: { not: null } },
         // Direct expenses have no group, so they are matched through the
         // expense's own participants.
         {

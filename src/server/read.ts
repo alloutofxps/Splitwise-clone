@@ -336,6 +336,7 @@ export function activityDto(
     actorPersonId: string;
     expenseId: string | null;
     settlementId: string | null;
+    targetPersonId?: string | null;
     data: string;
     createdAt: Date;
     group?: { name: string; emoji: string } | null;
@@ -359,6 +360,7 @@ export function activityDto(
     actorPersonId: row.actorPersonId,
     expenseId: row.expenseId,
     settlementId: row.settlementId,
+    targetPersonId: row.targetPersonId ?? null,
     data,
     createdAt: row.createdAt.toISOString(),
     isUnread: lastReadAt ? row.createdAt > lastReadAt : true,

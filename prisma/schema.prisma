@@ -51,7 +51,6 @@ model Person {
 
   memberships       Membership[]
   paymentMethods    PaymentMethod[]
-  pushSubscriptions PushSubscription[]
   budgets           Budget[]
 
   expensesCreated    Expense[]          @relation("ExpenseCreator")
@@ -63,6 +62,7 @@ model Person {
   settlementsCreated Settlement[]       @relation("SettlementCreator")
   comments           Comment[]
   activities         Activity[]         @relation("ActivityActor")
+  nudgesReceived     Activity[]         @relation("ActivityTarget")
   recurrences        Recurrence[]
   friendshipsA       Friendship[]       @relation("FriendA")
   friendshipsB       Friendship[]       @relation("FriendB")
@@ -98,19 +98,6 @@ model PaymentMethod {
   /// The handle itself: a UPI id, @venmo-handle, IBAN, paypal.me slug, ...
   value     String
   sortOrder Int     @default(0)
-
-  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
-
-  @@index([personId])
-}
-
-model PushSubscription {
-  id        String   @id @default(cuid())
-  personId  String
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  createdAt DateTime @default(now())
 
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
@@ -379,12 +366,16 @@ model Activity {
   groupId String?
   /// expense.created | expense.updated | expense.deleted | settlement.created |
   /// settlement.deleted | comment.created | member.joined | member.added |
-  /// group.created | group.updated | recurrence.fired
+  /// group.created | group.updated | recurrence.fired | nudge.sent
   type    String
 
   actorPersonId String
   expenseId     String?
   settlementId  String?
+  /// Set only for entries addressed to one person rather than to a group - a
+  /// nudge is between two people even when it concerns a group debt, so the
+  /// feed query uses this to keep it out of everybody else's timeline.
+  targetPersonId String?
 
   /// JSON blob with a pre-rendered summary so the feed stays readable even
   /// after the underlying record is edited or deleted.
@@ -394,11 +385,13 @@ model Activity {
 
   group      Group?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
   actor      Person      @relation("ActivityActor", fields: [actorPersonId], references: [id], onDelete: Cascade)
+  target     Person?     @relation("ActivityTarget", fields: [targetPersonId], references: [id], onDelete: Cascade)
   expense    Expense?    @relation(fields: [expenseId], references: [id], onDelete: SetNull)
   settlement Settlement? @relation(fields: [settlementId], references: [id], onDelete: SetNull)
 
   @@index([groupId, createdAt])
   @@index([createdAt])
+  @@index([targetPersonId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

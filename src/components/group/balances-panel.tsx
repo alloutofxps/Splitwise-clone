@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Info, Sparkles } from "lucide-react";
+import { ArrowRight, BellRing, Check, Info, Sparkles } from "lucide-react";
 import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
-import { Button, Switch, cn } from "../ui/primitives";
-import { useUpdateGroup } from "@/lib/client/queries";
+import { Button, Switch, cn, haptic } from "../ui/primitives";
+import { useToast } from "../ui/toast";
+import { useNudge, useUpdateGroup } from "@/lib/client/queries";
+import { ApiError } from "@/lib/client/api";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 
 /**
@@ -139,6 +141,13 @@ export function BalancesPanel({
                     tone="plain"
                     className="shrink-0"
                   />
+
+                  {/* Only on debts owed *to* the viewer: reminding somebody on
+                      behalf of a third party is how a shared ledger turns into
+                      an argument. */}
+                  {edge.toPersonId === meId && !from.isGhost ? (
+                    <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
+                  ) : null}
                 </li>
               );
             })}
@@ -163,5 +172,73 @@ export function BalancesPanel({
         ) : null}
       </section>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * "Remind" on a debt owed to you.
+ *
+ * Splitwise sends this by email or push. Neither is available here: the schema
+ * holds no email addresses at all - that is the identity model, not an omission
+ * - and web push needs a deployed HTTPS origin and a VAPID keypair that a
+ * self-hosted app cannot assume. So the reminder lands in the other person's
+ * activity feed, marked unread like everything else, which is somewhere they
+ * already look.
+ *
+ * The server enforces what matters: that the debt is real, that only the person
+ * owed can send it, and that it is once a day. A reminder that can be sent
+ * forty times is not a reminder.
+ */
+function NudgeButton({
+  personId,
+  groupId,
+  name,
+}: {
+  personId: string;
+  groupId: string;
+  name: string;
+}) {
+  const toast = useToast();
+  const nudge = useNudge();
+  const [sent, setSent] = React.useState(false);
+
+  const send = async () => {
+    try {
+      await nudge.mutateAsync({ personId, groupId });
+      haptic([10, 40, 10]);
+      setSent(true);
+      toast({
+        tone: "success",
+        title: `Reminded ${name.split(" ")[0]}`,
+        description: "It will show up in their activity feed.",
+      });
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not send that",
+        // The server's refusals are written to be read: "you already reminded
+        // them today", "they do not owe you anything right now".
+        description: error instanceof ApiError ? error.message : undefined,
+      });
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void send()}
+      disabled={nudge.isPending || sent}
+      aria-label={`Remind ${name}`}
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full transition active:scale-90",
+        sent
+          ? "text-positive-text"
+          : "text-subtle hover:bg-surface-2 hover:text-text disabled:opacity-40",
+      )}
+    >
+      {sent ? <Check className="size-4" /> : <BellRing className="size-4" />}
+    </button>
   );
 }

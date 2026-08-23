@@ -121,3 +121,12 @@ export const CODE_LOOKUP: RateLimit = { limit: 20, windowSeconds: 600 };
  * rather than as an unbounded stream of database lookups.
  */
 export const RECOVERY_ATTEMPT: RateLimit = { limit: 20, windowSeconds: 3600 };
+
+/**
+ * Nudges.
+ *
+ * The per-person daily cap in the route is the real control; this only stops a
+ * script from spraying every group at once. Generous, because a person with
+ * four housemates settling up may legitimately send several in a minute.
+ */
+export const NUDGE: RateLimit = { limit: 30, windowSeconds: 600 };
