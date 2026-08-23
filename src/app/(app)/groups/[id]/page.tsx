@@ -163,6 +163,7 @@ export default function GroupPage() {
             <GroupLedger
               groupId={groupId}
               meId={meId}
+              members={group.members}
               people={people}
               onAdd={() => composer.open(groupId)}
             />

@@ -12,10 +12,11 @@ import {
   Users,
   Receipt,
 } from "lucide-react";
-import { EmptyState, Skeleton, cn } from "@/components/ui/primitives";
+import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { useActivity, useDashboard } from "@/lib/client/queries";
+import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
 import type { ActivityDto, PersonDto } from "@/lib/types";
 
@@ -35,6 +36,7 @@ export default function ActivityPage() {
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useActivity();
   const { data: dashboard } = useDashboard();
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
+  const [groupFilter, setGroupFilter] = React.useState<string | null>(null);
 
   const people = React.useMemo(
     () => new Map((dashboard?.people ?? []).map((person) => [person.id, person])),
@@ -54,31 +56,81 @@ export default function ActivityPage() {
     );
   }
 
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
+  const all = data?.pages.flatMap((page) => page.items) ?? [];
+
+  // Filtering client-side rather than by refetching: the feed is already
+  // loaded, every entry carries its group, and a round trip to hide rows the
+  // browser is holding would be slower and would reset the scroll position.
+  const items = groupFilter ? all.filter((item) => item.groupId === groupFilter) : all;
+  const days = groupByDay(items, (item) => item.createdAt);
+
+  // Only groups that actually appear, so the chip row does not offer filters
+  // that lead to an empty list.
+  const groupsInFeed = dashboard.groups.filter((group) =>
+    all.some((item) => item.groupId === group.id),
+  );
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Activity</h1>
+      <h1 className="mb-4 text-[26px] font-black tracking-[-0.03em] text-text">Activity</h1>
+
+      {groupsInFeed.length > 1 ? (
+        <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <GroupChip active={groupFilter === null} onClick={() => setGroupFilter(null)}>
+            All
+          </GroupChip>
+          {groupsInFeed.map((group) => (
+            <GroupChip
+              key={group.id}
+              active={groupFilter === group.id}
+              onClick={() => setGroupFilter(groupFilter === group.id ? null : group.id)}
+            >
+              <span aria-hidden>{group.emoji}</span>
+              {group.name}
+            </GroupChip>
+          ))}
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <EmptyState
           icon={<Receipt className="size-6" />}
-          title="Nothing has happened yet"
-          description="Expenses, payments and comments from all your groups show up here."
+          title={groupFilter ? "Nothing in that group yet" : "Nothing has happened yet"}
+          description={
+            groupFilter
+              ? "Nothing has happened in that group in the entries loaded so far."
+              : "Expenses, payments and comments from all your groups show up here."
+          }
+          action={
+            groupFilter ? (
+              <Button variant="secondary" onClick={() => setGroupFilter(null)}>
+                Show everything
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
-        <ul className="space-y-1">
-          {items.map((item) => (
-            <li key={item.id}>
-              <ActivityRow
-                activity={item}
-                meId={dashboard.me.id}
-                people={people}
-                onOpenExpense={setOpenExpenseId}
-              />
-            </li>
+        <div className="space-y-5">
+          {days.map(({ label, entries }) => (
+            <section key={label}>
+              <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+                {label}
+              </h2>
+              <ul className="space-y-1">
+                {entries.map((item) => (
+                  <li key={item.id}>
+                    <ActivityRow
+                      activity={item}
+                      meId={dashboard.me.id}
+                      people={people}
+                      onOpenExpense={setOpenExpenseId}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
 
       <LoadMore
@@ -95,6 +147,37 @@ export default function ActivityPage() {
         people={people}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function GroupChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => {
+        haptic();
+        onClick();
+      }}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        active
+          ? "border-brand bg-brand text-white"
+          : "border-line bg-surface text-muted hover:text-text",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

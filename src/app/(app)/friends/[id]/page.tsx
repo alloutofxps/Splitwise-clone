@@ -7,11 +7,12 @@ import { ChevronLeft, Plus, Receipt } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, Skeleton, haptic } from "@/components/ui/primitives";
-import { ExpenseRow, groupByDay } from "@/components/group/ledger";
+import { ExpenseRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleUpSheet } from "@/components/group/settle-up-sheet";
 import { useComposer } from "@/components/expense/composer-context";
 import { useDashboard, useFriend } from "@/lib/client/queries";
+import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -52,7 +53,7 @@ export default function FriendPage() {
   }
 
   const meId = dashboard.me.id;
-  const grouped = groupByDay(data.items);
+  const grouped = groupByDay(data.items, (item) => item.date);
   const hasBalance = data.balances.some((entry) => BigInt(entry.net) !== 0n);
 
   return (

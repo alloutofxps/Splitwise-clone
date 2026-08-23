@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
-import { ArrowLeftRight, Paperclip, MessageSquare, Receipt, Search, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeftRight, Paperclip, MessageSquare, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 import { Amount } from "../ui/money";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
 import { LoadMore } from "../ui/load-more";
 import { Button } from "../ui/primitives";
+import { Avatar } from "../ui/avatar";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { ExpenseDetailSheet } from "../expense/detail-sheet";
-import { useGroupLedger, type LedgerEntry } from "@/lib/client/queries";
+import { useGroupLedger, useGroupStats, type LedgerEntry } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
+import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
 
@@ -33,16 +35,22 @@ export function GroupLedger({
   groupId,
   meId,
   people,
+  members,
   onAdd,
 }: {
   groupId: string;
   meId: string;
   people: Map<string, PersonDto>;
+  /** This group's members, for the "who" filter. */
+  members: PersonDto[];
   onAdd: () => void;
 }) {
   const [query, setQuery] = React.useState("");
   const [searching, setSearching] = React.useState(false);
   const [debounced, setDebounced] = React.useState("");
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [person, setPerson] = React.useState<string | null>(null);
+  const [category, setCategory] = React.useState<string | null>(null);
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -50,8 +58,27 @@ export function GroupLedger({
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useGroupLedger(groupId, { q: debounced || undefined });
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useGroupLedger(
+    groupId,
+    {
+      q: debounced || undefined,
+      category: category ?? undefined,
+      person: person ?? undefined,
+    },
+  );
+
+  // The categories this group has actually spent in, biggest first. Offering
+  // all thirty would be a wall of chips for things nobody in the group buys;
+  // the stats endpoint already knows which ones exist and is fetched for the
+  // Insights tab anyway.
+  const { data: stats } = useGroupStats(groupId);
+  const availableCategories = (stats?.byCategory ?? []).map((row) => row.categoryId);
+
+  const activeFilters = (person ? 1 : 0) + (category ? 1 : 0);
+  const clearFilters = () => {
+    setPerson(null);
+    setCategory(null);
+  };
 
   if (isLoading) {
     return (
@@ -64,7 +91,7 @@ export function GroupLedger({
   }
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
-  const groups = groupByDay(items);
+  const groups = groupByDay(items, (item) => item.date);
 
   return (
     <div>
@@ -105,6 +132,25 @@ export function GroupLedger({
             <button
               onClick={() => {
                 haptic();
+                setShowFilters((open) => !open);
+              }}
+              aria-label="Filter this group"
+              aria-expanded={showFilters}
+              className={cn(
+                "relative flex size-8 items-center justify-center rounded-full transition active:scale-90 hover:bg-surface-2",
+                activeFilters > 0 ? "text-brand" : "text-subtle",
+              )}
+            >
+              <SlidersHorizontal className="size-[17px]" />
+              {/* A dot rather than a count: with two filters the number carries
+                  no information the chips below do not already show. */}
+              {activeFilters > 0 ? (
+                <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-brand" />
+              ) : null}
+            </button>
+            <button
+              onClick={() => {
+                haptic();
                 setSearching(true);
               }}
               aria-label="Search this group"
@@ -116,12 +162,82 @@ export function GroupLedger({
         )}
       </div>
 
+      <AnimatePresence initial={false}>
+        {showFilters || activeFilters > 0 ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="mb-3 space-y-2.5 rounded-[--radius-lg] bg-surface-2 px-3 py-3">
+              <FilterRow label="Who">
+                {members.map((member) => (
+                  <FilterChip
+                    key={member.id}
+                    active={person === member.id}
+                    onClick={() => setPerson(person === member.id ? null : member.id)}
+                  >
+                    <Avatar person={member} size="xs" />
+                    {member.id === meId ? "You" : member.displayName.split(" ")[0]}
+                  </FilterChip>
+                ))}
+              </FilterRow>
+
+              {availableCategories.length > 0 ? (
+                <FilterRow label="Category">
+                  {availableCategories.map((id) => {
+                    const definition = categoryById(id);
+                    return (
+                      <FilterChip
+                        key={id}
+                        active={category === id}
+                        onClick={() => setCategory(category === id ? null : id)}
+                      >
+                        <span style={{ color: `var(--avatar-${definition.color})` }}>
+                          <CategoryGlyph name={definition.icon} className="size-3.5" />
+                        </span>
+                        {definition.name}
+                      </FilterChip>
+                    );
+                  })}
+                </FilterRow>
+              ) : null}
+
+              {activeFilters > 0 ? (
+                <button
+                  onClick={() => {
+                    haptic();
+                    clearFilters();
+                  }}
+                  className="text-[12px] font-bold text-brand transition active:scale-95"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
       {items.length === 0 ? (
-        debounced ? (
+        debounced || activeFilters > 0 ? (
           <EmptyState
             icon={<Search className="size-6" />}
             title="Nothing matches"
-            description={`No expenses in this group mention "${debounced}".`}
+            description={
+              debounced
+                ? `No expenses in this group mention "${debounced}".`
+                : "No expenses match those filters."
+            }
+            action={
+              activeFilters > 0 ? (
+                <Button variant="secondary" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <EmptyState
@@ -333,39 +449,61 @@ function SettlementRow({
  * of forty individual date headings from a two-week holiday is unreadable, but
  * so is a wall of undifferentiated rows.
  */
-export function groupByDay(
-  items: LedgerEntry[],
-): { label: string; entries: LedgerEntry[] }[] {
-  const buckets = new Map<string, LedgerEntry[]>();
 
-  for (const item of items) {
-    const label = dayLabel(new Date(item.date));
-    const bucket = buckets.get(label) ?? [];
-    bucket.push(item);
-    buckets.set(label, bucket);
-  }
-
-  return [...buckets].map(([label, entries]) => ({ label, entries }));
-}
-
-function dayLabel(date: Date): string {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = Math.floor((startOfToday.getTime() - startOfDay(date).getTime()) / 86_400_000);
-
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return date.toLocaleDateString(undefined, { weekday: "long" });
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString(undefined, { month: "long" });
-  }
-  return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
 
 function formatBare(amount: string, currency: string): string {
   return formatMoney(BigInt(amount), currency, { trimZeros: true });
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * One labelled, horizontally scrollable row of filter chips.
+ *
+ * Scrolling rather than wrapping: a group with a dozen spending categories
+ * would otherwise push the ledger itself off the screen, and the point of the
+ * filter is to see the rows it produces.
+ */
+function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.07em] text-subtle">
+        {label}
+      </p>
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      // Pressed rather than a checkbox role: these are independent toggles, and
+      // a screen reader should hear the state without inventing a group.
+      aria-pressed={active}
+      onClick={() => {
+        haptic();
+        onClick();
+      }}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        active
+          ? "border-brand bg-brand text-white"
+          : "border-line bg-surface text-muted hover:text-text",
+      )}
+    >
+      {children}
+    </button>
+  );
 }

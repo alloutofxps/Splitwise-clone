@@ -44,6 +44,7 @@ function makeClient() {
         headers: {
           ...(options.body ? { "Content-Type": "application/json" } : {}),
           ...(cookie ? { Cookie: cookie } : {}),
+          ...(options.headers ?? {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
         redirect: "manual",
@@ -768,10 +769,19 @@ async function main() {
   // them rather than entropy. Asserted here because the limiter is invisible
   // until it is the only thing standing between a guesser and every group.
   console.log("\nRate limiting");
+
+  // The burst runs from its own source address, for two reasons: it proves the
+  // limiter keys on the address rather than throttling the whole server, and it
+  // keeps the allowance for every other section - and for the next run of this
+  // suite - untouched. Without it, one pass would leave the real invite flow
+  // rate-limited for ten minutes.
+  const guesser = { "X-Forwarded-For": `203.0.113.${1 + Math.floor(Math.random() * 250)}` };
+
   let limited = null;
   for (let attempt = 0; attempt < 40 && !limited; attempt++) {
     const guess = await outsider.call(`/api/invite/wrong-guess-${attempt}`, {
       allowError: true,
+      headers: guesser,
     });
     if (guess.status === 429) limited = guess;
   }
@@ -779,6 +789,85 @@ async function main() {
   if (limited) {
     check("the refusal explains itself", typeof limited.body.error === "string");
   }
+
+  // A different address must still be served: a limiter that throttles everyone
+  // once one person guesses is a denial of service with extra steps.
+  const bystander = await outsider.call(`/api/invite/${inviteCode}`, {
+    allowError: true,
+    headers: { "X-Forwarded-For": "198.51.100.7" },
+  });
+  check(
+    "another address is unaffected",
+    bystander.status !== 429,
+    String(bystander.status),
+  );
+
+  // -- Ledger filters -------------------------------------------------------
+  //
+  // The endpoint has accepted `category` and `person` since it was written, but
+  // nothing in the UI reached them until now. Asserted here because a filter
+  // that silently returns everything looks exactly like a filter that works.
+  console.log("\nLedger filters");
+
+  // An expense deliberately excluding Ravi, so a person filter has something to
+  // exclude - a group where every split includes everybody cannot tell a
+  // working filter from a no-op.
+  await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId: homeId,
+      description: "Solo laundry",
+      amount: "500",
+      currency: "EUR",
+      splitMode: "EXACT",
+      categoryId: "household",
+      payers: [{ personId: priyaId, amount: "500" }],
+      splits: [{ personId: priyaId, amount: "500", included: true }],
+    },
+  });
+
+  const everything = (await priya.call(`/api/groups/${homeId}/expenses`)).body.items;
+  const forRavi = (await priya.call(`/api/groups/${homeId}/expenses?person=${raviId}`)).body.items;
+  const forPriya = (await priya.call(`/api/groups/${homeId}/expenses?person=${priyaId}`)).body.items;
+
+  check(
+    "a person filter excludes what they are not part of",
+    forRavi.length < everything.length,
+    `${forRavi.length} of ${everything.length}`,
+  );
+  check(
+    "the excluded expense is the one left out",
+    !forRavi.some((row) => row.expense?.description === "Solo laundry"),
+  );
+  check(
+    "the payer still sees their own expense",
+    forPriya.some((row) => row.expense?.description === "Solo laundry"),
+  );
+
+  const byCategory = (await priya.call(`/api/groups/${homeId}/expenses?category=household`)).body.items;
+  check(
+    "a category filter narrows to that category",
+    byCategory.length > 0 && byCategory.length < everything.length,
+    `${byCategory.length} of ${everything.length}`,
+  );
+  check(
+    "every row in a category filter belongs to it",
+    byCategory.every((row) => row.expense?.categoryId === "household"),
+  );
+
+  // Both filters and a search term at once. These used to collide: two of them
+  // wanted an `OR` key on the same object literal, so the text filter was
+  // silently dropped whenever a person filter was also set.
+  const combined = (
+    await priya.call(
+      `/api/groups/${homeId}/expenses?person=${priyaId}&category=household&q=laundry`,
+    )
+  ).body.items;
+  check(
+    "person, category and search combine rather than overwrite",
+    combined.length === 1 && combined[0].expense?.description === "Solo laundry",
+    `${combined.length} rows`,
+  );
 
   // -- Reporting ------------------------------------------------------------
   console.log("\nReporting");
