@@ -77,6 +77,9 @@ function makeClient() {
 
 const sum = (values) => values.reduce((total, value) => total + BigInt(value), 0n);
 
+/** The group's whole-group spend, for comparing against a personal budget. */
+const stats0 = (response) => response.body.stats.totalSpend;
+
 async function main() {
   console.log(`\nDivvy smoke test against ${BASE}\n`);
 
@@ -550,6 +553,232 @@ async function main() {
     { allowError: true },
   );
   check("a junk cursor falls back to the first page", junk.status === 200, String(junk.status));
+
+  // -- A group for the sections below ---------------------------------------
+  //
+  // Everything from here on files expenses that leave a balance outstanding,
+  // and the Lisbon group has just been settled to zero for the lifecycle
+  // assertion at the end. Keeping them apart means neither test has to know
+  // about the other.
+  const extras = await priya.call("/api/groups", {
+    method: "POST",
+    body: {
+      name: "Household",
+      kind: "home",
+      emoji: "🏠",
+      currency: "EUR",
+      simplifyDebts: false,
+      placeholderNames: [],
+    },
+  });
+  const homeId = extras.body.group.id;
+  await priya.call(`/api/groups/${homeId}/members`, {
+    method: "POST",
+    body: { inviteCode: (await ravi.call("/api/identity")).body.me.inviteCode },
+  });
+
+  // -- Attachments ----------------------------------------------------------
+  //
+  // Receipts routinely carry card digits and home addresses, so both halves
+  // matter: who may fetch one, and that there is a way to take it back off.
+  console.log("\nAttachments");
+
+  // A 1x1 PNG. Small enough to inline, real enough to survive decoding.
+  const pixel =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  const withReceipt = await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId: homeId,
+      description: "Taxi with receipt",
+      amount: "2000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "2000" }],
+      splits: [
+        { personId: priyaId, amount: "1000", included: true },
+        { personId: raviId, amount: "1000", included: true },
+      ],
+      attachments: [{ filename: "receipt.png", mimeType: "image/png", dataUrl: pixel }],
+    },
+  });
+  const receipt = withReceipt.body.expense.attachments[0];
+  check("an expense stores its receipt", Boolean(receipt), JSON.stringify(receipt));
+
+  const receiptFetch = await fetch(`${BASE}${receipt.url}`, {
+    headers: { Cookie: priya.cookie },
+  });
+  check("a member can fetch the receipt", receiptFetch.status === 200);
+  check(
+    "the receipt is served as an image",
+    (receiptFetch.headers.get("content-type") ?? "").startsWith("image/"),
+  );
+
+  const receiptDenied = await fetch(`${BASE}${receipt.url}`, {
+    headers: { Cookie: outsider.cookie },
+  });
+  check("a non-member cannot fetch the receipt", receiptDenied.status === 403);
+
+  const receiptDeleteDenied = await outsider.call(receipt.url, {
+    method: "DELETE",
+    allowError: true,
+  });
+  check("a non-member cannot delete the receipt", receiptDeleteDenied.status === 403);
+
+  const receiptDeleted = await priya.call(receipt.url, { method: "DELETE" });
+  check("a member can delete the receipt", receiptDeleted.status === 200);
+
+  // Deleting twice is what the offline outbox does on replay.
+  const receiptDeletedAgain = await priya.call(receipt.url, {
+    method: "DELETE",
+    allowError: true,
+  });
+  check("deleting a receipt twice is not an error", receiptDeletedAgain.status === 200);
+
+  const afterDelete = (await priya.call(`/api/expenses/${withReceipt.body.expense.id}`)).body;
+  check("the expense survives its receipt being removed", afterDelete.expense.id === withReceipt.body.expense.id);
+  check("the receipt is gone from the expense", afterDelete.expense.attachments.length === 0);
+
+  // -- Comments -------------------------------------------------------------
+  console.log("\nComments");
+  const expenseForComments = withReceipt.body.expense.id;
+  await priya.call(`/api/expenses/${expenseForComments}/comments`, {
+    method: "POST",
+    body: { body: "Was this the airport one?" },
+  });
+  const comments = (await ravi.call(`/api/expenses/${expenseForComments}/comments`)).body;
+  check("a comment is stored and readable by another member", comments.comments.length === 1);
+  check("the comment keeps its author", comments.comments[0].personId === priyaId);
+
+  const commentDenied = await outsider.call(`/api/expenses/${expenseForComments}/comments`, {
+    method: "POST",
+    allowError: true,
+    body: { body: "I should not be here" },
+  });
+  check("a non-member cannot comment", commentDenied.status >= 400, String(commentDenied.status));
+
+  // -- Recurring expenses ---------------------------------------------------
+  //
+  // The engine posts each occurrence dated when it was *due*, not when someone
+  // opened the app, and catches up on months nobody looked. Both are asserted
+  // by backdating the start.
+  console.log("\nRecurring expenses");
+
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  threeMonthsAgo.setDate(1);
+  threeMonthsAgo.setHours(9, 0, 0, 0);
+
+  const recurrence = await priya.call("/api/recurrences", {
+    method: "POST",
+    body: {
+      groupId: homeId,
+      description: "Rent",
+      amount: "120000",
+      currency: "EUR",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "120000" }],
+      splits: [
+        { personId: priyaId, amount: "60000", included: true },
+        { personId: raviId, amount: "60000", included: true },
+      ],
+      frequency: "MONTHLY",
+      interval: 1,
+      startDate: threeMonthsAgo.toISOString(),
+    },
+  });
+  check("a recurrence is created", recurrence.status === 201, String(recurrence.status));
+
+  const listed = (await priya.call(`/api/recurrences?groupId=${homeId}`)).body;
+  check("the recurrence is listed for its group", listed.recurrences.length === 1);
+
+  const outsiderRecurrences = (await outsider.call(`/api/recurrences?groupId=${homeId}`)).body;
+  check(
+    "a non-member sees none of the group's recurrences",
+    outsiderRecurrences.recurrences.length === 0,
+  );
+
+  const fired = (await priya.call("/api/recurrences/run", { method: "POST" })).body;
+  check("catching up posts every missed occurrence", fired.posted >= 3, `posted=${fired.posted}`);
+
+  // Running again must post nothing: the occurrence id is derived from the
+  // recurrence and the due date, so a replay collides on the primary key.
+  const firedAgain = (await priya.call("/api/recurrences/run", { method: "POST" })).body;
+  check("running again posts nothing", firedAgain.posted === 0, `posted=${firedAgain.posted}`);
+
+  const rentRows = (await priya.call(`/api/groups/${homeId}/expenses?q=Rent`)).body.items;
+  check("each occurrence is filed once", rentRows.length === fired.posted, `${rentRows.length} rows`);
+  const rentDates = new Set(rentRows.map((row) => row.date.slice(0, 10)));
+  check("occurrences are dated when they were due, not today", rentDates.size === rentRows.length);
+
+  // -- Budgets --------------------------------------------------------------
+  //
+  // A budget tracks *your share*, not the group's spend: fronting a 1200 rent
+  // you are half of must count 600.
+  console.log("\nBudgets");
+  // PUT, not POST: setting a budget replaces whatever was there for the same
+  // scope, and an amount of zero removes it.
+  const budget = await priya.call("/api/budgets", {
+    method: "PUT",
+    body: { groupId: homeId, amount: "1000000", currency: "EUR", period: "YEARLY" },
+  });
+  check("a budget is set", budget.status === 200, String(budget.status));
+
+  const budgets = (await priya.call("/api/budgets")).body.budgets;
+  check("the budget reports spending", budgets.length === 1 && BigInt(budgets[0].spent) > 0n,
+    JSON.stringify(budgets[0]));
+  check(
+    "the budget counts only the viewer's share",
+    BigInt(budgets[0].spent) < BigInt(stats0(await priya.call(`/api/groups/${homeId}/stats`))),
+  );
+
+  // Setting the same scope again replaces rather than duplicating - the scope
+  // columns are nullable, so a unique constraint could not enforce this.
+  await priya.call("/api/budgets", {
+    method: "PUT",
+    body: { groupId: homeId, amount: "900000", currency: "EUR", period: "YEARLY" },
+  });
+  const replaced = (await priya.call("/api/budgets")).body.budgets;
+  check("setting the same scope replaces the budget", replaced.length === 1, `${replaced.length} budgets`);
+  check("the replacement took the new amount", replaced[0].amount === "900000", replaced[0].amount);
+
+  await priya.call("/api/budgets", {
+    method: "PUT",
+    body: { groupId: homeId, amount: "0", currency: "EUR", period: "YEARLY" },
+  });
+  const cleared = (await priya.call("/api/budgets")).body.budgets;
+  check("a zero amount removes the budget", cleared.length === 0, `${cleared.length} budgets`);
+
+  // -- People and rates -----------------------------------------------------
+  console.log("\nPeople and rates");
+  const people = (await priya.call("/api/people")).body.people;
+  check("visible people include every group member", people.length >= 3, `${people.length} people`);
+  check(
+    "a stranger is not in the visible set",
+    !people.some((person) => person.id === outsiderId),
+  );
+
+  const rate = await priya.call("/api/rates?base=EUR&quote=USD", { allowError: true });
+  check("the rates endpoint answers", rate.status === 200, String(rate.status));
+
+  // -- Rate limiting --------------------------------------------------------
+  //
+  // Invite codes are three short words, so a cap on attempts is what protects
+  // them rather than entropy. Asserted here because the limiter is invisible
+  // until it is the only thing standing between a guesser and every group.
+  console.log("\nRate limiting");
+  let limited = null;
+  for (let attempt = 0; attempt < 40 && !limited; attempt++) {
+    const guess = await outsider.call(`/api/invite/wrong-guess-${attempt}`, {
+      allowError: true,
+    });
+    if (guess.status === 429) limited = guess;
+  }
+  check("guessing invite codes is eventually refused", Boolean(limited), "never hit 429");
+  if (limited) {
+    check("the refusal explains itself", typeof limited.body.error === "string");
+  }
 
   // -- Reporting ------------------------------------------------------------
   console.log("\nReporting");
