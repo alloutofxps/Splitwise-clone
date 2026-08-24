@@ -10,7 +10,14 @@ import { Button } from "../ui/primitives";
 import { Avatar } from "../ui/avatar";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { ExpenseDetailSheet } from "../expense/detail-sheet";
-import { useGroupLedger, useGroupStats, type LedgerEntry } from "@/lib/client/queries";
+import { ConfirmSheet } from "../ui/sheet";
+import { useToast } from "../ui/toast";
+import {
+  useDeleteSettlement,
+  useGroupLedger,
+  useGroupStats,
+  type LedgerEntry,
+} from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
@@ -277,6 +284,7 @@ export function GroupLedger({
                         meId={meId}
                         people={people}
                         pending={entry.pending}
+                        groupId={groupId}
                       />
                     </li>
                   ) : null,
@@ -394,27 +402,75 @@ export function ExpenseRow({
   );
 }
 
-function SettlementRow({
+/**
+ * A recorded payment, and the way to take it back.
+ *
+ * Recording a payment that did not happen - or recording the same one twice
+ * after a flaky tap - moves a balance as surely as an invented expense does,
+ * and it is a much easier mistake to make: there is nothing to check it
+ * against. The row is therefore a control, not a label. Without this the API
+ * route, its authorisation rules and the mutation hook were all reachable only
+ * from a terminal.
+ */
+export function SettlementRow({
   settlement,
   meId,
   people,
   pending,
+  groupId,
 }: {
   settlement: NonNullable<LedgerEntry["settlement"]>;
   meId: string;
   people: Map<string, PersonDto>;
   pending?: boolean;
+  groupId?: string;
 }) {
   const from = people.get(settlement.fromPersonId);
   const to = people.get(settlement.toPersonId);
+  const toast = useToast();
+  const remove = useDeleteSettlement();
+  const [confirming, setConfirming] = React.useState(false);
+
+  const fromLabel = from?.id === meId ? "You" : (from?.displayName ?? "Someone");
+  const toLabel = to?.id === meId ? "you" : (to?.displayName ?? "someone");
+
+  const undo = () => {
+    remove.mutate(
+      { id: settlement.id, groupId: groupId ?? null },
+      {
+        onSuccess: () => {
+          setConfirming(false);
+          toast({ tone: "success", title: "Payment removed" });
+        },
+        onError: (error) => {
+          setConfirming(false);
+          toast({
+            tone: "error",
+            title: "Could not remove that payment",
+            description: error instanceof Error ? error.message : undefined,
+          });
+        },
+      },
+    );
+  };
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5",
-        pending && "opacity-60",
-      )}
-    >
+    <>
+      <button
+        type="button"
+        // A payment that has not reached the server yet has no id the server
+        // would recognise, so undoing it is offered once it is confirmed.
+        disabled={pending}
+        onClick={() => {
+          haptic();
+          setConfirming(true);
+        }}
+        aria-label={`${fromLabel} paid ${toLabel}. Remove this payment.`}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-left transition",
+          pending ? "opacity-60" : "active:scale-[0.99] hover:bg-surface-2",
+        )}
+      >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md] bg-positive-soft text-positive-text">
         <ArrowLeftRight className="size-[18px]" />
       </span>
@@ -429,14 +485,25 @@ function SettlementRow({
           </span>
         ) : null}
       </span>
-      <Amount
-        value={settlement.amount}
-        currency={settlement.currency}
-        size="sm"
-        tone="plain"
-        className="shrink-0"
+        <Amount
+          value={settlement.amount}
+          currency={settlement.currency}
+          size="sm"
+          tone="plain"
+          className="shrink-0"
+        />
+      </button>
+
+      <ConfirmSheet
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        onConfirm={undo}
+        loading={remove.isPending}
+        title="Remove this payment?"
+        description={`${fromLabel} paid ${toLabel} ${formatMoney(BigInt(settlement.amount), settlement.currency)}. Removing it puts that amount back on the balance.`}
+        confirmLabel="Remove"
       />
-    </div>
+    </>
   );
 }
 

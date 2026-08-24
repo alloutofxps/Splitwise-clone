@@ -86,7 +86,7 @@ export function ExpenseComposer({
   // loaded. The hook falls back to a pessimistic write in that case, which is
   // correct: the composer cannot be opened until the dashboard is in hand.
   const create = useCreateExpense(data?.me?.id);
-  const update = useUpdateExpense(expense?.id ?? "");
+  const update = useUpdateExpense(expense?.id ?? "", expense?.groupId);
 
   const [panel, setPanel] = React.useState<
     null | "split" | "payer" | "category" | "currency" | "notes" | "receipt"
@@ -297,6 +297,14 @@ export function ExpenseComposer({
             draft={draft}
             data={data}
             onChange={(changes) => patch(changes)}
+            // An existing expense cannot change hands. The server's
+            // `updateExpense` does not write `groupId`, so the picker used to
+            // accept the change, report success, and leave the expense exactly
+            // where it was. Moving one properly is not a small fix - the
+            // destination group has different members, so every split would
+            // have to be re-derived against people who may not be in it - so
+            // the control stops claiming it rather than half-doing it.
+            locked={Boolean(expense)}
           />
 
           {/* Amount --------------------------------------------------------- */}
@@ -580,10 +588,13 @@ function ScopePicker({
   draft,
   data,
   onChange,
+  locked,
 }: {
   draft: Draft;
   data: { groups: { id: string; name: string; emoji: string; currency: string; members: PersonDto[] }[]; friends: { person: PersonDto }[]; me: PersonDto };
   onChange: (changes: Partial<Draft>) => void;
+  /** Editing: the scope is fixed and shown as a label rather than a control. */
+  locked?: boolean;
 }) {
   const options = [
     ...data.groups.map((group) => ({
@@ -618,6 +629,20 @@ function ScopePicker({
       : "";
 
   if (options.length === 0) return null;
+
+  if (locked) {
+    const label = options.find((option) => option.key === current)?.label;
+    if (!label) return null;
+    return (
+      <div className="flex items-center gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2.5">
+        <span className="shrink-0 text-[13px] font-semibold text-muted">With</span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text">
+          {label}
+        </span>
+        <span className="shrink-0 text-[12px] text-subtle">Can&rsquo;t be moved</span>
+      </div>
+    );
+  }
 
   return (
     <label className="flex items-center gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2.5">

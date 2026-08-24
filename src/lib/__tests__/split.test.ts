@@ -208,6 +208,39 @@ describe("resolveSplit", () => {
   });
 });
 
+describe("apportion under hostile input", () => {
+  /*
+   * These run inside the balance fold, so a throw here does not fail one split
+   * - it takes down every screen that reads the group. Conservation has to hold
+   * for input no caller should ever produce.
+   */
+  const hostile: [string, bigint, number[]][] = [
+    ["a NaN weight", 1000n, [1, Number.NaN]],
+    ["an Infinity weight", 1000n, [1, Number.POSITIVE_INFINITY]],
+    ["a -Infinity weight", 1000n, [1, Number.NEGATIVE_INFINITY]],
+    ["every weight NaN", 1000n, [Number.NaN, Number.NaN]],
+    ["a mixture", 1000n, [Number.NaN, 1, Number.POSITIVE_INFINITY, 3]],
+    ["negative weights", 1000n, [-1, -2]],
+    ["a weight past float range", 1000n, [1, 1e300]],
+    ["vanishing weights", 1000n, [1e-9, 1e-9]],
+    ["a negative total", -1000n, [1, 1]],
+    ["a zero total", 0n, [1, 1]],
+  ];
+
+  for (const [name, total, weights] of hostile) {
+    it(`still sums to the total with ${name}`, () => {
+      const parts = apportion(total, weights);
+      expect(parts).toHaveLength(weights.length);
+      expect(parts.reduce((a, b) => a + b, 0n)).toBe(total);
+    });
+  }
+
+  it("treats a non-finite weight as a zero share, like a negative one", () => {
+    expect(apportion(1000n, [1, Number.NaN])).toEqual([1000n, 0n]);
+    expect(apportion(1000n, [1, Number.POSITIVE_INFINITY])).toEqual([1000n, 0n]);
+  });
+});
+
 describe("validateExpenseBalance", () => {
   it("passes when payers and splits both match the total", () => {
     expect(

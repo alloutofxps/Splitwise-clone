@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "pwa:check": "node scripts/pwa-check.mjs"
+    "pwa:check": "node scripts/pwa-check.mjs",
+    "ui:check": "node scripts/ui-check.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

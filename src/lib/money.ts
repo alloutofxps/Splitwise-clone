@@ -374,11 +374,3 @@ export const sum = (values: Iterable<bigint>): bigint => {
   return total;
 };
 
-/**
- * Amounts closer together than half a minor unit are the same amount. Used to
- * decide whether a balance counts as "settled" — after simplification a
- * residue of a cent or two is noise, not debt.
- */
-export function isSettled(amount: bigint, tolerance = 0n): boolean {
-  return abs(amount) <= tolerance;
-}

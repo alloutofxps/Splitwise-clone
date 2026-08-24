@@ -23,7 +23,13 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Person } from "@prisma/client";
 import { prisma } from "./db";
-import { generateInviteCode, generatePersonalCode, generateSecret, hashSecret } from "./codes";
+import {
+  generateInviteCode,
+  generatePersonalCode,
+  generateSecret,
+  hashSecret,
+  secretMatches,
+} from "./codes";
 
 export const IDENTITY_COOKIE = "divvy_id";
 
@@ -101,7 +107,12 @@ export async function getSession(): Promise<Session | null> {
 
   const person = await prisma.person.findUnique({ where: { id: decoded.personId } });
   if (!person || !person.tokenHash) return null;
-  if (person.tokenHash !== hashSecret(decoded.secret)) return null;
+  // Constant-time, via `secretMatches`. Comparing two digests with `!==` is not
+  // itself exploitable - an attacker cannot grind a timing signal backwards
+  // through SHA-256 into a preimage - but the helper was written for exactly
+  // this comparison and then never called from it, which left the codebase
+  // claiming a property at one site that it did not apply at the other.
+  if (!secretMatches(decoded.secret, person.tokenHash)) return null;
 
   return { person };
 }

@@ -256,13 +256,13 @@ curtain rather than a lock.
 ### Verification
 
 - `src/lib/__tests__/`, `src/lib/client/__tests__/` and `src/server/__tests__/` —
-  106 unit tests, including
+  126 unit tests, including
   randomised property checks that no split or apportionment ever loses a minor
   unit, that debt simplification always reproduces the same net position in at
   most n−1 transfers, and that folding one event at a time into a balance sheet
   gives the same answer as recomputing the history (which is what lets the
   client show a new expense's effect before the server confirms it).
-- `scripts/smoke.mjs` — 118 assertions driving the real HTTP API: three people,
+- `scripts/smoke.mjs` — 130 assertions driving the real HTTP API: three people,
   every split mode, a placeholder claimed mid-trip, multi-currency conversion,
   replayed mutations, settling to zero, access control, paging a ledger whose
   rows all share one timestamp, and a backup export that reconciles and stays
@@ -274,6 +274,10 @@ curtain rather than a lock.
   parks in `waiting` and shows the update toast rather than reloading the page
   out from under a half-typed expense, and that the privacy curtain is opaque
   the instant its class is set.
+- `scripts/ui-check.mjs` — 9 assertions asking whether the control on screen is
+  actually wired to the thing it claims to do. Both regressions it pins looked
+  healthy from the outside: the settlement row rendered and the scope picker
+  returned 200, and both were inert.
 - `scripts/shots.mjs` — captures every screen in both themes at a phone
   viewport, and reports any console or page error.
 

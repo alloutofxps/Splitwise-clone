@@ -18,7 +18,3 @@ export function newId(prefix: string): string {
   return `${prefix}_${generate()}`;
 }
 
-/** Sortable-by-creation id, useful when a list is rendered before it syncs. */
-export function newSortableId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${generate().slice(0, 10)}`;
-}

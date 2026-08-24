@@ -98,6 +98,26 @@ export function apportion(
   const n = weights.length;
   if (n === 0) return [];
 
+  /*
+   * Non-finite weights are flattened to zero before anything else touches them.
+   *
+   * `BigInt(NaN)` and `BigInt(Infinity)` both throw a `RangeError`, and this
+   * runs inside the balance fold - so one bad weight does not fail a split, it
+   * takes down every screen that reads the group. A `NaN` also defeats the
+   * guard below on its own, since `NaN <= 0` is false.
+   *
+   * Zero is the right flattening because it is already how a negative weight is
+   * treated: somebody contributing nothing to the split. And if every weight
+   * flattens away, the fallbacks below hand out evenly rather than dividing by
+   * zero, so the parts still sum to the total.
+   *
+   * The API rejects non-finite weights at the schema, and `MAX_MINOR_UNITS`
+   * keeps converted amounts inside float range. This is the layer that holds
+   * when neither applies - a stored row from an older build, or the client's
+   * own optimistic fold.
+   */
+  weights = weights.map((w) => (Number.isFinite(w) ? w : 0));
+
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   if (totalWeight <= 0) {
     // Degenerate input (all weights zero): fall back to an even hand-out so we

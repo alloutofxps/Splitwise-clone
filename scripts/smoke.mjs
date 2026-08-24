@@ -955,6 +955,120 @@ async function main() {
   check("CSV has a header row", csvText.includes("Date,Type,Description"));
   check("CSV includes the payments", csvText.includes("Payment"));
 
+  // -- Undoing a payment ----------------------------------------------------
+  console.log("\nUndoing a payment");
+  const beforeUndo = (await priya.call(`/api/groups/${homeId}`)).body.group;
+  const undoNetBefore = BigInt(beforeUndo.balances.net[raviId] ?? "0");
+
+  const undoable = await priya.call("/api/settlements", {
+    method: "POST",
+    body: {
+      groupId: homeId,
+      fromPersonId: raviId,
+      toPersonId: priyaId,
+      amount: "1500",
+      currency: beforeUndo.currency,
+    },
+  });
+  check("a payment can be recorded", undoable.status === 201, String(undoable.status));
+  const settlementId = undoable.body.settlement.id;
+
+  const afterPay = (await priya.call(`/api/groups/${homeId}`)).body.group;
+  check(
+    "recording it moves the balance",
+    BigInt(afterPay.balances.net[raviId] ?? "0") !== undoNetBefore,
+  );
+
+  const removed = await priya.call(`/api/settlements/${settlementId}`, {
+    method: "DELETE",
+    allowError: true,
+  });
+  check("the payment can be undone", removed.status === 200, String(removed.status));
+
+  const afterUndo = (await priya.call(`/api/groups/${homeId}`)).body.group;
+  check(
+    "undoing it puts the balance back exactly",
+    BigInt(afterUndo.balances.net[raviId] ?? "0") === undoNetBefore,
+    `${afterUndo.balances.net[raviId]} vs ${undoNetBefore}`,
+  );
+  check(
+    "and the payment leaves the ledger",
+    !(await priya.call(`/api/groups/${homeId}/expenses`)).body.items.some(
+      (item) => item.settlement?.id === settlementId,
+    ),
+  );
+  check(
+    "undoing it twice is refused rather than double-counted",
+    (await priya.call(`/api/settlements/${settlementId}`, { method: "DELETE", allowError: true }))
+      .status === 404,
+  );
+
+  // -- An expense cannot change hands ---------------------------------------
+  console.log("\nScope is fixed once filed");
+  const filed = (await priya.call(`/api/groups/${homeId}/expenses`)).body.items.find(
+    (item) => item.kind === "expense",
+  ).expense;
+  const moveAttempt = await priya.call(`/api/expenses/${filed.id}`, {
+    method: "PATCH",
+    allowError: true,
+    body: {
+      groupId: groupId,
+      description: filed.description,
+      amount: filed.amount,
+      currency: filed.currency,
+      exchangeRate: filed.exchangeRate,
+      splitMode: filed.splitMode,
+      payers: filed.payers.map((p) => ({ personId: p.personId, amount: p.amount })),
+      splits: filed.splits.map((s) => ({
+        personId: s.personId,
+        amount: s.amount,
+        included: s.included,
+      })),
+    },
+  });
+  // The server ignores `groupId` on update. The composer used to offer the
+  // change anyway, so this pins the contract the UI is now built against.
+  if (moveAttempt.status === 200) {
+    check(
+      "an edit cannot move an expense to another group",
+      moveAttempt.body.expense.groupId === homeId,
+      String(moveAttempt.body.expense.groupId),
+    );
+  } else {
+    check("an edit cannot move an expense to another group", true, "refused outright");
+  }
+
+  // -- Amounts beyond exact representation ----------------------------------
+  console.log("\nMoney boundary");
+  for (const [label, amount] of [
+    ["one unit past the safe integer", "9007199254740992"],
+    ["a 400-digit amount", "9".repeat(400)],
+  ]) {
+    const tooBig = await priya.call("/api/expenses", {
+      method: "POST",
+      allowError: true,
+      body: {
+        groupId: homeId,
+        description: "Too big",
+        amount,
+        currency: beforeUndo.currency,
+        splitMode: "EQUAL",
+        payers: [{ personId: priyaId, amount }],
+        splits: [{ personId: priyaId, amount }],
+      },
+    });
+    check(`${label} is refused as a 422`, tooBig.status === 422, String(tooBig.status));
+    check(
+      `${label} says why`,
+      JSON.stringify(tooBig.body).includes("too large"),
+      JSON.stringify(tooBig.body).slice(0, 100),
+    );
+  }
+  check(
+    "the group still reads cleanly afterwards",
+    (await priya.call(`/api/groups/${homeId}`)).status === 200,
+  );
+
   // -- A share that is negative --------------------------------------------
   console.log("\nConservation");
   const negativeShare = await priya.call("/api/expenses", {

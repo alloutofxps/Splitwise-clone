@@ -117,26 +117,3 @@ export function AvatarStack({
     </div>
   );
 }
-
-/** Name with a placeholder marker, used wherever a person is listed. */
-export function PersonName({
-  person,
-  you,
-  className,
-}: {
-  person: PersonDto;
-  /** True when this person is the viewer, rendered as "you". */
-  you?: boolean;
-  className?: string;
-}) {
-  return (
-    <span className={cn("inline-flex items-baseline gap-1.5", className)}>
-      <span className="truncate">{you ? "You" : person.displayName}</span>
-      {person.isGhost ? (
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-subtle">
-          invited
-        </span>
-      ) : null}
-    </span>
-  );
-}

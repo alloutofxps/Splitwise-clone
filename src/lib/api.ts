@@ -132,16 +132,43 @@ export async function readBody<T>(request: Request, schema: ZodType<T>): Promise
  * than coercing, because a silently-zeroed amount is the worst possible
  * failure mode here.
  */
+/**
+ * The largest amount the system will accept, in minor units.
+ *
+ * Not an arbitrary product limit — it is the exact point where the money
+ * pipeline stops being lossless. Amounts are `bigint` end to end, but
+ * apportionment converts them to `number` to use as weights
+ * (`convertedBreakdown`, and the creditor weights in debt simplification), and
+ * a `number` only represents integers exactly up to 2^53-1. One unit past that,
+ * a split of 100000000000000001 comes back as 100000000000000000: conservation
+ * still holds, because the error is symmetric, but an individual balance is
+ * wrong by a minor unit. That is precisely the failure the "money is never a
+ * float" rule exists to prevent, so the boundary is enforced where money
+ * enters rather than patched where it is spent.
+ *
+ * It is also far above any real expense: 2^53-1 minor units is ninety trillion
+ * dollars. Anything larger is a typo or an attack, and both deserve a 422
+ * rather than the 500 that SQLite's own 64-bit ceiling used to produce.
+ */
+export const MAX_MINOR_UNITS = BigInt(Number.MAX_SAFE_INTEGER);
+
 export function parseMinorUnits(value: unknown, field = "amount"): bigint {
-  if (typeof value === "bigint") return value;
+  const bounded = (amount: bigint): bigint => {
+    if (amount > MAX_MINOR_UNITS || amount < -MAX_MINOR_UNITS) {
+      throw new ValidationError(`${field} is too large to be represented exactly.`);
+    }
+    return amount;
+  };
+
+  if (typeof value === "bigint") return bounded(value);
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value)) {
       throw new ValidationError(`${field} must be a whole number of minor units.`);
     }
-    return BigInt(value);
+    return bounded(BigInt(value));
   }
   if (typeof value === "string" && /^-?\d+$/.test(value.trim())) {
-    return BigInt(value.trim());
+    return bounded(BigInt(value.trim()));
   }
   throw new ValidationError(`${field} must be an integer amount in minor units.`);
 }
@@ -155,10 +182,18 @@ export const minorUnits = (field = "amount") =>
   z.union([z.string(), z.number(), z.bigint()]).transform((value, ctx) => {
     try {
       return parseMinorUnits(value, field);
-    } catch {
+    } catch (error) {
+      // Pass the parser's own reason through. Collapsing every failure into
+      // "must be a whole number" told somebody who sent a well-formed integer
+      // that was merely too large to be exact that their digits were not
+      // digits - a message they could not act on and could not have been
+      // right about.
       ctx.addIssue({
         code: "custom",
-        message: `${field} must be a whole number of minor units, as a string.`,
+        message:
+          error instanceof ValidationError
+            ? error.message
+            : `${field} must be a whole number of minor units, as a string.`,
       });
       return z.NEVER;
     }

@@ -28,18 +28,23 @@ import {
   expenseEvent,
   optimisticExpense,
   optimisticSettlement,
-  rollback,
+  revertOptimisticWrite,
   settlementEvent,
-  type Snapshot,
+  type Reversal,
 } from "./optimistic";
 import { newId } from "@/lib/ids";
+import {
+  keys,
+  type DashboardPayload,
+  type LedgerEntry,
+  type Page,
+} from "./cache-contract";
+
 import type {
   ActivityDto,
   BudgetDto,
-  DashboardDto,
   ExpenseDto,
   ExpenseInput,
-  FriendDto,
   GroupDetailDto,
   GroupStatsDto,
   MeDto,
@@ -49,30 +54,15 @@ import type {
   SettlementInput,
 } from "@/lib/types";
 
-export const keys = {
-  me: ["me"] as const,
-  dashboard: ["dashboard"] as const,
-  people: ["people"] as const,
-  group: (id: string) => ["group", id] as const,
-  groupLedger: (id: string) => ["group", id, "ledger"] as const,
-  groupStats: (id: string) => ["group", id, "stats"] as const,
-  friends: ["friends"] as const,
-  friend: (id: string) => ["friend", id] as const,
-  activity: ["activity"] as const,
-  expense: (id: string) => ["expense", id] as const,
-  comments: (id: string) => ["expense", id, "comments"] as const,
-  recurrences: ["recurrences"] as const,
-  budgets: ["budgets"] as const,
-  search: (q: string) => ["search", q] as const,
-};
+// Re-exported: every screen already imports its keys and payload shapes from
+// here, and moving the declarations out is a refactor of this file's internals,
+// not of its public surface.
+export { keys };
+export type { DashboardPayload, LedgerEntry };
 
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
-
-export interface DashboardPayload extends DashboardDto {
-  people: PersonDto[];
-}
 
 export function useDashboard() {
   return useQuery({
@@ -95,24 +85,6 @@ export function useGroup(id: string | undefined) {
   });
 }
 
-export interface LedgerEntry {
-  kind: "expense" | "settlement";
-  /** Unique across both tables; the second half of the pagination key. */
-  id: string;
-  date: string;
-  expense?: ExpenseDto;
-  settlement?: SettlementDto;
-  /**
-   * Written by the client before the server has confirmed it. Never sent by the
-   * API - the refetch that follows replaces the row and the flag with it.
-   */
-  pending?: boolean;
-}
-
-interface Page<T> {
-  items: T[];
-  nextCursor: string | null;
-}
 
 /**
  * The group ledger, paged.
@@ -166,15 +138,6 @@ export function useActivity() {
         signal,
       ),
     getNextPageParam: (last) => last.nextCursor,
-    staleTime: 10_000,
-  });
-}
-
-export function useFriends() {
-  return useQuery({
-    queryKey: keys.friends,
-    queryFn: ({ signal }) =>
-      api.get<{ friends: FriendDto[] }>("/api/friends", signal).then((r) => r.friends),
     staleTime: 10_000,
   });
 }
@@ -263,16 +226,36 @@ export function useSearch(query: string) {
  * touched - which is exactly the sort of bookkeeping that rots and leaves users
  * staring at a stale number - everything balance-shaped is invalidated. These
  * are small, local requests.
+ *
+ * Variadic in the scopes, because an edit can move an expense between them. The
+ * composer shows the scope picker when editing as well as when creating, so
+ * dragging last night's dinner from the flat share into the ski trip touches
+ * two groups; passing only the destination left the origin still listing the
+ * row and still counting it towards a balance, with nothing on screen to
+ * suggest a refresh was needed.
+ *
+ * Budgets and search are in here for the same reason and were both missing.
+ * A budget's "spent" figure is computed from your share of the expenses, so
+ * every expense write moves it, and search results embed whole expense rows,
+ * so a deleted one stayed visible - and openable - until the query aged out.
  */
-function invalidateLedger(client: QueryClient, groupId?: string | null) {
+function invalidateLedger(client: QueryClient, ...scopes: (string | null | undefined)[]) {
   void client.invalidateQueries({ queryKey: keys.dashboard });
   void client.invalidateQueries({ queryKey: keys.activity });
   void client.invalidateQueries({ queryKey: keys.friends });
-  if (groupId) {
+  void client.invalidateQueries({ queryKey: keys.budgets });
+  void client.invalidateQueries({ queryKey: ["search"] });
+
+  const groupIds = new Set(scopes.filter((scope): scope is string => Boolean(scope)));
+  for (const groupId of groupIds) {
     void client.invalidateQueries({ queryKey: keys.group(groupId) });
-    void client.invalidateQueries({ queryKey: ["group", groupId, "ledger"] });
+    void client.invalidateQueries({ queryKey: keys.groupLedger(groupId) });
     void client.invalidateQueries({ queryKey: keys.groupStats(groupId) });
-  } else {
+  }
+
+  // A scope that is absent is a direct expense between two people, which shows
+  // up on the friend screens rather than in any group.
+  if (scopes.length === 0 || scopes.some((scope) => !scope)) {
     void client.invalidateQueries({ queryKey: ["friend"] });
   }
 }
@@ -285,7 +268,7 @@ function invalidateLedger(client: QueryClient, groupId?: string | null) {
  * Files an expense.
  *
  * Optimistic: the row and every balance it moves are written to the cache
- * before the request goes out, and the mutation carries the snapshot needed to
+ * before the request goes out, and the mutation carries what it needs to
  * undo that if the server refuses. The id is generated here rather than by the
  * database, which is what makes the optimistic row and the confirmed row the
  * same row - and what makes an offline replay idempotent.
@@ -300,7 +283,7 @@ export function useCreateExpense(meId?: string) {
     ExpenseDto | null,
     Error,
     ExpenseInput & { id?: string },
-    { snapshot?: Snapshot }
+    { reversal?: Reversal }
   >({
     mutationFn: async (input) => {
       const id = writeId(input, "exp");
@@ -345,7 +328,7 @@ export function useCreateExpense(meId?: string) {
       const expense = optimisticExpense({ ...input, id }, meId, currency);
 
       return {
-        snapshot: applyOptimisticWrite(client, {
+        reversal: applyOptimisticWrite(client, {
           groupId: input.groupId,
           currency,
           entry: {
@@ -361,7 +344,7 @@ export function useCreateExpense(meId?: string) {
       };
     },
 
-    onError: (_error, _input, context) => rollback(client, context?.snapshot),
+    onError: (_error, _input, context) => revertOptimisticWrite(client, context?.reversal),
 
     // A null result means the write is sitting in the outbox, not on the
     // server. Refetching then would replace the optimistic row with a server
@@ -374,7 +357,15 @@ export function useCreateExpense(meId?: string) {
   });
 }
 
-export function useUpdateExpense(expenseId: string) {
+/**
+ * Edits an expense.
+ *
+ * `previousGroupId` is the scope the expense was in when the sheet opened, and
+ * it is separate from the one in the payload because the composer lets an edit
+ * change it. Invalidating only the destination left the origin group still
+ * listing the row and still counting it towards a balance.
+ */
+export function useUpdateExpense(expenseId: string, previousGroupId?: string | null) {
   const client = useQueryClient();
 
   return useMutation({
@@ -401,7 +392,7 @@ export function useUpdateExpense(expenseId: string) {
     },
     onSuccess: (_result, input) => {
       void client.invalidateQueries({ queryKey: keys.expense(expenseId) });
-      invalidateLedger(client, input.groupId);
+      invalidateLedger(client, input.groupId, previousGroupId);
     },
   });
 }
@@ -435,7 +426,7 @@ export function useDeleteExpense() {
 export function useCreateSettlement(meId?: string) {
   const client = useQueryClient();
 
-  return useMutation<SettlementDto | null, Error, SettlementInput, { snapshot?: Snapshot }>({
+  return useMutation<SettlementDto | null, Error, SettlementInput, { reversal?: Reversal }>({
     mutationFn: async (input) => {
       const id = writeId(input, "stl");
       const body = { ...input, id };
@@ -477,7 +468,7 @@ export function useCreateSettlement(meId?: string) {
       );
 
       return {
-        snapshot: applyOptimisticWrite(client, {
+        reversal: applyOptimisticWrite(client, {
           groupId: input.groupId,
           currency,
           entry: {
@@ -493,7 +484,7 @@ export function useCreateSettlement(meId?: string) {
       };
     },
 
-    onError: (_error, _input, context) => rollback(client, context?.snapshot),
+    onError: (_error, _input, context) => revertOptimisticWrite(client, context?.reversal),
     // As above: a queued write must not be reconciled against a server that has
     // not seen it.
     onSettled: (settlement, error, input) => {

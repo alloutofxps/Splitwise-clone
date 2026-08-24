@@ -7,13 +7,12 @@ import { ChevronLeft, Plus, Receipt } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, Skeleton, haptic } from "@/components/ui/primitives";
-import { ExpenseRow } from "@/components/group/ledger";
+import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleUpSheet } from "@/components/group/settle-up-sheet";
 import { useComposer } from "@/components/expense/composer-context";
 import { useDashboard, useFriend } from "@/lib/client/queries";
 import { groupByDay } from "@/lib/day-groups";
-import { formatMoney } from "@/lib/money";
 
 /**
  * One friend.
@@ -183,21 +182,19 @@ export default function FriendPage() {
                         />
                       </li>
                     ) : entry.settlement ? (
-                      <li
-                        key={entry.settlement.id}
-                        className="flex items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5"
-                      >
-                        <span className="min-w-0 flex-1 text-[14px] font-semibold text-text">
-                          {entry.settlement.fromPersonId === meId
-                            ? `You paid ${data.person.displayName.split(" ")[0]}`
-                            : `${data.person.displayName.split(" ")[0]} paid you`}
-                        </span>
-                        <span className="tabular shrink-0 text-[14px] font-semibold text-muted">
-                          {formatMoney(
-                            BigInt(entry.settlement.amount),
-                            entry.settlement.currency,
-                          )}
-                        </span>
+                      // The same row the group ledger uses, rather than a
+                      // second copy of it: the copy that used to live here was
+                      // inert, so a payment recorded against a friend by
+                      // mistake could not be undone from the one screen that
+                      // shows it. `groupId` is left unset because a direct
+                      // payment belongs to no group.
+                      <li key={entry.settlement.id}>
+                        <SettlementRow
+                          settlement={entry.settlement}
+                          meId={meId}
+                          people={people}
+                          pending={entry.pending}
+                        />
                       </li>
                     ) : null,
                   )}
