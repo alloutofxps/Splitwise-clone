@@ -256,13 +256,13 @@ curtain rather than a lock.
 ### Verification
 
 - `src/lib/__tests__/`, `src/lib/client/__tests__/` and `src/server/__tests__/` —
-  105 unit tests, including
+  106 unit tests, including
   randomised property checks that no split or apportionment ever loses a minor
   unit, that debt simplification always reproduces the same net position in at
   most n−1 transfers, and that folding one event at a time into a balance sheet
   gives the same answer as recomputing the history (which is what lets the
   client show a new expense's effect before the server confirms it).
-- `scripts/smoke.mjs` — 116 assertions driving the real HTTP API: three people,
+- `scripts/smoke.mjs` — 118 assertions driving the real HTTP API: three people,
   every split mode, a placeholder claimed mid-trip, multi-currency conversion,
   replayed mutations, settling to zero, access control, paging a ledger whose
   rows all share one timestamp, and a backup export that reconciles and stays

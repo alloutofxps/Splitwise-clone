@@ -955,6 +955,39 @@ async function main() {
   check("CSV has a header row", csvText.includes("Date,Type,Description"));
   check("CSV includes the payments", csvText.includes("Payment"));
 
+  // -- A share that is negative --------------------------------------------
+  console.log("\nConservation");
+  const negativeShare = await priya.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      groupId: homeId,
+      description: "Negative share",
+      amount: "1000",
+      // The group settles in EUR; a USD expense would be refused for a missing
+      // exchange rate before it ever reached the share check, which would make
+      // the assertion below pass without testing anything.
+      currency: "EUR",
+      splitMode: "EXACT",
+      payers: [{ personId: priyaId, amount: "1000" }],
+      // These sum to the total, so conservation alone lets them through.
+      splits: [
+        { personId: priyaId, amount: "2000" },
+        { personId: raviId, amount: "-1000" },
+      ],
+    },
+  });
+  check(
+    "a negative share is refused",
+    negativeShare.status === 422,
+    String(negativeShare.status),
+  );
+  check(
+    "and the reason says so",
+    JSON.stringify(negativeShare.body).includes("share cannot be negative"),
+    JSON.stringify(negativeShare.body).slice(0, 120),
+  );
+
   // -- The JSON backup ------------------------------------------------------
   console.log("\nBackup export");
   const backupResponse = await fetch(`${BASE}/api/export`, {

@@ -234,4 +234,21 @@ describe("validateExpenseBalance", () => {
   it("rejects a zero or negative total", () => {
     expect(validateExpenseBalance(0n, [], []).length).toBeGreaterThan(0);
   });
+
+  it("refuses a negative share even when the columns still add up", () => {
+    // +2000 and -1000 sum to the 1000 total, so conservation alone lets this
+    // through. The row would then read one way to the balance engine (which
+    // clamps the negative weight to zero) and another to the CSV and JSON
+    // exports, which print the shares verbatim.
+    const errors = validateExpenseBalance(
+      1000n,
+      [{ personId: "a", amount: 1000n }],
+      [
+        { personId: "a", amount: 2000n },
+        { personId: "b", amount: -1000n },
+      ],
+    );
+
+    expect(errors).toContain("A share cannot be negative.");
+  });
 });

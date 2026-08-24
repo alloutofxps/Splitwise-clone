@@ -442,6 +442,24 @@ export function validateExpenseBalance(
   }
 
   if (payers.some((p) => p.amount < 0n)) errors.push("A payer cannot pay a negative amount.");
+
+  /*
+   * A negative share passes both conservation checks above - pair a +2000 with
+   * a -1000 on a 1000 total and the columns still add up - so it has to be
+   * refused on its own terms.
+   *
+   * It does not corrupt a balance: `convertedBreakdown` re-apportions the
+   * stored shares as weights, and `apportion` clamps a negative weight to zero,
+   * so the fold treats the row as though that person owed nothing. What it does
+   * corrupt is everything that reads the shares directly. The CSV export and
+   * the JSON backup print them verbatim, so an exported ledger states a share
+   * of -10.00 for somebody the app itself shows as owing nothing - two answers
+   * to the same question, from the same row.
+   */
+  if (splits.some((s) => s.amount < 0n)) {
+    errors.push("A share cannot be negative.");
+  }
+
   return errors;
 }
 
