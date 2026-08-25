@@ -125,7 +125,7 @@ function ServiceWorkerManager() {
         className="pointer-events-auto flex w-full max-w-[420px] items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-elevated px-4 py-3 shadow-float"
       >
         <RefreshCw className="size-[18px] shrink-0 text-brand" />
-        <p className="min-w-0 flex-1 text-[13px] font-semibold text-text">
+        <p className="min-w-0 flex-1 text-body font-semibold text-text">
           A new version of Divvy is ready
         </p>
         <button
@@ -133,7 +133,7 @@ function ServiceWorkerManager() {
             haptic();
             waiting.postMessage("skip-waiting");
           }}
-          className="shrink-0 rounded-[var(--radius-sm)] bg-brand px-3 py-1.5 text-[13px] font-bold text-white transition active:scale-95"
+          className="shrink-0 rounded-[var(--radius-sm)] bg-brand px-3 py-1.5 text-body font-bold text-white transition active:scale-95"
         >
           Reload
         </button>
@@ -252,14 +252,14 @@ function InstallPrompt() {
             </button>
 
             <div className="flex items-start gap-3 pr-6">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-[19px] font-black text-white">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-title-lg font-black text-white">
                 D
               </span>
               <div className="min-w-0">
-                <p className="text-[15px] font-bold tracking-[-0.01em] text-text">
+                <p className="text-subhead font-bold tracking-[-0.01em] text-text">
                   Install Divvy
                 </p>
-                <p className="mt-0.5 text-[13px] leading-snug text-muted">
+                <p className="mt-0.5 text-body leading-snug text-muted">
                   {showIos
                     ? "Add it to your home screen to use it offline and get it out of the browser."
                     : "Works offline, opens instantly, no app store."}
@@ -284,7 +284,7 @@ function InstallPrompt() {
             ) : (
               <button
                 onClick={() => void install()}
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-[15px] font-semibold text-white transition active:scale-[0.98]"
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-white transition active:scale-[0.98]"
               >
                 <Download className="size-[18px]" />
                 Install
@@ -316,8 +316,8 @@ function IosStep({
       >
         {icon}
       </span>
-      <span className="text-[13px] leading-snug text-text">{children}</span>
-      <span className="ml-auto shrink-0 text-[11px] font-bold text-subtle">{index}</span>
+      <span className="text-body leading-snug text-text">{children}</span>
+      <span className="ml-auto shrink-0 text-tiny font-bold text-subtle">{index}</span>
     </li>
   );
 }

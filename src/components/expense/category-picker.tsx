@@ -34,7 +34,7 @@ export function CategoryPicker({
 
           return (
             <section key={groupName} className="mb-6 last:mb-0">
-              <h3 className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.07em] text-subtle">
+              <h3 className="mb-2.5 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
                 {groupName}
               </h3>
               <div className="grid grid-cols-2 gap-2 xs:grid-cols-3">
@@ -63,7 +63,7 @@ export function CategoryPicker({
                       >
                         <CategoryGlyph name={category.icon} />
                       </span>
-                      <span className="text-[13px] font-semibold leading-tight text-text">
+                      <span className="text-body font-semibold leading-tight text-text">
                         {category.name}
                       </span>
                       {active ? (

@@ -50,7 +50,7 @@ export function CurrencyPicker({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search currencies"
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-subtle/70"
+              className="min-w-0 flex-1 bg-transparent text-subhead text-text outline-none placeholder:text-subtle/70"
             />
           </label>
         </div>
@@ -70,16 +70,16 @@ export function CurrencyPicker({
                     active ? "bg-brand-soft" : "hover:bg-surface-2",
                   )}
                 >
-                  <span className="text-[20px] leading-none">{entry.flag}</span>
+                  <span className="text-title-lg leading-none">{entry.flag}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold text-text">
+                    <span className="block text-body-lg font-semibold text-text">
                       {entry.code}
                     </span>
-                    <span className="block truncate text-[12px] text-subtle">
+                    <span className="block truncate text-caption text-subtle">
                       {entry.name}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[14px] font-semibold text-muted">
+                  <span className="shrink-0 text-body-lg font-semibold text-muted">
                     {entry.symbol}
                   </span>
                   {active ? (
@@ -92,7 +92,7 @@ export function CurrencyPicker({
         </ul>
 
         {results.length === 0 ? (
-          <p className="py-10 text-center text-[14px] text-muted">
+          <p className="py-10 text-center text-body-lg text-muted">
             Nothing matches &ldquo;{query}&rdquo;.
           </p>
         ) : null}

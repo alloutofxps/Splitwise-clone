@@ -117,7 +117,7 @@ export function ReceiptPicker({
                   {attachment.mimeType === "application/pdf" ? (
                     <span className="flex size-full flex-col items-center justify-center gap-1 text-subtle">
                       <FileText className="size-7" />
-                      <span className="px-1 text-center text-[10px] font-semibold">PDF</span>
+                      <span className="px-1 text-center text-micro font-semibold">PDF</span>
                     </span>
                   ) : (
                     // Plain img: this is a client-side blob that next/image
@@ -140,14 +140,14 @@ export function ReceiptPicker({
                 >
                   <Trash2 className="size-3.5" />
                 </button>
-                <p className="mt-1 truncate text-center text-[10px] text-subtle">
+                <p className="mt-1 truncate text-center text-micro text-subtle">
                   {formatSize(attachment.size)}
                 </p>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-4 rounded-[var(--radius-md)] bg-surface-2 px-4 py-6 text-center text-[13px] leading-relaxed text-muted">
+          <p className="mt-4 rounded-[var(--radius-md)] bg-surface-2 px-4 py-6 text-center text-body leading-relaxed text-muted">
             Photos are shrunk on your phone before they upload, so this works on
             a bad connection.
           </p>

@@ -91,7 +91,7 @@ export function AmountPad({
   return (
     <div className={cn("select-none", className)}>
       <div className="flex items-baseline justify-center gap-1.5 px-2 py-1">
-        <span className="display-number shrink-0 text-[30px] font-bold text-subtle">
+        <span className="display-number shrink-0 text-display font-bold text-subtle">
           {symbol}
         </span>
         <input
@@ -113,7 +113,7 @@ export function AmountPad({
             if (event.key === "Enter") onSubmit?.();
           }}
           style={{ width: `${Math.max(1, (text || "0").length)}ch` }}
-          className="display-number min-w-0 bg-transparent text-center text-[46px] font-bold leading-none text-text outline-none placeholder:text-subtle/60"
+          className="display-number min-w-0 bg-transparent text-center text-hero font-bold leading-none text-text outline-none placeholder:text-subtle/60"
           aria-label="Amount"
         />
       </div>
@@ -148,7 +148,7 @@ export function AmountPad({
               haptic();
               setOpen(false);
             }}
-            className="col-span-3 mt-1 flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-[14px] font-bold text-brand transition active:scale-[0.98]"
+            className="col-span-3 mt-1 flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-body-lg font-bold text-brand transition active:scale-[0.98]"
           >
             <Check className="size-4" />
             Done
@@ -179,7 +179,7 @@ function Key({
       disabled={disabled}
       aria-label={label}
       className={cn(
-        "display-number flex h-14 items-center justify-center rounded-[var(--radius-md)] bg-surface text-[22px] font-semibold text-text",
+        "display-number flex h-12 items-center justify-center rounded-[var(--radius-md)] bg-surface text-title-lg font-semibold text-text",
         "border border-line transition active:scale-95 active:bg-surface-3",
         "disabled:opacity-30 disabled:active:scale-100",
       )}

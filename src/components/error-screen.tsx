@@ -34,8 +34,8 @@ export function ErrorScreen({
       <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-warning-soft text-text">
         <TriangleAlert size={22} />
       </div>
-      <p className="text-[16px] font-semibold text-text">{title}</p>
-      <p className="mt-1.5 max-w-[34ch] text-[14px] leading-relaxed text-muted">
+      <p className="text-input font-semibold text-text">{title}</p>
+      <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
         {description}
       </p>
       <div className="mt-5 flex gap-2">
@@ -56,7 +56,7 @@ export function ErrorScreen({
         </Button>
       </div>
       {error.digest ? (
-        <p className="display-number mt-6 text-[11px] text-subtle">
+        <p className="display-number mt-6 text-tiny text-subtle">
           Reference {error.digest}
         </p>
       ) : null}

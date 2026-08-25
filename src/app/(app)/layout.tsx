@@ -97,15 +97,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (error || !data) {
     return (
       <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
-        <p className="text-[17px] font-semibold text-text">Could not reach Divvy</p>
-        <p className="mt-2 text-[14px] leading-relaxed text-muted">
+        <p className="text-title font-semibold text-text">Could not reach Divvy</p>
+        <p className="mt-2 text-body-lg leading-relaxed text-muted">
           {error instanceof ApiError && error.isOffline
             ? "You appear to be offline. Anything you add will sync once you reconnect."
             : "Something went wrong loading your data."}
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-[15px] font-semibold text-white"
+          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-subhead font-semibold text-white"
         >
           Try again
         </button>

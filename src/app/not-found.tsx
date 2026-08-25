@@ -22,17 +22,17 @@ export default function NotFound() {
         <Compass className="size-7" />
       </span>
 
-      <h1 className="mt-6 text-[22px] font-black tracking-[-0.03em] text-text">
+      <h1 className="mt-6 text-heading font-black tracking-[-0.03em] text-text">
         There is nothing here
       </h1>
-      <p className="mt-2 text-[14px] leading-relaxed text-muted">
+      <p className="mt-2 text-body-lg leading-relaxed text-muted">
         This link may be out of date, or whatever it pointed at has been
         deleted. Your groups and expenses are unaffected.
       </p>
 
       <Link
         href="/"
-        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-[15px] font-semibold text-white transition active:scale-[0.98]"
+        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-subhead font-semibold text-white transition active:scale-[0.98]"
       >
         Back to Divvy
       </Link>

@@ -83,7 +83,7 @@ export function PayerPicker({
           <div>
             <p
               className={cn(
-                "mb-2.5 text-center text-[13px] font-semibold",
+                "mb-2.5 text-center text-body font-semibold",
                 remaining === 0n ? "text-positive-text" : "text-negative-text",
               )}
             >
@@ -125,7 +125,7 @@ export function PayerPicker({
           )}
         >
           <Users className={cn("size-4", multiple ? "text-brand" : "text-subtle")} />
-          <span className="flex-1 text-[14px] font-semibold text-text">
+          <span className="flex-1 text-body-lg font-semibold text-text">
             More than one person paid
           </span>
           <span
@@ -158,7 +158,7 @@ export function PayerPicker({
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
                     <Avatar person={member} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text">
+                    <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
                       {member.id === meId ? "You" : member.displayName}
                     </span>
                     {!multiple && selected ? (
@@ -214,7 +214,7 @@ function PayerAmount({
 
   return (
     <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
-      <span className="text-[12px] font-semibold text-subtle">{currencySymbol(currency)}</span>
+      <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         inputMode="decimal"
         value={text}
@@ -232,7 +232,7 @@ function PayerAmount({
           setText(next);
           onChange(next === "" ? 0n : parseAmount(next, currency));
         }}
-        className="tabular w-[76px] bg-transparent text-right text-[14px] font-bold text-text outline-none placeholder:text-subtle/60"
+        className="tabular w-[76px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60"
       />
     </div>
   );

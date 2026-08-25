@@ -149,8 +149,8 @@ export default function JoinPage() {
     return (
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col justify-center px-6 text-center">
         <Wordmark className="mb-8 justify-center" />
-        <p className="text-[19px] font-bold text-text">This invite is not valid</p>
-        <p className="mt-2 text-[14px] leading-relaxed text-muted">
+        <p className="text-title-lg font-bold text-text">This invite is not valid</p>
+        <p className="mt-2 text-body-lg leading-relaxed text-muted">
           {error ?? "The code may have been changed or the group deleted."}
         </p>
         <Button variant="primary" className="mt-6" onClick={() => router.push("/")}>
@@ -165,17 +165,17 @@ export default function JoinPage() {
       <Wordmark className="mb-8" />
 
       <div className="flex flex-1 flex-col">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="text-body font-semibold uppercase tracking-[0.06em] text-subtle">
           You&rsquo;ve been invited to
         </p>
 
         {preview.kind === "group" ? (
           <>
-            <h1 className="mt-2 flex items-center gap-2.5 text-[30px] font-black leading-tight tracking-[-0.03em] text-text">
+            <h1 className="mt-2 flex items-center gap-2.5 text-display font-black leading-tight tracking-[-0.03em] text-text">
               <span>{preview.group.emoji}</span>
               <span className="min-w-0 break-words">{preview.group.name}</span>
             </h1>
-            <p className="mt-2 text-[15px] text-muted">
+            <p className="mt-2 text-subhead text-muted">
               {preview.group.memberCount}{" "}
               {preview.group.memberCount === 1 ? "person" : "people"} ·{" "}
               {preview.group.expenseCount}{" "}
@@ -190,7 +190,7 @@ export default function JoinPage() {
                   className="flex items-center gap-2 rounded-full bg-surface-2 py-1.5 pl-1.5 pr-3"
                 >
                   <Avatar person={member} size="xs" />
-                  <span className="text-[13px] font-semibold text-text">
+                  <span className="text-body font-semibold text-text">
                     {member.displayName}
                   </span>
                 </li>
@@ -199,10 +199,10 @@ export default function JoinPage() {
           </>
         ) : (
           <>
-            <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.03em] text-text">
+            <h1 className="mt-2 text-display font-black leading-tight tracking-[-0.03em] text-text">
               {preview.person.displayName}
             </h1>
-            <p className="mt-2 text-[15px] text-muted">
+            <p className="mt-2 text-subhead text-muted">
               Add them to split expenses one-to-one.
             </p>
             <div className="mt-5">
@@ -214,11 +214,11 @@ export default function JoinPage() {
         {/* Placeholder claiming ------------------------------------------- */}
         {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
           <div className="mt-7 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
-            <p className="flex items-center gap-1.5 text-[14px] font-semibold text-text">
+            <p className="flex items-center gap-1.5 text-body-lg font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
               Which one are you?
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-muted">
+            <p className="mt-1 text-body leading-relaxed text-muted">
               These names have been splitting expenses already. Pick yours and
               everything filed against it becomes yours.
             </p>
@@ -240,7 +240,7 @@ export default function JoinPage() {
                     )}
                   >
                     <Avatar person={member} size="sm" />
-                    <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                    <span className="flex-1 truncate text-body-lg font-semibold text-text">
                       {member.displayName}
                     </span>
                     <span
@@ -259,7 +259,7 @@ export default function JoinPage() {
                 haptic();
                 setClaimId(null);
               }}
-              className="mt-2.5 w-full py-1.5 text-[13px] font-semibold text-muted"
+              className="mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
             >
               None of these — I&rsquo;m new
             </button>
@@ -270,12 +270,12 @@ export default function JoinPage() {
         {!me ? (
           <div className="mt-7">
             <label className="block">
-              <span className="mb-1.5 block text-[13px] font-semibold text-muted">
+              <span className="mb-1.5 block text-body font-semibold text-muted">
                 Your name
               </span>
               <div className="flex items-center gap-3">
                 <span
-                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-[17px] font-bold text-white transition-colors duration-300"
+                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-title font-bold text-white transition-colors duration-300"
                   style={{ background: `var(--avatar-${colorForName(name || "divvy")})` }}
                 >
                   {name.trim() ? initials(name) : "?"}
@@ -287,11 +287,11 @@ export default function JoinPage() {
                   placeholder="Priya"
                   autoFocus
                   enterKeyHint="go"
-                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
                 />
               </div>
             </label>
-            <p className="mt-2 text-[12px] leading-relaxed text-subtle">
+            <p className="mt-2 text-caption leading-relaxed text-subtle">
               No email, no password. You will get a recovery key afterwards to
               save — that is the only way back in on another device.
             </p>
@@ -317,7 +317,7 @@ export default function JoinPage() {
         </Button>
 
         {me ? (
-          <p className="mt-3 text-center text-[12px] text-subtle">
+          <p className="mt-3 text-center text-caption text-subtle">
             Joining as {me.displayName}
           </p>
         ) : null}

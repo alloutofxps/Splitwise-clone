@@ -123,17 +123,17 @@ export function RecurringSheet({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-semibold text-text">
+                      <p className="truncate text-body-lg font-semibold text-text">
                         {recurrence.description}
                       </p>
-                      <p className="mt-0.5 flex items-center gap-1 text-[12px] text-muted">
+                      <p className="mt-0.5 flex items-center gap-1 text-caption text-muted">
                         <span className="tabular font-semibold">
                           {formatMoney(BigInt(recurrence.amount), recurrence.currency)}
                         </span>
                         <span>·</span>
                         <span>{FREQUENCY_LABELS[recurrence.frequency]}</span>
                       </p>
-                      <p className="mt-1 flex items-center gap-1 text-[11px] text-subtle">
+                      <p className="mt-1 flex items-center gap-1 text-tiny text-subtle">
                         <CalendarClock className="size-3" />
                         {recurrence.active
                           ? `Next on ${new Date(recurrence.nextRunAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
@@ -275,7 +275,7 @@ function NewRecurrenceSheet({
           onChange={(event) => setDescription(event.target.value.slice(0, 140))}
           placeholder="Rent"
           autoFocus
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
 
         <div className="mt-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
@@ -287,7 +287,7 @@ function NewRecurrenceSheet({
           />
         </div>
 
-        <p className="mb-2 mt-5 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
           How often
         </p>
         <div className="flex flex-wrap gap-2">
@@ -299,7 +299,7 @@ function NewRecurrenceSheet({
                 setFrequency(option);
               }}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
                 frequency === option
                   ? "border-brand bg-brand text-white"
                   : "border-line bg-surface text-muted",
@@ -311,7 +311,7 @@ function NewRecurrenceSheet({
         </div>
 
         <label className="mt-5 block">
-          <span className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+          <span className="mb-1.5 block text-caption font-bold uppercase tracking-[0.06em] text-subtle">
             Starting
           </span>
           <input
@@ -323,11 +323,11 @@ function NewRecurrenceSheet({
                 setStartDate(new Date(year, month - 1, day, 12));
               }
             }}
-            className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[16px] text-text outline-none focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+            className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
         </label>
 
-        <p className="mb-2 mt-5 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
           Paid by
         </p>
         <div className="flex flex-wrap gap-2">
@@ -339,7 +339,7 @@ function NewRecurrenceSheet({
                 setPayerId(member.id);
               }}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
                 payerId === member.id
                   ? "border-brand bg-brand text-white"
                   : "border-line bg-surface text-muted",
@@ -350,7 +350,7 @@ function NewRecurrenceSheet({
           ))}
         </div>
 
-        <p className="mt-5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-[12px] leading-relaxed text-muted">
+        <p className="mt-5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-caption leading-relaxed text-muted">
           Splits equally between all {group.members.length} members, and keeps
           that split even if the group changes. Edit or stop it any time — past
           expenses it created stay put.

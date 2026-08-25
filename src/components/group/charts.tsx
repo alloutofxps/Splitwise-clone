@@ -124,10 +124,10 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
           key={tile.label}
           className="rounded-[var(--radius-lg)] border border-line bg-surface p-3 shadow-card"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-subtle">
+          <p className="text-micro font-bold uppercase tracking-[0.05em] text-subtle">
             {tile.label}
           </p>
-          <p className="display-number mt-1 truncate text-[17px] font-bold text-text">
+          <p className="display-number mt-1 truncate text-title font-bold text-text">
             {formatMoney(BigInt(tile.value), stats.currency, { compact: true, trimZeros: true })}
           </p>
         </div>
@@ -154,7 +154,19 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
   // The last twelve months is what fits legibly on a phone; older data stays in
   // the table view rather than being squeezed into two-pixel bars.
   const months = stats.byMonth.slice(-12);
-  if (months.length === 0) return null;
+  /*
+   * A trend needs two points to be a trend.
+   *
+   * With one month this drew a single bar over a third of the card to convey a
+   * figure the "Peak month" label directly above it already stated, and which
+   * the group-total tile above *that* stated again - the same number three
+   * times, arranged to look like analysis. Most groups sit at one month for
+   * their first few weeks, so this is the common case rather than the edge one.
+   *
+   * The distribution charts below are unaffected: a breakdown by category or by
+   * person is meaningful within a single month, where a time series is not.
+   */
+  if (months.length < 2) return null;
 
   const values = months.map((month) =>
     BigInt(lens === "group" ? month.total : month.yourShare),
@@ -178,10 +190,10 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
         <div className="mb-2 h-9">
           {active ? (
             <div className="inline-flex flex-col rounded-[var(--radius-sm)] bg-surface-2 px-2.5 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
+              <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
                 {formatMonth(active.month, true)}
               </span>
-              <span className="tabular text-[13px] font-bold text-text">
+              <span className="tabular text-body font-bold text-text">
                 {formatMoney(
                   BigInt(lens === "group" ? active.total : active.yourShare),
                   stats.currency,
@@ -190,10 +202,10 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
             </div>
           ) : (
             <div className="inline-flex flex-col px-2.5 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
+              <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
                 Peak month
               </span>
-              <span className="tabular text-[13px] font-bold text-text">
+              <span className="tabular text-body font-bold text-text">
                 {formatMoney(peak, stats.currency, { compact: true })}
               </span>
             </div>
@@ -239,7 +251,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
             <span
               key={month.month}
               className={cn(
-                "max-w-[56px] flex-1 text-center text-[9px] font-semibold uppercase",
+                "max-w-[56px] flex-1 text-center text-micro font-semibold uppercase",
                 hovered === index ? "text-text" : "text-subtle",
               )}
             >
@@ -308,13 +320,13 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
                 >
                   <CategoryGlyph name={category.icon} className="size-3" />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
+                <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
                   {category.name}
                 </span>
-                <span className="tabular shrink-0 text-[12px] font-semibold text-muted">
+                <span className="tabular shrink-0 text-caption font-semibold text-muted">
                   {formatMoney(row.value, stats.currency, { trimZeros: true })}
                 </span>
-                <span className="tabular w-9 shrink-0 text-right text-[11px] text-subtle">
+                <span className="tabular w-9 shrink-0 text-right text-tiny text-subtle">
                   {share >= 1 ? `${Math.round(share)}%` : "<1%"}
                 </span>
               </div>
@@ -333,10 +345,10 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
 
         {rest.length > 0 ? (
           <li className="flex items-center gap-2 pt-1">
-            <span className="min-w-0 flex-1 text-[12px] font-semibold text-subtle">
+            <span className="min-w-0 flex-1 text-caption font-semibold text-subtle">
               {rest.length} more {rest.length === 1 ? "category" : "categories"}
             </span>
-            <span className="tabular text-[12px] font-semibold text-muted">
+            <span className="tabular text-caption font-semibold text-muted">
               {formatMoney(restTotal, stats.currency, { trimZeros: true })}
             </span>
           </li>
@@ -398,12 +410,12 @@ function PersonChart({
             <li key={row.person!.id}>
               <div className="mb-1.5 flex items-center gap-2">
                 <Avatar person={row.person!} size="xs" />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
+                <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
                   {row.person!.displayName}
                 </span>
                 <span
                   className={cn(
-                    "tabular shrink-0 text-[12px] font-bold",
+                    "tabular shrink-0 text-caption font-bold",
                     row.net === 0n
                       ? "text-subtle"
                       : positive
@@ -446,7 +458,7 @@ function PersonChart({
         })}
       </ul>
 
-      <p className="mt-4 border-t border-line pt-3 text-[11px] leading-relaxed text-subtle">
+      <p className="mt-4 border-t border-line pt-3 text-tiny leading-relaxed text-subtle">
         Right of the line means they have paid out more than they have consumed.
         This is lifetime activity, not the current balance — settling up does
         not change it.
@@ -536,8 +548,8 @@ function TableCard({
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {/* The table scrolls inside its own box; the page never scrolls sideways. */}
       <div className="scroll-area overflow-x-auto">
-        <table className="w-full text-left text-[13px]">
-          <caption className="px-4 pb-2 pt-3.5 text-left text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+        <table className="w-full text-left text-body">
+          <caption className="px-4 pb-2 pt-3.5 text-left text-caption font-bold uppercase tracking-[0.06em] text-subtle">
             {caption}
           </caption>
           <thead>
@@ -547,7 +559,7 @@ function TableCard({
                   key={cell}
                   scope="col"
                   className={cn(
-                    "whitespace-nowrap px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-subtle",
+                    "whitespace-nowrap px-4 py-2 text-tiny font-bold uppercase tracking-wide text-subtle",
                     index > 0 && "text-right",
                   )}
                 >
@@ -594,9 +606,9 @@ function ChartCard({
 }) {
   return (
     <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4 shadow-card">
-      <h3 className="text-[14px] font-bold tracking-[-0.01em] text-text">{title}</h3>
+      <h3 className="text-body-lg font-bold tracking-[-0.01em] text-text">{title}</h3>
       {subtitle ? (
-        <p className="mb-3.5 mt-0.5 text-[12px] leading-snug text-muted">{subtitle}</p>
+        <p className="mb-3.5 mt-0.5 text-caption leading-snug text-muted">{subtitle}</p>
       ) : (
         <div className="mb-3.5" />
       )}

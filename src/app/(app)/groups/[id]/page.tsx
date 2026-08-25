@@ -69,7 +69,7 @@ export default function GroupPage() {
         </button>
 
         <div className="min-w-0 flex-1 px-1">
-          <h1 className="flex items-center gap-2 truncate text-[17px] font-bold tracking-[-0.02em] text-text">
+          <h1 className="flex items-center gap-2 truncate text-title font-bold tracking-[-0.02em] text-text">
             <span>{group.emoji}</span>
             <span className="truncate">{group.name}</span>
           </h1>
@@ -114,7 +114,7 @@ export default function GroupPage() {
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pr-1 transition active:scale-95"
           >
             <AvatarStack people={group.members} size="xs" max={4} />
-            <span className="whitespace-nowrap text-[12px] font-semibold text-subtle">
+            <span className="whitespace-nowrap text-caption font-semibold text-subtle">
               {group.memberCount}
             </span>
           </button>

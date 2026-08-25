@@ -59,10 +59,10 @@ export function MyCodeSheet({
     <Sheet open={open} onClose={onClose} title="Your code">
       <div className="px-5 pb-6">
         <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
-          <p className="text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
             Personal code
           </p>
-          <p className="mt-2 select-all break-words text-[24px] font-black tracking-[-0.01em] text-text">
+          <p className="mt-2 select-all break-words text-heading font-black tracking-[-0.01em] text-text">
             {me.inviteCode}
           </p>
         </div>
@@ -87,7 +87,7 @@ export function MyCodeSheet({
           </Button>
         </div>
 
-        <p className="mt-5 text-center text-[12px] leading-relaxed text-muted">
+        <p className="mt-5 text-center text-caption leading-relaxed text-muted">
           Anyone with this can add you as a friend. It does not give them access
           to your groups or any of your history.
         </p>

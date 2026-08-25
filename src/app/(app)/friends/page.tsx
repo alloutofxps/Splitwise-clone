@@ -27,7 +27,7 @@ export default function FriendsPage() {
   if (isLoading || !data) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Friends</h1>
+        <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Friends</h1>
         <div className="space-y-2.5">
           {[0, 1, 2].map((index) => (
             <Skeleton key={index} className="h-[68px] w-full rounded-[var(--radius-lg)]" />
@@ -43,7 +43,7 @@ export default function FriendsPage() {
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
       <div className="mb-5 flex items-start justify-between gap-4">
-        <h1 className="text-[26px] font-black tracking-[-0.03em] text-text">Friends</h1>
+        <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">Friends</h1>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" variant="secondary" onClick={() => setMyCode(true)}>
             My code
@@ -130,11 +130,11 @@ function FriendCard({
       <Avatar person={friend.person} size="md" />
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold text-text">
+        <span className="block truncate text-subhead font-semibold text-text">
           {friend.person.displayName}
         </span>
         {friend.sharedGroupIds.length > 0 ? (
-          <span className="mt-0.5 flex items-center gap-1 text-[12px] text-subtle">
+          <span className="mt-0.5 flex items-center gap-1 text-caption text-subtle">
             <Users className="size-3" />
             {friend.sharedGroupIds.length} shared{" "}
             {friend.sharedGroupIds.length === 1 ? "group" : "groups"}
@@ -144,14 +144,14 @@ function FriendCard({
 
       <span className="shrink-0 text-right">
         {entries.length === 0 ? (
-          <span className="text-[13px] font-semibold text-subtle">settled</span>
+          <span className="text-body font-semibold text-subtle">settled</span>
         ) : (
           entries.map(([currency, value]) => {
             const amount = BigInt(value);
             return (
               <span key={currency} className="block">
                 <Amount value={amount} currency={currency} size="md" />
-                <span className="block text-[10px] font-semibold text-subtle">
+                <span className="block text-micro font-semibold text-subtle">
                   {amount > 0n ? "owes you" : "you owe"}
                 </span>
               </span>

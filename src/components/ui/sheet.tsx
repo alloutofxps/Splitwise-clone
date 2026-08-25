@@ -155,7 +155,7 @@ function SheetBody({
 
         {title ? (
           <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-3">
-            <h2 className="text-[17px] font-bold tracking-[-0.01em] text-text">{title}</h2>
+            <h2 className="text-title font-bold tracking-[-0.01em] text-text">{title}</h2>
             {dismissible ? (
               <IconButton label="Close" size="sm" onClick={onClose} className="-mr-2">
                 <X className="size-5" />
@@ -207,12 +207,12 @@ export function ConfirmSheet({
     <Sheet open={open} onClose={onClose} title={title}>
       <div className="px-5 pb-5">
         {description ? (
-          <p className="text-[15px] leading-relaxed text-muted">{description}</p>
+          <p className="text-subhead leading-relaxed text-muted">{description}</p>
         ) : null}
         <div className="mt-6 flex gap-3">
           <button
             onClick={onClose}
-            className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-[15px] font-semibold text-text transition active:scale-[0.975]"
+            className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-subhead font-semibold text-text transition active:scale-[0.975]"
           >
             Cancel
           </button>
@@ -220,7 +220,7 @@ export function ConfirmSheet({
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              "h-11 flex-1 rounded-[var(--radius-md)] text-[15px] font-semibold text-white transition active:scale-[0.975] disabled:opacity-60",
+              "h-11 flex-1 rounded-[var(--radius-md)] text-subhead font-semibold text-white transition active:scale-[0.975] disabled:opacity-60",
               tone === "danger" ? "bg-negative" : "bg-brand",
             )}
           >

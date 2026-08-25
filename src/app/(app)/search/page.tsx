@@ -55,7 +55,7 @@ export default function SearchPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-4 text-[26px] font-black tracking-[-0.03em] text-text">Search</h1>
+      <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Search</h1>
 
       <div className="sticky top-0 z-20 -mx-4 bg-bg/90 px-4 pb-3 backdrop-blur lg:-mx-8 lg:px-8">
         <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-ring)]">
@@ -66,7 +66,7 @@ export default function SearchPage() {
             placeholder="Boat, hotel, groceries…"
             autoFocus
             enterKeyHint="search"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-text outline-none placeholder:text-subtle/70"
+            className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
           />
           {query ? (
             <button
@@ -85,7 +85,7 @@ export default function SearchPage() {
 
       {debounced.trim().length < 2 ? (
         <div className="mt-2">
-          <p className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
             Try a category
           </p>
           <div className="flex flex-wrap gap-2">
@@ -100,13 +100,13 @@ export default function SearchPage() {
                   haptic();
                   setQuery(`category:${category.id}`);
                 }}
-                className="rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+                className="rounded-full border border-line bg-surface px-3 py-1.5 text-body font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
               >
                 {category.name}
               </button>
             ))}
           </div>
-          <p className="mt-4 px-1 text-[12px] leading-relaxed text-subtle">
+          <p className="mt-4 px-1 text-caption leading-relaxed text-subtle">
             Searches descriptions and notes across every group you are in. You
             can also filter inline with <code>category:dining</code>.
           </p>
@@ -126,11 +126,11 @@ export default function SearchPage() {
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1">
-            <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+            <p className="text-caption font-bold uppercase tracking-[0.06em] text-subtle">
               {items.length} {items.length === 1 ? "match" : "matches"}
             </p>
             {[...totals].map(([currency, total]) => (
-              <p key={currency} className="tabular text-[13px] font-semibold text-text">
+              <p key={currency} className="tabular text-body font-semibold text-text">
                 {formatMoney(total, currency)}
               </p>
             ))}

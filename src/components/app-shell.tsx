@@ -50,7 +50,7 @@ export function AppShell({
         <OfflineBanner />
         <main
           className={cn(
-            "mx-auto w-full max-w-[560px] flex-1 px-4 lg:max-w-[720px] lg:px-8",
+            "mx-auto w-full max-w-[560px] flex-1 px-4 lg:max-w-[720px] lg:px-8 xl:max-w-[880px]",
             // Clears the tab bar plus the home indicator on mobile.
             "pb-[calc(env(safe-area-inset-bottom)+5.25rem)] lg:pb-12",
           )}
@@ -138,7 +138,7 @@ function TabLink({ destination, active }: { destination: Destination; active: bo
       </span>
       <span
         className={cn(
-          "text-[10px] font-semibold transition-colors duration-200",
+          "text-micro font-semibold transition-colors duration-200",
           active ? "text-brand" : "text-subtle",
         )}
       >
@@ -150,7 +150,7 @@ function TabLink({ destination, active }: { destination: Destination; active: bo
 
 function Dot({ count }: { count: number }) {
   return (
-    <span className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-negative px-1 text-[9px] font-bold leading-[16px] text-white ring-2 ring-surface">
+    <span className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-negative px-1 text-micro font-bold leading-[16px] text-white ring-2 ring-surface">
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -175,7 +175,7 @@ function Sidebar({
 
       <button
         onClick={onAddExpense}
-        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-[15px] font-semibold text-white shadow-card transition hover:bg-brand-hover active:scale-[0.98]"
+        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-white shadow-card transition hover:bg-brand-hover active:scale-[0.98]"
       >
         <Plus className="size-[18px]" strokeWidth={2.6} />
         Add expense
@@ -191,7 +191,7 @@ function Sidebar({
               href={destination.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[14px] font-semibold transition",
+                "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-semibold transition",
                 active ? "text-brand" : "text-muted hover:bg-surface-2 hover:text-text",
               )}
             >
@@ -205,7 +205,7 @@ function Sidebar({
               <Icon className="relative size-[18px]" strokeWidth={active ? 2.4 : 2} />
               <span className="relative">{destination.label}</span>
               {destination.badge ? (
-                <span className="relative ml-auto rounded-full bg-negative px-1.5 text-[10px] font-bold leading-4 text-white">
+                <span className="relative ml-auto rounded-full bg-negative px-1.5 text-micro font-bold leading-4 text-white">
                   {destination.badge > 9 ? "9+" : destination.badge}
                 </span>
               ) : null}
@@ -216,7 +216,7 @@ function Sidebar({
         <Link
           href="/search"
           className={cn(
-            "flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[14px] font-semibold transition",
+            "flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-semibold transition",
             pathname.startsWith("/search")
               ? "bg-brand-soft text-brand"
               : "text-muted hover:bg-surface-2 hover:text-text",
@@ -227,7 +227,7 @@ function Sidebar({
         </Link>
       </nav>
 
-      <p className="mt-auto px-3 text-[11px] leading-relaxed text-subtle">
+      <p className="mt-auto px-3 text-tiny leading-relaxed text-subtle">
         Every feature, free.
         <br />
         No accounts, no ads, no paywall.
@@ -239,10 +239,10 @@ function Sidebar({
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2", className)}>
-      <span className="flex size-8 items-center justify-center rounded-[10px] bg-brand text-[15px] font-black text-white">
+      <span className="flex size-8 items-center justify-center rounded-[10px] bg-brand text-subhead font-black text-white">
         D
       </span>
-      <span className="text-[19px] font-black tracking-[-0.03em] text-text">Divvy</span>
+      <span className="text-title-lg font-black tracking-[-0.03em] text-text">Divvy</span>
     </span>
   );
 }

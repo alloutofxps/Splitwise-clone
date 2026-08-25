@@ -6,11 +6,11 @@ import { initials } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
 
 const SIZES = {
-  xs: "size-6 text-[10px]",
-  sm: "size-8 text-[12px]",
-  md: "size-10 text-[14px]",
-  lg: "size-14 text-[19px]",
-  xl: "size-20 text-[28px]",
+  xs: "size-6 text-micro",
+  sm: "size-8 text-caption",
+  md: "size-10 text-body-lg",
+  lg: "size-14 text-title-lg",
+  xl: "size-20 text-display-sm",
 } as const;
 
 export type AvatarSize = keyof typeof SIZES;

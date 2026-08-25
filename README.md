@@ -256,7 +256,7 @@ curtain rather than a lock.
 ### Verification
 
 - `src/lib/__tests__/`, `src/lib/client/__tests__/` and `src/server/__tests__/` —
-  174 unit tests, including
+  179 unit tests, including
   randomised property checks that no split or apportionment ever loses a minor
   unit, that debt simplification always reproduces the same net position in at
   most n−1 transfers, and that folding one event at a time into a balance sheet

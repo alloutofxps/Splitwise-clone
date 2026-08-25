@@ -176,7 +176,7 @@ export function SettleUpSheet({
                   person={iAmPaying ? people.get(meId)! : other!}
                   size="md"
                 />
-                <span className="text-[12px] font-semibold text-text">
+                <span className="text-caption font-semibold text-text">
                   {iAmPaying ? "You" : (other?.displayName.split(" ")[0] ?? "")}
                 </span>
               </div>
@@ -185,7 +185,7 @@ export function SettleUpSheet({
 
               <div className="flex flex-col items-center gap-1.5">
                 <Avatar person={iAmPaying ? other! : people.get(meId)!} size="md" />
-                <span className="text-[12px] font-semibold text-text">
+                <span className="text-caption font-semibold text-text">
                   {iAmPaying ? (other?.displayName.split(" ")[0] ?? "") : "You"}
                 </span>
               </div>
@@ -196,7 +196,7 @@ export function SettleUpSheet({
                     haptic();
                     setSelected(null);
                   }}
-                  className="ml-2 text-[12px] font-semibold text-brand"
+                  className="ml-2 text-caption font-semibold text-brand"
                 >
                   Change
                 </button>
@@ -218,7 +218,7 @@ export function SettleUpSheet({
                     haptic();
                     setAmount(selected.amount);
                   }}
-                  className="mx-auto mt-2 block text-[12px] font-semibold text-brand"
+                  className="mx-auto mt-2 block text-caption font-semibold text-brand"
                 >
                   Settle the full {toDecimalString(selected.amount, currency)}
                 </button>
@@ -232,7 +232,7 @@ export function SettleUpSheet({
 
             {/* How ---------------------------------------------------------- */}
             <div className="mt-4">
-              <p className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+              <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                 How was it paid?
               </p>
               <div className="flex flex-wrap gap-2">
@@ -244,7 +244,7 @@ export function SettleUpSheet({
                       setMethod(method === option ? null : option);
                     }}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                      "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
                       method === option
                         ? "border-brand bg-brand text-white"
                         : "border-line bg-surface text-muted",
@@ -260,7 +260,7 @@ export function SettleUpSheet({
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 500))}
               placeholder="Add a note (optional)"
-              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </>
         )}
@@ -289,13 +289,13 @@ function SuggestionList({
   if (suggestions.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-[15px] font-semibold text-text">Nothing to settle</p>
-        <p className="mt-1.5 text-[13px] text-muted">
+        <p className="text-subhead font-semibold text-text">Nothing to settle</p>
+        <p className="mt-1.5 text-body text-muted">
           You are square with everyone in this group.
         </p>
         {group ? (
           <div className="mt-5">
-            <p className="mb-2 text-[12px] font-semibold text-subtle">
+            <p className="mb-2 text-caption font-semibold text-subtle">
               Record a payment anyway
             </p>
             <ul className="space-y-1.5">
@@ -310,7 +310,7 @@ function SuggestionList({
                       className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
                     >
                       <Avatar person={member} size="sm" />
-                      <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                      <span className="flex-1 truncate text-body-lg font-semibold text-text">
                         Pay {member.displayName}
                       </span>
                     </button>
@@ -339,12 +339,12 @@ function SuggestionList({
             >
               <Avatar person={iAmPaying ? to : from} size="md" />
               <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold text-text">
+                <span className="block text-body-lg font-semibold text-text">
                   {iAmPaying
                     ? `Pay ${to.displayName.split(" ")[0]}`
                     : `${from.displayName.split(" ")[0]} pays you`}
                 </span>
-                <span className="tabular mt-0.5 block text-[12px] text-subtle">
+                <span className="tabular mt-0.5 block text-caption text-subtle">
                   {toDecimalString(BigInt(edge.amount), currency)} {currency}
                 </span>
               </span>
@@ -408,7 +408,7 @@ function PayThem({
 
   return (
     <div className="mt-4 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
-      <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+      <p className="mb-2.5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
         Pay {person.displayName.split(" ")[0]}
       </p>
       <ul className="space-y-1.5">
@@ -426,12 +426,12 @@ function PayThem({
                   onClick={() => haptic()}
                   className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 transition active:scale-[0.985]"
                 >
-                  <span className="text-[16px]">{kind?.emoji ?? "💸"}</span>
+                  <span className="text-input">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold text-text">
+                    <span className="block text-body font-semibold text-text">
                       {entry.label || kind?.label || entry.kind}
                     </span>
-                    <span className="block truncate text-[11px] text-subtle">
+                    <span className="block truncate text-tiny text-subtle">
                       {entry.value}
                     </span>
                   </span>
@@ -442,12 +442,12 @@ function PayThem({
                   onClick={() => void copy(entry.value)}
                   className="flex w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-left transition active:scale-[0.985]"
                 >
-                  <span className="text-[16px]">{kind?.emoji ?? "💸"}</span>
+                  <span className="text-input">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold text-text">
+                    <span className="block text-body font-semibold text-text">
                       {entry.label || kind?.label || entry.kind}
                     </span>
-                    <span className="block truncate text-[11px] text-subtle">
+                    <span className="block truncate text-tiny text-subtle">
                       {entry.value}
                     </span>
                   </span>
@@ -462,7 +462,7 @@ function PayThem({
           );
         })}
       </ul>
-      <p className="mt-2.5 text-[11px] leading-relaxed text-subtle">
+      <p className="mt-2.5 text-tiny leading-relaxed text-subtle">
         Divvy never touches your money — these just open your own banking app.
         Record the payment below once it has gone through.
       </p>

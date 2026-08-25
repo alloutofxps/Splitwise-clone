@@ -117,10 +117,10 @@ export function ExpenseDetailSheet({
               </span>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-[19px] font-bold leading-tight tracking-[-0.02em] text-text">
+                <h2 className="text-title-lg font-bold leading-tight tracking-[-0.02em] text-text">
                   {expense.description}
                 </h2>
-                <p className="mt-1 text-[13px] text-muted">
+                <p className="mt-1 text-body text-muted">
                   {category!.name} ·{" "}
                   {new Date(expense.date).toLocaleDateString(undefined, {
                     day: "numeric",
@@ -139,7 +139,7 @@ export function ExpenseDetailSheet({
                 tone="plain"
               />
               {expense.currency !== "" && expense.exchangeRate !== "1" ? (
-                <span className="tabular text-[13px] text-subtle">
+                <span className="tabular text-body text-subtle">
                   ≈ {toDecimalString(BigInt(expense.convertedAmount), expense.currency)}
                 </span>
               ) : null}
@@ -158,7 +158,7 @@ export function ExpenseDetailSheet({
                       className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5"
                     >
                       <Avatar person={person} size="sm" />
-                      <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                      <span className="flex-1 truncate text-body-lg font-semibold text-text">
                         {payer.personId === meId ? "You" : person.displayName}
                       </span>
                       <Amount
@@ -194,11 +194,11 @@ export function ExpenseDetailSheet({
                       >
                         <Avatar person={person} size="sm" />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-semibold text-text">
+                          <span className="block truncate text-body-lg font-semibold text-text">
                             {split.personId === meId ? "You" : person.displayName}
                           </span>
                           {split.percent !== null || split.weight !== null ? (
-                            <span className="block text-[11px] text-subtle">
+                            <span className="block text-tiny text-subtle">
                               {split.percent !== null
                                 ? `${split.percent}%`
                                 : `${split.weight} ${split.weight === 1 ? "share" : "shares"}`}
@@ -206,13 +206,13 @@ export function ExpenseDetailSheet({
                           ) : null}
                         </span>
                         <span className="text-right">
-                          <span className="tabular block text-[14px] font-semibold text-text">
+                          <span className="tabular block text-body-lg font-semibold text-text">
                             {formatMoney(BigInt(split.amount), expense.currency)}
                           </span>
                           {net !== 0n ? (
                             <span
                               className={cn(
-                                "block text-[11px] font-semibold",
+                                "block text-tiny font-semibold",
                                 net > 0n ? "text-positive-text" : "text-negative-text",
                               )}
                             >
@@ -235,10 +235,10 @@ export function ExpenseDetailSheet({
                   {expense.items.map((item) => (
                     <li key={item.id} className="flex items-center gap-3 py-2.5">
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium text-text">
+                        <span className="block truncate text-body font-medium text-text">
                           {item.name}
                         </span>
-                        <span className="block truncate text-[11px] text-subtle">
+                        <span className="block truncate text-tiny text-subtle">
                           {item.participantIds
                             .map((id) =>
                               id === meId
@@ -248,7 +248,7 @@ export function ExpenseDetailSheet({
                             .join(", ")}
                         </span>
                       </span>
-                      <span className="tabular shrink-0 text-[13px] font-semibold text-muted">
+                      <span className="tabular shrink-0 text-body font-semibold text-muted">
                         {formatMoney(BigInt(item.amount), expense.currency)}
                       </span>
                     </li>
@@ -313,7 +313,7 @@ export function ExpenseDetailSheet({
             {expense.notes ? (
               <div className="mt-5">
                 <SectionLabel>Note</SectionLabel>
-                <p className="whitespace-pre-wrap rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-[14px] leading-relaxed text-text">
+                <p className="whitespace-pre-wrap rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-body-lg leading-relaxed text-text">
                   {expense.notes}
                 </p>
               </div>
@@ -335,12 +335,12 @@ export function ExpenseDetailSheet({
                       <li key={comment.id} className="flex gap-2.5">
                         {person ? <Avatar person={person} size="xs" /> : null}
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[12px] font-semibold text-muted">
+                          <span className="block text-caption font-semibold text-muted">
                             {comment.personId === meId
                               ? "You"
                               : (person?.displayName ?? "Someone")}
                           </span>
-                          <span className="mt-0.5 block whitespace-pre-wrap text-[14px] leading-snug text-text">
+                          <span className="mt-0.5 block whitespace-pre-wrap text-body-lg leading-snug text-text">
                             {comment.body}
                           </span>
                         </span>
@@ -361,7 +361,7 @@ export function ExpenseDetailSheet({
                     }
                   }}
                   placeholder="Add a comment"
-                  className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                  className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
                 />
                 <button
                   onClick={() => {
@@ -400,7 +400,7 @@ export function ExpenseDetailSheet({
               </Button>
             </div>
 
-            <p className="mt-3 text-center text-[11px] text-subtle">
+            <p className="mt-3 text-center text-tiny text-subtle">
               Added by{" "}
               {expense.createdByPersonId === meId
                 ? "you"
@@ -443,7 +443,7 @@ export function ExpenseDetailSheet({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
       {children}
     </p>
   );

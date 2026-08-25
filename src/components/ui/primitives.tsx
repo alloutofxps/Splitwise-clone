@@ -2,11 +2,37 @@
 
 import * as React from "react";
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
 import { Loader2 } from "lucide-react";
+import { TEXT_SCALE } from "@/lib/type-scale";
+
+/**
+ * Class merging, taught about this app's type scale.
+ *
+ * `tailwind-merge` resolves conflicts by knowing which utilities belong to the
+ * same group, and it knows the built-in names. Ours are custom, and every one
+ * of them looks exactly like a text *colour* - so `cn("text-display-lg",
+ * "text-positive-text")` dropped the font size and kept the colour, silently,
+ * on every element that sets both. That is most of the balances in the app: the
+ * home headline rendered at the inherited 16px while its class list still
+ * carried the `font-bold leading-none` from the same branch, which is what made
+ * it look like a styling bug rather than a merge bug.
+ *
+ * Declaring the group fixes it at the root instead of at forty call sites. The
+ * bracketed pixel values this scale replaced never had the problem, because the
+ * brackets told the library what it was looking at; a named scale has to say so
+ * explicitly.
+ */
+const merge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: [...TEXT_SCALE] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
+  return merge(clsx(inputs));
 }
 
 /**
@@ -51,9 +77,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-[13px] gap-1.5 rounded-[var(--radius-sm)]",
-  md: "h-11 px-4 text-[15px] gap-2 rounded-[var(--radius-md)]",
-  lg: "h-13 px-5 text-[16px] gap-2 rounded-[var(--radius-lg)]",
+  sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)]",
+  md: "h-11 px-4 text-subhead gap-2 rounded-[var(--radius-md)]",
+  lg: "h-13 px-5 text-input gap-2 rounded-[var(--radius-lg)]",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -263,7 +289,7 @@ export function Segmented<T extends string>({
           }}
           className={cn(
             "relative z-10 rounded-[var(--radius-sm)] font-semibold transition-colors duration-200",
-            size === "md" ? "h-9 text-[13px]" : "h-8 text-[12px]",
+            size === "md" ? "h-9 text-body" : "h-8 text-caption",
             option.value === value ? "text-text" : "text-subtle hover:text-muted",
           )}
         >
@@ -349,9 +375,9 @@ export function EmptyState({
           {icon}
         </div>
       ) : null}
-      <p className="text-[16px] font-semibold text-text">{title}</p>
+      <p className="text-input font-semibold text-text">{title}</p>
       {description ? (
-        <p className="mt-1.5 max-w-[34ch] text-[14px] leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
           {description}
         </p>
       ) : null}
@@ -376,7 +402,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-tiny font-semibold",
         tone === "neutral" && "bg-neutral-soft text-muted",
         tone === "brand" && "bg-brand-soft text-brand-soft-text",
         tone === "positive" && "bg-positive-soft text-positive-text",
@@ -405,7 +431,7 @@ export function SectionHeader({
 }) {
   return (
     <div className={cn("flex items-center justify-between px-1 pb-2", className)}>
-      <h2 className="text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+      <h2 className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
         {title}
       </h2>
       {action}

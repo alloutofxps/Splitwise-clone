@@ -95,13 +95,13 @@ export function InviteSheet({
     <Sheet open={open} onClose={onClose} title={`Invite to ${group.name}`}>
       <div className="px-5 pb-6">
         <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
-          <p className="text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
             Invite code
           </p>
-          <p className="mt-2 select-all break-words text-[26px] font-black tracking-[-0.01em] text-text">
+          <p className="mt-2 select-all break-words text-display-sm font-black tracking-[-0.01em] text-text">
             {code}
           </p>
-          <p className="mt-2 text-[12px] text-muted">
+          <p className="mt-2 text-caption text-muted">
             They enter this in Divvy, or open the link below.
           </p>
         </div>
@@ -135,7 +135,7 @@ export function InviteSheet({
         </div>
 
         <div className="mt-6 rounded-[var(--radius-md)] bg-surface-2 p-3.5">
-          <p className="flex items-start gap-2 text-[12px] leading-relaxed text-muted">
+          <p className="flex items-start gap-2 text-caption leading-relaxed text-muted">
             <MessageCircle className="mt-0.5 size-3.5 shrink-0" />
             <span>
               Anyone with this code can join the group and see its expenses. If
@@ -146,7 +146,7 @@ export function InviteSheet({
           <button
             onClick={() => void rotate()}
             disabled={rotating}
-            className="mt-2.5 flex items-center gap-1.5 text-[12px] font-bold text-brand transition active:scale-95 disabled:opacity-50"
+            className="mt-2.5 flex items-center gap-1.5 text-caption font-bold text-brand transition active:scale-95 disabled:opacity-50"
           >
             <RefreshCw className={rotating ? "size-3.5 animate-spin" : "size-3.5"} />
             Generate a new code

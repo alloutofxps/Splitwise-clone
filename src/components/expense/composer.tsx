@@ -290,7 +290,7 @@ export function ExpenseComposer({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-2 text-center text-[12px] font-semibold text-negative-text"
+                  className="mb-2 text-center text-caption font-semibold text-negative-text"
                 >
                   {blockers[0]}
                 </motion.p>
@@ -326,10 +326,10 @@ export function ExpenseComposer({
           />
 
           {/* Amount --------------------------------------------------------- */}
-          <div className="mt-5 flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-6">
+          <div className="mt-4 flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
             <button
               onClick={() => setPanel("currency")}
-              className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[12px] font-bold text-muted transition active:scale-95"
+              className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-caption font-bold text-muted transition active:scale-95"
             >
               {draft.currency}
               <ChevronDown className="size-3" />
@@ -352,6 +352,38 @@ export function ExpenseComposer({
                 onRateChange={(rate) => patch({ exchangeRate: rate })}
               />
             ) : null}
+          </div>
+
+          {/*
+            Who paid, and how it divides.
+
+            Directly under the amount, and two-up rather than stacked, because
+            the keypad opens with the sheet: at full height it pushed both of
+            these below the fold, so the first thing anyone saw of a new expense
+            was a number pad and no indication of who it involved. One row of
+            two costs 48px here instead of 116, which is the difference between
+            visible and not.
+          */}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <SummaryTile
+              label="Paid by"
+              value={payerLabel(draft.payers, peopleById, me.id)}
+              onClick={() => setPanel("payer")}
+              warning={payerMismatch}
+              icon={
+                draft.payers.length === 1 && peopleById.get(draft.payers[0].personId) ? (
+                  <Avatar person={peopleById.get(draft.payers[0].personId)!} size="xs" />
+                ) : (
+                  <Users className="size-4 text-subtle" />
+                )
+              }
+            />
+            <SummaryTile
+              label="Split"
+              value={splitLabel(draft.splitMode, split.splits.filter((s) => s.included).length)}
+              onClick={() => setPanel("split")}
+              warning={split.errors.length > 0}
+            />
           </div>
 
           {/* Description ---------------------------------------------------- */}
@@ -383,30 +415,7 @@ export function ExpenseComposer({
               }}
               placeholder="What was it for?"
               enterKeyHint="done"
-              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium text-text outline-none placeholder:text-subtle/70"
-            />
-          </div>
-
-          {/* Who paid / how it splits --------------------------------------- */}
-          <div className="mt-4 space-y-2">
-            <Row
-              label="Paid by"
-              value={payerLabel(draft.payers, peopleById, me.id)}
-              onClick={() => setPanel("payer")}
-              warning={payerMismatch}
-              icon={
-                draft.payers.length === 1 && peopleById.get(draft.payers[0].personId) ? (
-                  <Avatar person={peopleById.get(draft.payers[0].personId)!} size="xs" />
-                ) : (
-                  <Users className="size-4 text-subtle" />
-                )
-              }
-            />
-            <Row
-              label="Split"
-              value={splitLabel(draft.splitMode, split.splits.filter((s) => s.included).length)}
-              onClick={() => setPanel("split")}
-              warning={split.errors.length > 0}
+              className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle/70"
             />
           </div>
 
@@ -521,7 +530,7 @@ export function ExpenseComposer({
             rows={5}
             autoFocus
             placeholder="Anything worth remembering about this expense…"
-            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-[15px] leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-subhead leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
           <Button
             variant="primary"
@@ -653,25 +662,25 @@ function ScopePicker({
     if (!label) return null;
     return (
       <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
-        <span className="shrink-0 text-[13px] font-semibold text-muted">With</span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text">
+        <span className="shrink-0 text-body font-semibold text-muted">With</span>
+        <span className="min-w-0 flex-1 truncate text-subhead font-semibold text-text">
           {label}
         </span>
-        <span className="shrink-0 text-[12px] text-subtle">Can&rsquo;t be moved</span>
+        <span className="shrink-0 text-caption text-subtle">Can&rsquo;t be moved</span>
       </div>
     );
   }
 
   return (
     <label className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
-      <span className="shrink-0 text-[13px] font-semibold text-muted">With</span>
+      <span className="shrink-0 text-body font-semibold text-muted">With</span>
       <select
         value={current}
         onChange={(event) => {
           const option = options.find((o) => o.key === event.target.value);
           if (option) onChange(option.apply());
         }}
-        className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-text outline-none"
+        className="min-w-0 flex-1 bg-transparent text-subhead font-semibold text-text outline-none"
       >
         {current === "" ? <option value="">Choose a group or friend…</option> : null}
         {data.groups.length > 0 ? (
@@ -701,7 +710,15 @@ function ScopePicker({
   );
 }
 
-function Row({
+/**
+ * One of the two facts that decide what an expense means.
+ *
+ * Stacked label over value rather than the side-by-side row this replaces,
+ * because two of these have to fit in the width one row used to take. The
+ * chevron is dropped for the same reason - the tile is obviously a control from
+ * its fill, and at this size the affordance is not worth 16px of the value.
+ */
+function SummaryTile({
   label,
   value,
   onClick,
@@ -721,22 +738,23 @@ function Row({
         onClick();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[var(--radius-md)] border bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]",
+        "flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-md)] border bg-surface px-3 py-2 text-left transition active:scale-[0.985]",
         warning ? "border-negative/50 bg-negative-soft/40" : "border-line",
       )}
     >
-      <span className="shrink-0 text-[13px] font-semibold text-muted">{label}</span>
-      <span className="ml-auto flex min-w-0 items-center gap-2">
+      <span className="text-tiny font-semibold uppercase tracking-[0.05em] text-subtle">
+        {label}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5">
         {icon}
         <span
           className={cn(
-            "truncate text-[14px] font-semibold",
+            "truncate text-body-lg font-semibold",
             warning ? "text-negative-text" : "text-text",
           )}
         >
           {value}
         </span>
-        <ChevronDown className="size-4 shrink-0 -rotate-90 text-subtle" />
       </span>
     </button>
   );
@@ -760,7 +778,7 @@ function Chip({
         onClick();
       }}
       className={cn(
-        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
         active
           ? "border-brand/40 bg-brand-soft text-brand-soft-text"
           : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -803,7 +821,7 @@ function SplitPreview({
       className="mt-4 overflow-hidden"
     >
       <div className="rounded-[var(--radius-lg)] bg-surface-2 p-3.5">
-        <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2.5 text-tiny font-bold uppercase tracking-[0.06em] text-subtle">
           Who owes what
         </p>
         <ul className="space-y-2">
@@ -815,16 +833,16 @@ function SplitPreview({
             return (
               <li key={split.personId} className="flex items-center gap-2.5">
                 <Avatar person={person} size="xs" />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text">
+                <span className="min-w-0 flex-1 truncate text-body font-medium text-text">
                   {split.personId === meId ? "You" : person.displayName}
                 </span>
-                <span className="tabular text-[13px] font-semibold text-muted">
+                <span className="tabular text-body font-semibold text-muted">
                   {toDecimalString(split.amount, currency)}
                 </span>
                 {net !== 0n ? (
                   <span
                     className={cn(
-                      "tabular w-[68px] shrink-0 text-right text-[12px] font-bold",
+                      "tabular w-[68px] shrink-0 text-right text-caption font-bold",
                       net > 0n ? "text-positive-text" : "text-negative-text",
                     )}
                   >
@@ -832,7 +850,7 @@ function SplitPreview({
                     {toDecimalString(net > 0n ? net : -net, currency)}
                   </span>
                 ) : (
-                  <span className="w-[68px] shrink-0 text-right text-[12px] font-semibold text-subtle">
+                  <span className="w-[68px] shrink-0 text-right text-caption font-semibold text-subtle">
                     even
                   </span>
                 )}
@@ -885,7 +903,7 @@ function ConversionNote({
 
   return (
     <div className="mt-3 w-full rounded-[var(--radius-md)] bg-surface px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2 text-[12px]">
+      <div className="flex items-center justify-between gap-2 text-caption">
         <span className="font-semibold text-muted">
           Group settles in {to}
         </span>
@@ -906,7 +924,7 @@ function ConversionNote({
         )}
       </div>
       {converted ? (
-        <p className="tabular mt-1 text-[13px] font-bold text-text">≈ {converted} {to}</p>
+        <p className="tabular mt-1 text-body font-bold text-text">≈ {converted} {to}</p>
       ) : null}
     </div>
   );

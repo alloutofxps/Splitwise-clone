@@ -43,12 +43,12 @@ export function Amount({
     <span
       className={cn(
         "display-number whitespace-nowrap font-semibold",
-        size === "xs" && "text-[12px]",
-        size === "sm" && "text-[13px]",
-        size === "md" && "text-[15px]",
-        size === "lg" && "text-[20px] font-bold",
-        size === "xl" && "text-[28px] font-bold",
-        size === "hero" && "text-[38px] font-bold leading-none",
+        size === "xs" && "text-caption",
+        size === "sm" && "text-body",
+        size === "md" && "text-subhead",
+        size === "lg" && "text-title-lg font-bold",
+        size === "xl" && "text-display-sm font-bold",
+        size === "hero" && "text-display-lg font-bold leading-none",
         resolvedTone === "positive" && "text-positive-text",
         resolvedTone === "negative" && "text-negative-text",
         resolvedTone === "plain" && "text-text",
@@ -139,9 +139,9 @@ export function AmountInput({
       <span
         className={cn(
           "display-number shrink-0 font-bold text-subtle",
-          size === "md" && "text-[17px]",
-          size === "lg" && "text-[24px]",
-          size === "hero" && "text-[30px]",
+          size === "md" && "text-title",
+          size === "lg" && "text-heading",
+          size === "hero" && "text-display",
         )}
       >
         {symbol}
@@ -176,9 +176,9 @@ export function AmountInput({
           // Suppressed here because the wrapper above carries the focus ring.
           "outline-none focus-visible:outline-none",
           "placeholder:text-subtle/60",
-          size === "md" && "text-[20px]",
-          size === "lg" && "text-[32px]",
-          size === "hero" && "text-[46px] leading-none",
+          size === "md" && "text-title-lg",
+          size === "lg" && "text-display",
+          size === "hero" && "text-hero leading-none",
           size === "hero" && "text-center",
         )}
         aria-label="Amount"
@@ -245,7 +245,7 @@ export function BalanceHeadline({
   if (net === 0n) {
     return (
       <div>
-        <p className="text-[15px] font-semibold text-muted">{settledLabel}</p>
+        <p className="text-subhead font-semibold text-muted">{settledLabel}</p>
       </div>
     );
   }
@@ -253,7 +253,7 @@ export function BalanceHeadline({
   const owed = net > 0n;
   return (
     <div>
-      <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-subtle">
+      <p className="text-body font-semibold uppercase tracking-[0.06em] text-subtle">
         {owed ? "You are owed" : "You owe"}
       </p>
       <Amount

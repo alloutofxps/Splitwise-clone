@@ -73,7 +73,7 @@ export default function FriendPage() {
         >
           <ChevronLeft className="size-6" />
         </button>
-        <h1 className="min-w-0 flex-1 truncate px-1 text-[17px] font-bold tracking-[-0.02em] text-text">
+        <h1 className="min-w-0 flex-1 truncate px-1 text-title font-bold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
       </header>
@@ -85,16 +85,16 @@ export default function FriendPage() {
           <div className="min-w-0 flex-1">
             {data.balances.length === 0 ? (
               <>
-                <p className="text-[15px] font-semibold text-muted">
+                <p className="text-subhead font-semibold text-muted">
                   You&rsquo;re all settled up
                 </p>
-                <p className="mt-0.5 text-[13px] text-subtle">
+                <p className="mt-0.5 text-body text-subtle">
                   Nothing outstanding between you two.
                 </p>
               </>
             ) : (
               <>
-                <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-subtle">
+                <p className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
                   Between you two
                 </p>
                 <div className="mt-1 space-y-0.5">
@@ -103,7 +103,7 @@ export default function FriendPage() {
                     return (
                       <p key={entry.currency}>
                         <Amount value={net} currency={entry.currency} size="lg" />
-                        <span className="ml-1.5 text-[12px] font-semibold text-subtle">
+                        <span className="ml-1.5 text-caption font-semibold text-subtle">
                           {net > 0n ? "owed to you" : "you owe"}
                         </span>
                       </p>
@@ -149,7 +149,7 @@ export default function FriendPage() {
       {/* Shared groups ----------------------------------------------------- */}
       {data.sharedGroups.length > 0 ? (
         <section className="mt-6">
-          <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+          <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
             Also in
           </h2>
           <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
@@ -157,14 +157,14 @@ export default function FriendPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-[13px] font-semibold text-text transition active:scale-95"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-body font-semibold text-text transition active:scale-95"
               >
                 <span>{group.emoji}</span>
                 <span className="max-w-[140px] truncate">{group.name}</span>
               </Link>
             ))}
           </div>
-          <p className="mt-2 px-1 text-[11px] leading-relaxed text-subtle">
+          <p className="mt-2 px-1 text-tiny leading-relaxed text-subtle">
             Balances in those groups are kept separate from the direct one above.
           </p>
         </section>
@@ -172,7 +172,7 @@ export default function FriendPage() {
 
       {/* Direct ledger ----------------------------------------------------- */}
       <section className="mt-6">
-        <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
           Just between you
         </h2>
 
@@ -186,7 +186,7 @@ export default function FriendPage() {
           <div className="space-y-5">
             {grouped.map(({ label, entries }) => (
               <div key={label}>
-                <h3 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+                <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                   {label}
                 </h3>
                 <ul className="space-y-1.5">

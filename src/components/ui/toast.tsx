@@ -123,9 +123,9 @@ function ToastViewport({
           >
             <span className="mt-0.5 shrink-0">{ICONS[toast.tone ?? "info"]}</span>
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-semibold leading-snug text-text">{toast.title}</p>
+              <p className="text-body-lg font-semibold leading-snug text-text">{toast.title}</p>
               {toast.description ? (
-                <p className="mt-0.5 text-[13px] leading-snug text-muted">{toast.description}</p>
+                <p className="mt-0.5 text-body leading-snug text-muted">{toast.description}</p>
               ) : null}
             </div>
             {toast.action ? (
@@ -134,7 +134,7 @@ function ToastViewport({
                   toast.action?.onClick();
                   onDismiss(toast.id);
                 }}
-                className="-my-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-bold text-brand transition active:scale-95 hover:bg-brand-soft"
+                className="-my-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1.5 text-body font-bold text-brand transition active:scale-95 hover:bg-brand-soft"
               >
                 <Undo2 className="size-3.5" />
                 {toast.action.label}

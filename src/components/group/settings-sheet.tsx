@@ -129,7 +129,7 @@ export function GroupSettingsSheet({
       <Sheet open={open} onClose={onClose} tall title="Group settings">
         <div className="px-5 pb-6">
           <label className="block">
-            <span className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+            <span className="mb-1.5 block text-caption font-bold uppercase tracking-[0.06em] text-subtle">
               Name
             </span>
             <input
@@ -137,16 +137,16 @@ export function GroupSettingsSheet({
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               onBlur={commitName}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-              className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[16px] font-semibold text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input font-semibold text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </label>
 
           <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3">
             <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-semibold text-text">
+              <span className="block text-body-lg font-semibold text-text">
                 Simplify debts
               </span>
-              <span className="mt-0.5 block text-[12px] leading-relaxed text-muted">
+              <span className="mt-0.5 block text-caption leading-relaxed text-muted">
                 Show the fewest payments that settle the group.
               </span>
             </span>
@@ -159,7 +159,7 @@ export function GroupSettingsSheet({
 
           {/* Members ------------------------------------------------------- */}
           <div className="mt-6">
-            <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+            <p className="mb-2 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
               Members
             </p>
             <ul className="space-y-1.5">
@@ -172,11 +172,11 @@ export function GroupSettingsSheet({
                   >
                     <Avatar person={member} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-semibold text-text">
+                      <span className="block truncate text-body-lg font-semibold text-text">
                         {member.id === meId ? "You" : member.displayName}
                       </span>
                       {member.isGhost ? (
-                        <span className="block text-[11px] text-subtle">
+                        <span className="block text-tiny text-subtle">
                           Has not joined yet
                         </span>
                       ) : null}
@@ -217,7 +217,7 @@ export function GroupSettingsSheet({
                   }
                 }}
                 placeholder="Add someone by name"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
               />
               <button
                 onClick={() => void add()}
@@ -344,14 +344,14 @@ function ActionRow({
       <span className="min-w-0 flex-1">
         <span
           className={cn(
-            "block text-[14px] font-semibold",
+            "block text-body-lg font-semibold",
             tone === "danger" ? "text-negative-text" : "text-text",
           )}
         >
           {label}
         </span>
         {description ? (
-          <span className="mt-0.5 block text-[12px] leading-snug text-muted">
+          <span className="mt-0.5 block text-caption leading-snug text-muted">
             {description}
           </span>
         ) : null}

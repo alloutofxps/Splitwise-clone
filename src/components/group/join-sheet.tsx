@@ -169,10 +169,10 @@ export function JoinSheet({
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="go"
-          className="h-14 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-center text-[19px] font-bold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-14 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-center text-title-lg font-bold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
 
-        <p className="mt-2 text-center text-[12px] text-subtle">
+        <p className="mt-2 text-center text-caption text-subtle">
           Ask whoever set the group up for their invite code.
         </p>
 
@@ -186,20 +186,20 @@ export function JoinSheet({
               </div>
             </div>
           ) : notFound ? (
-            <p className="rounded-[var(--radius-md)] bg-negative-soft px-4 py-3 text-center text-[13px] font-semibold text-negative-text">
+            <p className="rounded-[var(--radius-md)] bg-negative-soft px-4 py-3 text-center text-body font-semibold text-negative-text">
               No group or person has that code.
             </p>
           ) : preview?.kind === "group" ? (
             <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-4">
               <div className="flex items-center gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-[22px]">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-heading">
                   {preview.group.emoji}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-bold text-text">
+                  <p className="truncate text-subhead font-bold text-text">
                     {preview.group.name}
                   </p>
-                  <p className="text-[12px] text-muted">
+                  <p className="text-caption text-muted">
                     {preview.group.memberCount}{" "}
                     {preview.group.memberCount === 1 ? "member" : "members"} ·{" "}
                     {preview.group.expenseCount}{" "}
@@ -211,11 +211,11 @@ export function JoinSheet({
 
               {preview.group.unclaimedMembers.length > 0 ? (
                 <div className="mt-4 border-t border-line pt-4">
-                  <p className="flex items-center gap-1.5 text-[13px] font-semibold text-text">
+                  <p className="flex items-center gap-1.5 text-body font-semibold text-text">
                     <UserCheck className="size-4 text-brand" />
                     Are you one of these?
                   </p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                  <p className="mt-1 text-caption leading-relaxed text-muted">
                     Someone has been splitting with these names. Pick yours and
                     everything filed against it becomes yours.
                   </p>
@@ -236,7 +236,7 @@ export function JoinSheet({
                           )}
                         >
                           <Avatar person={member} size="sm" />
-                          <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                          <span className="flex-1 truncate text-body-lg font-semibold text-text">
                             {member.displayName}
                           </span>
                           <span
@@ -257,7 +257,7 @@ export function JoinSheet({
                       haptic();
                       setClaimId(null);
                     }}
-                    className="mt-2.5 w-full py-1.5 text-[13px] font-semibold text-muted"
+                    className="mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
                   >
                     None of these — I&rsquo;m new here
                   </button>
@@ -268,10 +268,10 @@ export function JoinSheet({
             <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
               <Avatar person={preview.person} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-bold text-text">
+                <p className="truncate text-subhead font-bold text-text">
                   {preview.person.displayName}
                 </p>
-                <p className="text-[12px] text-muted">
+                <p className="text-caption text-muted">
                   Add them so you can split expenses one-to-one.
                 </p>
               </div>

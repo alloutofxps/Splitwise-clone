@@ -159,10 +159,10 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-text">
+          <p className="truncate text-subhead font-semibold text-text">
             {category ? category.name : "Everything"}
           </p>
-          <p className="mt-0.5 truncate text-[12px] text-subtle">
+          <p className="mt-0.5 truncate text-caption text-subtle">
             {scopeLabel} · {PERIOD_LABEL[budget.period]}
           </p>
         </div>
@@ -200,7 +200,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
           />
         </div>
 
-        <p className="mt-2 text-[13px] text-muted">
+        <p className="mt-2 text-body text-muted">
           <Amount value={spent} currency={budget.currency} tone="plain" size="sm" /> of{" "}
           {formatMoney(limit, budget.currency)} -{" "}
           {over ? (
@@ -288,7 +288,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
             size="lg"
             autoFocus
           />
-          <p className="mt-1.5 text-[12px] text-subtle">Your share, {PERIOD_LABEL[period]}</p>
+          <p className="mt-1.5 text-caption text-subtle">Your share, {PERIOD_LABEL[period]}</p>
         </div>
 
         <div className="mt-4">
@@ -356,7 +356,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
       {children}
     </p>
   );
@@ -395,7 +395,7 @@ function Chip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:scale-95",
         active
           ? "border-brand bg-brand text-white"
           : "border-line bg-surface text-muted hover:text-text",

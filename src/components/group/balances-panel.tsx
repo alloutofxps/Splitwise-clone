@@ -49,7 +49,7 @@ export function BalancesPanel({
     <div>
       {/* Per-person net ---------------------------------------------------- */}
       <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4 shadow-card">
-        <h3 className="mb-3 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+        <h3 className="mb-3 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
           Where everyone stands
         </h3>
         <ul className="space-y-2.5">
@@ -58,15 +58,15 @@ export function BalancesPanel({
             return (
               <li key={member.id} className="flex items-center gap-3">
                 <Avatar person={member} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text">
+                <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
                   {member.id === meId ? "You" : member.displayName}
                 </span>
                 {net === 0n ? (
-                  <span className="text-[12px] font-semibold text-subtle">settled</span>
+                  <span className="text-caption font-semibold text-subtle">settled</span>
                 ) : (
                   <span className="text-right">
                     <Amount value={net} currency={group.currency} size="sm" />
-                    <span className="block text-[10px] font-semibold text-subtle">
+                    <span className="block text-micro font-semibold text-subtle">
                       {net > 0n ? "is owed" : "owes"}
                     </span>
                   </span>
@@ -80,11 +80,11 @@ export function BalancesPanel({
       {/* Settlement plan ---------------------------------------------------- */}
       <section className="mt-4">
         <div className="mb-2.5 flex items-center justify-between gap-3 px-1">
-          <h3 className="text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+          <h3 className="text-caption font-bold uppercase tracking-[0.06em] text-subtle">
             {simplified ? "Fewest payments" : "Who owes whom"}
           </h3>
           <div className="flex items-center gap-2">
-            <span className="text-[12px] font-semibold text-muted">Simplify</span>
+            <span className="text-caption font-semibold text-muted">Simplify</span>
             <Switch
               checked={simplified}
               label="Simplify debts"
@@ -99,8 +99,8 @@ export function BalancesPanel({
         {edges.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
             <Sparkles className="mx-auto size-6 text-positive-text" />
-            <p className="mt-2 text-[15px] font-bold text-text">Everyone is square</p>
-            <p className="mt-1 text-[13px] text-muted">
+            <p className="mt-2 text-subhead font-bold text-text">Everyone is square</p>
+            <p className="mt-1 text-body text-muted">
               Nothing outstanding in this group.
             </p>
           </div>
@@ -123,14 +123,14 @@ export function BalancesPanel({
                   )}
                 >
                   <Avatar person={from} size="sm" />
-                  <span className="min-w-0 truncate text-[13px] font-semibold text-text">
+                  <span className="min-w-0 truncate text-body font-semibold text-text">
                     {edge.fromPersonId === meId ? "You" : from.displayName.split(" ")[0]}
                   </span>
 
                   <ArrowRight className="size-4 shrink-0 text-subtle" />
 
                   <Avatar person={to} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
+                  <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
                     {edge.toPersonId === meId ? "you" : to.displayName.split(" ")[0]}
                   </span>
 
@@ -155,7 +155,7 @@ export function BalancesPanel({
         )}
 
         {simplified && group.balances.pairwise.length > group.balances.simplified.length ? (
-          <p className="mt-3 flex gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-[12px] leading-relaxed text-muted">
+          <p className="mt-3 flex gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-caption leading-relaxed text-muted">
             <Info className="mt-0.5 size-3.5 shrink-0" />
             <span>
               Simplifying turned {group.balances.pairwise.length} payments into{" "}

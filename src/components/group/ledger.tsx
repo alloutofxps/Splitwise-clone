@@ -115,7 +115,7 @@ export function GroupLedger({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search this group"
               autoFocus
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-subtle/70"
+              className="min-w-0 flex-1 bg-transparent text-subhead text-text outline-none placeholder:text-subtle/70"
             />
             <button
               onClick={() => {
@@ -131,7 +131,7 @@ export function GroupLedger({
           </motion.div>
         ) : (
           <>
-            <p className="flex-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+            <p className="flex-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
               {items.length > 0
                 ? `${items.length}${hasNextPage ? "+" : ""} entries`
                 : "Nothing yet"}
@@ -218,7 +218,7 @@ export function GroupLedger({
                     haptic();
                     clearFilters();
                   }}
-                  className="text-[12px] font-bold text-brand transition active:scale-95"
+                  className="text-caption font-bold text-brand transition active:scale-95"
                 >
                   Clear filters
                 </button>
@@ -262,7 +262,7 @@ export function GroupLedger({
         <div className="space-y-5">
           {groups.map(({ label, entries }) => (
             <section key={label}>
-              <h3 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+              <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                 {label}
               </h3>
               <ul className="space-y-1.5">
@@ -367,20 +367,20 @@ export function ExpenseRow({
 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[14px] font-semibold text-text">
+          <span className="truncate text-body-lg font-semibold text-text">
             {expense.description}
           </span>
           {expense.attachments.length > 0 ? (
             <Paperclip className="size-3 shrink-0 text-subtle" />
           ) : null}
           {expense.commentCount > 0 ? (
-            <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold text-subtle">
+            <span className="flex shrink-0 items-center gap-0.5 text-micro font-semibold text-subtle">
               <MessageSquare className="size-3" />
               {expense.commentCount}
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 block truncate text-[12px] text-subtle">
+        <span className="mt-0.5 block truncate text-caption text-subtle">
           {showGroup ? `${showGroup} · ` : ""}
           {paidLabel}
         </span>
@@ -388,11 +388,11 @@ export function ExpenseRow({
 
       <span className="shrink-0 text-right">
         {net === 0n ? (
-          <span className="text-[12px] font-semibold text-subtle">not involved</span>
+          <span className="text-caption font-semibold text-subtle">not involved</span>
         ) : (
           <>
             <Amount value={net} currency={expense.currency} size="sm" />
-            <span className="mt-0.5 block text-[10px] font-semibold text-subtle">
+            <span className="mt-0.5 block text-micro font-semibold text-subtle">
               {net > 0n ? "you lent" : "you borrowed"}
             </span>
           </>
@@ -475,12 +475,12 @@ export function SettlementRow({
         <ArrowLeftRight className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-semibold text-text">
+        <span className="block truncate text-body-lg font-semibold text-text">
           {from?.id === meId ? "You" : (from?.displayName ?? "Someone")} paid{" "}
           {to?.id === meId ? "you" : (to?.displayName ?? "someone")}
         </span>
         {settlement.note || settlement.method ? (
-          <span className="mt-0.5 block truncate text-[12px] text-subtle">
+          <span className="mt-0.5 block truncate text-caption text-subtle">
             {[settlement.method, settlement.note].filter(Boolean).join(" · ")}
           </span>
         ) : null}
@@ -534,7 +534,7 @@ function formatBare(amount: string, currency: string): string {
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.07em] text-subtle">
+      <p className="mb-1.5 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
         {label}
       </p>
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -564,7 +564,7 @@ function FilterChip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:scale-95",
         active
           ? "border-brand bg-brand text-white"
           : "border-line bg-surface text-muted hover:text-text",

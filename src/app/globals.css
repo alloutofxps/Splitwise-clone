@@ -182,6 +182,45 @@
   --shadow-xl: 0 8px 16px oklch(0 0 0 / 0.38), 0 24px 56px oklch(0 0 0 / 0.5);
 }
 
+/* --------------------------------------------------------------------------
+   Type scale
+   -------------------------------------------------------------------------- */
+
+/*
+ * Named steps, so there is one place to adjust the app's rhythm.
+ *
+ * These began as 389 one-off `text-[13px]`-style values across 23 distinct
+ * sizes, which is not a scale - it is 23 independent decisions, and no way to
+ * shift the whole app half a step without touching forty files.
+ *
+ * Named by role rather than by t-shirt size, for two reasons: the roles are
+ * what the app actually has, and reusing `text-sm` / `text-lg` would quietly
+ * redefine Tailwind's own defaults to different pixel values, which is a trap
+ * for whoever reads this next.
+ *
+ * The steps preserve the sizes that were doing real work and fold in the ones
+ * used once or twice. Every fold is 1-2px except the onboarding headline, which
+ * was alone at 34px and now sits on `display` at 30 - a deliberate 4px, checked
+ * on the screen rather than waved through, because a scale that keeps a step
+ * for every one-off is not a scale.
+ */
+@theme {
+  --text-micro: 10px;      /* badge counts, chart axis labels */
+  --text-tiny: 11px;       /* uppercase eyebrows */
+  --text-caption: 12px;    /* secondary and supporting text */
+  --text-body: 13px;       /* the default for reading */
+  --text-body-lg: 14px;    /* row titles, primary list text */
+  --text-subhead: 15px;    /* buttons, emphasised rows */
+  --text-input: 16px;      /* never smaller: Safari zooms the viewport below it */
+  --text-title: 17px;      /* sheet and section titles */
+  --text-title-lg: 19px;   /* screen titles */
+  --text-heading: 22px;    /* page headings */
+  --text-display-sm: 26px; /* secondary balances */
+  --text-display: 30px;    /* balances */
+  --text-display-lg: 38px; /* the headline figure on a group */
+  --text-hero: 46px;       /* the headline figure on the home screen */
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);

@@ -47,7 +47,7 @@ export default function ActivityPage() {
   if (isLoading || !dashboard) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Activity</h1>
+        <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Activity</h1>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((index) => (
             <Skeleton key={index} className="h-14 w-full rounded-[var(--radius-lg)]" />
@@ -73,7 +73,7 @@ export default function ActivityPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-4 text-[26px] font-black tracking-[-0.03em] text-text">Activity</h1>
+      <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Activity</h1>
 
       {groupsInFeed.length > 1 ? (
         <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -114,7 +114,7 @@ export default function ActivityPage() {
         <div className="space-y-5">
           {days.map(({ label, entries }) => (
             <section key={label}>
-              <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
+              <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                 {label}
               </h2>
               <ul className="space-y-1">
@@ -171,7 +171,7 @@ function GroupChip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
         active
           ? "border-brand bg-brand text-white"
           : "border-line bg-surface text-muted hover:text-text",
@@ -223,8 +223,8 @@ function ActivityRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-[14px] leading-snug text-text">{sentence}</span>
-        <span className="mt-1 flex items-center gap-1.5 text-[11px] text-subtle">
+        <span className="block text-body-lg leading-snug text-text">{sentence}</span>
+        <span className="mt-1 flex items-center gap-1.5 text-tiny text-subtle">
           {activity.groupName ? (
             <>
               <span className="truncate">
@@ -361,7 +361,7 @@ function describe(
               drop the quote line, not render "[object Object]" inside quotes.
             */}
             {typeof data.preview === "string" && data.preview ? (
-              <span className="mt-0.5 block truncate text-[13px] text-muted">
+              <span className="mt-0.5 block truncate text-body text-muted">
                 &ldquo;{data.preview}&rdquo;
               </span>
             ) : null}

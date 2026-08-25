@@ -103,13 +103,13 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
       <div className="flex flex-1 flex-col justify-center py-10">
         <Wordmark className="mb-9" />
 
-        <h1 className="text-[34px] font-black leading-[1.08] tracking-[-0.035em] text-text">
+        <h1 className="text-display font-black leading-[1.08] tracking-[-0.035em] text-text">
           Split anything.
           <br />
           <span className="text-brand">Settle everything.</span>
         </h1>
 
-        <p className="mt-4 text-[16px] leading-relaxed text-muted">
+        <p className="mt-4 text-input leading-relaxed text-muted">
           Track shared expenses with friends, housemates and travel companions.
           Every feature is free — receipts, itemised bills, multiple currencies,
           charts, exports, the lot.
@@ -156,8 +156,8 @@ function Feature({
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-semibold text-text">{title}</span>
-        <span className="block text-[14px] leading-snug text-muted">{children}</span>
+        <span className="block text-subhead font-semibold text-text">{title}</span>
+        <span className="block text-body-lg leading-snug text-muted">{children}</span>
       </span>
     </li>
   );
@@ -210,21 +210,21 @@ function ProfileStep({
     <div className="flex flex-1 flex-col">
       <button
         onClick={onBack}
-        className="-ml-1 mb-8 self-start py-2 text-[14px] font-semibold text-muted"
+        className="-ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
       >
         Back
       </button>
 
-      <h1 className="text-[27px] font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
         What should we call you?
       </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-muted">
+      <p className="mt-2 text-subhead leading-relaxed text-muted">
         This is the name your friends will see next to every expense.
       </p>
 
       <div className="mt-8 flex flex-col items-center">
         <span
-          className="flex size-20 items-center justify-center rounded-full text-[28px] font-bold text-white transition-colors duration-300"
+          className="flex size-20 items-center justify-center rounded-full text-display-sm font-bold text-white transition-colors duration-300"
           style={{ background: `var(--avatar-${color})` }}
         >
           {emoji ?? (name.trim() ? initials(name) : "?")}
@@ -243,7 +243,7 @@ function ProfileStep({
       </div>
 
       <label className="mt-7 block">
-        <span className="mb-1.5 block text-[13px] font-semibold text-muted">Your name</span>
+        <span className="mb-1.5 block text-body font-semibold text-muted">Your name</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value.slice(0, 60))}
@@ -252,18 +252,18 @@ function ProfileStep({
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
       </label>
 
       <label className="mt-4 block">
-        <span className="mb-1.5 block text-[13px] font-semibold text-muted">
+        <span className="mb-1.5 block text-body font-semibold text-muted">
           Default currency
         </span>
         <select
           value={currency}
           onChange={(event) => setCurrency(event.target.value)}
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         >
           {CURRENCIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
@@ -271,7 +271,7 @@ function ProfileStep({
             </option>
           ))}
         </select>
-        <span className="mt-1.5 block text-[12px] text-subtle">
+        <span className="mt-1.5 block text-caption text-subtle">
           You can use any currency on any expense; this is just the default.
         </span>
       </label>
@@ -308,7 +308,7 @@ function EmojiChip({
         onClick();
       }}
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full text-[19px] transition",
+        "flex size-11 shrink-0 items-center justify-center rounded-full text-title-lg transition",
         "active:scale-90",
         active
           ? "bg-brand-soft ring-2 ring-brand"
@@ -352,17 +352,17 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
         <KeyRound className="size-6 text-text" />
       </div>
 
-      <h1 className="text-[27px] font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
         Save your recovery key
       </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-muted">
+      <p className="mt-2 text-subhead leading-relaxed text-muted">
         There is no password to reset and no email to send. This key is the only
         way back into your account on another device.
       </p>
 
       <div className="mt-6 rounded-[var(--radius-lg)] border border-line bg-surface-2 p-4">
         <p
-          className="select-all break-all font-mono text-[13px] leading-relaxed text-text"
+          className="select-all break-all font-mono text-body leading-relaxed text-text"
           // Selectable on purpose: this is the one string in the app a user
           // genuinely needs to copy by hand if the clipboard is unavailable.
           style={{ userSelect: "all", WebkitUserSelect: "all" }}
@@ -384,7 +384,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
 
       <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
         <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
-        <p className="text-[13px] leading-relaxed text-negative-text">
+        <p className="text-body leading-relaxed text-negative-text">
           Anyone with this key can open your account. Keep it in a password
           manager or notes app — not in the group chat.
         </p>
@@ -397,7 +397,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
           onChange={(event) => setAcknowledged(event.target.checked)}
           className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]"
         />
-        <span className="text-[14px] leading-snug text-text">
+        <span className="text-body-lg leading-snug text-text">
           I have saved my recovery key somewhere safe.
         </span>
       </label>
@@ -453,15 +453,15 @@ function RestoreStep({ onBack }: { onBack: () => void }) {
     <div className="flex flex-1 flex-col">
       <button
         onClick={onBack}
-        className="-ml-1 mb-8 self-start py-2 text-[14px] font-semibold text-muted"
+        className="-ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
       >
         Back
       </button>
 
-      <h1 className="text-[27px] font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
         Enter your recovery key
       </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-muted">
+      <p className="mt-2 text-subhead leading-relaxed text-muted">
         Paste the key you saved when you first set up Divvy. Everything comes
         back exactly as you left it.
       </p>
@@ -475,7 +475,7 @@ function RestoreStep({ onBack }: { onBack: () => void }) {
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-[14px] text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-body-lg text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
       />
 
       <div className="mt-auto pt-8">

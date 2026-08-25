@@ -88,7 +88,7 @@ export function OfflineBanner() {
           <div className="mx-auto max-w-[560px] px-4 py-2 lg:max-w-[720px] lg:px-8">
             {!online || queue.length > 0 ? (
               <div className="flex items-center gap-2.5" role="status">
-                <span className="flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1.5 text-[12px] font-semibold text-text">
+                <span className="flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1.5 text-caption font-semibold text-text">
                   <CloudOff className="size-3.5 shrink-0" />
                   {!online
                     ? queue.length > 0
@@ -101,7 +101,7 @@ export function OfflineBanner() {
                   <button
                     onClick={() => void retry()}
                     disabled={retrying}
-                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-bold text-brand transition active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-caption font-bold text-brand transition active:scale-95 disabled:opacity-50"
                   >
                     <RefreshCw className={retrying ? "size-3.5 animate-spin" : "size-3.5"} />
                     Retry
@@ -123,7 +123,7 @@ export function OfflineBanner() {
               >
                 <div className="flex items-center gap-2">
                   <TriangleAlert className="size-3.5 shrink-0 text-negative-text" />
-                  <p className="flex-1 text-[12px] font-bold text-negative-text">
+                  <p className="flex-1 text-caption font-bold text-negative-text">
                     {failures.length === 1
                       ? "1 change could not be saved"
                       : `${failures.length} changes could not be saved`}
@@ -131,7 +131,7 @@ export function OfflineBanner() {
                   {failures.length > 1 ? (
                     <button
                       onClick={() => void discardAllRejected()}
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold text-muted transition active:scale-95"
+                      className="shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold text-muted transition active:scale-95"
                     >
                       Dismiss all
                     </button>
@@ -145,19 +145,19 @@ export function OfflineBanner() {
                       className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-surface px-2.5 py-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-text">
+                        <p className="truncate text-body font-semibold text-text">
                           {failure.label}
                         </p>
                         {/* The server's message, verbatim. Every one of them is
                             written to be read by a person. */}
-                        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+                        <p className="mt-0.5 text-caption leading-snug text-muted">
                           {failure.reason}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => void retryRejected(failure.id)}
-                          className="rounded-full px-2 py-1 text-[12px] font-bold text-brand transition active:scale-95"
+                          className="rounded-full px-2 py-1 text-caption font-bold text-brand transition active:scale-95"
                         >
                           Retry
                         </button>

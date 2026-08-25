@@ -90,7 +90,7 @@ export default function AccountPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Account</h1>
+      <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Account</h1>
 
       {/* Profile ----------------------------------------------------------- */}
       <section className="rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
@@ -110,9 +110,9 @@ export default function AccountPage() {
               }}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
               aria-label="Your name"
-              className="w-full rounded-[var(--radius-sm)] bg-transparent text-[19px] font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+              className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
             />
-            <p className="mt-0.5 text-[13px] text-subtle">
+            <p className="mt-0.5 text-body text-subtle">
               Member since{" "}
               {new Date(me.createdAt).toLocaleDateString(undefined, {
                 month: "long",
@@ -143,7 +143,7 @@ export default function AccountPage() {
 
       {/* Preferences -------------------------------------------------------- */}
       <section className="mt-5">
-        <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
           Preferences
         </h2>
 
@@ -187,8 +187,8 @@ export default function AccountPage() {
             <EyeOff className="size-[18px]" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-semibold text-text">Privacy screen</span>
-            <span className="mt-0.5 block text-[12px] leading-snug text-subtle">
+            <span className="block text-body-lg font-semibold text-text">Privacy screen</span>
+            <span className="mt-0.5 block text-caption leading-snug text-subtle">
               Cover the screen when you switch apps, so balances stay out of the
               app switcher. It is a curtain, not a lock — anyone holding an
               unlocked phone can still open Divvy.
@@ -202,7 +202,7 @@ export default function AccountPage() {
         </div>
 
         <div className="mt-3 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
-          <p className="mb-2.5 text-[13px] font-semibold text-text">Appearance</p>
+          <p className="mb-2.5 text-body font-semibold text-text">Appearance</p>
           <Segmented
             value={theme}
             onChange={setTheme}
@@ -217,7 +217,7 @@ export default function AccountPage() {
 
       {/* Data --------------------------------------------------------------- */}
       <section className="mt-5">
-        <h2 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
           Your data
         </h2>
         <div className="space-y-1.5">
@@ -247,7 +247,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <p className="mt-2 px-1 text-[12px] leading-relaxed text-subtle">
+        <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">
           The backup holds every group, expense and payment you can see, with
           the amounts as text so nothing is rounded. Receipts are listed but not
           included.
@@ -257,11 +257,11 @@ export default function AccountPage() {
       </section>
 
       <footer className="mt-8 pb-4 text-center">
-        <p className="flex items-center justify-center gap-1.5 text-[12px] text-subtle">
+        <p className="flex items-center justify-center gap-1.5 text-caption text-subtle">
           Divvy · every feature, free
           <Heart className="size-3" />
         </p>
-        <p className="mt-1 text-[11px] text-subtle">
+        <p className="mt-1 text-tiny text-subtle">
           No accounts, no ads, no tracking, no paywall.
         </p>
       </footer>
@@ -335,10 +335,10 @@ function StorageRow() {
         <Database className="size-[18px]" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold text-text">
+        <p className="text-body-lg font-semibold text-text">
           {status.persisted ? "Kept on this device" : "Not protected from cleanup"}
         </p>
-        <p className="mt-0.5 text-[12px] leading-snug text-subtle">
+        <p className="mt-0.5 text-caption leading-snug text-subtle">
           {status.persisted
             ? "This browser has agreed not to clear Divvy's offline data to reclaim space."
             : "This browser may clear Divvy's offline data if the device runs low on space. Installing the app usually earns the guarantee."}
@@ -383,14 +383,14 @@ function Row({
       </span>
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-[14px] font-semibold",
+          "min-w-0 flex-1 truncate text-body-lg font-semibold",
           tone === "danger" ? "text-negative-text" : "text-text",
         )}
       >
         {label}
       </span>
       {value ? (
-        <span className="shrink-0 truncate text-[13px] font-semibold text-subtle">{value}</span>
+        <span className="shrink-0 truncate text-body font-semibold text-subtle">{value}</span>
       ) : null}
     </button>
   );
@@ -455,7 +455,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
           <>
             <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 p-4">
               <p
-                className="break-all font-mono text-[13px] leading-relaxed text-text"
+                className="break-all font-mono text-body leading-relaxed text-text"
                 style={{ userSelect: "all", WebkitUserSelect: "all" }}
               >
                 {key}
@@ -470,14 +470,14 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
             >
               {copied ? "Copied" : "Copy key"}
             </Button>
-            <p className="mt-4 rounded-[var(--radius-md)] bg-warning-soft p-3.5 text-[13px] leading-relaxed text-text">
+            <p className="mt-4 rounded-[var(--radius-md)] bg-warning-soft p-3.5 text-body leading-relaxed text-text">
               Save this now. Any older key has stopped working, and this one is
               not retrievable later — the server only keeps a hash of it.
             </p>
           </>
         ) : (
           <>
-            <p className="text-[15px] leading-relaxed text-muted">
+            <p className="text-subhead leading-relaxed text-muted">
               Your recovery key is the only way to open this account on another
               device. Divvy stores a one-way hash of it, so it cannot be shown to
               you again — it can only be replaced.
@@ -485,7 +485,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
 
             <div className="mt-5 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
               <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
-              <p className="text-[13px] leading-relaxed text-negative-text">
+              <p className="text-body leading-relaxed text-negative-text">
                 Generating a new key immediately invalidates the old one. Any
                 other device signed in with it will be locked out.
               </p>
@@ -556,7 +556,7 @@ function PaymentMethodsSheet({
   return (
     <Sheet open={open} onClose={onClose} tall title="How people can pay you">
       <div className="px-5 pb-6">
-        <p className="text-[14px] leading-relaxed text-muted">
+        <p className="text-body-lg leading-relaxed text-muted">
           Divvy never handles money. These handles just give your friends a
           tappable shortcut into their own banking app when they settle up.
         </p>
@@ -570,12 +570,12 @@ function PaymentMethodsSheet({
                   key={method.id}
                   className="flex items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5"
                 >
-                  <span className="text-[18px]">{entry?.emoji ?? "💸"}</span>
+                  <span className="text-title">{entry?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold text-text">
+                    <span className="block text-body font-semibold text-text">
                       {entry?.label ?? method.kind}
                     </span>
-                    <span className="block truncate text-[12px] text-subtle">
+                    <span className="block truncate text-caption text-subtle">
                       {method.value}
                     </span>
                   </span>
@@ -593,7 +593,7 @@ function PaymentMethodsSheet({
         ) : null}
 
         <div className="mt-5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
-          <p className="mb-2.5 text-[13px] font-semibold text-text">Add a method</p>
+          <p className="mb-2.5 text-body font-semibold text-text">Add a method</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
             {PAYMENT_KINDS.map((entry) => (
@@ -604,7 +604,7 @@ function PaymentMethodsSheet({
                   setKind(entry.value);
                 }}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
                   kind === entry.value
                     ? "border-brand bg-brand text-white"
                     : "border-line bg-surface-2 text-muted",
@@ -625,7 +625,7 @@ function PaymentMethodsSheet({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
             <button
               onClick={() => void add()}
@@ -638,7 +638,7 @@ function PaymentMethodsSheet({
           </div>
 
           {selected.hint ? (
-            <p className="mt-2 text-[12px] leading-relaxed text-subtle">{selected.hint}</p>
+            <p className="mt-2 text-caption leading-relaxed text-subtle">{selected.hint}</p>
           ) : null}
         </div>
       </div>

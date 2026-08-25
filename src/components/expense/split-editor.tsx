@@ -199,7 +199,7 @@ export function SplitEditor({
               key={option.value}
               onClick={() => switchMode(option.value)}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition active:scale-95",
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-body font-semibold transition active:scale-95",
                 option.value === localMode
                   ? "border-brand bg-brand text-white"
                   : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -211,7 +211,7 @@ export function SplitEditor({
           ))}
         </div>
 
-        <p className="mt-3 text-[13px] leading-relaxed text-muted">{activeMode.blurb}</p>
+        <p className="mt-3 text-body leading-relaxed text-muted">{activeMode.blurb}</p>
 
         {/* Itemised gets its own editor ----------------------------------- */}
         {localMode === "ITEMIZED" ? (
@@ -305,11 +305,11 @@ function ParticipantRow({
       >
         <Avatar person={member} size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold text-text">
+          <span className="block truncate text-body-lg font-semibold text-text">
             {isMe ? "You" : member.displayName}
           </span>
           {included && mode !== "EXACT" ? (
-            <span className="tabular block text-[12px] text-subtle">
+            <span className="tabular block text-caption text-subtle">
               {currencySymbol(currency)}
               {toDecimalString(resolvedAmount, currency)}
             </span>
@@ -354,9 +354,9 @@ function ModeInput({
               onUpdate({ percent: Number.isFinite(value) ? value : 0 });
             }}
             onFocus={(event) => event.currentTarget.select()}
-            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-[14px] font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
+            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-body-lg font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
           />
-          <span className="text-[13px] font-semibold text-subtle">%</span>
+          <span className="text-body font-semibold text-subtle">%</span>
         </div>
       );
 
@@ -371,7 +371,7 @@ function ModeInput({
     case "ADJUSTMENT":
       return (
         <div className="flex shrink-0 items-center gap-1">
-          <span className="text-[13px] font-bold text-subtle">+</span>
+          <span className="text-body font-bold text-subtle">+</span>
           <MoneyField
             value={entry.adjustment ?? 0n}
             currency={currency}
@@ -408,7 +408,7 @@ function MoneyField({
 
   return (
     <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
-      <span className="text-[12px] font-semibold text-subtle">{currencySymbol(currency)}</span>
+      <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         inputMode="decimal"
         value={text}
@@ -426,7 +426,7 @@ function MoneyField({
           setText(next);
           onChange(next === "" ? 0n : parseAmount(next, currency));
         }}
-        className="tabular w-[72px] bg-transparent text-right text-[14px] font-bold text-text outline-none placeholder:text-subtle/60"
+        className="tabular w-[72px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60"
       />
     </div>
   );
@@ -441,18 +441,18 @@ function Stepper({ value, onChange }: { value: number; onChange: (value: number)
           onChange(Math.max(0, value - 1));
         }}
         aria-label="One fewer share"
-        className="flex size-7 items-center justify-center rounded-full text-[16px] font-bold text-muted transition active:scale-90 hover:bg-surface-3"
+        className="flex size-7 items-center justify-center rounded-full text-input font-bold text-muted transition active:scale-90 hover:bg-surface-3"
       >
         −
       </button>
-      <span className="tabular w-6 text-center text-[14px] font-bold text-text">{value}</span>
+      <span className="tabular w-6 text-center text-body-lg font-bold text-text">{value}</span>
       <button
         onClick={() => {
           haptic();
           onChange(Math.min(99, value + 1));
         }}
         aria-label="One more share"
-        className="flex size-7 items-center justify-center rounded-full text-[16px] font-bold text-muted transition active:scale-90 hover:bg-surface-3"
+        className="flex size-7 items-center justify-center rounded-full text-input font-bold text-muted transition active:scale-90 hover:bg-surface-3"
       >
         +
       </button>
@@ -467,7 +467,7 @@ function MiniButton({ children, onClick }: { children: React.ReactNode; onClick:
         haptic();
         onClick();
       }}
-      className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+      className="rounded-full border border-line bg-surface px-3 py-1.5 text-caption font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
     >
       {children}
     </button>
@@ -497,7 +497,7 @@ function RunningTotal({
 }) {
   if (resolved.errors.length > 0) {
     return (
-      <p className="rounded-[var(--radius-sm)] bg-negative-soft px-3 py-2 text-center text-[13px] font-semibold text-negative-text">
+      <p className="rounded-[var(--radius-sm)] bg-negative-soft px-3 py-2 text-center text-body font-semibold text-negative-text">
         {friendlyError(resolved.errors[0], currency)}
       </p>
     );
@@ -509,7 +509,7 @@ function RunningTotal({
   if (mode === "PERCENT") {
     const percent = local.reduce((sum, entry) => sum + (entry.percent ?? 0), 0);
     return (
-      <p className="text-center text-[13px] font-semibold text-positive-text">
+      <p className="text-center text-body font-semibold text-positive-text">
         {Math.round(percent * 10) / 10}% assigned across {included}{" "}
         {included === 1 ? "person" : "people"}
       </p>
@@ -517,7 +517,7 @@ function RunningTotal({
   }
 
   return (
-    <p className="text-center text-[13px] font-semibold text-muted">
+    <p className="text-center text-body font-semibold text-muted">
       <span className="tabular text-text">
         {currencySymbol(currency)}
         {toDecimalString(assigned, currency)}
@@ -611,7 +611,7 @@ function ItemEditor({
                   )
                 }
                 placeholder={`Item ${index + 1}`}
-                className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-text outline-none placeholder:text-subtle/70"
+                className="min-w-0 flex-1 bg-transparent text-body-lg font-semibold text-text outline-none placeholder:text-subtle/70"
               />
               <MoneyField
                 value={item.amount ?? 0n}
@@ -658,7 +658,7 @@ function ItemEditor({
                       );
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[12px] font-semibold transition active:scale-95",
+                      "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-caption font-semibold transition active:scale-95",
                       active
                         ? "border-brand/40 bg-brand-soft text-brand-soft-text"
                         : "border-line bg-surface-2 text-subtle",
@@ -676,14 +676,14 @@ function ItemEditor({
 
       <button
         onClick={addItem}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-line-strong py-3 text-[14px] font-semibold text-muted transition active:scale-[0.98] hover:bg-surface-2"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-line-strong py-3 text-body-lg font-semibold text-muted transition active:scale-[0.98] hover:bg-surface-2"
       >
         <Plus className="size-4" />
         Add an item
       </button>
 
       {items.length > 0 ? (
-        <p className="mt-3 rounded-[var(--radius-sm)] bg-surface-2 px-3 py-2 text-center text-[12px] font-semibold text-muted">
+        <p className="mt-3 rounded-[var(--radius-sm)] bg-surface-2 px-3 py-2 text-center text-caption font-semibold text-muted">
           {extras > 0n ? (
             <>
               <span className="tabular text-text">

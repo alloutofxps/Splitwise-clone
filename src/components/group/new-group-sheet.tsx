@@ -128,7 +128,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 setEmoji(next.emoji);
               }}
               aria-label="Change group icon"
-              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-[26px] transition active:scale-90"
+              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-display-sm transition active:scale-90"
             >
               {emoji}
             </button>
@@ -138,7 +138,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
               placeholder="Lisbon 2026"
               autoFocus
               enterKeyHint="done"
-              className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </div>
 
@@ -152,7 +152,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                   setEmoji(entry.emoji);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95",
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
                   kind === entry.value
                     ? "border-brand bg-brand text-white"
                     : "border-line bg-surface text-muted",
@@ -168,19 +168,19 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             onClick={() => setCurrencyOpen(true)}
             className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]"
           >
-            <span className="text-[14px] font-semibold text-muted">Settles in</span>
-            <span className="text-[14px] font-bold text-text">{currency}</span>
+            <span className="text-body-lg font-semibold text-muted">Settles in</span>
+            <span className="text-body-lg font-bold text-text">{currency}</span>
           </button>
-          <p className="mt-1.5 px-1 text-[12px] leading-relaxed text-subtle">
+          <p className="mt-1.5 px-1 text-caption leading-relaxed text-subtle">
             Expenses can be in any currency; balances are totted up in this one.
           </p>
 
           <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3">
             <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-semibold text-text">
+              <span className="block text-body-lg font-semibold text-text">
                 Simplify debts
               </span>
-              <span className="mt-0.5 block text-[12px] leading-relaxed text-muted">
+              <span className="mt-0.5 block text-caption leading-relaxed text-muted">
                 Collapse the balances into the fewest possible payments, rather
                 than everyone settling with everyone.
               </span>
@@ -190,8 +190,8 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
 
           {/* Placeholder members --------------------------------------------- */}
           <div className="mt-6">
-            <p className="text-[13px] font-semibold text-text">Who else is in?</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            <p className="text-body font-semibold text-text">Who else is in?</p>
+            <p className="mt-1 text-caption leading-relaxed text-muted">
               Add names now and start splitting straight away — they can claim
               their name later with the invite code.
             </p>
@@ -208,7 +208,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 }}
                 placeholder="Add a name"
                 enterKeyHint="done"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
               />
               <button
                 onClick={addName}
@@ -229,7 +229,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                         haptic();
                         setNames((current) => current.filter((item) => item !== entry));
                       }}
-                      className="flex items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-3 pr-2 text-[13px] font-semibold text-text transition active:scale-95"
+                      className="flex items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-3 pr-2 text-body font-semibold text-text transition active:scale-95"
                     >
                       {entry}
                       <X className="size-3.5 text-subtle" />

@@ -28,7 +28,7 @@ export default function HomePage() {
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
       <header className="mb-7 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-muted">
+          <p className="text-body font-semibold text-muted">
             {greeting()}, {data.me.displayName.split(" ")[0]}
           </p>
           <div className="mt-2">
@@ -52,19 +52,29 @@ export default function HomePage() {
         <FirstRun onCreate={() => setNewGroup(true)} onJoin={() => setJoining(true)} />
       ) : (
         <>
+          {/*
+            Two columns from xl, one below it.
+
+            On a phone this is a single scroll and the order is the priority
+            order. On a desktop the same list left a screen's worth of empty
+            space beside it while Friends sat below the fold, which is the
+            wrong trade when both fit side by side.
+          */}
+          <div className="xl:grid xl:grid-cols-[1.35fr_1fr] xl:items-start xl:gap-8">
+          <div className="min-w-0">
           <SectionHeader
             title="Groups"
             action={
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setJoining(true)}
-                  className="rounded-[var(--radius-sm)] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
+                  className="rounded-[var(--radius-sm)] px-2 py-1 text-body font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
                 >
                   Join
                 </button>
                 <button
                   onClick={() => setNewGroup(true)}
-                  className="flex items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
+                  className="flex items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1 text-body font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
                 >
                   <Plus className="size-3.5" strokeWidth={2.8} />
                   New
@@ -101,14 +111,17 @@ export default function HomePage() {
             </ul>
           )}
 
+          </div>
+
+          <div className="min-w-0">
           {data.friends.length > 0 ? (
-            <div className="mt-8">
+            <div className="mt-8 xl:mt-0">
               <SectionHeader
                 title="Friends"
                 action={
                   <Link
                     href="/friends"
-                    className="flex items-center gap-0.5 px-2 py-1 text-[13px] font-semibold text-brand"
+                    className="flex items-center gap-0.5 px-2 py-1 text-body font-semibold text-brand"
                   >
                     All
                     <ArrowRight className="size-3.5" />
@@ -137,6 +150,8 @@ export default function HomePage() {
               </ul>
             </div>
           ) : null}
+          </div>
+          </div>
         </>
       )}
 
@@ -158,7 +173,7 @@ export default function HomePage() {
 function TotalHeadline({ totals }: { totals: [string, string][] }) {
   if (totals.length === 0) {
     return (
-      <p className="display-number text-[30px] font-bold tracking-[-0.03em] text-text">
+      <p className="display-number text-display font-bold tracking-[-0.03em] text-text">
         All settled up
       </p>
     );
@@ -175,7 +190,7 @@ function TotalHeadline({ totals }: { totals: [string, string][] }) {
           size="hero"
           tone={amount > 0n ? "positive" : "negative"}
         />
-        <p className="mt-1.5 text-[14px] font-semibold text-muted">
+        <p className="mt-1.5 text-body-lg font-semibold text-muted">
           {amount > 0n ? "you are owed overall" : "you owe overall"}
         </p>
       </div>
@@ -187,7 +202,7 @@ function TotalHeadline({ totals }: { totals: [string, string][] }) {
       {totals.map(([currency, value]) => (
         <Amount key={currency} value={BigInt(value)} currency={currency} size="xl" />
       ))}
-      <span className="w-full text-[13px] font-semibold text-muted">
+      <span className="w-full text-body font-semibold text-muted">
         across {totals.length} currencies
       </span>
     </div>
@@ -216,7 +231,7 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
       )}
     >
       <span
-        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[21px]"
+        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-title-lg"
         style={{ background: `color-mix(in oklch, var(--avatar-${group.color}) 16%, transparent)` }}
       >
         {group.emoji}
@@ -224,7 +239,7 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-[15px] font-semibold text-text">{group.name}</span>
+          <span className="truncate text-subhead font-semibold text-text">{group.name}</span>
           {group.unreadCount > 0 ? (
             <span className="size-2 shrink-0 rounded-full bg-brand" aria-label="New activity" />
           ) : null}
@@ -236,11 +251,11 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
 
       <span className="shrink-0 text-right">
         {net === 0n ? (
-          <span className="text-[13px] font-semibold text-subtle">settled</span>
+          <span className="text-body font-semibold text-subtle">settled</span>
         ) : (
           <>
             <Amount value={net} currency={group.currency} size="md" />
-            <span className="mt-0.5 block text-[11px] font-semibold text-subtle">
+            <span className="mt-0.5 block text-tiny font-semibold text-subtle">
               {net > 0n ? "you are owed" : "you owe"}
             </span>
           </>
@@ -263,24 +278,24 @@ function FriendRow({
       className="flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2"
     >
       <span
-        className="flex size-10 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full text-body-lg font-bold text-white"
         style={{ background: `var(--avatar-${friend.person.avatarColor})` }}
       >
         {friend.person.avatarEmoji ?? friend.person.displayName.slice(0, 1).toUpperCase()}
       </span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text">
+      <span className="min-w-0 flex-1 truncate text-subhead font-semibold text-text">
         {friend.person.displayName}
       </span>
       <span className="shrink-0 text-right">
         {entries.length === 0 ? (
-          <span className="text-[13px] font-semibold text-subtle">settled</span>
+          <span className="text-body font-semibold text-subtle">settled</span>
         ) : (
           entries.map(([currency, value]) => {
             const amount = BigInt(value);
             return (
               <span key={currency} className="block">
                 <Amount value={amount} currency={currency} size="sm" className="block" />
-                <span className="block text-[10px] font-semibold text-subtle">
+                <span className="block text-micro font-semibold text-subtle">
                   {amount > 0n ? "owes you" : "you owe"}
                 </span>
               </span>
@@ -301,10 +316,10 @@ function FirstRun({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => vo
         <Sparkles className="size-5" />
       </span>
 
-      <h2 className="mt-4 text-[19px] font-bold tracking-[-0.02em] text-text">
+      <h2 className="mt-4 text-title-lg font-bold tracking-[-0.02em] text-text">
         Let&rsquo;s get you set up
       </h2>
-      <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
+      <p className="mt-1.5 text-body-lg leading-relaxed text-muted">
         Start a group for a trip or a flat share, or join one a friend has
         already made using their invite code.
       </p>
