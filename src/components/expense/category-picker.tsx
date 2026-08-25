@@ -48,14 +48,14 @@ export function CategoryPicker({
                         onChange(category.id);
                       }}
                       className={cn(
-                        "relative flex flex-col items-start gap-2 rounded-[--radius-md] border p-3 text-left transition active:scale-95",
+                        "relative flex flex-col items-start gap-2 rounded-[var(--radius-md)] border p-3 text-left transition active:scale-95",
                         active
                           ? "border-brand bg-brand-soft"
                           : "border-line bg-surface hover:bg-surface-2",
                       )}
                     >
                       <span
-                        className="flex size-9 items-center justify-center rounded-[--radius-sm]"
+                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)]"
                         style={{
                           background: `color-mix(in oklch, var(--avatar-${category.color}) 18%, transparent)`,
                           color: `var(--avatar-${category.color})`,

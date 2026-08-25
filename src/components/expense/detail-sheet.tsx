@@ -100,14 +100,14 @@ export function ExpenseDetailSheet({
           <div className="space-y-3 px-5 py-4">
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-4 w-24" />
-            <Skeleton className="mt-4 h-24 w-full rounded-[--radius-lg]" />
+            <Skeleton className="mt-4 h-24 w-full rounded-[var(--radius-lg)]" />
           </div>
         ) : (
           <div className="px-5 pb-6">
             {/* Head ------------------------------------------------------- */}
             <div className="flex items-start gap-3.5 pt-1">
               <span
-                className="flex size-12 shrink-0 items-center justify-center rounded-[--radius-md]"
+                className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
                 style={{
                   background: `color-mix(in oklch, var(--avatar-${category!.color}) 16%, transparent)`,
                   color: `var(--avatar-${category!.color})`,
@@ -155,7 +155,7 @@ export function ExpenseDetailSheet({
                   return (
                     <li
                       key={payer.personId}
-                      className="flex items-center gap-3 rounded-[--radius-md] bg-surface-2 px-3 py-2.5"
+                      className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5"
                     >
                       <Avatar person={person} size="sm" />
                       <span className="flex-1 truncate text-[14px] font-semibold text-text">
@@ -190,7 +190,7 @@ export function ExpenseDetailSheet({
                     return (
                       <li
                         key={split.personId}
-                        className="flex items-center gap-3 rounded-[--radius-md] bg-surface-2 px-3 py-2.5"
+                        className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5"
                       >
                         <Avatar person={person} size="sm" />
                         <span className="min-w-0 flex-1">
@@ -231,7 +231,7 @@ export function ExpenseDetailSheet({
             {expense.items.length > 0 ? (
               <div className="mt-5">
                 <SectionLabel>Receipt</SectionLabel>
-                <ul className="divide-y divide-line rounded-[--radius-md] bg-surface-2 px-3">
+                <ul className="divide-y divide-line rounded-[var(--radius-md)] bg-surface-2 px-3">
                   {expense.items.map((item) => (
                     <li key={item.id} className="flex items-center gap-3 py-2.5">
                       <span className="min-w-0 flex-1">
@@ -268,7 +268,7 @@ export function ExpenseDetailSheet({
                         href={attachment.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block aspect-square overflow-hidden rounded-[--radius-md] border border-line bg-surface-2 transition active:scale-95"
+                        className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface-2 transition active:scale-95"
                       >
                         {attachment.mimeType.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -313,7 +313,7 @@ export function ExpenseDetailSheet({
             {expense.notes ? (
               <div className="mt-5">
                 <SectionLabel>Note</SectionLabel>
-                <p className="whitespace-pre-wrap rounded-[--radius-md] bg-surface-2 px-3.5 py-3 text-[14px] leading-relaxed text-text">
+                <p className="whitespace-pre-wrap rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-[14px] leading-relaxed text-text">
                   {expense.notes}
                 </p>
               </div>
@@ -361,7 +361,7 @@ export function ExpenseDetailSheet({
                     }
                   }}
                   placeholder="Add a comment"
-                  className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+                  className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
                 />
                 <button
                   onClick={() => {
@@ -372,7 +372,7 @@ export function ExpenseDetailSheet({
                   }}
                   disabled={!draft.trim()}
                   aria-label="Post comment"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-brand text-white transition active:scale-90 disabled:opacity-40"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-white transition active:scale-90 disabled:opacity-40"
                 >
                   <Send className="size-[18px]" />
                 </button>

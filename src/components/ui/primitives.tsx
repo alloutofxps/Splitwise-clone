@@ -51,9 +51,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-[13px] gap-1.5 rounded-[--radius-sm]",
-  md: "h-11 px-4 text-[15px] gap-2 rounded-[--radius-md]",
-  lg: "h-13 px-5 text-[16px] gap-2 rounded-[--radius-lg]",
+  sm: "h-9 px-3.5 text-[13px] gap-1.5 rounded-[var(--radius-sm)]",
+  md: "h-11 px-4 text-[15px] gap-2 rounded-[var(--radius-md)]",
+  lg: "h-13 px-5 text-[16px] gap-2 rounded-[var(--radius-lg)]",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -164,7 +164,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[--radius-lg] border border-line bg-surface shadow-card",
+        "rounded-[var(--radius-lg)] border border-line bg-surface shadow-card",
         className,
       )}
       {...props}
@@ -238,14 +238,14 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       className={cn(
-        "relative grid gap-1 rounded-[--radius-md] bg-surface-2 p-1",
+        "relative grid gap-1 rounded-[var(--radius-md)] bg-surface-2 p-1",
         className,
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-1 rounded-[--radius-sm] bg-surface shadow-card transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="pointer-events-none absolute inset-y-1 rounded-[var(--radius-sm)] bg-surface shadow-card transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
         style={{
           width: `calc((100% - 0.5rem - ${(options.length - 1) * 0.25}rem) / ${options.length})`,
           transform: `translateX(calc(${index} * (100% + 0.25rem)))`,
@@ -262,7 +262,7 @@ export function Segmented<T extends string>({
             onChange(option.value);
           }}
           className={cn(
-            "relative z-10 rounded-[--radius-sm] font-semibold transition-colors duration-200",
+            "relative z-10 rounded-[var(--radius-sm)] font-semibold transition-colors duration-200",
             size === "md" ? "h-9 text-[13px]" : "h-8 text-[12px]",
             option.value === value ? "text-text" : "text-subtle hover:text-muted",
           )}
@@ -321,7 +321,7 @@ export function Switch({
 // ---------------------------------------------------------------------------
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("shimmer rounded-[--radius-sm]", className)} />;
+  return <div className={cn("shimmer rounded-[var(--radius-sm)]", className)} />;
 }
 
 export function EmptyState({
@@ -345,7 +345,7 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="mb-4 flex size-14 items-center justify-center rounded-[--radius-lg] bg-surface-2 text-subtle">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-subtle">
           {icon}
         </div>
       ) : null}

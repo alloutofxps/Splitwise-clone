@@ -18,7 +18,7 @@ import { Compass } from "lucide-react";
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
-      <span className="flex size-14 items-center justify-center rounded-[--radius-lg] bg-surface-2 text-muted">
+      <span className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-muted">
         <Compass className="size-7" />
       </span>
 
@@ -32,7 +32,7 @@ export default function NotFound() {
 
       <Link
         href="/"
-        className="mt-7 flex h-11 items-center justify-center rounded-[--radius-md] bg-brand px-6 text-[15px] font-semibold text-white transition active:scale-[0.98]"
+        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-[15px] font-semibold text-white transition active:scale-[0.98]"
       >
         Back to Divvy
       </Link>

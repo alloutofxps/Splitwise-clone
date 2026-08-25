@@ -58,13 +58,13 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setJoining(true)}
-                  className="rounded-[--radius-sm] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
+                  className="rounded-[var(--radius-sm)] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
                 >
                   Join
                 </button>
                 <button
                   onClick={() => setNewGroup(true)}
-                  className="flex items-center gap-1 rounded-[--radius-sm] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
+                  className="flex items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1 text-[13px] font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
                 >
                   <Plus className="size-3.5" strokeWidth={2.8} />
                   New
@@ -211,12 +211,12 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
     <Link
       href={`/groups/${group.id}`}
       className={cn(
-        "flex items-center gap-3.5 rounded-[--radius-lg] border border-line bg-surface p-3.5",
+        "flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5",
         "shadow-card transition duration-150 active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
       )}
     >
       <span
-        className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] text-[21px]"
+        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[21px]"
         style={{ background: `color-mix(in oklch, var(--avatar-${group.color}) 16%, transparent)` }}
       >
         {group.emoji}
@@ -260,7 +260,7 @@ function FriendRow({
   return (
     <Link
       href={`/friends/${friend.person.id}`}
-      className="flex items-center gap-3.5 rounded-[--radius-lg] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2"
+      className="flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2"
     >
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white"
@@ -296,8 +296,8 @@ function FriendRow({
 
 function FirstRun({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => void }) {
   return (
-    <div className="rounded-[--radius-xl] border border-line bg-surface p-6 shadow-card">
-      <span className="flex size-11 items-center justify-center rounded-[--radius-md] bg-brand-soft text-brand-soft-text">
+    <div className="rounded-[var(--radius-xl)] border border-line bg-surface p-6 shadow-card">
+      <span className="flex size-11 items-center justify-center rounded-[var(--radius-md)] bg-brand-soft text-brand-soft-text">
         <Sparkles className="size-5" />
       </span>
 

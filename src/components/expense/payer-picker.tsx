@@ -120,7 +120,7 @@ export function PayerPicker({
             }
           }}
           className={cn(
-            "mb-4 flex w-full items-center gap-2.5 rounded-[--radius-md] border px-3.5 py-2.5 text-left transition active:scale-[0.985]",
+            "mb-4 flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border px-3.5 py-2.5 text-left transition active:scale-[0.985]",
             multiple ? "border-brand/40 bg-brand-soft" : "border-line bg-surface",
           )}
         >
@@ -147,7 +147,7 @@ export function PayerPicker({
               <li key={member.id}>
                 <div
                   className={cn(
-                    "flex items-center gap-3 rounded-[--radius-md] border px-3 py-2.5 transition",
+                    "flex items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition",
                     selected ? "border-brand/40 bg-brand-soft/40" : "border-line bg-surface",
                   )}
                 >
@@ -213,7 +213,7 @@ function PayerAmount({
   }, [value, currency]);
 
   return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[--radius-xs] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[--brand-ring]">
+    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
       <span className="text-[12px] font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         inputMode="decimal"

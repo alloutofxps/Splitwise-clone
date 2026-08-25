@@ -63,7 +63,7 @@ export default function AccountPage() {
   if (isLoading || !data) {
     return (
       <div className="pt-8">
-        <Skeleton className="h-24 w-full rounded-[--radius-xl]" />
+        <Skeleton className="h-24 w-full rounded-[var(--radius-xl)]" />
       </div>
     );
   }
@@ -93,7 +93,7 @@ export default function AccountPage() {
       <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Account</h1>
 
       {/* Profile ----------------------------------------------------------- */}
-      <section className="rounded-[--radius-xl] border border-line bg-surface p-5 shadow-card">
+      <section className="rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
         <div className="flex items-center gap-4">
           <Avatar person={me} size="lg" />
           <div className="min-w-0 flex-1">
@@ -110,7 +110,7 @@ export default function AccountPage() {
               }}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
               aria-label="Your name"
-              className="w-full rounded-[--radius-sm] bg-transparent text-[19px] font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+              className="w-full rounded-[var(--radius-sm)] bg-transparent text-[19px] font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
             />
             <p className="mt-0.5 text-[13px] text-subtle">
               Member since{" "}
@@ -133,7 +133,7 @@ export default function AccountPage() {
               aria-label={`Use the ${color} avatar colour`}
               className={cn(
                 "size-7 rounded-full transition active:scale-90",
-                me.avatarColor === color && "ring-2 ring-brand ring-offset-2 ring-offset-[--surface]",
+                me.avatarColor === color && "ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]",
               )}
               style={{ background: `var(--avatar-${color})` }}
             />
@@ -182,7 +182,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <div className="mt-1.5 flex items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3">
+        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
           <span className="shrink-0 text-muted">
             <EyeOff className="size-[18px]" />
           </span>
@@ -201,7 +201,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <div className="mt-3 rounded-[--radius-lg] border border-line bg-surface p-3.5">
+        <div className="mt-3 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
           <p className="mb-2.5 text-[13px] font-semibold text-text">Appearance</p>
           <Segmented
             value={theme}
@@ -330,7 +330,7 @@ function StorageRow() {
   if (!status?.supported) return null;
 
   return (
-    <div className="mt-1.5 flex items-start gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3">
+    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
       <span className="shrink-0 pt-0.5 text-muted">
         <Database className="size-[18px]" />
       </span>
@@ -376,7 +376,7 @@ function Row({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
     >
       <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
         {icon}
@@ -453,7 +453,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
       <div className="px-5 pb-6">
         {key ? (
           <>
-            <div className="rounded-[--radius-lg] border border-line bg-surface-2 p-4">
+            <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 p-4">
               <p
                 className="break-all font-mono text-[13px] leading-relaxed text-text"
                 style={{ userSelect: "all", WebkitUserSelect: "all" }}
@@ -470,7 +470,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
             >
               {copied ? "Copied" : "Copy key"}
             </Button>
-            <p className="mt-4 rounded-[--radius-md] bg-warning-soft p-3.5 text-[13px] leading-relaxed text-text">
+            <p className="mt-4 rounded-[var(--radius-md)] bg-warning-soft p-3.5 text-[13px] leading-relaxed text-text">
               Save this now. Any older key has stopped working, and this one is
               not retrievable later — the server only keeps a hash of it.
             </p>
@@ -483,7 +483,7 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
               you again — it can only be replaced.
             </p>
 
-            <div className="mt-5 flex gap-3 rounded-[--radius-md] bg-negative-soft p-3.5">
+            <div className="mt-5 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
               <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
               <p className="text-[13px] leading-relaxed text-negative-text">
                 Generating a new key immediately invalidates the old one. Any
@@ -568,7 +568,7 @@ function PaymentMethodsSheet({
               return (
                 <li
                   key={method.id}
-                  className="flex items-center gap-3 rounded-[--radius-md] border border-line bg-surface px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5"
                 >
                   <span className="text-[18px]">{entry?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
@@ -592,7 +592,7 @@ function PaymentMethodsSheet({
           </ul>
         ) : null}
 
-        <div className="mt-5 rounded-[--radius-lg] border border-line bg-surface p-3.5">
+        <div className="mt-5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
           <p className="mb-2.5 text-[13px] font-semibold text-text">Add a method</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
@@ -625,13 +625,13 @@ function PaymentMethodsSheet({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
             <button
               onClick={() => void add()}
               disabled={!value.trim() || busy}
               aria-label="Add payment method"
-              className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-brand text-white transition active:scale-90 disabled:opacity-40"
+              className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-white transition active:scale-90 disabled:opacity-40"
             >
               <Plus className="size-5" />
             </button>

@@ -170,7 +170,7 @@ export function SettleUpSheet({
         ) : (
           <>
             {/* Direction ---------------------------------------------------- */}
-            <div className="flex items-center justify-center gap-3 rounded-[--radius-lg] bg-surface-2 px-4 py-4">
+            <div className="flex items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
               <div className="flex flex-col items-center gap-1.5">
                 <Avatar
                   person={iAmPaying ? people.get(meId)! : other!}
@@ -204,7 +204,7 @@ export function SettleUpSheet({
             </div>
 
             {/* Amount ------------------------------------------------------- */}
-            <div className="mt-4 rounded-[--radius-lg] bg-surface-2 px-4 py-5">
+            <div className="mt-4 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
               <AmountInput
                 value={amount}
                 onChange={setAmount}
@@ -260,7 +260,7 @@ export function SettleUpSheet({
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 500))}
               placeholder="Add a note (optional)"
-              className="mt-4 h-11 w-full rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </>
         )}
@@ -307,7 +307,7 @@ function SuggestionList({
                       onClick={() =>
                         onPick({ fromPersonId: meId, toPersonId: member.id, amount: "0" })
                       }
-                      className="flex w-full items-center gap-3 rounded-[--radius-md] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
                     >
                       <Avatar person={member} size="sm" />
                       <span className="flex-1 truncate text-[14px] font-semibold text-text">
@@ -335,7 +335,7 @@ function SuggestionList({
           <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
             <button
               onClick={() => onPick(edge)}
-              className="flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
+              className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
             >
               <Avatar person={iAmPaying ? to : from} size="md" />
               <span className="min-w-0 flex-1">
@@ -407,7 +407,7 @@ function PayThem({
   };
 
   return (
-    <div className="mt-4 rounded-[--radius-lg] border border-line bg-surface p-3.5">
+    <div className="mt-4 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
       <p className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
         Pay {person.displayName.split(" ")[0]}
       </p>
@@ -424,7 +424,7 @@ function PayThem({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => haptic()}
-                  className="flex items-center gap-3 rounded-[--radius-md] bg-surface-2 px-3 py-2.5 transition active:scale-[0.985]"
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 transition active:scale-[0.985]"
                 >
                   <span className="text-[16px]">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
@@ -440,7 +440,7 @@ function PayThem({
               ) : (
                 <button
                   onClick={() => void copy(entry.value)}
-                  className="flex w-full items-center gap-3 rounded-[--radius-md] bg-surface-2 px-3 py-2.5 text-left transition active:scale-[0.985]"
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-left transition active:scale-[0.985]"
                 >
                   <span className="text-[16px]">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">

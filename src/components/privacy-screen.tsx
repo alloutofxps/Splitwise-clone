@@ -121,7 +121,7 @@ export function PrivacyScreen() {
 
   return (
     <div className="privacy-veil no-print" aria-hidden="true">
-      <span className="flex size-16 items-center justify-center rounded-[--radius-lg] bg-brand text-[28px] font-black text-white">
+      <span className="flex size-16 items-center justify-center rounded-[var(--radius-lg)] bg-brand text-[28px] font-black text-white">
         D
       </span>
       <p className="mt-4 flex items-center gap-1.5 text-[13px] font-semibold text-muted">

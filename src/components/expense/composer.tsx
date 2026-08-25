@@ -326,7 +326,7 @@ export function ExpenseComposer({
           />
 
           {/* Amount --------------------------------------------------------- */}
-          <div className="mt-5 flex flex-col items-center rounded-[--radius-lg] bg-surface-2 px-4 py-6">
+          <div className="mt-5 flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-6">
             <button
               onClick={() => setPanel("currency")}
               className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[12px] font-bold text-muted transition active:scale-95"
@@ -355,11 +355,11 @@ export function ExpenseComposer({
           </div>
 
           {/* Description ---------------------------------------------------- */}
-          <div className="mt-4 flex items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}
-              className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md] transition active:scale-90"
+              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition active:scale-90"
               style={{
                 background: `color-mix(in oklch, var(--avatar-${category.color}) 16%, transparent)`,
                 color: `var(--avatar-${category.color})`,
@@ -521,7 +521,7 @@ export function ExpenseComposer({
             rows={5}
             autoFocus
             placeholder="Anything worth remembering about this expense…"
-            className="w-full resize-none rounded-[--radius-md] border border-line bg-surface p-3.5 text-[15px] leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-[15px] leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
           <Button
             variant="primary"
@@ -652,7 +652,7 @@ function ScopePicker({
     const label = options.find((option) => option.key === current)?.label;
     if (!label) return null;
     return (
-      <div className="flex items-center gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2.5">
+      <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
         <span className="shrink-0 text-[13px] font-semibold text-muted">With</span>
         <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text">
           {label}
@@ -663,7 +663,7 @@ function ScopePicker({
   }
 
   return (
-    <label className="flex items-center gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2.5">
+    <label className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
       <span className="shrink-0 text-[13px] font-semibold text-muted">With</span>
       <select
         value={current}
@@ -721,7 +721,7 @@ function Row({
         onClick();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[--radius-md] border bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]",
+        "flex w-full items-center gap-3 rounded-[var(--radius-md)] border bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]",
         warning ? "border-negative/50 bg-negative-soft/40" : "border-line",
       )}
     >
@@ -802,7 +802,7 @@ function SplitPreview({
       animate={{ opacity: 1, height: "auto" }}
       className="mt-4 overflow-hidden"
     >
-      <div className="rounded-[--radius-lg] bg-surface-2 p-3.5">
+      <div className="rounded-[var(--radius-lg)] bg-surface-2 p-3.5">
         <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">
           Who owes what
         </p>
@@ -884,7 +884,7 @@ function ConversionNote({
     amount > 0n && rate ? convertPreview(amount, from, to, rate) : null;
 
   return (
-    <div className="mt-3 w-full rounded-[--radius-md] bg-surface px-3 py-2.5">
+    <div className="mt-3 w-full rounded-[var(--radius-md)] bg-surface px-3 py-2.5">
       <div className="flex items-center justify-between gap-2 text-[12px]">
         <span className="font-semibold text-muted">
           Group settles in {to}

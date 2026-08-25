@@ -98,7 +98,7 @@ export default function GroupPage() {
       </header>
 
       {/* Balance summary -------------------------------------------------- */}
-      <div className="mt-2 rounded-[--radius-xl] border border-line bg-surface p-5 shadow-card">
+      <div className="mt-2 rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
         <BalanceHeadline
           net={net}
           currency={group.currency}
@@ -207,11 +207,11 @@ function GroupSkeleton() {
   return (
     <div className="pt-6">
       <Skeleton className="h-6 w-40" />
-      <Skeleton className="mt-5 h-[148px] w-full rounded-[--radius-xl]" />
-      <Skeleton className="mt-5 h-11 w-full rounded-[--radius-md]" />
+      <Skeleton className="mt-5 h-[148px] w-full rounded-[var(--radius-xl)]" />
+      <Skeleton className="mt-5 h-11 w-full rounded-[var(--radius-md)]" />
       <div className="mt-5 space-y-2.5">
         {[0, 1, 2, 3].map((index) => (
-          <Skeleton key={index} className="h-[62px] w-full rounded-[--radius-lg]" />
+          <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
         ))}
       </div>
     </div>

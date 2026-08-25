@@ -94,7 +94,7 @@ export function InviteSheet({
   return (
     <Sheet open={open} onClose={onClose} title={`Invite to ${group.name}`}>
       <div className="px-5 pb-6">
-        <div className="rounded-[--radius-lg] border border-line bg-surface-2 px-4 py-6 text-center">
+        <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
           <p className="text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
             Invite code
           </p>
@@ -134,7 +134,7 @@ export function InviteSheet({
           </div>
         </div>
 
-        <div className="mt-6 rounded-[--radius-md] bg-surface-2 p-3.5">
+        <div className="mt-6 rounded-[var(--radius-md)] bg-surface-2 p-3.5">
           <p className="flex items-start gap-2 text-[12px] leading-relaxed text-muted">
             <MessageCircle className="mt-0.5 size-3.5 shrink-0" />
             <span>

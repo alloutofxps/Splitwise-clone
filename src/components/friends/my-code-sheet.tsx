@@ -58,7 +58,7 @@ export function MyCodeSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Your code">
       <div className="px-5 pb-6">
-        <div className="rounded-[--radius-lg] border border-line bg-surface-2 px-4 py-6 text-center">
+        <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
           <p className="text-[12px] font-bold uppercase tracking-[0.07em] text-subtle">
             Personal code
           </p>

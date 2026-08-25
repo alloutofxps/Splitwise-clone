@@ -30,7 +30,7 @@ export default function FriendsPage() {
         <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Friends</h1>
         <div className="space-y-2.5">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-[68px] w-full rounded-[--radius-lg]" />
+            <Skeleton key={index} className="h-[68px] w-full rounded-[var(--radius-lg)]" />
           ))}
         </div>
       </div>
@@ -125,7 +125,7 @@ function FriendCard({
   return (
     <Link
       href={`/friends/${friend.person.id}`}
-      className="flex items-center gap-3.5 rounded-[--radius-lg] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
+      className="flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
     >
       <Avatar person={friend.person} size="md" />
 

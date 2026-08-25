@@ -46,10 +46,10 @@ export default function FriendPage() {
   if (isLoading || !data || !dashboard) {
     return (
       <div className="pt-8">
-        <Skeleton className="h-20 w-full rounded-[--radius-xl]" />
+        <Skeleton className="h-20 w-full rounded-[var(--radius-xl)]" />
         <div className="mt-4 space-y-2.5">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-[62px] w-full rounded-[--radius-lg]" />
+            <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
           ))}
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function FriendPage() {
       </header>
 
       {/* Balance ---------------------------------------------------------- */}
-      <div className="mt-2 rounded-[--radius-xl] border border-line bg-surface p-5 shadow-card">
+      <div className="mt-2 rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
         <div className="flex items-center gap-4">
           <Avatar person={data.person} size="lg" />
           <div className="min-w-0 flex-1">

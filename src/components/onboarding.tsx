@@ -152,7 +152,7 @@ function Feature({
 }) {
   return (
     <li className="flex gap-3.5">
-      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[--radius-sm] bg-brand-soft text-brand-soft-text">
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-brand-soft text-brand-soft-text">
         {icon}
       </span>
       <span className="min-w-0">
@@ -252,7 +252,7 @@ function ProfileStep({
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
-          className="h-12 w-full rounded-[--radius-md] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
       </label>
 
@@ -263,7 +263,7 @@ function ProfileStep({
         <select
           value={currency}
           onChange={(event) => setCurrency(event.target.value)}
-          className="h-12 w-full rounded-[--radius-md] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         >
           {CURRENCIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
@@ -348,7 +348,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mb-6 mt-4 flex size-12 items-center justify-center rounded-[--radius-lg] bg-warning-soft">
+      <div className="mb-6 mt-4 flex size-12 items-center justify-center rounded-[var(--radius-lg)] bg-warning-soft">
         <KeyRound className="size-6 text-text" />
       </div>
 
@@ -360,7 +360,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
         way back into your account on another device.
       </p>
 
-      <div className="mt-6 rounded-[--radius-lg] border border-line bg-surface-2 p-4">
+      <div className="mt-6 rounded-[var(--radius-lg)] border border-line bg-surface-2 p-4">
         <p
           className="select-all break-all font-mono text-[13px] leading-relaxed text-text"
           // Selectable on purpose: this is the one string in the app a user
@@ -382,7 +382,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
         {copied ? "Copied" : "Copy key"}
       </Button>
 
-      <div className="mt-6 flex gap-3 rounded-[--radius-md] bg-negative-soft p-3.5">
+      <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
         <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
         <p className="text-[13px] leading-relaxed text-negative-text">
           Anyone with this key can open your account. Keep it in a password
@@ -395,7 +395,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
           type="checkbox"
           checked={acknowledged}
           onChange={(event) => setAcknowledged(event.target.checked)}
-          className="mt-0.5 size-5 shrink-0 accent-[--brand]"
+          className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]"
         />
         <span className="text-[14px] leading-snug text-text">
           I have saved my recovery key somewhere safe.
@@ -475,7 +475,7 @@ function RestoreStep({ onBack }: { onBack: () => void }) {
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-7 w-full resize-none rounded-[--radius-md] border border-line bg-surface p-4 font-mono text-[14px] text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-[14px] text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
       />
 
       <div className="mt-auto pt-8">

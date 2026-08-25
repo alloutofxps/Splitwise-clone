@@ -113,7 +113,7 @@ export function ReceiptPicker({
           <ul className="mt-4 grid grid-cols-3 gap-2.5">
             {attachments.map((attachment) => (
               <li key={attachment.id} className="group relative">
-                <div className="relative aspect-square overflow-hidden rounded-[--radius-md] border border-line bg-surface-2">
+                <div className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface-2">
                   {attachment.mimeType === "application/pdf" ? (
                     <span className="flex size-full flex-col items-center justify-center gap-1 text-subtle">
                       <FileText className="size-7" />
@@ -147,7 +147,7 @@ export function ReceiptPicker({
             ))}
           </ul>
         ) : (
-          <p className="mt-4 rounded-[--radius-md] bg-surface-2 px-4 py-6 text-center text-[13px] leading-relaxed text-muted">
+          <p className="mt-4 rounded-[var(--radius-md)] bg-surface-2 px-4 py-6 text-center text-[13px] leading-relaxed text-muted">
             Photos are shrunk on your phone before they upload, so this works on
             a bad connection.
           </p>

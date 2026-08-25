@@ -27,7 +27,7 @@ export default function OfflinePage() {
       {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
         href="/"
-        className="mx-auto mt-6 flex h-11 items-center justify-center rounded-[--radius-md] bg-brand px-5 text-[15px] font-semibold text-white"
+        className="mx-auto mt-6 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-5 text-[15px] font-semibold text-white"
       >
         Try again
       </a>

@@ -117,7 +117,7 @@ function ToastViewport({
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
             className={cn(
-              "pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-[--radius-lg]",
+              "pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-[var(--radius-lg)]",
               "border border-line bg-elevated px-4 py-3 shadow-float",
             )}
           >
@@ -134,7 +134,7 @@ function ToastViewport({
                   toast.action?.onClick();
                   onDismiss(toast.id);
                 }}
-                className="-my-1 flex shrink-0 items-center gap-1 rounded-[--radius-sm] px-2 py-1.5 text-[13px] font-bold text-brand transition active:scale-95 hover:bg-brand-soft"
+                className="-my-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-bold text-brand transition active:scale-95 hover:bg-brand-soft"
               >
                 <Undo2 className="size-3.5" />
                 {toast.action.label}

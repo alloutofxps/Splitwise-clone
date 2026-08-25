@@ -50,7 +50,7 @@ export default function ActivityPage() {
         <h1 className="mb-5 text-[26px] font-black tracking-[-0.03em] text-text">Activity</h1>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((index) => (
-            <Skeleton key={index} className="h-14 w-full rounded-[--radius-lg]" />
+            <Skeleton key={index} className="h-14 w-full rounded-[var(--radius-lg)]" />
           ))}
         </div>
       </div>
@@ -204,7 +204,7 @@ function ActivityRow({
   const body = (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-[--radius-lg] px-3 py-3 transition",
+        "flex items-start gap-3 rounded-[var(--radius-lg)] px-3 py-3 transition",
         clickable && "hover:bg-surface-2 active:scale-[0.99] active:bg-surface-2",
         activity.isUnread && "bg-brand-soft/30",
       )}

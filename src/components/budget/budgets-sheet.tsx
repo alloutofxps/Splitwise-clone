@@ -55,7 +55,7 @@ export function BudgetsSheet({ open, onClose }: { open: boolean; onClose: () => 
           {isLoading ? (
             <div className="space-y-2">
               {[0, 1].map((index) => (
-                <Skeleton key={index} className="h-20 w-full rounded-[--radius-lg]" />
+                <Skeleton key={index} className="h-20 w-full rounded-[var(--radius-lg)]" />
               ))}
             </div>
           ) : !budgets || budgets.length === 0 ? (
@@ -138,10 +138,10 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
   };
 
   return (
-    <div className="rounded-[--radius-lg] border border-line bg-surface p-3.5">
+    <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
       <div className="flex items-start gap-3">
         <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-[--radius-md]"
+          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
           style={
             category
               ? {
@@ -280,7 +280,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
       }
     >
       <div className="px-5 pb-6">
-        <div className="flex flex-col items-center rounded-[--radius-lg] bg-surface-2 px-4 py-5">
+        <div className="flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
           <AmountInput
             value={amount}
             onChange={setAmount}

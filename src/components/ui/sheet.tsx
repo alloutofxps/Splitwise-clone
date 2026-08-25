@@ -142,7 +142,7 @@ function SheetBody({
         style={{ y }}
         className={cn(
           "relative flex w-full flex-col overflow-hidden bg-elevated shadow-sheet",
-          "rounded-t-[--radius-2xl] sm:rounded-[--radius-xl]",
+          "rounded-t-[var(--radius-2xl)] sm:rounded-[var(--radius-xl)]",
           "sm:max-w-[440px]",
           tall ? "h-[92dvh] sm:h-[min(86dvh,760px)]" : "max-h-[90dvh]",
           className,
@@ -212,7 +212,7 @@ export function ConfirmSheet({
         <div className="mt-6 flex gap-3">
           <button
             onClick={onClose}
-            className="h-11 flex-1 rounded-[--radius-md] border border-line bg-surface-2 text-[15px] font-semibold text-text transition active:scale-[0.975]"
+            className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-[15px] font-semibold text-text transition active:scale-[0.975]"
           >
             Cancel
           </button>
@@ -220,7 +220,7 @@ export function ConfirmSheet({
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              "h-11 flex-1 rounded-[--radius-md] text-[15px] font-semibold text-white transition active:scale-[0.975] disabled:opacity-60",
+              "h-11 flex-1 rounded-[var(--radius-md)] text-[15px] font-semibold text-white transition active:scale-[0.975] disabled:opacity-60",
               tone === "danger" ? "bg-negative" : "bg-brand",
             )}
           >

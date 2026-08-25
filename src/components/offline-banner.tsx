@@ -116,7 +116,7 @@ export function OfflineBanner() {
               <div
                 role="alert"
                 className={cn(
-                  "rounded-[--radius-md] border border-line bg-negative-soft px-3 py-2.5",
+                  "rounded-[var(--radius-md)] border border-line bg-negative-soft px-3 py-2.5",
                   // Only spaced when it sits under the offline pill.
                   (!online || queue.length > 0) && "mt-2",
                 )}
@@ -142,7 +142,7 @@ export function OfflineBanner() {
                   {failures.map((failure) => (
                     <li
                       key={failure.id}
-                      className="flex items-start gap-2 rounded-[--radius-sm] bg-surface px-2.5 py-2"
+                      className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-surface px-2.5 py-2"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-semibold text-text">

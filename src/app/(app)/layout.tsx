@@ -105,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-6 h-11 rounded-[--radius-md] bg-brand px-5 text-[15px] font-semibold text-white"
+          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-[15px] font-semibold text-white"
         >
           Try again
         </button>
@@ -140,7 +140,7 @@ function BootSkeleton() {
       <Skeleton className="mt-8 h-4 w-16" />
       <div className="mt-3 space-y-3">
         {[0, 1, 2].map((index) => (
-          <Skeleton key={index} className="h-[76px] w-full rounded-[--radius-lg]" />
+          <Skeleton key={index} className="h-[76px] w-full rounded-[var(--radius-lg)]" />
         ))}
       </div>
     </div>

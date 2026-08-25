@@ -31,7 +31,7 @@ export function ErrorScreen({
 
   return (
     <div className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-[--radius-lg] bg-warning-soft text-text">
+      <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-warning-soft text-text">
         <TriangleAlert size={22} />
       </div>
       <p className="text-[16px] font-semibold text-text">{title}</p>

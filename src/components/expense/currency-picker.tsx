@@ -43,7 +43,7 @@ export function CurrencyPicker({
     <Sheet open={open} onClose={onClose} title="Currency" tall>
       <div className="px-5 pb-6">
         <div className="sticky top-0 z-10 -mx-5 bg-elevated px-5 pb-3">
-          <label className="flex items-center gap-2.5 rounded-[--radius-md] bg-surface-2 px-3.5 py-2.5">
+          <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-2.5">
             <Search className="size-4 shrink-0 text-subtle" />
             <input
               value={query}
@@ -66,7 +66,7 @@ export function CurrencyPicker({
                     onChange(entry.code);
                   }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-[--radius-md] px-3 py-2.5 text-left transition active:scale-[0.985]",
+                    "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition active:scale-[0.985]",
                     active ? "bg-brand-soft" : "hover:bg-surface-2",
                   )}
                 >

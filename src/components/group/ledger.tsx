@@ -91,7 +91,7 @@ export function GroupLedger({
     return (
       <div className="space-y-2.5">
         {[0, 1, 2, 3, 4].map((index) => (
-          <Skeleton key={index} className="h-[62px] w-full rounded-[--radius-lg]" />
+          <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
         ))}
       </div>
     );
@@ -107,7 +107,7 @@ export function GroupLedger({
           <motion.div
             initial={{ opacity: 0, width: "60%" }}
             animate={{ opacity: 1, width: "100%" }}
-            className="flex flex-1 items-center gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2"
+            className="flex flex-1 items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2"
           >
             <Search className="size-4 shrink-0 text-subtle" />
             <input
@@ -178,7 +178,7 @@ export function GroupLedger({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="mb-3 space-y-2.5 rounded-[--radius-lg] bg-surface-2 px-3 py-3">
+            <div className="mb-3 space-y-2.5 rounded-[var(--radius-lg)] bg-surface-2 px-3 py-3">
               <FilterRow label="Who">
                 {members.map((member) => (
                   <FilterChip
@@ -347,7 +347,7 @@ export function ExpenseRow({
         onOpen();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[--radius-lg] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
+        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
         // Faded rather than spinner-topped: the row is real and its numbers are
         // already correct, so the only thing being signalled is that the server
         // has not acknowledged it. A spinner would suggest it might not be
@@ -356,7 +356,7 @@ export function ExpenseRow({
       )}
     >
       <span
-        className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md]"
+        className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
         style={{
           background: `color-mix(in oklch, var(--avatar-${category.color}) 15%, transparent)`,
           color: `var(--avatar-${category.color})`,
@@ -467,11 +467,11 @@ export function SettlementRow({
         }}
         aria-label={`${fromLabel} paid ${toLabel}. Remove this payment.`}
         className={cn(
-          "flex w-full items-center gap-3 rounded-[--radius-lg] border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-left transition",
+          "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-left transition",
           pending ? "opacity-60" : "active:scale-[0.99] hover:bg-surface-2",
         )}
       >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[--radius-md] bg-positive-soft text-positive-text">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-positive-soft text-positive-text">
         <ArrowLeftRight className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">

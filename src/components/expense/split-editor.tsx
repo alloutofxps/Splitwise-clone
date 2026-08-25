@@ -291,7 +291,7 @@ function ParticipantRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-[--radius-md] border px-3 py-2.5 transition",
+        "flex items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition",
         included ? "border-line bg-surface" : "border-transparent bg-surface-2/50 opacity-55",
       )}
     >
@@ -354,7 +354,7 @@ function ModeInput({
               onUpdate({ percent: Number.isFinite(value) ? value : 0 });
             }}
             onFocus={(event) => event.currentTarget.select()}
-            className="tabular w-14 rounded-[--radius-xs] bg-surface-2 px-2 py-1.5 text-right text-[14px] font-bold text-text outline-none focus:ring-2 focus:ring-[--brand-ring]"
+            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-[14px] font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
           />
           <span className="text-[13px] font-semibold text-subtle">%</span>
         </div>
@@ -407,7 +407,7 @@ function MoneyField({
   const decimals = decimalsFor(currency);
 
   return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[--radius-xs] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[--brand-ring]">
+    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
       <span className="text-[12px] font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         inputMode="decimal"
@@ -497,7 +497,7 @@ function RunningTotal({
 }) {
   if (resolved.errors.length > 0) {
     return (
-      <p className="rounded-[--radius-sm] bg-negative-soft px-3 py-2 text-center text-[13px] font-semibold text-negative-text">
+      <p className="rounded-[var(--radius-sm)] bg-negative-soft px-3 py-2 text-center text-[13px] font-semibold text-negative-text">
         {friendlyError(resolved.errors[0], currency)}
       </p>
     );
@@ -599,7 +599,7 @@ function ItemEditor({
     <div className="mt-4">
       <ul className="space-y-2.5">
         {items.map((item, index) => (
-          <li key={item.id} className="rounded-[--radius-md] border border-line bg-surface p-3">
+          <li key={item.id} className="rounded-[var(--radius-md)] border border-line bg-surface p-3">
             <div className="flex items-center gap-2">
               <input
                 value={item.name}
@@ -676,14 +676,14 @@ function ItemEditor({
 
       <button
         onClick={addItem}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[--radius-md] border border-dashed border-line-strong py-3 text-[14px] font-semibold text-muted transition active:scale-[0.98] hover:bg-surface-2"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-line-strong py-3 text-[14px] font-semibold text-muted transition active:scale-[0.98] hover:bg-surface-2"
       >
         <Plus className="size-4" />
         Add an item
       </button>
 
       {items.length > 0 ? (
-        <p className="mt-3 rounded-[--radius-sm] bg-surface-2 px-3 py-2 text-center text-[12px] font-semibold text-muted">
+        <p className="mt-3 rounded-[var(--radius-sm)] bg-surface-2 px-3 py-2 text-center text-[12px] font-semibold text-muted">
           {extras > 0n ? (
             <>
               <span className="tabular text-text">

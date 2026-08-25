@@ -128,7 +128,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 setEmoji(next.emoji);
               }}
               aria-label="Change group icon"
-              className="flex size-14 shrink-0 items-center justify-center rounded-[--radius-lg] bg-surface-2 text-[26px] transition active:scale-90"
+              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-[26px] transition active:scale-90"
             >
               {emoji}
             </button>
@@ -138,7 +138,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
               placeholder="Lisbon 2026"
               autoFocus
               enterKeyHint="done"
-              className="h-12 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-4 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+              className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </div>
 
@@ -166,7 +166,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
 
           <button
             onClick={() => setCurrencyOpen(true)}
-            className="mt-5 flex w-full items-center justify-between rounded-[--radius-md] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]"
+            className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]"
           >
             <span className="text-[14px] font-semibold text-muted">Settles in</span>
             <span className="text-[14px] font-bold text-text">{currency}</span>
@@ -175,7 +175,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             Expenses can be in any currency; balances are totted up in this one.
           </p>
 
-          <div className="mt-4 flex items-start gap-3 rounded-[--radius-md] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3">
             <span className="min-w-0 flex-1">
               <span className="block text-[14px] font-semibold text-text">
                 Simplify debts
@@ -208,13 +208,13 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 }}
                 placeholder="Add a name"
                 enterKeyHint="done"
-                className="h-11 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[15px] text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
               />
               <button
                 onClick={addName}
                 disabled={!draftName.trim()}
                 aria-label="Add name"
-                className="flex size-11 shrink-0 items-center justify-center rounded-[--radius-md] bg-surface-2 text-muted transition active:scale-90 disabled:opacity-40"
+                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-muted transition active:scale-90 disabled:opacity-40"
               >
                 <Plus className="size-5" />
               </button>

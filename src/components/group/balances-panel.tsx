@@ -48,7 +48,7 @@ export function BalancesPanel({
   return (
     <div>
       {/* Per-person net ---------------------------------------------------- */}
-      <section className="rounded-[--radius-lg] border border-line bg-surface p-4 shadow-card">
+      <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4 shadow-card">
         <h3 className="mb-3 text-[12px] font-bold uppercase tracking-[0.06em] text-subtle">
           Where everyone stands
         </h3>
@@ -97,7 +97,7 @@ export function BalancesPanel({
         </div>
 
         {edges.length === 0 ? (
-          <div className="rounded-[--radius-lg] border border-line bg-positive-soft/50 p-6 text-center">
+          <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
             <Sparkles className="mx-auto size-6 text-positive-text" />
             <p className="mt-2 text-[15px] font-bold text-text">Everyone is square</p>
             <p className="mt-1 text-[13px] text-muted">
@@ -116,7 +116,7 @@ export function BalancesPanel({
                 <li
                   key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-[--radius-lg] border px-3 py-3",
+                    "flex items-center gap-2.5 rounded-[var(--radius-lg)] border px-3 py-3",
                     involvesMe
                       ? "border-brand/30 bg-brand-soft/40"
                       : "border-line bg-surface",
@@ -155,7 +155,7 @@ export function BalancesPanel({
         )}
 
         {simplified && group.balances.pairwise.length > group.balances.simplified.length ? (
-          <p className="mt-3 flex gap-2 rounded-[--radius-md] bg-surface-2 px-3 py-2.5 text-[12px] leading-relaxed text-muted">
+          <p className="mt-3 flex gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-[12px] leading-relaxed text-muted">
             <Info className="mt-0.5 size-3.5 shrink-0" />
             <span>
               Simplifying turned {group.balances.pairwise.length} payments into{" "}

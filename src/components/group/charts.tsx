@@ -42,9 +42,9 @@ export function GroupCharts({
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-24 w-full rounded-[--radius-lg]" />
-        <Skeleton className="h-56 w-full rounded-[--radius-lg]" />
-        <Skeleton className="h-56 w-full rounded-[--radius-lg]" />
+        <Skeleton className="h-24 w-full rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-56 w-full rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-56 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
   }
@@ -79,7 +79,7 @@ export function GroupCharts({
           aria-pressed={asTable}
           aria-label={asTable ? "Show charts" : "Show as a table"}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[--radius-sm] transition active:scale-90",
+            "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition active:scale-90",
             asTable ? "bg-brand-soft text-brand-soft-text" : "bg-surface-2 text-subtle",
           )}
         >
@@ -122,7 +122,7 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="rounded-[--radius-lg] border border-line bg-surface p-3 shadow-card"
+          className="rounded-[var(--radius-lg)] border border-line bg-surface p-3 shadow-card"
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-subtle">
             {tile.label}
@@ -177,7 +177,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
             not jump when it appears. */}
         <div className="mb-2 h-9">
           {active ? (
-            <div className="inline-flex flex-col rounded-[--radius-sm] bg-surface-2 px-2.5 py-1.5">
+            <div className="inline-flex flex-col rounded-[var(--radius-sm)] bg-surface-2 px-2.5 py-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
                 {formatMonth(active.month, true)}
               </span>
@@ -533,7 +533,7 @@ function TableCard({
   rows: string[][];
 }) {
   return (
-    <div className="overflow-hidden rounded-[--radius-lg] border border-line bg-surface shadow-card">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {/* The table scrolls inside its own box; the page never scrolls sideways. */}
       <div className="scroll-area overflow-x-auto">
         <table className="w-full text-left text-[13px]">
@@ -593,7 +593,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[--radius-lg] border border-line bg-surface p-4 shadow-card">
+    <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4 shadow-card">
       <h3 className="text-[14px] font-bold tracking-[-0.01em] text-text">{title}</h3>
       {subtitle ? (
         <p className="mb-3.5 mt-0.5 text-[12px] leading-snug text-muted">{subtitle}</p>

@@ -140,7 +140,7 @@ export default function JoinPage() {
     return (
       <div className="mx-auto w-full max-w-[440px] px-6 pt-16">
         <Skeleton className="h-8 w-32" />
-        <Skeleton className="mt-6 h-32 w-full rounded-[--radius-xl]" />
+        <Skeleton className="mt-6 h-32 w-full rounded-[var(--radius-xl)]" />
       </div>
     );
   }
@@ -213,7 +213,7 @@ export default function JoinPage() {
 
         {/* Placeholder claiming ------------------------------------------- */}
         {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
-          <div className="mt-7 rounded-[--radius-lg] border border-line bg-surface p-4">
+          <div className="mt-7 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
             <p className="flex items-center gap-1.5 text-[14px] font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
               Which one are you?
@@ -233,7 +233,7 @@ export default function JoinPage() {
                       if (claimId !== member.id && !name) setName(member.displayName);
                     }}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-[--radius-md] border px-3 py-2.5 text-left transition active:scale-[0.985]",
+                      "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition active:scale-[0.985]",
                       claimId === member.id
                         ? "border-brand bg-brand-soft"
                         : "border-line bg-surface-2",
@@ -287,7 +287,7 @@ export default function JoinPage() {
                   placeholder="Priya"
                   autoFocus
                   enterKeyHint="go"
-                  className="h-12 min-w-0 flex-1 rounded-[--radius-md] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[16px] font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
                 />
               </div>
             </label>

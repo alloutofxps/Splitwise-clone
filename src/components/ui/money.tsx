@@ -130,8 +130,8 @@ export function AmountInput({
       className={cn(
         // The focus ring lives on the wrapper: a 2px outline drawn around a
         // borderless 46px input reads as a stray pill rather than as focus.
-        "flex items-baseline gap-1.5 rounded-[--radius-md] transition",
-        "focus-within:ring-4 focus-within:ring-[--brand-ring]",
+        "flex items-baseline gap-1.5 rounded-[var(--radius-md)] transition",
+        "focus-within:ring-4 focus-within:ring-[var(--brand-ring)]",
         size === "hero" && "justify-center px-2 py-1",
         className,
       )}

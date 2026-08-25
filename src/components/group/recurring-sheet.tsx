@@ -113,12 +113,12 @@ export function RecurringSheet({
                 <li
                   key={recurrence.id}
                   className={cn(
-                    "rounded-[--radius-lg] border border-line bg-surface p-3.5",
+                    "rounded-[var(--radius-lg)] border border-line bg-surface p-3.5",
                     !recurrence.active && "opacity-60",
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[--radius-md] bg-brand-soft text-brand-soft-text">
+                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand-soft text-brand-soft-text">
                       <Repeat className="size-[17px]" />
                     </span>
 
@@ -275,10 +275,10 @@ function NewRecurrenceSheet({
           onChange={(event) => setDescription(event.target.value.slice(0, 140))}
           placeholder="Rent"
           autoFocus
-          className="h-12 w-full rounded-[--radius-md] border border-line bg-surface px-3.5 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[16px] font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
 
-        <div className="mt-3 rounded-[--radius-lg] bg-surface-2 px-4 py-5">
+        <div className="mt-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
           <AmountInput
             value={amount}
             onChange={setAmount}
@@ -323,7 +323,7 @@ function NewRecurrenceSheet({
                 setStartDate(new Date(year, month - 1, day, 12));
               }
             }}
-            className="h-12 w-full rounded-[--radius-md] border border-line bg-surface px-3.5 text-[16px] text-text outline-none focus:border-brand focus:ring-4 focus:ring-[--brand-ring]"
+            className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-[16px] text-text outline-none focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
         </label>
 
@@ -350,7 +350,7 @@ function NewRecurrenceSheet({
           ))}
         </div>
 
-        <p className="mt-5 rounded-[--radius-md] bg-surface-2 px-3.5 py-3 text-[12px] leading-relaxed text-muted">
+        <p className="mt-5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-[12px] leading-relaxed text-muted">
           Splits equally between all {group.members.length} members, and keeps
           that split even if the group changes. Edit or stop it any time — past
           expenses it created stay put.

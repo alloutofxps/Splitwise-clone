@@ -175,7 +175,7 @@ function Sidebar({
 
       <button
         onClick={onAddExpense}
-        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[--radius-md] bg-brand text-[15px] font-semibold text-white shadow-card transition hover:bg-brand-hover active:scale-[0.98]"
+        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-[15px] font-semibold text-white shadow-card transition hover:bg-brand-hover active:scale-[0.98]"
       >
         <Plus className="size-[18px]" strokeWidth={2.6} />
         Add expense
@@ -191,14 +191,14 @@ function Sidebar({
               href={destination.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex h-10 items-center gap-3 rounded-[--radius-md] px-3 text-[14px] font-semibold transition",
+                "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[14px] font-semibold transition",
                 active ? "text-brand" : "text-muted hover:bg-surface-2 hover:text-text",
               )}
             >
               {active ? (
                 <motion.span
                   layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-[--radius-md] bg-brand-soft"
+                  className="absolute inset-0 rounded-[var(--radius-md)] bg-brand-soft"
                   transition={{ type: "spring", stiffness: 420, damping: 36 }}
                 />
               ) : null}
@@ -216,7 +216,7 @@ function Sidebar({
         <Link
           href="/search"
           className={cn(
-            "flex h-10 items-center gap-3 rounded-[--radius-md] px-3 text-[14px] font-semibold transition",
+            "flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[14px] font-semibold transition",
             pathname.startsWith("/search")
               ? "bg-brand-soft text-brand"
               : "text-muted hover:bg-surface-2 hover:text-text",
