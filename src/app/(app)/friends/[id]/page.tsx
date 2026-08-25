@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Plus, Receipt } from "lucide-react";
+import { ChevronLeft, Plus, Receipt, UserMinus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, Skeleton, haptic } from "@/components/ui/primitives";
@@ -11,7 +11,9 @@ import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleUpSheet } from "@/components/group/settle-up-sheet";
 import { useComposer } from "@/components/expense/composer-context";
-import { useDashboard, useFriend } from "@/lib/client/queries";
+import { ConfirmSheet } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/toast";
+import { useDashboard, useFriend, useRemoveFriend } from "@/lib/client/queries";
 import { groupByDay } from "@/lib/day-groups";
 
 /**
@@ -32,6 +34,9 @@ export default function FriendPage() {
 
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
   const [settleUp, setSettleUp] = React.useState(false);
+  const [removing, setRemoving] = React.useState(false);
+  const toast = useToast();
+  const removeFriend = useRemoveFriend();
 
   const people = React.useMemo(
     () => new Map((dashboard?.people ?? []).map((person) => [person.id, person])),
@@ -124,6 +129,20 @@ export default function FriendPage() {
           >
             Add an expense
           </Button>
+          {/*
+            Only offered once you are square. The server enforces it too, but a
+            button that exists and always fails is worse than one that waits.
+          */}
+          {!hasBalance ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setRemoving(true)}
+              icon={<UserMinus className="size-4" />}
+            >
+              Remove
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -210,6 +229,35 @@ export default function FriendPage() {
         onClose={() => setOpenExpenseId(null)}
         meId={meId}
         people={people}
+      />
+
+      <ConfirmSheet
+        open={removing}
+        onClose={() => setRemoving(false)}
+        loading={removeFriend.isPending}
+        onConfirm={() => {
+          removeFriend.mutate(
+            { id: data.person.id },
+            {
+              onSuccess: () => {
+                setRemoving(false);
+                toast({ tone: "success", title: `Removed ${data.person.displayName}` });
+                router.push("/friends");
+              },
+              onError: (error) => {
+                setRemoving(false);
+                toast({
+                  tone: "error",
+                  title: "Could not remove them",
+                  description: error instanceof Error ? error.message : undefined,
+                });
+              },
+            },
+          );
+        }}
+        title={`Remove ${data.person.displayName}?`}
+        description="They drop off your friends list. Expenses you shared in a group stay exactly as they are, and you can add them again with their code."
+        confirmLabel="Remove"
       />
 
       <SettleUpSheet

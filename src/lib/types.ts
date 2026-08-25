@@ -278,6 +278,11 @@ export interface DashboardDto {
 // ---------------------------------------------------------------------------
 
 export interface ExpenseInput {
+  /**
+   * For an edit: the `updatedAt` the composer opened with, so the server can
+   * refuse a save built on a version somebody has already replaced.
+   */
+  expectedUpdatedAt?: string;
   groupId?: string | null;
   /** For a direct expense with no group. */
   friendId?: string | null;

@@ -149,6 +149,22 @@ export class NotFoundError extends Error {
  * Thrown when a caller has used up an endpoint's allowance. Carries the number
  * of seconds until the next attempt so the route wrapper can set Retry-After.
  */
+/**
+ * Somebody else changed the row first.
+ *
+ * Distinct from a 403: the caller is entitled to the edit, they are just
+ * working from a version that has since moved. The only safe answer is to
+ * refuse and let them see the newer one, because the alternative - writing
+ * anyway - silently discards whatever the other person did, and on a shared
+ * ledger that is a balance nobody agreed to.
+ */
+export class ConflictError extends Error {
+  constructor(message = "Somebody else changed this first.") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
 export class RateLimitError extends Error {
   retryAfterSeconds: number;
   constructor(retryAfterSeconds: number, message = "Too many attempts. Wait a moment and try again.") {

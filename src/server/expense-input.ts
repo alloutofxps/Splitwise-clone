@@ -9,6 +9,14 @@ import { decodeDataUrl, type ExpenseWriteInput } from "./write";
 
 export const expenseInputSchema = z.object({
   id: z.string().min(6).max(80).optional(),
+  /**
+   * The `updatedAt` the client last saw, for an edit.
+   *
+   * Optional so that a client which does not send it keeps working - and so
+   * that a replayed offline edit, which may legitimately be working from an
+   * older view, is not blocked by a race it cannot resolve on a plane.
+   */
+  expectedUpdatedAt: z.string().datetime().optional(),
   groupId: z.string().nullable().optional(),
   /** Set instead of groupId for a direct expense with one other person. */
   friendId: z.string().nullable().optional(),
@@ -139,6 +147,7 @@ export async function prepareExpense(
     categoryId,
     date: input.date ?? new Date(),
     createdByPersonId: actorId,
+    expectedUpdatedAt: input.expectedUpdatedAt ? new Date(input.expectedUpdatedAt) : null,
     payers: input.payers.map((p) => ({ personId: p.personId, amount: p.amount })),
     splits: input.splits.map((s) => ({
       personId: s.personId,

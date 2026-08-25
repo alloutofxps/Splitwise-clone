@@ -17,7 +17,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { ValidationError } from "@/lib/identity";
+import { ConflictError, ValidationError } from "@/lib/identity";
 import { validateExpenseBalance } from "@/lib/split";
 import { convert, currency as currencyInfo } from "@/lib/money";
 import { DEFAULT_CATEGORY_ID, CATEGORY_BY_ID } from "@/lib/categories";
@@ -49,6 +49,8 @@ export interface ExpenseWriteInput {
   date: Date;
   createdByPersonId: string;
   recurrenceId?: string | null;
+  /** For an edit: the version the editor was looking at. */
+  expectedUpdatedAt?: Date | null;
   payers: { personId: string; amount: bigint }[];
   splits: {
     personId: string;
@@ -175,6 +177,30 @@ export async function updateExpense(input: ExpenseWriteInput) {
   const convertedAmount = convertedFor(input);
 
   return prisma.$transaction(async (tx) => {
+    /*
+     * Refuse an edit built on a version somebody has already replaced.
+     *
+     * Two people opening the same expense is not exotic - it is a group
+     * settling up after dinner, both fixing the same typo. Without this the
+     * second save silently discarded the first, and because balances are
+     * derived, the loss showed up only as a number nobody could account for.
+     *
+     * The check is inside the transaction so the row cannot move between
+     * reading it and writing it. It is skipped when the client sends no
+     * expectation, which is what lets a queued offline edit still land.
+     */
+    if (input.expectedUpdatedAt) {
+      const current = await tx.expense.findUnique({
+        where: { id: input.id },
+        select: { updatedAt: true },
+      });
+      if (current && current.updatedAt.getTime() !== input.expectedUpdatedAt.getTime()) {
+        throw new ConflictError(
+          "Somebody else edited this expense while you had it open. Close and reopen it to see their version.",
+        );
+      }
+    }
+
     await tx.expensePayer.deleteMany({ where: { expenseId: input.id } });
     await tx.expenseSplit.deleteMany({ where: { expenseId: input.id } });
     await tx.expenseItem.deleteMany({ where: { expenseId: input.id } });

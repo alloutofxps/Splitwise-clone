@@ -508,6 +508,22 @@ function writeId<T extends { id?: string }>(input: T, prefix: string): string {
   return input.id;
 }
 
+/**
+ * Removes a friend.
+ *
+ * The server refuses while any currency between the two of you is unsettled,
+ * which is the guard that matters: forgetting somebody is not a way to forget
+ * what you owe them. Pessimistic, because the answer depends on a balance the
+ * client would have to recompute to predict.
+ */
+export function useRemoveFriend() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.del(`/api/friends/${id}`),
+    onSuccess: () => invalidateLedger(client, null),
+  });
+}
+
 export function useDeleteSettlement() {
   const client = useQueryClient();
   return useMutation({

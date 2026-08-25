@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Camera, ChevronDown, NotebookPen, Users } from "lucide-react";
 import { Sheet } from "../ui/sheet";
@@ -15,7 +16,7 @@ import { CurrencyPicker } from "./currency-picker";
 import { ReceiptPicker } from "./receipt-picker";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
-import { useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
+import { keys, useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
 import { convert, toDecimalString } from "@/lib/money";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
 import { suggestCategory, DEFAULT_CATEGORY_ID, categoryById } from "@/lib/categories";
@@ -85,6 +86,7 @@ export function ExpenseComposer({
   // `data?.me` is undefined on the very first render, before the dashboard has
   // loaded. The hook falls back to a pessimistic write in that case, which is
   // correct: the composer cannot be opened until the dashboard is in hand.
+  const client = useQueryClient();
   const create = useCreateExpense(data?.me?.id);
   const update = useUpdateExpense(expense?.id ?? "", expense?.groupId);
 
@@ -198,6 +200,9 @@ export function ExpenseComposer({
 
     const payload = {
       id: expense?.id ?? newId("exp"),
+      // The version this sheet opened with. The server refuses the save if
+      // somebody has replaced it since, rather than quietly overwriting them.
+      expectedUpdatedAt: expense?.updatedAt,
       groupId: draft.groupId,
       friendId: draft.friendId,
       description: draft.description.trim(),
@@ -246,6 +251,19 @@ export function ExpenseComposer({
       haptic([8, 30, 8]);
       onClose();
     } catch (error) {
+      if (error instanceof ApiError && error.isConflict) {
+        // Their copy is the current one, so close rather than leave a stale
+        // draft on screen inviting a second attempt at the same overwrite.
+        toast({
+          tone: "error",
+          title: "Somebody got there first",
+          description: error.message,
+        });
+        void client.invalidateQueries({ queryKey: keys.expense(expense?.id ?? "") });
+        onClose();
+        return;
+      }
+
       toast({
         tone: "error",
         title: "Could not save",

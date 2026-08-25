@@ -14,6 +14,7 @@ import {
   NotFoundError,
   RateLimitError,
   UnauthorizedError,
+  ConflictError,
   ValidationError,
 } from "./identity";
 
@@ -76,6 +77,9 @@ export function route<Args extends unknown[]>(
       }
       if (error instanceof NotFoundError) {
         return errorResponse(404, { error: error.message, code: "not_found" });
+      }
+      if (error instanceof ConflictError) {
+        return errorResponse(409, { error: error.message, code: "conflict" });
       }
       if (error instanceof RateLimitError) {
         return json(

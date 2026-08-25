@@ -429,7 +429,7 @@ async function main() {
     String(deniedDirect.status),
   );
 
-  const strangerFriends = (await outsider.call("/api/friends")).body.friends;
+  const strangerFriends = (await outsider.call("/api/dashboard")).body.friends;
   check(
     "the refused expense left no friendship behind",
     !strangerFriends.some((friend) => friend.id === priyaId),
@@ -759,7 +759,7 @@ async function main() {
 
   // -- People and rates -----------------------------------------------------
   console.log("\nPeople and rates");
-  const people = (await priya.call("/api/people")).body.people;
+  const people = (await priya.call("/api/dashboard")).body.people;
   check("visible people include every group member", people.length >= 3, `${people.length} people`);
   check(
     "a stranger is not in the visible set",
@@ -954,6 +954,87 @@ async function main() {
   check("CSV export is served", csv.status === 200);
   check("CSV has a header row", csvText.includes("Date,Type,Description"));
   check("CSV includes the payments", csvText.includes("Payment"));
+
+  // -- Two people editing the same expense ----------------------------------
+  console.log("\nConcurrent edits");
+  const contested = (await priya.call(`/api/groups/${homeId}/expenses`)).body.items.find(
+    (item) => item.kind === "expense",
+  ).expense;
+
+  const editPayload = (description, expectedUpdatedAt) => ({
+    description,
+    amount: contested.amount,
+    currency: contested.currency,
+    exchangeRate: contested.exchangeRate,
+    splitMode: contested.splitMode,
+    categoryId: contested.categoryId,
+    payers: contested.payers.map((p) => ({ personId: p.personId, amount: p.amount })),
+    splits: contested.splits.map((s) => ({
+      personId: s.personId,
+      amount: s.amount,
+      included: s.included,
+    })),
+    ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+  });
+
+  // Both people open it, so both hold the same version.
+  const openedAt = contested.updatedAt;
+
+  const firstSave = await priya.call(`/api/expenses/${contested.id}`, {
+    method: "PATCH",
+    body: editPayload("Renamed by Priya", openedAt),
+    allowError: true,
+  });
+  check("the first edit succeeds", firstSave.status === 200, String(firstSave.status));
+  check(
+    "and moves the version",
+    firstSave.body.expense.updatedAt !== openedAt,
+    `${firstSave.body.expense.updatedAt} vs ${openedAt}`,
+  );
+
+  const secondSave = await ravi.call(`/api/expenses/${contested.id}`, {
+    method: "PATCH",
+    body: editPayload("Renamed by Ravi", openedAt),
+    allowError: true,
+  });
+  check(
+    "the second edit is refused rather than overwriting",
+    secondSave.status === 409,
+    String(secondSave.status),
+  );
+  check(
+    "and says who to blame",
+    JSON.stringify(secondSave.body).includes("Somebody else edited"),
+    JSON.stringify(secondSave.body).slice(0, 110),
+  );
+
+  const survivor = (await priya.call(`/api/expenses/${contested.id}`)).body.expense;
+  check(
+    "the first edit survives intact",
+    survivor.description === "Renamed by Priya",
+    survivor.description,
+  );
+
+  // Re-reading gives the current version, which then saves cleanly.
+  const retry = await ravi.call(`/api/expenses/${contested.id}`, {
+    method: "PATCH",
+    body: editPayload("Renamed by Ravi", survivor.updatedAt),
+    allowError: true,
+  });
+  check("re-opening and saving again works", retry.status === 200, String(retry.status));
+
+  // An offline replay carries no expectation and must still land, because the
+  // queue cannot resolve a race that happened while the phone had no signal.
+  const replayed = await ravi.call(`/api/expenses/${contested.id}`, {
+    method: "PATCH",
+    body: editPayload("Replayed from the outbox", null),
+    allowError: true,
+  });
+  check(
+    "an edit with no expectation still lands, for offline replay",
+    replayed.status === 200,
+    String(replayed.status),
+  );
 
   // -- Undoing a payment ----------------------------------------------------
   console.log("\nUndoing a payment");

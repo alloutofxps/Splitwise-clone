@@ -29,6 +29,11 @@ export class ApiError extends Error {
   get isUnauthorized(): boolean {
     return this.status === 401;
   }
+
+  /** Somebody else changed the row while this edit was open. */
+  get isConflict(): boolean {
+    return this.status === 409;
+  }
 }
 
 interface RequestOptions {

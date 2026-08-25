@@ -19,11 +19,6 @@ const createSchema = z.object({
   placeholderNames: z.array(text(60, "A name")).max(40).default([]),
 });
 
-export const GET = route(async () => {
-  const session = await requireSession();
-  return json({ groups: await groupSummaries(session.person.id) });
-});
-
 /**
  * Creates a group.
  *
