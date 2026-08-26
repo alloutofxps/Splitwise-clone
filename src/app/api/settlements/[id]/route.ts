@@ -68,6 +68,10 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     type: "settlement.deleted",
     actorPersonId: session.person.id,
     groupId: settlement.batchId ? null : settlement.groupId,
+    // Tombstoned rather than destroyed, so this still resolves and the feed can
+    // offer to restore it. For a batch it names the row that was tapped; the
+    // restore takes the whole batch back, the same way the delete took it.
+    settlementId: settlement.id,
     data: {
       amount: total.toString(),
       currency: settlement.currency,

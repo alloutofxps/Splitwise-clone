@@ -56,6 +56,12 @@ async function onboard() {
     await start.click();
     await page.locator('input[placeholder="Priya"]').fill("Tester");
     await page.getByRole("button", { name: "Continue" }).click();
+    // The recovery key is shown once and never again, so the step holds the
+    // screen until it is acknowledged. Everything below this line needs the app
+    // itself, not onboarding, so signing up is not finished until this is done.
+    await page.getByText("Save your recovery key").waitFor({ timeout: 15000 });
+    await page.locator("input[type=checkbox]").check();
+    await page.getByRole("button", { name: "Start using Divvy" }).click();
     await page.waitForTimeout(2500);
   }
 }

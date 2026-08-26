@@ -105,6 +105,11 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     type: "expense.deleted",
     actorPersonId: session.person.id,
     groupId: expense.groupId,
+    // The row is a tombstone, not a hole, so the reference still resolves — and
+    // it is what lets the activity feed offer to put this back. Without it the
+    // feed can tell you the expense was deleted and nothing else, which is the
+    // one place somebody looks when they want it undone.
+    expenseId: expense.id,
     data: {
       description: expense.description,
       amount: expense.amount.toString(),

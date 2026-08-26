@@ -449,6 +449,98 @@ console.log("\nUndoing a deleted expense");
 }
 
 /**
+ * The activity feed can put back what it says was removed.
+ *
+ * The toast is the fast path and it lasts seconds. This is the one that is
+ * still there tomorrow, which is when people actually go looking — and in a
+ * shared ledger the person who needs to undo a delete is often not the person
+ * who made it, so the feed has to carry the affordance for anyone who could
+ * have performed the delete in the first place.
+ *
+ * Two things are worth pinning. The balance must come back exactly, not
+ * approximately: undo is only worth offering if the ledger it repairs is the
+ * ledger you had. And the button must retire itself once its record is live
+ * again, or the feed would keep offering to undo something already undone.
+ */
+console.log("\nUndoing from the activity feed");
+{
+  const feed = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const me = (await (await fetch("/api/dashboard")).json()).me;
+    const group = (await post("/api/groups", {
+      name: "Feed", currency: "USD", placeholderNames: ["Kit"],
+    })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const kit = detail.group.members.find((m) => m.displayName === "Kit").id;
+
+    const expense = (await post("/api/expenses", {
+      groupId: group.id, description: "Cabin", amount: "8000", currency: "USD", splitMode: "EQUAL",
+      payers: [{ personId: me.id, amount: "8000" }],
+      splits: [{ personId: me.id, amount: "4000" }, { personId: kit, amount: "4000" }],
+    })).expense;
+    const settlement = (await post("/api/settlements", {
+      groupId: group.id, fromPersonId: kit, toPersonId: me.id, amount: "1000", currency: "USD",
+    })).settlement;
+
+    const net = async () =>
+      ((await (await fetch(`/api/groups/${group.id}`)).json()).group.balances.net[me.id] ?? "0");
+    const baseline = await net();
+
+    await fetch(`/api/expenses/${expense.id}`, { method: "DELETE" });
+    await fetch(`/api/settlements/${settlement.id}`, { method: "DELETE" });
+
+    return { groupId: group.id, meId: me.id, baseline, afterDeletes: await net() };
+  });
+
+  check("seeded a group, then removed both records", feed.baseline === "3000", feed.baseline);
+  check("the ledger is emptied by the deletes", feed.afterDeletes === "0", feed.afterDeletes);
+
+  const netNow = () =>
+    page.evaluate(async (g) => {
+      const r = await (await fetch(`/api/groups/${g}`)).json();
+      return r.group.balances.net;
+    }, feed.groupId);
+
+  await page.goto(`${BASE}/activity`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(2500);
+
+  const undoExpense = page.getByRole("button", { name: /restore this expense/i });
+  const undoPayment = page.getByRole("button", { name: /restore this payment/i });
+  const expensesBefore = await undoExpense.count();
+  const paymentsBefore = await undoPayment.count();
+  check("both removals offer an undo in the feed",
+    expensesBefore > 0 && paymentsBefore > 0,
+    `${expensesBefore} expense, ${paymentsBefore} payment`);
+
+  // Counted as a decrease of one rather than down to zero: earlier blocks in
+  // this same run remove records and leave them removed, and those rows are
+  // still rightly offering an undo of their own.
+  if (expensesBefore > 0) {
+    await undoExpense.first().click();
+    await page.waitForTimeout(3000);
+    const back = await netNow();
+    check("undoing the expense restores exactly its share of the balance",
+      back[feed.meId] === "4000", JSON.stringify(back));
+    const left = await undoExpense.count();
+    check("and that row stops offering an undo",
+      left === expensesBefore - 1, `${expensesBefore} -> ${left}`);
+  }
+
+  if (paymentsBefore > 0) {
+    await undoPayment.first().click();
+    await page.waitForTimeout(3000);
+    const back = await netNow();
+    check("undoing the payment returns the ledger to where it started",
+      back[feed.meId] === feed.baseline, `${JSON.stringify(back)} vs ${feed.baseline}`);
+    const left = await undoPayment.count();
+    check("and that row stops offering an undo too",
+      left === paymentsBefore - 1, `${paymentsBefore} -> ${left}`);
+  }
+}
+
+/**
  * Sign-up shows the recovery key.
  *
  * Needs its own context: the page above already holds an identity cookie, and

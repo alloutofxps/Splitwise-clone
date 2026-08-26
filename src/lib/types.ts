@@ -176,6 +176,8 @@ export interface ActivityDto {
   data: ActivityData;
   createdAt: string;
   isUnread: boolean;
+  /** True while this entry describes a deletion that has not been undone. */
+  undoable: boolean;
 }
 
 export interface ActivityData {

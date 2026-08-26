@@ -103,11 +103,38 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     },
   });
 
+  /**
+   * What actually changed, so the feed can say it.
+   *
+   * Compared against the values the group held before the update rather than
+   * taken from the request body: a field can be sent carrying the value it
+   * already had, and "renamed it to Lisbon 2026" is a lie when the name was
+   * already that. Only archiving and the simplify toggle are worth naming in
+   * both directions; the rest read the same either way.
+   */
+  const changes: string[] = [];
+  if (input.name && input.name !== group.name) changes.push(`renamed it ${updated.name}`);
+  if (input.emoji && input.emoji !== group.emoji) changes.push("changed the icon");
+  if (input.color && input.color !== group.color) changes.push("changed the colour");
+  if (input.kind && input.kind !== group.kind) changes.push("changed the type");
+  if (input.currency && input.currency !== group.currency) {
+    changes.push(`set the currency to ${updated.currency}`);
+  }
+  if (input.simplifyDebts !== undefined && input.simplifyDebts !== group.simplifyDebts) {
+    changes.push(input.simplifyDebts ? "turned on debt simplification" : "turned off debt simplification");
+  }
+  if (input.archived !== undefined && input.archived !== Boolean(group.archivedAt)) {
+    changes.push(input.archived ? "archived it" : "unarchived it");
+  }
+
+  // Nothing actually moved — a no-op save should not fill the feed.
+  if (changes.length === 0) return json({ ok: true });
+
   await recordActivity({
     type: "group.updated",
     actorPersonId: session.person.id,
     groupId: id,
-    data: { groupName: updated.name },
+    data: { groupName: updated.name, changes },
   });
 
   return json({ ok: true });

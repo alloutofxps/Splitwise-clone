@@ -410,6 +410,41 @@ export function useUpdateExpense(expenseId: string, previousGroupId?: string | n
  * the expense touched, and guessing those only to correct them a moment later
  * is worse than a round trip on an action nobody performs in a hurry.
  */
+/**
+ * Puts a deleted payment back, batch and all.
+ *
+ * Pessimistic like its delete: the amount is known but which ledgers it lands
+ * in is the server's answer, so guessing the balances would mean correcting
+ * them a moment later.
+ */
+export function useRestoreSettlement() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; groupId?: string | null }) => {
+      try {
+        await api.post(`/api/settlements/${id}/restore`);
+      } catch (error) {
+        if (error instanceof ApiError && error.isOffline) {
+          await enqueue({
+            id: `restore_stl_${id}`,
+            path: `/api/settlements/${id}/restore`,
+            method: "POST",
+            body: undefined,
+            label: "Restored payment",
+          });
+          return;
+        }
+        throw error;
+      }
+    },
+    // A batch can span groups, so nothing narrower than everything is safe.
+    onSuccess: () => {
+      void client.invalidateQueries();
+    },
+  });
+}
+
 export function useRestoreExpense() {
   const client = useQueryClient();
 

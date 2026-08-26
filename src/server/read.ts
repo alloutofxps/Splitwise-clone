@@ -375,6 +375,8 @@ export function activityDto(
     data: string;
     createdAt: Date;
     group?: { name: string; emoji: string } | null;
+    expense?: { deletedAt: Date | null } | null;
+    settlement?: { deletedAt: Date | null } | null;
   },
   lastReadAt: Date | null,
 ): ActivityDto {
@@ -399,6 +401,17 @@ export function activityDto(
     data,
     createdAt: row.createdAt.toISOString(),
     isUnread: lastReadAt ? row.createdAt > lastReadAt : true,
+    /**
+     * Whether this entry describes a deletion that is still in force.
+     *
+     * The feed offers an undo on that basis. Deriving it from the record rather
+     * than from the entry keeps the two honest with each other: restore the
+     * expense from anywhere — the toast, another device, this feed — and the
+     * button stops being offered here, instead of sitting there doing nothing.
+     */
+    undoable:
+      (row.type === "expense.deleted" && row.expense?.deletedAt != null) ||
+      (row.type === "settlement.deleted" && row.settlement?.deletedAt != null),
   };
 }
 

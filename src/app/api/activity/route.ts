@@ -69,7 +69,14 @@ export const GET = route(async (request: Request) => {
         },
       ],
     },
-    include: { group: { select: { name: true, emoji: true } } },
+    include: {
+      group: { select: { name: true, emoji: true } },
+      // Whether the thing a deletion entry points at is *still* deleted. An
+      // Undo on a row somebody already undid would do nothing and say nothing,
+      // which is worse than no button at all.
+      expense: { select: { deletedAt: true } },
+      settlement: { select: { deletedAt: true } },
+    },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: PAGE_SIZE + 1,
   });

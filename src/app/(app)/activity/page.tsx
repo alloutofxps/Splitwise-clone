@@ -17,7 +17,14 @@ import {
 import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
-import { useActivity, useDashboard } from "@/lib/client/queries";
+import {
+  useActivity,
+  useDashboard,
+  useRestoreExpense,
+  useRestoreSettlement,
+} from "@/lib/client/queries";
+import { useToast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/client/api";
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
 import type { ActivityDto, PersonDto } from "@/lib/types";
@@ -200,7 +207,18 @@ function ActivityRow({
   const actorName = activity.actorPersonId === meId ? "You" : (actor?.displayName ?? "Someone");
 
   const { icon, tone, sentence } = describe(activity, actorName, meId, people);
-  const clickable = Boolean(activity.expenseId);
+
+  /**
+   * A deletion is the one entry that carries a reference it must not follow.
+   *
+   * The id is there so this row can offer to put the record back — but the
+   * record is tombstoned, and every read route refuses a tombstone on purpose,
+   * so opening it would 404. So a deleted row is not a link: it is a statement
+   * with an undo attached.
+   */
+  const deleted =
+    activity.type === "expense.deleted" || activity.type === "settlement.deleted";
+  const clickable = Boolean(activity.expenseId) && !deleted;
 
   const body = (
     <div
@@ -238,11 +256,15 @@ function ActivityRow({
         </span>
       </span>
 
-      {activity.isUnread ? (
+      {deleted && activity.undoable ? (
+        <UndoButton activity={activity} />
+      ) : activity.isUnread ? (
         <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" aria-label="Unread" />
       ) : null}
     </div>
   );
+
+  if (deleted) return body;
 
   if (clickable) {
     return (
@@ -259,6 +281,58 @@ function ActivityRow({
     );
   }
   return body;
+}
+
+/**
+ * Putting back what a row says was deleted.
+ *
+ * Offered to anyone who could have performed the delete, not only to whoever
+ * did. Restricting repair more tightly than destruction would let a person
+ * break a shared ledger and leave somebody else unable to fix it.
+ *
+ * The toast is the fast path and lasts seconds; this is the one that is still
+ * here tomorrow, which is when people actually go looking.
+ */
+function UndoButton({ activity }: { activity: ActivityDto }) {
+  const toast = useToast();
+  const restoreExpense = useRestoreExpense();
+  const restoreSettlement = useRestoreSettlement();
+
+  const isExpense = activity.type === "expense.deleted";
+  const id = isExpense ? activity.expenseId : activity.settlementId;
+  const busy = isExpense ? restoreExpense.isPending : restoreSettlement.isPending;
+
+  // Older entries were written before the delete routes carried the id, and a
+  // group that has since been deleted takes its rows with it. Nothing to point
+  // at, so nothing to offer.
+  if (!id) return null;
+
+  const label = isExpense ? "expense" : "payment";
+
+  return (
+    <button
+      onClick={() => {
+        haptic();
+        const options = {
+          onSuccess: () =>
+            toast({ tone: "success", title: `Put the ${label} back` }),
+          onError: (error: unknown) =>
+            toast({
+              tone: "error",
+              title: `Could not put the ${label} back`,
+              description: error instanceof ApiError ? error.message : undefined,
+            }),
+        };
+        if (isExpense) restoreExpense.mutate({ id }, options);
+        else restoreSettlement.mutate({ id }, options);
+      }}
+      disabled={busy}
+      aria-label={`Undo — restore this ${label}`}
+      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-brand transition active:scale-95 hover:bg-surface-2 disabled:opacity-50"
+    >
+      {busy ? "…" : "Undo"}
+    </button>
+  );
 }
 
 /**
@@ -336,6 +410,35 @@ function describe(
           </>
         ),
       };
+
+    case "settlement.restored":
+      return {
+        icon: <Undo2 className="size-[16px]" />,
+        tone: "brand",
+        sentence: (
+          <>
+            {strong(actorName)} restored a payment
+            {amount ? <> · <span className="tabular">{amount}</span></> : null}
+          </>
+        ),
+      };
+
+    case "group.updated": {
+      // The route stores what changed; without this the entry fell through to
+      // "made a change", which is true of every entry in the feed.
+      const changes = Array.isArray(data.changes) ? data.changes : [];
+      return {
+        icon: <Pencil className="size-[16px]" />,
+        tone: "neutral",
+        sentence: (
+          <>
+            {strong(actorName)}{" "}
+            {changes.length > 0 ? changes.join(" and ") : "changed the settings"} in{" "}
+            {strong(String(data.groupName ?? "the group"))}
+          </>
+        ),
+      };
+    }
 
     case "settlement.created": {
       const from = data.fromPersonId as string | undefined;
