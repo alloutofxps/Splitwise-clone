@@ -3,7 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronDown, ChevronLeft, Plus, Receipt, UserMinus } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Receipt,
+  Settings2,
+  UserMinus,
+} from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
@@ -11,7 +19,7 @@ import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleAcrossSheet } from "@/components/friends/settle-across-sheet";
 import { useComposer } from "@/components/expense/composer-context";
-import { ConfirmSheet } from "@/components/ui/sheet";
+import { ConfirmSheet, Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { useDashboard, useFriend, useRemoveFriend } from "@/lib/client/queries";
 import { groupByDay } from "@/lib/day-groups";
@@ -41,6 +49,7 @@ export default function FriendPage() {
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
   const [settleUp, setSettleUp] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
+  const [settings, setSettings] = React.useState(false);
   const [showBreakdown, setShowBreakdown] = React.useState(false);
   const toast = useToast();
   const removeFriend = useRemoveFriend();
@@ -92,6 +101,16 @@ export default function FriendPage() {
         <h1 className="min-w-0 flex-1 truncate px-1 text-title font-bold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
+        <button
+          onClick={() => {
+            haptic();
+            setSettings(true);
+          }}
+          aria-label="Friend settings"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+        >
+          <Settings2 className="size-5" />
+        </button>
       </header>
 
       {/* Balance ---------------------------------------------------------- */}
@@ -145,20 +164,6 @@ export default function FriendPage() {
           >
             Add an expense
           </Button>
-          {/*
-            Only offered once you are square. The server enforces it too, but a
-            button that exists and always fails is worse than one that waits.
-          */}
-          {!anythingOutstanding ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setRemoving(true)}
-              icon={<UserMinus className="size-4" />}
-            >
-              Remove
-            </Button>
-          ) : null}
         </div>
       </div>
 
@@ -251,7 +256,7 @@ export default function FriendPage() {
           />
         ) : (
           <div className="space-y-5">
-            {grouped.map(({ label, entries }) => (
+            {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
                 <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                   {label}
@@ -264,6 +269,7 @@ export default function FriendPage() {
                           expense={entry.expense}
                           meId={meId}
                           people={people}
+                          showDate={!precise}
                           onOpen={() => setOpenExpenseId(entry.expense!.id)}
                         />
                       </li>
@@ -280,6 +286,7 @@ export default function FriendPage() {
                           meId={meId}
                           people={people}
                           pending={entry.pending}
+                          showDate={!precise}
                         />
                       </li>
                     ) : null,
@@ -297,6 +304,76 @@ export default function FriendPage() {
         meId={meId}
         people={people}
       />
+
+      {/*
+        Everything about the relationship rather than the ledger: which groups
+        you are both in, and the one destructive thing you can do here.
+
+        No "block" and no "report". Blocking means suppressing somebody's
+        content, and there is nothing here to suppress: the only way anyone
+        reaches you is an invite code you gave them, and a shared group is a
+        thing you leave rather than mute. Reporting needs somebody to report
+        to, and a self-hosted app with no accounts has no such party — offering
+        the button would be a promise nothing is behind.
+      */}
+      <Sheet open={settings} onClose={() => setSettings(false)} title="Friend settings">
+        <div className="px-5 pb-6">
+          {data.sharedGroups.length > 0 ? (
+            <>
+              <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+                Shared groups
+              </p>
+              <ul className="space-y-1.5">
+                {data.sharedGroups.map((group) => (
+                  <li key={group.id}>
+                    <Link
+                      href={`/groups/${group.id}`}
+                      onClick={() => setSettings(false)}
+                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 transition active:scale-[0.985]"
+                    >
+                      <span className="text-input">{group.emoji}</span>
+                      <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                        {group.name}
+                      </span>
+                      <ChevronRight className="size-4 shrink-0 text-subtle" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="px-1 text-body leading-relaxed text-muted">
+              You are not in any groups together — everything between you two is
+              split directly.
+            </p>
+          )}
+
+          <p className="mb-2 mt-6 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            Manage
+          </p>
+          <button
+            onClick={() => {
+              haptic();
+              setSettings(false);
+              setRemoving(true);
+            }}
+            disabled={anythingOutstanding}
+            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] disabled:opacity-50 disabled:active:scale-100"
+          >
+            <UserMinus className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-body-lg font-semibold text-text">
+                Remove from friends list
+              </span>
+              <span className="mt-0.5 block text-caption leading-relaxed text-subtle">
+                {anythingOutstanding
+                  ? "You have to be settled up first — removing them now would hide the only record of the debt from both of you."
+                  : "Your shared history stays in any groups you are both in."}
+              </span>
+            </span>
+          </button>
+        </div>
+      </Sheet>
 
       <ConfirmSheet
         open={removing}

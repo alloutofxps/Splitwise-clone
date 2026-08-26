@@ -265,6 +265,70 @@ console.log("\nSettling with a person, across ledgers");
 }
 
 /**
+ * The friends list accounts for its own figures, and rows carry their date.
+ *
+ * Both are the same defect in different places: a figure with nothing to
+ * check it against. The list showed a single number per person, and the ledger
+ * grouped a whole month under one heading with no day on any row — so a week of
+ * dinners was an undated block, which is precisely the thing the ledger exists
+ * to settle arguments about.
+ */
+console.log("\nFigures that account for themselves");
+{
+  await page.goto(`${BASE}/friends`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+  const list = await page.locator("body").innerText();
+
+  // Both directions only appear when both exist, so the rule is the invariant:
+  // the header names a direction in words, and if any row says you owe, the
+  // header says so too rather than burying it inside a net figure.
+  const headerNamesDirection = /you owe|you are owed|settled up with everyone/i.test(list);
+  const anyRowSaysYouOwe = /\byou owe\b/i.test(list.split("OUTSTANDING")[1] ?? "");
+  const headerSaysYouOwe = /Overall,[^\n]*you owe/i.test(list);
+  check(
+    "the list states the direction in words, not just a net figure",
+    headerNamesDirection && (!anyRowSaysYouOwe || headerSaysYouOwe),
+    list.replace(/\n+/g, " | ").slice(0, 140),
+  );
+
+  const filter = page.getByRole("button", { name: "Filter this list" });
+  check("the list can be filtered", (await filter.count()) > 0);
+  if ((await filter.count()) > 0) {
+    await filter.click();
+    await page.waitForTimeout(700);
+    const options = await page.locator("[role=dialog]").first().innerText();
+    check(
+      "by direction, not just by whether anything is outstanding",
+      /People you owe/.test(options) && /People who owe you/.test(options),
+      options.replace(/\n+/g, " | ").slice(0, 120),
+    );
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  }
+
+  // A row under a month heading has to carry its own day.
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+  const dated = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll("button")].filter((b) => /Dinner/.test(b.textContent ?? ""));
+    if (rows.length === 0) return null;
+    // The stamp is the abbreviated month plus the day-of-month, in that order.
+    return /^[A-Za-z]{3}\d{1,2}/.test((rows[0].textContent ?? "").trim());
+  });
+  // Freshly seeded rows sit under "Today", where the heading already names the
+  // day and a stamp would repeat it — so this asserts the rule, not the stamp.
+  const heading = await page.locator("body").innerText();
+  const underPreciseHeading = /TODAY|YESTERDAY/i.test(heading);
+  check(
+    underPreciseHeading
+      ? "a row under a same-day heading does not repeat the date"
+      : "a row under a month heading carries its own date",
+    underPreciseHeading ? dated === false : dated === true,
+    `dated=${dated}, heading precise=${underPreciseHeading}`,
+  );
+}
+
+/**
  * Sign-up shows the recovery key.
  *
  * Needs its own context: the page above already holds an identity cookie, and

@@ -13,28 +13,45 @@
  *
  * Input is assumed already sorted newest-first; this preserves that order and
  * emits buckets in the order they are first seen.
+ *
+ * `precise` says whether the heading pins one particular day. "Today" and
+ * "Thursday" do; "August" covers thirty-one of them. Rows under an imprecise
+ * heading have to carry their own date, or a week in Lisbon collapses into one
+ * undated block and nobody can tell the Tuesday dinner from the Friday one —
+ * which is exactly the argument the ledger exists to settle.
  */
 export function groupByDay<T>(
   items: T[],
   getDate: (item: T) => string | Date,
-): { label: string; entries: T[] }[] {
-  const buckets = new Map<string, T[]>();
+): { label: string; precise: boolean; entries: T[] }[] {
+  const buckets = new Map<string, { precise: boolean; entries: T[] }>();
 
   for (const item of items) {
     const raw = getDate(item);
-    const label = dayLabel(raw instanceof Date ? raw : new Date(raw));
+    const date = raw instanceof Date ? raw : new Date(raw);
+    const label = dayLabel(date);
     const bucket = buckets.get(label);
-    if (bucket) bucket.push(item);
-    else buckets.set(label, [item]);
+    if (bucket) bucket.entries.push(item);
+    else buckets.set(label, { precise: namesOneDay(date), entries: [item] });
   }
 
-  return [...buckets].map(([label, entries]) => ({ label, entries }));
+  return [...buckets].map(([label, bucket]) => ({ label, ...bucket }));
+}
+
+/** Whether `dayLabel` would return a heading that identifies this exact day. */
+function namesOneDay(date: Date): boolean {
+  return daysAgo(date) < 7;
+}
+
+function daysAgo(date: Date): number {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.floor((startOfToday.getTime() - startOfDay(date).getTime()) / 86_400_000);
 }
 
 export function dayLabel(date: Date): string {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = Math.floor((startOfToday.getTime() - startOfDay(date).getTime()) / 86_400_000);
+  const days = daysAgo(date);
 
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";

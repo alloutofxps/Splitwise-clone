@@ -260,7 +260,7 @@ export function GroupLedger({
         )
       ) : (
         <div className="space-y-5">
-          {groups.map(({ label, entries }) => (
+          {groups.map(({ label, precise, entries }) => (
             <section key={label}>
               <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
                 {label}
@@ -274,6 +274,7 @@ export function GroupLedger({
                         meId={meId}
                         people={people}
                         pending={entry.pending}
+                        showDate={!precise}
                         onOpen={() => setOpenExpenseId(entry.expense!.id)}
                       />
                     </li>
@@ -285,6 +286,7 @@ export function GroupLedger({
                         people={people}
                         pending={entry.pending}
                         groupId={groupId}
+                        showDate={!precise}
                       />
                     </li>
                   ) : null,
@@ -320,6 +322,7 @@ export function ExpenseRow({
   onOpen,
   showGroup,
   pending,
+  showDate,
 }: {
   expense: NonNullable<LedgerEntry["expense"]>;
   meId: string;
@@ -328,6 +331,8 @@ export function ExpenseRow({
   showGroup?: string;
   /** Written optimistically; the server has not confirmed it yet. */
   pending?: boolean;
+  /** Set when the day heading above only names a month. */
+  showDate?: boolean;
 }) {
   const category = categoryById(expense.categoryId);
   const net = BigInt(expense.yourNet);
@@ -355,6 +360,8 @@ export function ExpenseRow({
         pending && "opacity-60",
       )}
     >
+      {showDate ? <DateStamp date={expense.date} /> : null}
+
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
         style={{
@@ -418,12 +425,15 @@ export function SettlementRow({
   people,
   pending,
   groupId,
+  showDate,
 }: {
   settlement: NonNullable<LedgerEntry["settlement"]>;
   meId: string;
   people: Map<string, PersonDto>;
   pending?: boolean;
   groupId?: string;
+  /** Set when the day heading above only names a month. */
+  showDate?: boolean;
 }) {
   const from = people.get(settlement.fromPersonId);
   const to = people.get(settlement.toPersonId);
@@ -471,6 +481,8 @@ export function SettlementRow({
           pending ? "opacity-60" : "active:scale-[0.99] hover:bg-surface-2",
         )}
       >
+      {showDate ? <DateStamp date={settlement.date} /> : null}
+
       <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-positive-soft text-positive-text">
         <ArrowLeftRight className="size-[18px]" />
       </span>
@@ -574,3 +586,28 @@ function FilterChip({
     </button>
   );
 }
+
+/**
+ * The day a row happened, for lists whose heading only names a month.
+ *
+ * Two lines rather than one so it stays narrow enough to sit outside the
+ * content column at any type size, and tabular so the numerals line up down the
+ * list instead of shuffling with the glyph widths.
+ */
+function DateStamp({ date }: { date: string }) {
+  const value = new Date(date);
+  return (
+    <span
+      className="flex w-8 shrink-0 flex-col items-center leading-none text-subtle"
+      aria-hidden="true"
+    >
+      <span className="text-micro font-semibold uppercase tracking-[0.06em]">
+        {value.toLocaleDateString(undefined, { month: "short" })}
+      </span>
+      <span className="tabular mt-0.5 text-body font-semibold">
+        {value.toLocaleDateString(undefined, { day: "numeric" })}
+      </span>
+    </span>
+  );
+}
+

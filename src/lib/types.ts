@@ -238,6 +238,14 @@ export interface FriendDto {
    * has to be able to say which part of the total lives where.
    */
   directNet: Record<string, string>;
+  /**
+   * Where that total comes from, ledger by ledger, biggest first.
+   *
+   * Carried on the list row and not just the detail page: a single number with
+   * no account of itself is the thing people distrust, and "you owe €96,14"
+   * reads very differently beside the three places it came from.
+   */
+  ledgers: SharedLedgerDto[];
   sharedGroupIds: string[];
   lastActivityAt: string | null;
 }

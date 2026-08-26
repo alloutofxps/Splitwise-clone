@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
-import type { DashboardDto, FriendDto, MeDto, PersonDto } from "@/lib/types";
+import type {
+  DashboardDto,
+  FriendDto,
+  MeDto,
+  PersonDto,
+  SharedLedgerDto,
+} from "@/lib/types";
 import type { Person } from "@prisma/client";
 import {
   directBalanceSheets,
@@ -34,9 +40,16 @@ export async function meDto(person: Person): Promise<MeDto> {
 /**
  * The friends list.
  *
- * A "friend" is anyone you have connected with directly, and the figure beside
- * their name is where the two of you stand *in total* - every group you share,
- * plus the direct ledger, kept per currency.
+ * A "friend" is anyone you share a ledger with - somebody you added by code, or
+ * somebody in a group with you - and the figure beside their name is where the
+ * two of you stand *in total*: every group you share, plus the direct ledger,
+ * kept per currency.
+ *
+ * Group members belong here even when nobody exchanged codes. Restricting the
+ * list to the friendship table meant an account whose whole life was one flat
+ * share opened Friends to "No friends added yet" while owing four people money,
+ * and the person you most need to square up with is rarely the one you happened
+ * to add directly.
  *
  * It used to be the direct ledger alone, on the reasoning that group debts
  * belong to the group. That is right about where a debt is *settled* and wrong
@@ -53,16 +66,35 @@ export async function friendDtos(
   /** The viewer's group sheets, computed once per request by the caller. */
   groupSheets?: Map<string, BalanceSheet>,
 ): Promise<FriendDto[]> {
-  const friendships = await prisma.friendship.findMany({
-    where: { OR: [{ personAId: personId }, { personBId: personId }] },
-    include: { personA: true, personB: true },
-  });
+  const [friendships, coMembers] = await Promise.all([
+    prisma.friendship.findMany({
+      where: { OR: [{ personAId: personId }, { personBId: personId }] },
+      include: { personA: true, personB: true },
+    }),
+    prisma.person.findMany({
+      where: {
+        id: { not: personId },
+        memberships: {
+          some: {
+            leftAt: null,
+            group: { memberships: { some: { personId, leftAt: null } } },
+          },
+        },
+      },
+    }),
+  ]);
 
-  if (friendships.length === 0) return [];
+  // Union, because the two overlap: somebody added by code who then joined your
+  // flat group is one person, not two rows.
+  const byId = new Map<string, (typeof coMembers)[number]>();
+  for (const friendship of friendships) {
+    const other = friendship.personAId === personId ? friendship.personB : friendship.personA;
+    byId.set(other.id, other);
+  }
+  for (const person of coMembers) byId.set(person.id, person);
 
-  const others = friendships.map((friendship) =>
-    friendship.personAId === personId ? friendship.personB : friendship.personA,
-  );
+  const others = [...byId.values()];
+  if (others.length === 0) return [];
 
   const [sheets, sharedMemberships, sheetsByGroup] = await Promise.all([
     directBalanceSheets(personId),
@@ -75,14 +107,26 @@ export async function friendDtos(
         leftAt: null,
         group: { memberships: { some: { personId, leftAt: null } } },
       },
-      select: { personId: true, groupId: true, group: { select: { currency: true } } },
+      select: {
+        personId: true,
+        groupId: true,
+        group: { select: { currency: true, name: true, emoji: true } },
+      },
     }),
     groupSheets ? Promise.resolve(groupSheets) : groupSheetsFor(personId),
   ]);
 
-  const sharedByFriend = new Map<string, { groupId: string; currency: string }[]>();
+  const sharedByFriend = new Map<
+    string,
+    { groupId: string; currency: string; name: string; emoji: string }[]
+  >();
   for (const membership of sharedMemberships) {
-    const entry = { groupId: membership.groupId, currency: membership.group.currency };
+    const entry = {
+      groupId: membership.groupId,
+      currency: membership.group.currency,
+      name: membership.group.name,
+      emoji: membership.group.emoji,
+    };
     const list = sharedByFriend.get(membership.personId);
     if (list) list.push(entry);
     else sharedByFriend.set(membership.personId, [entry]);
@@ -97,21 +141,36 @@ export async function friendDtos(
     // reconcile against anything.
     const combined = new Map<string, bigint>();
     const directNet: Record<string, string> = {};
+    const ledgers: SharedLedgerDto[] = [];
 
     for (const [currency, sheet] of sheets) {
       const value = pairwiseNet(sheet, personId, other.id);
       if (value === 0n) continue;
       directNet[currency] = value.toString();
       combined.set(currency, (combined.get(currency) ?? 0n) + value);
+      ledgers.push({
+        groupId: null,
+        name: null,
+        emoji: null,
+        currency,
+        net: value.toString(),
+      });
     }
 
-    for (const { groupId, currency } of shared) {
+    for (const { groupId, currency, name, emoji } of shared) {
       const sheet = sheetsByGroup.get(groupId);
       if (!sheet) continue;
       const value = pairwiseNet(sheet, personId, other.id);
       if (value === 0n) continue;
       combined.set(currency, (combined.get(currency) ?? 0n) + value);
+      ledgers.push({ groupId, name, emoji, currency, net: value.toString() });
     }
+
+    const size = (value: string) => {
+      const amount = BigInt(value);
+      return amount < 0n ? -amount : amount;
+    };
+    ledgers.sort((a, b) => (size(b.net) > size(a.net) ? 1 : -1));
 
     const net: Record<string, string> = {};
     for (const [currency, value] of combined) {
@@ -123,6 +182,7 @@ export async function friendDtos(
       person: personDto(other),
       net,
       directNet,
+      ledgers,
       sharedGroupIds: shared.map((entry) => entry.groupId),
       lastActivityAt: null,
     });
