@@ -18,6 +18,7 @@ import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
+import { clearRecoveryPending, markRecoveryPending } from "@/lib/client/recovery";
 import { colorForName, initials } from "@/lib/avatar";
 import { CURRENCIES } from "@/lib/money";
 import type { MeDto } from "@/lib/types";
@@ -40,7 +41,7 @@ type Step = "welcome" | "profile" | "recovery" | "restore";
 
 const EMOJI_CHOICES = ["🙂", "😎", "🦊", "🐙", "🌵", "🍕", "⚡️", "🌊", "🎧", "🚲", "🪐", "🐝"];
 
-export function Onboarding() {
+export function Onboarding({ onFinished }: { onFinished: () => void }) {
   const [step, setStep] = React.useState<Step>("welcome");
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(null);
 
@@ -67,13 +68,13 @@ export function Onboarding() {
 
         {step === "recovery" && recoveryKey ? (
           <StepShell key="recovery">
-            <RecoveryStep recoveryKey={recoveryKey} />
+            <RecoveryStep recoveryKey={recoveryKey} onFinished={onFinished} />
           </StepShell>
         ) : null}
 
         {step === "restore" ? (
           <StepShell key="restore">
-            <RestoreStep onBack={() => setStep("welcome")} />
+            <RestoreStep onBack={() => setStep("welcome")} onFinished={onFinished} />
           </StepShell>
         ) : null}
       </AnimatePresence>
@@ -173,7 +174,6 @@ function ProfileStep({
   onBack: () => void;
 }) {
   const toast = useToast();
-  const client = useQueryClient();
 
   const [name, setName] = React.useState("");
   const [emoji, setEmoji] = React.useState<string | null>(null);
@@ -193,7 +193,11 @@ function ProfileStep({
         avatarEmoji: emoji,
         defaultCurrency: currency,
       });
-      await client.invalidateQueries({ queryKey: keys.dashboard });
+      // The account exists from here on, and its key has been shown to nobody.
+      // Recorded rather than assumed, because the user can still close the tab
+      // on the next screen: while this flag is set the account screen says the
+      // key was never saved and offers to issue a new one.
+      markRecoveryPending();
       haptic([10, 40, 10]);
       onDone(result.recoveryKey);
     } catch (error) {
@@ -322,8 +326,14 @@ function EmojiChip({
 
 // ---------------------------------------------------------------------------
 
-function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
-  const router = useRouter();
+function RecoveryStep({
+  recoveryKey,
+  onFinished,
+}: {
+  recoveryKey: string;
+  onFinished: () => void;
+}) {
+  const client = useQueryClient();
   const toast = useToast();
   const [copied, setCopied] = React.useState(false);
   const [acknowledged, setAcknowledged] = React.useState(false);
@@ -410,7 +420,13 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
           disabled={!acknowledged}
           onClick={() => {
             haptic(10);
-            router.refresh();
+            clearRecoveryPending();
+            // Releasing the gate is what shows the app. The dashboard has very
+            // likely loaded already - the cookie was set back at the profile
+            // step - so this is usually just a refresh, but asking for it keeps
+            // the first painted screen current rather than however stale.
+            void client.invalidateQueries({ queryKey: keys.dashboard });
+            onFinished();
           }}
         >
           Start using Divvy
@@ -422,7 +438,7 @@ function RecoveryStep({ recoveryKey }: { recoveryKey: string }) {
 
 // ---------------------------------------------------------------------------
 
-function RestoreStep({ onBack }: { onBack: () => void }) {
+function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const client = useQueryClient();
@@ -438,6 +454,7 @@ function RestoreStep({ onBack }: { onBack: () => void }) {
       haptic([10, 40, 10]);
       toast({ tone: "success", title: "Welcome back" });
       router.refresh();
+      onFinished();
     } catch (error) {
       toast({
         tone: "error",

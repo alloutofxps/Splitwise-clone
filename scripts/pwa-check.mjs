@@ -189,10 +189,14 @@ console.log("\nA share that lands on a device with no identity");
   });
   check("the receipt is NOT consumed before there is an identity", stillParked === "Late night kebab", String(stillParked));
 
-  // Now onboard, and it should be collected.
+  // Now onboard — all of it, including saving the recovery key, which is what
+  // actually hands the screen over to the app — and it should be collected.
   await freshPage.getByRole("button", { name: /get started|create/i }).first().click();
   await freshPage.locator('input[placeholder="Priya"]').fill("Newcomer");
   await freshPage.getByRole("button", { name: "Continue" }).click();
+  await freshPage.getByText("Save your recovery key").waitFor({ timeout: 15000 });
+  await freshPage.locator("input[type=checkbox]").check();
+  await freshPage.getByRole("button", { name: "Start using Divvy" }).click();
   await freshPage.waitForTimeout(3000);
 
   const thumb = await freshPage.locator('img[alt="kebab.png"]').count();
@@ -251,6 +255,96 @@ console.log("\nUpdate lifecycle");
     check("the new build's caches are created", names.some((n) => n.includes("next-build")), names.join(", "));
     check("the share stash survives the update", true);
   }
+}
+
+/**
+ * An expense entered offline survives closing the app.
+ *
+ * The claim on the tin is "works offline including adding expenses", and the
+ * durable half of that is the IndexedDB outbox — an optimistic row on screen is
+ * worth nothing if it lives only in memory.
+ *
+ * It did, once. TanStack's default `networkMode: "online"` pauses a mutation
+ * while the browser reports itself offline: `onMutate` ran, so the row appeared
+ * and the balance moved, but `mutationFn` never did — which is the only thing
+ * that ever calls `enqueue()`. Nothing reached IndexedDB, the composer sat
+ * spinning on a promise that could not settle, and closing the app threw the
+ * expense away. Everything visible said it had been saved.
+ *
+ * So this asserts the durable fact, not the visible one: it goes offline, adds
+ * an expense, kills the page, comes back online in a new one, and asks the
+ * server.
+ */
+console.log("\nAn expense added offline");
+{
+  const durable = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const off = await durable.newPage();
+  await off.goto(BASE, { waitUntil: "networkidle" });
+
+  const groupId = await off.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    await post("/api/identity", { displayName: "Tunnel" });
+    const g = await post("/api/groups", { name: "Tunnel", currency: "USD", placeholderNames: ["Pat"] });
+    return g.group.id;
+  });
+
+  await off.goto(`${BASE}/groups/${groupId}`, { waitUntil: "domcontentloaded" });
+  await off.getByRole("button", { name: /^Add$/ }).waitFor({ timeout: 30000 });
+  await off.waitForTimeout(1500);
+
+  await durable.setOffline(true);
+  await off.waitForTimeout(500);
+  await off.getByRole("button", { name: /^Add$/ }).click();
+  await off.waitForTimeout(900);
+  for (const digit of ["4", "2"]) {
+    await off.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();
+  }
+  await off.locator("input[placeholder='What was it for?']").fill("Tunnel dinner");
+
+  const startedAt = Date.now();
+  await off.getByRole("button", { name: "Add expense" }).click();
+  const closed = await off
+    .locator("[role=dialog]")
+    .waitFor({ state: "detached", timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  check("the composer closes instead of waiting on the network", closed, `${Date.now() - startedAt}ms`);
+
+  await off.waitForTimeout(1000);
+  const told = await off.locator("body").innerText();
+  check("and says the expense is saved locally", /Saved on your device|will sync/i.test(told));
+
+  const queued = await off.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("divvy");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    if (![...db.objectStoreNames].includes("outbox")) return ["no outbox store"];
+    return await new Promise((resolve) => {
+      const query = db.transaction("outbox", "readonly").objectStore("outbox").getAll();
+      query.onsuccess = () => resolve(query.result.map((row) => row.path));
+      query.onerror = () => resolve(["read failed"]);
+    });
+  });
+  check("the write is in the durable outbox, not just in memory", queued.includes("/api/expenses"), queued.join(", "));
+
+  // The whole point: kill the page while still offline.
+  await off.close();
+  await durable.setOffline(false);
+  const back = await durable.newPage();
+  await back.goto(`${BASE}/groups/${groupId}`, { waitUntil: "domcontentloaded" });
+  await back.waitForTimeout(8000);
+
+  const onServer = await back.evaluate(async (id) => {
+    const r = await (await fetch(`/api/groups/${id}/expenses`)).json();
+    return (r.items ?? []).map((e) => e.expense?.description).filter(Boolean);
+  }, groupId);
+  check("and reaches the server after the app is closed and reopened", onServer.includes("Tunnel dinner"), onServer.join(", "));
+
+  await durable.close();
 }
 
 console.log("");

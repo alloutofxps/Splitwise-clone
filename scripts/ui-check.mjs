@@ -103,6 +103,62 @@ if (await edit.count() > 0) {
   check("could not open the edit sheet (skipped)", true, "no Edit button found");
 }
 
+/**
+ * Sign-up shows the recovery key.
+ *
+ * Needs its own context: the page above already holds an identity cookie, and
+ * onboarding renders only while the dashboard query is a 401.
+ *
+ * This one is worth pinning hard. The server keeps a SHA-256 of the key and
+ * nothing else, so a key that is not seen at this moment is gone for good — and
+ * the step broke silently once already, because the profile step invalidated
+ * the dashboard query before handing over, which flipped the layout's auth gate
+ * and unmounted the whole of onboarding a frame before the key could paint.
+ * Every account created against that build has an unseen, unrecoverable key.
+ */
+console.log("\nSign-up shows the recovery key");
+{
+  const fresh = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const signup = await fresh.newPage();
+  signup.on("pageerror", (e) => errors.push(String(e)));
+
+  await signup.goto(BASE, { waitUntil: "networkidle" });
+  await signup.getByRole("button", { name: "Get started" }).click();
+  await signup.waitForTimeout(600);
+  await signup.locator("input").first().fill("Keyholder");
+  await signup.getByRole("button", { name: "Continue" }).click();
+
+  const step = signup.getByText("Save your recovery key");
+  const shown = await step
+    .waitFor({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  check("the recovery step appears after sign-up", shown);
+
+  if (shown) {
+    // It must survive: the failure mode was a race, not an absence.
+    await signup.waitForTimeout(4000);
+    check("and is still there four seconds later", await step.count() > 0);
+
+    const body = await signup.locator("body").innerText();
+    check("the key itself is on screen", /dvy_[\w-]{20,}/.test(body));
+
+    const go = signup.getByRole("button", { name: "Start using Divvy" });
+    check("entering the app is gated on acknowledging it", await go.isDisabled());
+
+    await signup.locator("input[type=checkbox]").check();
+    await go.click();
+    await signup.waitForTimeout(3000);
+    const after = await signup.locator("body").innerText();
+    check(
+      "acknowledging it enters the app",
+      /Let.s get you set up|All settled up/.test(after),
+      after.slice(0, 120).replace(/\n/g, " | "),
+    );
+  }
+  await fresh.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

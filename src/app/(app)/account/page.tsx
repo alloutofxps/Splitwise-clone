@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/toast";
 import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
+import { clearRecoveryPending, recoveryPending } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
@@ -55,10 +56,15 @@ export default function AccountPage() {
   const [payments, setPayments] = React.useState(false);
   const [budgetsOpen, setBudgets] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
+  const [keyUnsaved, setKeyUnsaved] = React.useState(false);
 
   React.useEffect(() => {
     if (data) setName(data.me.displayName);
   }, [data]);
+
+  // Read after mount: the server has no localStorage, and initialising from it
+  // during render would mismatch hydration.
+  React.useEffect(() => setKeyUnsaved(recoveryPending()), []);
 
   if (isLoading || !data) {
     return (
@@ -221,10 +227,27 @@ export default function AccountPage() {
           Your data
         </h2>
         <div className="space-y-1.5">
+          {keyUnsaved ? (
+            <button
+              onClick={() => {
+                haptic();
+                setRecovery(true);
+              }}
+              className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] bg-negative-soft p-3.5 text-left"
+            >
+              <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
+              <span className="text-body leading-relaxed text-negative-text">
+                <b className="font-semibold">You never saved a recovery key.</b> Divvy
+                keeps only a one-way hash of it, so the one made when you signed up
+                cannot be shown again — without a key you cannot get this account back
+                if you lose this device. Generate a new one now.
+              </span>
+            </button>
+          ) : null}
           <Row
             icon={<KeyRound className="size-[18px]" />}
             label="Recovery key"
-            value="Manage"
+            value={keyUnsaved ? "Not saved" : "Manage"}
             onClick={() => setRecovery(true)}
           />
           <Row
@@ -281,7 +304,11 @@ export default function AccountPage() {
 
       <BudgetsSheet open={budgetsOpen} onClose={() => setBudgets(false)} />
 
-      <RecoverySheet open={recovery} onClose={() => setRecovery(false)} />
+      <RecoverySheet
+        open={recovery}
+        onClose={() => setRecovery(false)}
+        onSaved={() => setKeyUnsaved(false)}
+      />
 
       <PaymentMethodsSheet
         open={payments}
@@ -406,7 +433,16 @@ function Row({
  * which invalidates the old - or nothing. The copy says so plainly rather than
  * letting someone discover it at the worst moment.
  */
-function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function RecoverySheet({
+  open,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Called once a fresh key is on screen, so the account screen can drop its warning. */
+  onSaved?: () => void;
+}) {
   const toast = useToast();
   const [key, setKey] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -424,6 +460,10 @@ function RecoverySheet({ open, onClose }: { open: boolean; onClose: () => void }
     try {
       const result = await api.post<{ recoveryKey: string }>("/api/identity/recovery");
       setKey(result.recoveryKey);
+      // The old key is dead the moment this returns, so whatever the account
+      // was missing before, it is not missing now: there is a key on screen.
+      clearRecoveryPending();
+      onSaved?.();
       haptic([8, 30, 8]);
     } catch (error) {
       toast({

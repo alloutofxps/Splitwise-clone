@@ -25,7 +25,26 @@ function makeClient() {
         },
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
       },
-      mutations: { retry: false },
+      mutations: {
+        retry: false,
+        /**
+         * The outbox handles being offline, not the query client.
+         *
+         * Under the default `networkMode: "online"`, TanStack pauses a mutation
+         * whenever the browser reports itself offline: `onMutate` runs, so the
+         * optimistic row appears and the balance moves, but `mutationFn` never
+         * executes. That meant the app's own `catch (isOffline) → enqueue()`
+         * branch was unreachable in the exact case it was written for, and the
+         * write existed only as a paused mutation in memory — the composer sat
+         * there spinning, and closing the app lost the expense outright, with
+         * nothing in IndexedDB and nothing on the server.
+         *
+         * "always" makes the fetch attempt happen regardless. It fails, the
+         * mutation catches it, and the write lands in the durable queue that
+         * exists to survive exactly this.
+         */
+        networkMode: "always",
+      },
     },
   });
 }

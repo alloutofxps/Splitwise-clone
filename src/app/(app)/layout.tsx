@@ -62,6 +62,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
    */
   const intentHandled = React.useRef(false);
 
+  /**
+   * Setup owns the screen until setup says it is finished — not until the
+   * dashboard starts answering.
+   *
+   * The identity cookie is set the moment the profile step returns, so from
+   * then on any successful dashboard fetch would flip this gate and unmount
+   * onboarding. That matters because the recovery key lives in onboarding's
+   * state and the server keeps only a hash of it: unmount the component and
+   * the key is gone for good, from the one screen whose entire job is to show
+   * it. And the fetch that does it need not be one we control — the query
+   * refetches on window focus, which is exactly what happens when someone
+   * opens a password manager to paste the key somewhere safe.
+   *
+   * So the flag latches on and is cleared only by onboarding itself.
+   */
+  const unauthorized = error instanceof ApiError && error.isUnauthorized;
+  const [setupOpen, setSetupOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (unauthorized) setSetupOpen(true);
+  }, [unauthorized]);
+
   React.useEffect(() => {
     if (!intent.compose || !data || intentHandled.current) return;
     // Latched, because this effect also depends on `data` and the dashboard
@@ -92,7 +114,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) return <BootSkeleton />;
 
-  if (error instanceof ApiError && error.isUnauthorized) return <Onboarding />;
+  if (setupOpen || unauthorized) {
+    return <Onboarding onFinished={() => setSetupOpen(false)} />;
+  }
 
   if (error || !data) {
     return (
