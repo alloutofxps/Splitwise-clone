@@ -116,3 +116,25 @@ export async function areFriends(a: string, b: string): Promise<boolean> {
   });
   return Boolean(found);
 }
+
+/**
+ * Whether two people are in at least one group together.
+ *
+ * A shared group is its own kind of connection: you can already see the
+ * person's name, avatar and balance on every screen the group renders, so
+ * gating a person-level view behind a separate friendship would hide a figure
+ * the app is already showing — and it is exactly the people you share several
+ * groups with, and never added directly, whose balances most need adding up.
+ */
+export async function sharesAGroup(a: string, b: string): Promise<boolean> {
+  const group = await prisma.group.findFirst({
+    where: {
+      AND: [
+        { memberships: { some: { personId: a, leftAt: null } } },
+        { memberships: { some: { personId: b, leftAt: null } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return group !== null;
+}

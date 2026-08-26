@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Plus, Receipt, UserMinus } from "lucide-react";
+import { ChevronDown, ChevronLeft, Plus, Receipt, UserMinus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
-import { Button, EmptyState, Skeleton, haptic } from "@/components/ui/primitives";
+import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
-import { SettleUpSheet } from "@/components/group/settle-up-sheet";
+import { SettleAcrossSheet } from "@/components/friends/settle-across-sheet";
 import { useComposer } from "@/components/expense/composer-context";
 import { ConfirmSheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
@@ -19,10 +19,16 @@ import { groupByDay } from "@/lib/day-groups";
 /**
  * One friend.
  *
- * The direct ledger between the two of you, plus links to the groups you share.
- * The separation is the point: this page never quotes a single combined number,
- * because "you owe me 90" is only a useful sentence when both people agree on
- * which 90 it is.
+ * The headline is where the two of you stand in total — every group you share
+ * plus the direct ledger — because that is the question the page is opened to
+ * answer, and it is the figure a single bank transfer settles.
+ *
+ * It is never quoted on its own, though. Under it sits the breakdown that
+ * produced it, group by group, and the ledger below stays direct-only. "You owe
+ * me 90" is a useful sentence exactly when both people can see which 90 it is;
+ * the earlier version answered that by refusing to add up, which left the
+ * friends list reporting "settled up" to someone owed two thousand euros in the
+ * only group they shared.
  */
 export default function FriendPage() {
   const params = useParams<{ id: string }>();
@@ -35,6 +41,7 @@ export default function FriendPage() {
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
   const [settleUp, setSettleUp] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
+  const [showBreakdown, setShowBreakdown] = React.useState(false);
   const toast = useToast();
   const removeFriend = useRemoveFriend();
 
@@ -58,7 +65,16 @@ export default function FriendPage() {
 
   const meId = dashboard.me.id;
   const grouped = groupByDay(data.items, (item) => item.date);
-  const hasBalance = data.balances.some((entry) => BigInt(entry.net) !== 0n);
+
+  // Where the two of you stand in total, and what it is made of.
+  const combined = Object.entries(data.combined ?? {});
+  const ledgers = data.ledgers ?? [];
+  const anythingOutstanding = combined.length > 0 || ledgers.length > 0;
+
+  // Settling is per currency: a euro balance and a rupee balance are two
+  // different transfers, and one sheet cannot honestly represent both.
+  const settleCurrency = combined[0]?.[0] ?? null;
+  const settleLedgers = ledgers.filter((ledger) => ledger.currency === settleCurrency);
 
   return (
     <div className="pt-[max(0.5rem,env(safe-area-inset-top))]">
@@ -83,26 +99,26 @@ export default function FriendPage() {
         <div className="flex items-center gap-4">
           <Avatar person={data.person} size="lg" />
           <div className="min-w-0 flex-1">
-            {data.balances.length === 0 ? (
+            {!anythingOutstanding ? (
               <>
                 <p className="text-subhead font-semibold text-muted">
                   You&rsquo;re all settled up
                 </p>
                 <p className="mt-0.5 text-body text-subtle">
-                  Nothing outstanding between you two.
+                  Nothing outstanding, in any group.
                 </p>
               </>
             ) : (
               <>
                 <p className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
-                  Between you two
+                  Overall
                 </p>
                 <div className="mt-1 space-y-0.5">
-                  {data.balances.map((entry) => {
-                    const net = BigInt(entry.net);
+                  {combined.map(([code, value]) => {
+                    const net = BigInt(value);
                     return (
-                      <p key={entry.currency}>
-                        <Amount value={net} currency={entry.currency} size="lg" />
+                      <p key={code}>
+                        <Amount value={net} currency={code} size="lg" />
                         <span className="ml-1.5 text-caption font-semibold text-subtle">
                           {net > 0n ? "owed to you" : "you owe"}
                         </span>
@@ -116,7 +132,7 @@ export default function FriendPage() {
         </div>
 
         <div className="mt-4 flex gap-2">
-          {hasBalance ? (
+          {anythingOutstanding ? (
             <Button size="sm" variant="secondary" onClick={() => setSettleUp(true)}>
               Settle up
             </Button>
@@ -133,7 +149,7 @@ export default function FriendPage() {
             Only offered once you are square. The server enforces it too, but a
             button that exists and always fails is worse than one that waits.
           */}
-          {!hasBalance ? (
+          {!anythingOutstanding ? (
             <Button
               size="sm"
               variant="ghost"
@@ -146,8 +162,62 @@ export default function FriendPage() {
         </div>
       </div>
 
-      {/* Shared groups ----------------------------------------------------- */}
-      {data.sharedGroups.length > 0 ? (
+      {/* Where that total comes from --------------------------------------- */}
+      {ledgers.length > 0 ? (
+        <section className="mt-5">
+          <button
+            onClick={() => {
+              haptic();
+              setShowBreakdown((current) => !current);
+            }}
+            aria-expanded={showBreakdown}
+            className="flex w-full items-center gap-1.5 px-1 py-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle"
+          >
+            Made up of {ledgers.length} {ledgers.length === 1 ? "balance" : "balances"}
+            <ChevronDown
+              className={cn("size-4 transition-transform", showBreakdown && "rotate-180")}
+            />
+          </button>
+
+          {showBreakdown ? (
+            <ul className="mt-2 space-y-1.5">
+              {ledgers.map((ledger) => {
+                const net = BigInt(ledger.net);
+                const body = (
+                  <>
+                    <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                      {ledger.emoji ? `${ledger.emoji} ` : ""}
+                      {ledger.name ?? "Just between you"}
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <Amount value={net} currency={ledger.currency} size="sm" />
+                      <span className="block text-tiny text-subtle">
+                        {net > 0n ? "owed to you" : "you owe"}
+                      </span>
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={ledger.groupId ?? "direct"}>
+                    {ledger.groupId ? (
+                      <Link
+                        href={`/groups/${ledger.groupId}`}
+                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 transition active:scale-[0.985]"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+                        {body}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </section>
+      ) : data.sharedGroups.length > 0 ? (
         <section className="mt-6">
           <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
             Also in
@@ -164,9 +234,6 @@ export default function FriendPage() {
               </Link>
             ))}
           </div>
-          <p className="mt-2 px-1 text-tiny leading-relaxed text-subtle">
-            Balances in those groups are kept separate from the direct one above.
-          </p>
         </section>
       ) : null}
 
@@ -260,14 +327,21 @@ export default function FriendPage() {
         confirmLabel="Remove"
       />
 
-      <SettleUpSheet
-        open={settleUp}
-        onClose={() => setSettleUp(false)}
-        meId={meId}
-        people={people}
-        fixedPersonId={data.person.id}
-        directCurrency={data.balances[0]?.currency ?? dashboard.me.defaultCurrency}
-      />
+      {/*
+        One sheet for everywhere the two of you stand, because one transfer is
+        what settles it. Each ledger is still written separately — the sheet
+        lists exactly what it is about to record.
+      */}
+      {settleCurrency && settleLedgers.length > 0 ? (
+        <SettleAcrossSheet
+          open={settleUp}
+          onClose={() => setSettleUp(false)}
+          person={data.person}
+          me={dashboard.me}
+          ledgers={settleLedgers}
+          currency={settleCurrency}
+        />
+      ) : null}
     </div>
   );
 }

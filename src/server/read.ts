@@ -25,6 +25,7 @@ import type {
   PersonDto,
   SettlementDto,
   SplitMode,
+  SharedLedgerDto,
 } from "@/lib/types";
 import type { Prisma } from "@prisma/client";
 
@@ -377,7 +378,115 @@ export function activityDto(
  * Deliberately batched: a naive version issues four queries per group, which is
  * fine for three groups and miserable for thirty.
  */
-export async function groupSummaries(personId: string): Promise<GroupSummaryDto[]> {
+/**
+ * Every group the viewer belongs to, folded into a balance sheet, keyed by id.
+ *
+ * Lifted out because two different screens need the same fold and computing it
+ * twice per request means twice the queries over the same rows: the group list
+ * asks "where do I stand in each group", the friends list asks "where do I
+ * stand with each person", and both answers come out of these sheets.
+ */
+/** A group with nothing in it, so a missing precomputed sheet degrades to
+ *  "no balances" rather than throwing. */
+const EMPTY_SHEET: BalanceSheet = {
+  net: new Map(),
+  pairwise: [],
+  simplified: [],
+  totalSpend: 0n,
+};
+
+export async function groupSheetsFor(personId: string): Promise<Map<string, BalanceSheet>> {
+  const memberships = await prisma.membership.findMany({
+    where: { personId, leftAt: null },
+    select: { groupId: true },
+  });
+  const ids = memberships.map((membership) => membership.groupId);
+  const sheets = await Promise.all(ids.map((id) => groupBalanceSheet(id)));
+  return new Map(ids.map((id, index) => [id, sheets[index]] as const));
+}
+
+/**
+ * The pairwise position between the viewer and one other person, in one sheet.
+ *
+ * Pairwise rather than simplified on purpose. Simplification is a presentation
+ * choice about how to *discharge* a group's debts with the fewest transfers,
+ * and it will happily route your debt through somebody you have never bought
+ * anything from. The question here is what these two people owe each other,
+ * and only the literal ledger answers that.
+ *
+ * Positive means they owe the viewer.
+ */
+export function pairwiseNet(sheet: BalanceSheet, meId: string, otherId: string): bigint {
+  const edge = sheet.pairwise.find(
+    (candidate) =>
+      (candidate.fromPersonId === meId && candidate.toPersonId === otherId) ||
+      (candidate.fromPersonId === otherId && candidate.toPersonId === meId),
+  );
+  if (!edge) return 0n;
+  return edge.toPersonId === meId ? edge.amount : -edge.amount;
+}
+
+/**
+ * Every ledger two people share, with where they stand in each.
+ *
+ * This is the list a cross-ledger settlement is built from: one row per group
+ * plus one per currency of the direct ledger, each carrying its own currency
+ * because a group settles in the currency it was created with and two friends
+ * agree on nothing.
+ *
+ * Rows where the two are square are dropped — there is nothing to say about a
+ * group where you owe each other nothing, and nothing to settle in it.
+ */
+export async function sharedLedgers(meId: string, otherId: string): Promise<SharedLedgerDto[]> {
+  const [directSheets, groups] = await Promise.all([
+    directBalanceSheets(meId),
+    prisma.group.findMany({
+      where: {
+        AND: [
+          { memberships: { some: { personId: meId, leftAt: null } } },
+          { memberships: { some: { personId: otherId, leftAt: null } } },
+        ],
+      },
+      select: { id: true, name: true, emoji: true, currency: true },
+    }),
+  ]);
+
+  const ledgers: SharedLedgerDto[] = [];
+
+  for (const [currency, sheet] of directSheets) {
+    const net = pairwiseNet(sheet, meId, otherId);
+    if (net !== 0n) {
+      ledgers.push({ groupId: null, name: null, emoji: null, currency, net: net.toString() });
+    }
+  }
+
+  const sheets = await Promise.all(groups.map((group) => groupBalanceSheet(group.id)));
+  groups.forEach((group, index) => {
+    const net = pairwiseNet(sheets[index], meId, otherId);
+    if (net !== 0n) {
+      ledgers.push({
+        groupId: group.id,
+        name: group.name,
+        emoji: group.emoji,
+        currency: group.currency,
+        net: net.toString(),
+      });
+    }
+  });
+
+  // Biggest exposure first: it is the one being settled, and on a phone the
+  // rest may well be behind a "show more".
+  ledgers.sort((a, b) => (BigInt(b.net) < 0n ? -BigInt(b.net) : BigInt(b.net)) >
+    (BigInt(a.net) < 0n ? -BigInt(a.net) : BigInt(a.net)) ? 1 : -1);
+
+  return ledgers;
+}
+
+export async function groupSummaries(
+  personId: string,
+  /** Precomputed sheets, when the caller already needed them for something else. */
+  precomputed?: Map<string, BalanceSheet>,
+): Promise<GroupSummaryDto[]> {
   const memberships = await prisma.membership.findMany({
     where: { personId, leftAt: null },
     include: {
@@ -425,7 +534,9 @@ export async function groupSummaries(personId: string): Promise<GroupSummaryDto[
   // A group with nothing unread produces no row at all, hence the ?? 0 below.
   const unreadByGroup = new Map(unread.map((row) => [row.groupId, row._count._all]));
 
-  const sheets = await Promise.all(groupIds.map((id) => groupBalanceSheet(id)));
+  const sheets = precomputed
+    ? groupIds.map((id) => precomputed.get(id) ?? EMPTY_SHEET)
+    : await Promise.all(groupIds.map((id) => groupBalanceSheet(id)));
 
   return memberships.map((membership, index) => {
     const group = membership.group;

@@ -1,7 +1,7 @@
 import { json, route } from "@/lib/api";
 import { ForbiddenError, NotFoundError, requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
-import { areFriends } from "@/server/access";
+import { areFriends, sharesAGroup } from "@/server/access";
 import { compareDesc } from "@/server/cursor";
 import {
   EXPENSE_INCLUDE,
@@ -10,6 +10,7 @@ import {
   expenseDto,
   personDto,
   settlementDto,
+  sharedLedgers,
 } from "@/server/read";
 
 type Params = { params: Promise<{ id: string }> };
@@ -29,11 +30,20 @@ export const GET = route(async (_request: Request, { params }: Params) => {
 
   const person = await prisma.person.findUnique({ where: { id } });
   if (!person) throw new NotFoundError("That person is not here.");
-  if (id !== me && !(await areFriends(me, id))) {
+  // A shared group counts as much as a friendship here: the group already
+  // shows you this person and what they owe, so refusing to total it up across
+  // their groups hides arithmetic rather than protecting anything.
+  if (id !== me && !(await areFriends(me, id)) && !(await sharesAGroup(me, id))) {
     throw new ForbiddenError("You have not added that person.");
   }
 
-  const sheets = await directBalanceSheets(me);
+  const [sheets, ledgers] = await Promise.all([
+    directBalanceSheets(me),
+    // Every ledger the two of you share, so the page can state the real total
+    // and show what it is made of. Listing the groups without their amounts
+    // told you a balance existed somewhere and left you to go and find it.
+    sharedLedgers(me, id),
+  ]);
 
   const balances = [...sheets]
     .map(([currency, sheet]) => ({
@@ -106,9 +116,22 @@ export const GET = route(async (_request: Request, { params }: Params) => {
     })),
   ].sort(compareDesc);
 
+  // The combined position per currency: what the friends list shows, and the
+  // figure a cross-ledger settlement is built from.
+  const combined: Record<string, string> = {};
+  for (const ledger of ledgers) {
+    const total = (BigInt(combined[ledger.currency] ?? "0") + BigInt(ledger.net)).toString();
+    combined[ledger.currency] = total;
+  }
+  for (const [currency, value] of Object.entries(combined)) {
+    if (value === "0") delete combined[currency];
+  }
+
   return json({
     person: personDto(person),
     balances,
+    combined,
+    ledgers,
     items,
     sharedGroups,
   });
@@ -125,18 +148,17 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   const session = await requireSession();
   const me = session.person.id;
 
-  const sheets = await directBalanceSheets(me);
-  for (const [currency, sheet] of sheets) {
-    const edge = sheet.pairwise.find(
-      (e) =>
-        (e.fromPersonId === me && e.toPersonId === id) ||
-        (e.fromPersonId === id && e.toPersonId === me),
+  // Every ledger, not just the direct one. The guard exists so that removing
+  // somebody cannot hide the only record of a debt from both sides, and a debt
+  // in a shared group hides just as well as a direct one.
+  const outstanding = (await sharedLedgers(me, id)).filter((ledger) => ledger.net !== "0");
+  if (outstanding.length > 0) {
+    const where = outstanding[0].name ?? "between you two";
+    throw new ForbiddenError(
+      outstanding.length === 1
+        ? `You still have an unsettled ${outstanding[0].currency} balance with them in ${where}. Settle up first.`
+        : `You still have unsettled balances with them in ${outstanding.length} places. Settle up first.`,
     );
-    if (edge && edge.amount !== 0n) {
-      throw new ForbiddenError(
-        `You still have an unsettled ${currency} balance with them. Settle up first.`,
-      );
-    }
   }
 
   await prisma.friendship.deleteMany({

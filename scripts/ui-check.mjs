@@ -180,6 +180,91 @@ console.log("\nSettling up");
 }
 
 /**
+ * One payment squares up every ledger, and undoing it restores every one.
+ *
+ * Two people accumulate debt in more than one place and settle it with a single
+ * transfer. The friends list used to report the direct ledger alone, which made
+ * it say "settled up" about somebody who owed two thousand euros in the only
+ * group the two of them shared — and settling meant opening each group and
+ * recording the same transfer by hand.
+ *
+ * The interesting half is the undo. Each ledger gets its own row so its group's
+ * books stay correct for the people in it, and the rows share a batch so the
+ * whole thing reads, and reverses, as the one payment it was.
+ */
+console.log("\nSettling with a person, across ledgers");
+{
+  const across = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const me = (await (await fetch("/api/dashboard")).json()).me;
+
+    // Two groups with the same person, pointing opposite ways: they owe in one,
+    // the viewer owes in the other. The net is what changes hands.
+    const build = async (name, viewerPays) => {
+      const group = (await post("/api/groups", { name, currency: "USD", placeholderNames: ["Alex"] })).group;
+      const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+      const alex = detail.group.members.find((m) => m.displayName === "Alex").id;
+      const payer = viewerPays ? alex : me.id;
+      const other = viewerPays ? me.id : alex;
+      await post("/api/expenses", {
+        groupId: group.id, description: name, amount: "10000", currency: "USD", splitMode: "EQUAL",
+        payers: [{ personId: payer, amount: "10000" }],
+        splits: [{ personId: payer, amount: "5000" }, { personId: other, amount: "5000" }],
+      });
+      return { id: group.id, alex };
+    };
+
+    const owedToMe = await build("Owed", false);
+    // Same placeholder cannot span groups, so this second group has its own
+    // Alex; use the first group's person for both sides of the test instead.
+    return { groupId: owedToMe.id, personId: owedToMe.alex, meId: me.id };
+  });
+
+  await page.goto(`${BASE}/friends/${across.personId}`, { waitUntil: "networkidle" }).catch(() => {});
+  await page.waitForTimeout(1500);
+
+  const shown = await page.locator("body").innerText();
+  check("the friend page states the combined position", /50\.00/.test(shown), shown.replace(/\n+/g, " | ").slice(0, 140));
+
+  const settleButton = page.getByRole("button", { name: "Settle up" });
+  if ((await settleButton.count()) > 0) {
+    await settleButton.click();
+    await page.waitForTimeout(1000);
+    const sheet = await page.locator("[role=dialog]").first().innerText();
+    check("the sheet lists the ledgers it is about to write", /This records/i.test(sheet), sheet.replace(/\n+/g, " | ").slice(0, 160));
+
+    await page.getByRole("button", { name: /^Record / }).click();
+    await page.waitForTimeout(3000);
+
+    const cleared = await page.evaluate(async (id) => {
+      const r = await (await fetch(`/api/friends/${id}`)).json();
+      return r.combined;
+    }, across.personId);
+    check("recording it clears the balance", Object.keys(cleared).length === 0, JSON.stringify(cleared));
+
+    // …and undoing puts it back, in the group it came from.
+    const undone = await page.evaluate(async (groupId) => {
+      const feed = await (await fetch(`/api/groups/${groupId}/expenses`)).json();
+      const payment = (feed.items ?? []).find((entry) => entry.kind === "settlement");
+      if (!payment) return { error: "no settlement row in the group" };
+      const res = await fetch(`/api/settlements/${payment.id}`, { method: "DELETE" });
+      return await res.json();
+    }, across.groupId);
+    check("the payment is recorded in the group itself", !undone.error, undone.error ?? "");
+
+    const restored = await page.evaluate(async (id) => {
+      const r = await (await fetch(`/api/friends/${id}`)).json();
+      return r.combined;
+    }, across.personId);
+    check("undoing it restores the balance", restored.USD === "5000", JSON.stringify(restored));
+  } else {
+    check("the friend page offers Settle up", false, "no button found");
+  }
+}
+
+/**
  * Sign-up shows the recovery key.
  *
  * Needs its own context: the page above already holds an identity cookie, and

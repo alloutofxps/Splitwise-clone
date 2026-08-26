@@ -314,6 +314,23 @@ model Settlement {
   id      String  @id @default(cuid())
   groupId String?
 
+  /// Links the rows of one cross-ledger payment.
+  ///
+  /// Settling with a person can span several ledgers at once — a group where
+  /// they owe you, another where you owe them, and the direct one — because
+  /// that is how the debt actually accumulated and how people square it up:
+  /// one transfer. Each ledger still gets its own row, so every group's books
+  /// stay internally correct and its other members see a payment of exactly
+  /// the amount that was outstanding in it.
+  ///
+  /// The batch is what makes that one *event* rather than several: it shows as
+  /// a single entry, and deleting it takes every row down together. Without it
+  /// a user who changed their mind would have to find and delete each ledger's
+  /// row by hand, and would have no way to know when they had got them all.
+  ///
+  /// Null for an ordinary single-ledger payment.
+  batchId String?
+
   fromPersonId String
   toPersonId   String
 
@@ -341,6 +358,7 @@ model Settlement {
   @@index([groupId, date])
   @@index([fromPersonId])
   @@index([toPersonId])
+  @@index([batchId])
 }
 
 // ---------------------------------------------------------------------------

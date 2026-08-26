@@ -220,10 +220,37 @@ export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
 
 export interface FriendDto {
   person: PersonDto;
-  /** Net per currency, because two people share no default currency. */
+  /**
+   * Where the two of you stand in total, per currency — every shared group
+   * plus the direct ledger. Positive means they owe you.
+   *
+   * Per currency because two people share no default currency, and netting a
+   * euro against a rupee would be an invention. Across ledgers because this is
+   * the answer to "how do I stand with this person", and the direct ledger
+   * alone is not: it once reported "settled up" for somebody who owed two
+   * thousand euros in the only group the two of them shared.
+   */
   net: Record<string, string>;
+  /**
+   * The direct, non-group ledger only.
+   *
+   * Kept apart from `net` because settling is per-ledger and the detail view
+   * has to be able to say which part of the total lives where.
+   */
+  directNet: Record<string, string>;
   sharedGroupIds: string[];
   lastActivityAt: string | null;
+}
+
+/** One ledger two people share, and where they stand in it. */
+export interface SharedLedgerDto {
+  /** `null` for the direct, non-group ledger. */
+  groupId: string | null;
+  name: string | null;
+  emoji: string | null;
+  currency: string;
+  /** Positive: they owe you. Negative: you owe them. Minor units of `currency`. */
+  net: string;
 }
 
 export interface BudgetDto {

@@ -52,6 +52,7 @@ import type {
   RecurrenceDto,
   SettlementDto,
   SettlementInput,
+  SharedLedgerDto,
 } from "@/lib/types";
 
 // Re-exported: every screen already imports its keys and payload shapes from
@@ -144,7 +145,12 @@ export function useActivity() {
 
 export interface FriendDetail {
   person: PersonDto;
+  /** The direct, non-group ledger, per currency. */
   balances: { currency: string; net: string }[];
+  /** Where the two of you stand in total, per currency. */
+  combined: Record<string, string>;
+  /** Every shared ledger with something outstanding, biggest first. */
+  ledgers: SharedLedgerDto[];
   items: LedgerEntry[];
   sharedGroups: { id: string; name: string; emoji: string; currency: string; color: string }[];
 }
@@ -423,6 +429,73 @@ export function useDeleteExpense() {
 }
 
 /** Records a payment, with the same optimistic treatment as an expense. */
+/**
+ * One payment that squares up every ledger you share with somebody.
+ *
+ * Deliberately pessimistic where `useCreateSettlement` is optimistic. An
+ * optimistic fold would have to guess how the amount lands across several
+ * groups, and the balance it guessed for each would be the one thing the user
+ * cannot check by eye — the server decides direction and apportionment from
+ * the ledgers as they stand, so the honest thing is to wait for its answer.
+ *
+ * The row ids are still generated here, so a replay from the outbox collides
+ * on the primary key and the batch cannot be filed twice.
+ */
+export function useSettleWithPerson() {
+  const client = useQueryClient();
+
+  return useMutation<
+    { batchId: string; settlements: SettlementDto[] } | null,
+    Error,
+    {
+      personId: string;
+      currency: string;
+      method: string | null;
+      note: string | null;
+      rows: { groupId: string | null; amount: string }[];
+    }
+  >({
+    mutationFn: async (input) => {
+      const batchId = newId("btc");
+      const body = {
+        batchId,
+        personId: input.personId,
+        currency: input.currency,
+        method: input.method,
+        note: input.note,
+        rows: input.rows.map((row, index) => ({
+          ...row,
+          id: `${batchId.replace("btc_", "stl_")}_${index}`,
+        })),
+      };
+
+      try {
+        return await api.post<{ batchId: string; settlements: SettlementDto[] }>(
+          "/api/settlements/batch",
+          body,
+        );
+      } catch (error) {
+        if (error instanceof ApiError && error.isOffline) {
+          await enqueue({
+            id: batchId,
+            path: "/api/settlements/batch",
+            method: "POST",
+            body,
+            label: "Payment",
+          });
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    // Every ledger it touched, plus the friends list and the home totals.
+    onSuccess: () => {
+      void client.invalidateQueries();
+    },
+  });
+}
+
 export function useCreateSettlement(meId?: string) {
   const client = useQueryClient();
 
