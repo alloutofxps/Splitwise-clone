@@ -38,6 +38,8 @@ export function SettleUpSheet({
   fixedPersonId,
   /** Currency for a direct settlement outside any group. */
   directCurrency,
+  /** A specific transfer to open on, from tapping one in the balances list. */
+  initialEdge,
 }: {
   open: boolean;
   onClose: () => void;
@@ -46,6 +48,7 @@ export function SettleUpSheet({
   people: Map<string, PersonDto>;
   fixedPersonId?: string;
   directCurrency?: string;
+  initialEdge?: { fromPersonId: string; toPersonId: string; amount: string };
 }) {
   const toast = useToast();
   const settle = useCreateSettlement(meId);
@@ -63,6 +66,18 @@ export function SettleUpSheet({
     );
   }, [group, meId]);
 
+  /**
+   * Everyone else in the group, so the picker is never narrower than the group.
+   *
+   * The suggestions are a *plan*, not the set of people you are allowed to pay:
+   * a plan of one still leaves three other members you might be squaring up
+   * with over dinner.
+   */
+  const others = React.useMemo(
+    () => (group?.members ?? []).filter((member) => member.id !== meId),
+    [group, meId],
+  );
+
   const [selected, setSelected] = React.useState<{
     fromPersonId: string;
     toPersonId: string;
@@ -75,6 +90,18 @@ export function SettleUpSheet({
   useResetOnOpen(open, () => {
     setNote("");
     setMethod(null);
+
+    // Arrived by tapping a specific transfer: open straight on it, whatever
+    // the plan would otherwise have suggested.
+    if (initialEdge) {
+      setSelected({
+        fromPersonId: initialEdge.fromPersonId,
+        toPersonId: initialEdge.toPersonId,
+        amount: BigInt(initialEdge.amount),
+      });
+      setAmount(BigInt(initialEdge.amount));
+      return;
+    }
 
     if (fixedPersonId) {
       setSelected({ fromPersonId: meId, toPersonId: fixedPersonId, amount: 0n });
@@ -153,7 +180,7 @@ export function SettleUpSheet({
         {!selected ? (
           <SuggestionList
             suggestions={suggestions}
-            group={group}
+            others={others}
             meId={meId}
             people={people}
             currency={currency}
@@ -190,7 +217,17 @@ export function SettleUpSheet({
                 </span>
               </div>
 
-              {!fixedPersonId && suggestions.length > 1 ? (
+              {/*
+                Offered whenever the group holds anyone else, not just when the
+                plan happens to name more than one person.
+
+                With debt simplification on, the plan collapses the viewer's
+                whole position into a single transfer — so `suggestions` was
+                length one, this button was hidden, and the sheet became a
+                locked instruction to pay one specific person. Anyone else in
+                the group who owed you money could not be settled with at all.
+              */}
+              {!fixedPersonId && others.length > 0 ? (
                 <button
                   onClick={() => {
                     haptic();
@@ -273,87 +310,97 @@ export function SettleUpSheet({
 
 function SuggestionList({
   suggestions,
-  group,
+  others,
   meId,
   people,
   currency,
   onPick,
 }: {
   suggestions: { fromPersonId: string; toPersonId: string; amount: string }[];
-  group?: GroupDetailDto;
+  /** Every other member of the group, whether or not the plan mentions them. */
+  others: PersonDto[];
   meId: string;
   people: Map<string, PersonDto>;
   currency: string;
   onPick: (edge: { fromPersonId: string; toPersonId: string; amount: string }) => void;
 }) {
-  if (suggestions.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <p className="text-subhead font-semibold text-text">Nothing to settle</p>
-        <p className="mt-1.5 text-body text-muted">
-          You are square with everyone in this group.
-        </p>
-        {group ? (
-          <div className="mt-5">
-            <p className="mb-2 text-caption font-semibold text-subtle">
-              Record a payment anyway
-            </p>
-            <ul className="space-y-1.5">
-              {group.members
-                .filter((member) => member.id !== meId)
-                .map((member) => (
-                  <li key={member.id}>
-                    <button
-                      onClick={() =>
-                        onPick({ fromPersonId: meId, toPersonId: member.id, amount: "0" })
-                      }
-                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
-                    >
-                      <Avatar person={member} size="sm" />
-                      <span className="flex-1 truncate text-body-lg font-semibold text-text">
-                        Pay {member.displayName}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
+  // Someone already named by a suggestion is not repeated underneath it.
+  const suggested = new Set(
+    suggestions.map((edge) => (edge.fromPersonId === meId ? edge.toPersonId : edge.fromPersonId)),
+  );
+  const rest = others.filter((person) => !suggested.has(person.id));
 
   return (
-    <ul className="space-y-2">
-      {suggestions.map((edge, index) => {
-        const from = people.get(edge.fromPersonId);
-        const to = people.get(edge.toPersonId);
-        if (!from || !to) return null;
-        const iAmPaying = edge.fromPersonId === meId;
+    <div className="space-y-5">
+      {suggestions.length > 0 ? (
+        <div>
+          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            {suggestions.length === 1 ? "Suggested" : "Suggested payments"}
+          </p>
+          <ul className="space-y-2">
+            {suggestions.map((edge, index) => {
+              const from = people.get(edge.fromPersonId);
+              const to = people.get(edge.toPersonId);
+              if (!from || !to) return null;
+              const iAmPaying = edge.fromPersonId === meId;
 
-        return (
-          <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
-            <button
-              onClick={() => onPick(edge)}
-              className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
-            >
-              <Avatar person={iAmPaying ? to : from} size="md" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-body-lg font-semibold text-text">
-                  {iAmPaying
-                    ? `Pay ${to.displayName.split(" ")[0]}`
-                    : `${from.displayName.split(" ")[0]} pays you`}
-                </span>
-                <span className="tabular mt-0.5 block text-caption text-subtle">
-                  {toDecimalString(BigInt(edge.amount), currency)} {currency}
-                </span>
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-subtle" />
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+              return (
+                <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
+                  <button
+                    onClick={() => onPick(edge)}
+                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
+                  >
+                    <Avatar person={iAmPaying ? to : from} size="md" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-body-lg font-semibold text-text">
+                        {iAmPaying
+                          ? `Pay ${to.displayName.split(" ")[0]}`
+                          : `${from.displayName.split(" ")[0]} pays you`}
+                      </span>
+                      <span className="tabular mt-0.5 block text-caption text-subtle">
+                        {toDecimalString(BigInt(edge.amount), currency)} {currency}
+                      </span>
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-subtle" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : (
+        <div className="pt-4 text-center">
+          <p className="text-subhead font-semibold text-text">Nothing to settle</p>
+          <p className="mt-1.5 text-body text-muted">
+            You are square with everyone in this group.
+          </p>
+        </div>
+      )}
+
+      {rest.length > 0 ? (
+        <div>
+          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            {suggestions.length > 0 ? "Someone else" : "Record a payment anyway"}
+          </p>
+          <ul className="space-y-1.5">
+            {rest.map((person) => (
+              <li key={person.id}>
+                <button
+                  onClick={() => onPick({ fromPersonId: meId, toPersonId: person.id, amount: "0" })}
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
+                >
+                  <Avatar person={person} size="sm" />
+                  <span className="flex-1 truncate text-body-lg font-semibold text-text">
+                    Pay {person.displayName}
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-subtle" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

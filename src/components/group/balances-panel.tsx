@@ -8,6 +8,7 @@ import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
+import { toDecimalString } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 
 /**
@@ -33,7 +34,8 @@ export function BalancesPanel({
   group: GroupDetailDto;
   meId: string;
   people: Map<string, PersonDto>;
-  onSettle: () => void;
+  /** Opens the settle sheet, on a specific transfer when one is named. */
+  onSettle: (edge?: { fromPersonId: string; toPersonId: string; amount: string }) => void;
 }) {
   const updateGroup = useUpdateGroup(group.id);
   const [simplified, setSimplified] = React.useState(group.simplifyDebts);
@@ -122,25 +124,57 @@ export function BalancesPanel({
                       : "border-line bg-surface",
                   )}
                 >
-                  <Avatar person={from} size="sm" />
-                  <span className="min-w-0 truncate text-body font-semibold text-text">
-                    {edge.fromPersonId === meId ? "You" : from.displayName.split(" ")[0]}
-                  </span>
+                  {/*
+                    The row is the control when the transfer is yours to record.
+                    Working out the exact payment and then making somebody
+                    re-enter it by hand was the whole cost of computing it.
 
-                  <ArrowRight className="size-4 shrink-0 text-subtle" />
+                    A transfer between two other people stays inert: recording
+                    it is allowed by the API, but volunteering that somebody
+                    else has paid up is not a thing to make one tap away.
+                  */}
+                  <RowBody
+                    as={involvesMe ? "button" : "div"}
+                    onClick={
+                      involvesMe
+                        ? () => {
+                            haptic();
+                            onSettle({
+                              fromPersonId: edge.fromPersonId,
+                              toPersonId: edge.toPersonId,
+                              amount: edge.amount,
+                            });
+                          }
+                        : undefined
+                    }
+                    label={
+                      involvesMe
+                        ? edge.fromPersonId === meId
+                          ? `Pay ${to.displayName} ${toDecimalString(BigInt(edge.amount), group.currency)}`
+                          : `Record ${from.displayName} paying you ${toDecimalString(BigInt(edge.amount), group.currency)}`
+                        : undefined
+                    }
+                  >
+                    <Avatar person={from} size="sm" />
+                    <span className="min-w-0 truncate text-body font-semibold text-text">
+                      {edge.fromPersonId === meId ? "You" : from.displayName.split(" ")[0]}
+                    </span>
 
-                  <Avatar person={to} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
-                    {edge.toPersonId === meId ? "you" : to.displayName.split(" ")[0]}
-                  </span>
+                    <ArrowRight className="size-4 shrink-0 text-subtle" />
 
-                  <Amount
-                    value={edge.amount}
-                    currency={group.currency}
-                    size="sm"
-                    tone="plain"
-                    className="shrink-0"
-                  />
+                    <Avatar person={to} size="sm" />
+                    <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
+                      {edge.toPersonId === meId ? "you" : to.displayName.split(" ")[0]}
+                    </span>
+
+                    <Amount
+                      value={edge.amount}
+                      currency={group.currency}
+                      size="sm"
+                      tone="plain"
+                      className="shrink-0"
+                    />
+                  </RowBody>
 
                   {/* Only on debts owed *to* the viewer: reminding somebody on
                       behalf of a third party is how a shared ledger turns into
@@ -166,7 +200,7 @@ export function BalancesPanel({
         ) : null}
 
         {edges.length > 0 ? (
-          <Button variant="primary" size="lg" fullWidth className="mt-4" onClick={onSettle}>
+          <Button variant="primary" size="lg" fullWidth className="mt-4" onClick={() => onSettle()}>
             Record a payment
           </Button>
         ) : null}
@@ -191,6 +225,39 @@ export function BalancesPanel({
  * owed can send it, and that it is once a day. A reminder that can be sent
  * forty times is not a reminder.
  */
+/**
+ * The tappable part of a settlement row.
+ *
+ * A plain `div` when the transfer is not the viewer's to record, a `button`
+ * when it is — kept as one component so the two render identically. It is a
+ * sibling of the nudge button rather than its parent, because a button inside a
+ * button is invalid and browsers resolve it in their own ways.
+ */
+function RowBody({
+  as,
+  onClick,
+  label,
+  children,
+}: {
+  as: "button" | "div";
+  onClick?: () => void;
+  label?: string;
+  children: React.ReactNode;
+}) {
+  const className = "flex min-w-0 flex-1 items-center gap-2.5 text-left";
+  if (as === "div") return <div className={className}>{children}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={cn(className, "rounded-[var(--radius-md)] transition active:scale-[0.985]")}
+    >
+      {children}
+    </button>
+  );
+}
+
 function NudgeButton({
   personId,
   groupId,

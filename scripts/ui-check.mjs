@@ -104,6 +104,82 @@ if (await edit.count() > 0) {
 }
 
 /**
+ * Settling up reaches everybody, and the suggested transfers are controls.
+ *
+ * Two regressions in one screen. With debt simplification on, the plan
+ * collapses the viewer's whole position into a single transfer — and the sheet
+ * only offered a "Change" button when the plan named more than one person, so
+ * it became a locked instruction to pay whoever the plan picked. Anyone else in
+ * the group who owed you money could not be settled with at all.
+ *
+ * And the plan's rows were plain `<li>`s. The app worked out the exact payment
+ * and then made you re-enter it by hand, which is most of the value of having
+ * computed it.
+ */
+console.log("\nSettling up");
+{
+  const three = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const me = (await (await fetch("/api/dashboard")).json()).me;
+    const group = (await post("/api/groups", {
+      name: "Three",
+      currency: "USD",
+      placeholderNames: ["Robin", "Jules"],
+    })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const robin = detail.group.members.find((m) => m.displayName === "Robin").id;
+    const jules = detail.group.members.find((m) => m.displayName === "Jules").id;
+    // Only Robin is in the expense, so the plan names exactly one transfer —
+    // the shape that used to lock the sheet. Jules is in the group and owes
+    // nothing, and must still be reachable.
+    await post("/api/expenses", {
+      groupId: group.id, description: "Hotel", amount: "6000", currency: "USD", splitMode: "EQUAL",
+      payers: [{ personId: me.id, amount: "6000" }],
+      splits: [
+        { personId: me.id, amount: "3000" },
+        { personId: robin, amount: "3000" },
+      ],
+    });
+    return { groupId: group.id, robin, jules };
+  });
+
+  await page.goto(`${BASE}/groups/${three.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+  await page.getByRole("tab", { name: "Balances" }).click();
+  await page.waitForTimeout(1200);
+
+  const rowLabels = await page.evaluate(() =>
+    [...document.querySelectorAll("button")]
+      .map((b) => (b.getAttribute("aria-label") ?? "").trim())
+      .filter((n) => /^(Pay|Record) /.test(n)),
+  );
+  check("a suggested transfer is a control, not a list item", rowLabels.length > 0, rowLabels.join(" / "));
+
+  if (rowLabels.length > 0) {
+    await page.getByRole("button", { name: rowLabels[0] }).click();
+    await page.waitForTimeout(1000);
+    const prefilled = await page.locator("[role=dialog] input").first().inputValue();
+    check("tapping it opens the sheet on that exact amount", prefilled === "30.00", prefilled);
+
+    // …and the counterparty is never locked while the group holds anyone else.
+    const change = page.getByRole("button", { name: "Change" });
+    check("the counterparty can still be changed", (await change.count()) > 0);
+
+    if ((await change.count()) > 0) {
+      await change.click();
+      await page.waitForTimeout(800);
+      const offered = await page.locator("[role=dialog]").first().innerText();
+      check("and everyone in the group is offered", /Robin/.test(offered) && /Jules/.test(offered),
+        offered.replace(/\n+/g, " | ").slice(0, 140));
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(500);
+  }
+}
+
+/**
  * Sign-up shows the recovery key.
  *
  * Needs its own context: the page above already holds an identity cookie, and

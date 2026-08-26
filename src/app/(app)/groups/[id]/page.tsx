@@ -32,6 +32,19 @@ export default function GroupPage() {
   const [settings, setSettings] = React.useState(false);
   const [invite, setInvite] = React.useState(false);
   const [settleUp, setSettleUp] = React.useState(false);
+  // The transfer the sheet should open on, when it was reached by tapping a
+  // specific one rather than the general "Settle up" button.
+  const [settleEdge, setSettleEdge] = React.useState<
+    { fromPersonId: string; toPersonId: string; amount: string } | undefined
+  >();
+
+  const openSettle = React.useCallback(
+    (edge?: { fromPersonId: string; toPersonId: string; amount: string }) => {
+      setSettleEdge(edge);
+      setSettleUp(true);
+    },
+    [],
+  );
 
   // Opening the group clears its unread badge. Fired once per mount rather than
   // on every render, and deliberately not awaited - it must never delay paint.
@@ -121,7 +134,7 @@ export default function GroupPage() {
 
           <div className="flex shrink-0 gap-2">
             {net !== 0n || group.balances.pairwise.length > 0 ? (
-              <Button size="sm" variant="secondary" onClick={() => setSettleUp(true)}>
+              <Button size="sm" variant="secondary" onClick={() => openSettle()}>
                 Settle up
               </Button>
             ) : null}
@@ -174,7 +187,7 @@ export default function GroupPage() {
               group={group}
               meId={meId}
               people={people}
-              onSettle={() => setSettleUp(true)}
+              onSettle={openSettle}
             />
           ) : null}
 
@@ -196,6 +209,7 @@ export default function GroupPage() {
         group={group}
         meId={meId}
         people={people}
+        initialEdge={settleEdge}
       />
     </div>
   );
