@@ -101,12 +101,29 @@ export function optimisticExpense(
     splits: splits.map((s) => ({ personId: s.personId, amount: BigInt(s.amount) })),
   });
 
+  // In the settlement currency: this is what moves the balance.
   const myPaid = paid
     .filter((p) => p.personId === meId)
     .reduce((total, p) => total + p.amount, 0n);
   const myOwed = owed
     .filter((o) => o.personId === meId)
     .reduce((total, o) => total + o.amount, 0n);
+
+  /**
+   * And in the currency it was actually paid in, which is a different number
+   * for a foreign expense and the one the row is labelled with.
+   *
+   * These were the same field until now, holding the converted figure under the
+   * expense's own currency code - so a £52 dinner in a euro group rendered its
+   * euro value with a pound sign until the server answered and the row silently
+   * corrected itself.
+   */
+  const myPaidRaw = payers
+    .filter((p) => p.personId === meId)
+    .reduce((total, p) => total + BigInt(p.amount), 0n);
+  const myOwedRaw = splits
+    .filter((s) => s.personId === meId)
+    .reduce((total, s) => total + BigInt(s.amount), 0n);
 
   const now = new Date().toISOString();
 
@@ -138,8 +155,10 @@ export function optimisticExpense(
     })),
     attachments: [],
     commentCount: 0,
-    yourShare: myOwed.toString(),
-    yourNet: (myPaid - myOwed).toString(),
+    yourShare: myOwedRaw.toString(),
+    yourNet: (myPaidRaw - myOwedRaw).toString(),
+    settlementCurrency,
+    yourNetConverted: (myPaid - myOwed).toString(),
   };
 }
 

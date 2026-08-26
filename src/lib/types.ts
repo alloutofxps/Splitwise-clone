@@ -133,6 +133,10 @@ export interface ExpenseDto {
   /** Viewer's stake: positive if they are up on this expense. */
   yourShare: string;
   yourNet: string;
+  /** The currency `convertedAmount` and `yourNetConverted` are in. */
+  settlementCurrency: string;
+  /** `yourNet` in the settlement currency, apportioned so the parts still sum. */
+  yourNetConverted: string;
 }
 
 export interface SettlementDto {

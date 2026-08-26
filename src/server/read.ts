@@ -34,6 +34,11 @@ import type { Prisma } from "@prisma/client";
 // ---------------------------------------------------------------------------
 
 const expenseInclude = {
+  // The settlement currency lives on the group, and every row that shows an
+  // amount needs it: an expense paid in pounds inside a euro group is two
+  // different figures, and showing only the first leaves a list that cannot be
+  // added up against the total above it.
+  group: { select: { currency: true } },
   payers: true,
   splits: true,
   items: { include: { shares: true }, orderBy: { sortOrder: "asc" } },
@@ -240,6 +245,24 @@ export function expenseDto(expense: ExpenseRow, viewerId: string): ExpenseDto {
     .filter((s) => s.personId === viewerId)
     .reduce((total, s) => total + s.amount, 0n);
 
+  // What the group settles in. Outside a group there is nothing to convert to,
+  // so the expense's own currency is the answer and the conversion is a no-op.
+  const settlementCurrency = expense.group?.currency ?? expense.currency;
+  const net = paid - share;
+
+  const converted = convertedBreakdown({
+    convertedAmount: expense.convertedAmount,
+    payers: expense.payers,
+    splits: expense.splits,
+  });
+  const convertedNet =
+    converted.paid
+      .filter((entry) => entry.personId === viewerId)
+      .reduce((total, entry) => total + entry.amount, 0n) -
+    converted.owed
+      .filter((entry) => entry.personId === viewerId)
+      .reduce((total, entry) => total + entry.amount, 0n);
+
   return {
     id: expense.id,
     groupId: expense.groupId,
@@ -249,6 +272,7 @@ export function expenseDto(expense: ExpenseRow, viewerId: string): ExpenseDto {
     currency: expense.currency,
     exchangeRate: expense.exchangeRate,
     convertedAmount: expense.convertedAmount.toString(),
+    settlementCurrency,
     splitMode: expense.splitMode as SplitMode,
     categoryId: expense.categoryId ?? DEFAULT_CATEGORY_ID,
     date: expense.date.toISOString(),
@@ -279,7 +303,17 @@ export function expenseDto(expense: ExpenseRow, viewerId: string): ExpenseDto {
     attachments: expense.attachments.map(attachmentDto),
     commentCount: expense._count.comments,
     yourShare: share.toString(),
-    yourNet: (paid - share).toString(),
+    yourNet: net.toString(),
+    /**
+     * The same position, in the currency the group settles in.
+     *
+     * Apportioned through `convertedBreakdown` rather than converted directly.
+     * Converting one person's share on its own is off by up to a minor unit
+     * against the figures the balance sheet folds, and a converted row that
+     * does not reconcile against the total above it is worse than no converted
+     * row at all - which is the whole reason for showing it.
+     */
+    yourNetConverted: convertedNet.toString(),
   };
 }
 

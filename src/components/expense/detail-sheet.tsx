@@ -14,6 +14,7 @@ import {
   useComments,
   useDeleteAttachment,
   useDeleteExpense,
+  useRestoreExpense,
   useExpense,
 } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
@@ -43,6 +44,7 @@ export function ExpenseDetailSheet({
   const { data: comments } = useComments(expenseId ?? undefined);
   const addComment = useAddComment(expenseId ?? "");
   const deleteExpense = useDeleteExpense();
+  const restoreExpense = useRestoreExpense();
   const deleteAttachment = useDeleteAttachment(expenseId ?? "");
 
   const [editing, setEditing] = React.useState(false);
@@ -64,10 +66,32 @@ export function ExpenseDetailSheet({
 
   const remove = async () => {
     if (!expense) return;
+    // Captured before the mutation: the sheet closes and its query goes with
+    // it, so by the time anyone taps Undo there is nothing left to read this
+    // from.
+    const { id, groupId, description } = expense;
     try {
-      await deleteExpense.mutateAsync({ id: expense.id, groupId: expense.groupId });
+      await deleteExpense.mutateAsync({ id, groupId });
       haptic([10, 40, 10]);
-      toast({ tone: "success", title: `${expense.description} deleted` });
+      toast({
+        tone: "success",
+        title: `${description} deleted`,
+        // The row is tombstoned rather than destroyed and every balance is
+        // derived, so putting it back costs one field. Offering that is the
+        // difference between a delete people can risk and one they cannot.
+        action: {
+          label: "Undo",
+          onClick: () => {
+            restoreExpense.mutate(
+              { id, groupId },
+              {
+                onSuccess: () => toast({ tone: "success", title: `${description} restored` }),
+                onError: () => toast({ tone: "error", title: "Could not put that back" }),
+              },
+            );
+          },
+        },
+      });
       setConfirmDelete(false);
       onClose();
     } catch {

@@ -403,6 +403,38 @@ export function useUpdateExpense(expenseId: string, previousGroupId?: string | n
   });
 }
 
+/**
+ * Puts a deleted expense back.
+ *
+ * Pessimistic for the same reason the delete is: what changes is every balance
+ * the expense touched, and guessing those only to correct them a moment later
+ * is worse than a round trip on an action nobody performs in a hurry.
+ */
+export function useRestoreExpense() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; groupId?: string | null }) => {
+      try {
+        await api.post(`/api/expenses/${id}/restore`);
+      } catch (error) {
+        if (error instanceof ApiError && error.isOffline) {
+          await enqueue({
+            id: `restore_${id}`,
+            path: `/api/expenses/${id}/restore`,
+            method: "POST",
+            body: undefined,
+            label: "Restored expense",
+          });
+          return;
+        }
+        throw error;
+      }
+    },
+    onSuccess: (_result, variables) => invalidateLedger(client, variables.groupId),
+  });
+}
+
 export function useDeleteExpense() {
   const client = useQueryClient();
 

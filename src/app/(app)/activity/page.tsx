@@ -9,6 +9,7 @@ import {
   BellRing,
   Repeat,
   Trash2,
+  Undo2,
   UserPlus,
   Users,
   Receipt,
@@ -319,6 +320,18 @@ function describe(
         sentence: (
           <>
             {strong(actorName)} deleted {strong(String(data.description ?? "an expense"))}
+            {amount ? <> · <span className="tabular">{amount}</span></> : null}
+          </>
+        ),
+      };
+
+    case "expense.restored":
+      return {
+        icon: <Undo2 className="size-[16px]" />,
+        tone: "brand",
+        sentence: (
+          <>
+            {strong(actorName)} restored {strong(String(data.description ?? "an expense"))}
             {amount ? <> · <span className="tabular">{amount}</span></> : null}
           </>
         ),

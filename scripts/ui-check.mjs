@@ -329,6 +329,126 @@ console.log("\nFigures that account for themselves");
 }
 
 /**
+ * A foreign row shows both figures, and they add up.
+ *
+ * An expense paid in pounds inside a euro group is two numbers. The row keeps
+ * the pounds, because relabelling them as euros would be a lie — but the
+ * balance above the list is in euros, so a row that shows only pounds cannot be
+ * checked against it, and a ledger you cannot check is the one thing this app
+ * is for.
+ *
+ * The assertion is the sum, not the presence of a second line. Converting one
+ * person's share on its own drifts by up to a minor unit from the figures the
+ * balance sheet folds; a converted row that does not reconcile is worse than
+ * none, so this adds them up.
+ */
+console.log("\nA foreign-currency row reconciles");
+{
+  const mixed = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const me = (await (await fetch("/api/dashboard")).json()).me;
+    const group = (await post("/api/groups", {
+      name: "Abroad",
+      currency: "EUR",
+      placeholderNames: ["Kit"],
+    })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const kit = detail.group.members.find((m) => m.displayName === "Kit").id;
+
+    await post("/api/expenses", {
+      groupId: group.id, description: "Home", amount: "4000", currency: "EUR", splitMode: "EQUAL",
+      payers: [{ personId: me.id, amount: "4000" }],
+      splits: [{ personId: me.id, amount: "2000" }, { personId: kit, amount: "2000" }],
+    });
+    // Paid in pounds, at a rate that does not divide evenly — the case where a
+    // naive per-person conversion drifts.
+    await post("/api/expenses", {
+      groupId: group.id, description: "Taxi", amount: "5233", currency: "GBP",
+      exchangeRate: "1.1803", splitMode: "EQUAL",
+      payers: [{ personId: me.id, amount: "5233" }],
+      splits: [{ personId: me.id, amount: "2617" }, { personId: kit, amount: "2616" }],
+    });
+
+    const feed = await (await fetch(`/api/groups/${group.id}/expenses`)).json();
+    let sum = 0n;
+    for (const item of feed.items) {
+      if (item.kind === "expense") sum += BigInt(item.expense.yourNetConverted);
+    }
+    const after = await (await fetch(`/api/groups/${group.id}`)).json();
+    const foreign = feed.items.find((i) => i.expense?.currency === "GBP")?.expense;
+    return {
+      groupId: group.id,
+      sum: sum.toString(),
+      balance: after.group.balances.net[me.id] ?? "0",
+      rawNet: foreign?.yourNet,
+      convertedNet: foreign?.yourNetConverted,
+      settlementCurrency: foreign?.settlementCurrency,
+    };
+  });
+
+  check(
+    "the foreign row carries its own currency and the group's",
+    mixed.settlementCurrency === "EUR" && mixed.rawNet !== mixed.convertedNet,
+    `${mixed.rawNet} GBP -> ${mixed.convertedNet} ${mixed.settlementCurrency}`,
+  );
+  check(
+    "and the converted rows sum to exactly the group balance",
+    mixed.sum === mixed.balance,
+    `${mixed.sum} vs ${mixed.balance}`,
+  );
+
+  await page.goto(`${BASE}/groups/${mixed.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+  const shown = await page.locator("body").innerText();
+  check("the row shows both on screen", /£/.test(shown) && /≈\s*€/.test(shown),
+    shown.replace(/\n+/g, " | ").slice(0, 160));
+}
+
+/**
+ * Deleting an expense can be undone.
+ *
+ * The row is tombstoned and every balance is derived from live rows, so putting
+ * it back is one field — the data to reverse the action was already being kept
+ * and there was simply no way to ask for it. The toast even had an `action`
+ * slot, built and styled and given a longer timeout, with a comment claiming it
+ * was on every destructive action; nothing in the app had ever passed one.
+ */
+console.log("\nUndoing a deleted expense");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+  await page.getByText("Dinner").first().click();
+  await page.waitForTimeout(1200);
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page.waitForTimeout(800);
+  await page.getByRole("button", { name: /^Delete$/ }).last().click();
+  await page.waitForTimeout(2500);
+
+  const undo = page.getByRole("button", { name: "Undo" });
+  check("the delete toast offers an undo", (await undo.count()) > 0);
+
+  const goneNet = await page.evaluate(async (g) => {
+    const r = await (await fetch(`/api/groups/${g}`)).json();
+    return r.group.balances.net;
+  }, seeded.groupId);
+  // A person with no position is absent from the map, so `{}` is the correct
+  // shape for "nobody owes anything" rather than an explicit zero.
+  check("the expense is really gone", (goneNet[seeded.meId] ?? "0") === "0", JSON.stringify(goneNet));
+
+  if ((await undo.count()) > 0) {
+    await undo.click();
+    await page.waitForTimeout(3000);
+    const backNet = await page.evaluate(async (g) => {
+      const r = await (await fetch(`/api/groups/${g}`)).json();
+      return r.group.balances.net;
+    }, seeded.groupId);
+    check("and undo puts it back, balance and all", backNet[seeded.meId] === "2500", JSON.stringify(backNet));
+  }
+}
+
+/**
  * Sign-up shows the recovery key.
  *
  * Needs its own context: the page above already holds an identity cookie, and

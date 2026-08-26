@@ -14,8 +14,16 @@ export interface ToastOptions {
   tone?: ToastTone;
   duration?: number;
   /**
-   * An undo affordance. Present on every destructive action in the app, which
-   * is what lets those actions happen immediately without a confirm dialog in
+   * An undo affordance, offered wherever the action can genuinely be reversed —
+   * which for deleting an expense means everywhere, since the row is tombstoned
+   * rather than destroyed and every balance is derived from live rows.
+   *
+   * Deleting a recorded *payment* is still confirm-only: it can be undone, but
+   * a payment that squared up several ledgers at once comes back as a batch,
+   * and that is not wired yet.
+   *
+   * Where it is offered the toast lingers longer, because an undo nobody had
+   * time to read is decoration. It does not replace the confirm dialog in
    * front of them.
    */
   action?: { label: string; onClick: () => void };

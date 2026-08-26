@@ -20,7 +20,7 @@ import {
 } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
 import { groupByDay } from "@/lib/day-groups";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
 
 /**
@@ -336,6 +336,7 @@ export function ExpenseRow({
 }) {
   const category = categoryById(expense.categoryId);
   const net = BigInt(expense.yourNet);
+  const foreign = expense.settlementCurrency !== expense.currency;
   const payer = expense.payers[0] ? people.get(expense.payers[0].personId) : undefined;
 
   const paidLabel =
@@ -399,6 +400,22 @@ export function ExpenseRow({
         ) : (
           <>
             <Amount value={net} currency={expense.currency} size="sm" />
+            {/*
+              A foreign expense is two figures and needs both. The amount stays
+              in the currency it was paid in, because relabelling it as euros
+              would be a lie — but the balance above this list is in the group's
+              currency, so a row showing only pounds cannot be added up against
+              it. The converted figure is what reconciles.
+            */}
+            {foreign ? (
+              <span className="mt-0.5 block text-micro font-semibold text-subtle">
+                ≈{" "}
+                {formatMoney(
+                  abs(BigInt(expense.yourNetConverted)),
+                  expense.settlementCurrency,
+                )}
+              </span>
+            ) : null}
             <span className="mt-0.5 block text-micro font-semibold text-subtle">
               {net > 0n ? "you lent" : "you borrowed"}
             </span>
