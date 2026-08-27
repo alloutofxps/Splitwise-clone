@@ -138,3 +138,26 @@ export async function sharesAGroup(a: string, b: string): Promise<boolean> {
   });
   return group !== null;
 }
+
+/**
+ * Whether this person may see, and act on, one settlement row.
+ *
+ * A payment inside a group belongs to that group's ledger, so membership is
+ * the test. A direct payment between two people belongs to the two of them.
+ *
+ * Kept here rather than inline at the call sites because the rule is used by
+ * both the delete and the restore, and the two drifting apart is precisely how
+ * a route ends up answering a request it should have refused.
+ */
+export async function requireSettlementAccess(
+  settlement: { groupId: string | null; fromPersonId: string; toPersonId: string },
+  personId: string,
+): Promise<void> {
+  if (settlement.groupId) {
+    await requireGroupAccess(settlement.groupId, personId);
+    return;
+  }
+  if (settlement.fromPersonId !== personId && settlement.toPersonId !== personId) {
+    throw new ForbiddenError("That payment is not yours.");
+  }
+}

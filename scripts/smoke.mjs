@@ -429,6 +429,25 @@ async function main() {
     String(deniedDirect.status),
   );
 
+  /*
+   * Restoring is a write, and a refusal has to come before the reply.
+   *
+   * Both restore routes answered an already-live record with an idempotent
+   * 200 *and the record attached* — placed above the entitlement check, so a
+   * stranger holding an id got the description, the amount and every share
+   * back while the delete and edit on the same row correctly refused. A
+   * request that changes nothing is still not a read anybody may perform.
+   */
+  const strangerRestore = await outsider.call(
+    `/api/expenses/${equal.body.expense.id}/restore`,
+    { method: "POST", allowError: true },
+  );
+  check(
+    "a non-member cannot restore — nor read — a live expense",
+    strangerRestore.status === 403,
+    `${strangerRestore.status} ${JSON.stringify(strangerRestore.body).slice(0, 90)}`,
+  );
+
   const strangerFriends = (await outsider.call("/api/dashboard")).body.friends;
   check(
     "the refused expense left no friendship behind",
@@ -1053,6 +1072,16 @@ async function main() {
   });
   check("a payment can be recorded", undoable.status === 201, String(undoable.status));
   const settlementId = undoable.body.settlement.id;
+
+  const strangerStlRestore = await outsider.call(
+    `/api/settlements/${settlementId}/restore`,
+    { method: "POST", allowError: true },
+  );
+  check(
+    "a non-member cannot restore — nor read — a live payment",
+    strangerStlRestore.status === 403,
+    `${strangerStlRestore.status} ${JSON.stringify(strangerStlRestore.body).slice(0, 90)}`,
+  );
 
   const afterPay = (await priya.call(`/api/groups/${homeId}`)).body.group;
   check(

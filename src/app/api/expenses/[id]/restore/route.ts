@@ -33,12 +33,12 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     include: EXPENSE_INCLUDE,
   });
   if (!expense) throw new NotFoundError("That expense is gone.");
-  if (!expense.deletedAt) {
-    // Not an error worth failing a retry over: an outbox replay, or two taps on
-    // one toast, should land on the state the user asked for.
-    return json({ expense: expenseDto(expense, session.person.id) });
-  }
 
+  // Entitlement first, and before *any* reply — including the idempotent one
+  // below. Answering "already restored" with the expense attached would hand a
+  // stranger the description, the amount and everyone's share, which is the
+  // whole record; that a request changes nothing does not make it a read
+  // anybody may perform.
   if (expense.groupId) {
     await requireGroupAccess(expense.groupId, session.person.id);
   } else {
@@ -47,6 +47,12 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       expense.payers.some((payer) => payer.personId === session.person.id) ||
       expense.splits.some((split) => split.personId === session.person.id);
     if (!involved) throw new ForbiddenError("That expense is not yours to restore.");
+  }
+
+  if (!expense.deletedAt) {
+    // Not an error worth failing a retry over: an outbox replay, or two taps on
+    // one toast, should land on the state the user asked for.
+    return json({ expense: expenseDto(expense, session.person.id) });
   }
 
   // A group that has since been deleted takes its expenses with it, and putting

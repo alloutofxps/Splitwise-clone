@@ -1,7 +1,7 @@
 import { json, route } from "@/lib/api";
-import { ForbiddenError, NotFoundError, requireSession, ValidationError } from "@/lib/identity";
+import { NotFoundError, requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
-import { requireGroupAccess } from "@/server/access";
+import { requireSettlementAccess } from "@/server/access";
 import { settlementDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
 
@@ -26,6 +26,13 @@ export const POST = route(async (_request: Request, { params }: Params) => {
   const settlement = await prisma.settlement.findUnique({ where: { id } });
   if (!settlement) throw new NotFoundError("That payment is gone.");
 
+  // The row that was asked for is checked before anything is said about it,
+  // including the idempotent reply below: "already restored" with the payment
+  // attached still discloses the amount, the date and who paid whom. The batch
+  // is checked separately further down, because restoring is the part that
+  // touches ledgers this row alone does not speak for.
+  await requireSettlementAccess(settlement, session.person.id);
+
   if (!settlement.deletedAt) {
     // Idempotent: a replayed outbox entry, or a second tap, should land on the
     // state that was asked for rather than fail.
@@ -39,14 +46,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     : [settlement];
 
   for (const row of siblings) {
-    if (row.groupId) {
-      await requireGroupAccess(row.groupId, session.person.id);
-    } else if (
-      row.fromPersonId !== session.person.id &&
-      row.toPersonId !== session.person.id
-    ) {
-      throw new ForbiddenError("That payment is not yours to restore.");
-    }
+    await requireSettlementAccess(row, session.person.id);
   }
 
   // A group deleted since then takes its payments with it, and putting one back
