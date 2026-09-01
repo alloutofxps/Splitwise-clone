@@ -43,8 +43,15 @@ COPY . .
 # installed phone quietly keeps the old shell. A rebuild of identical code
 # getting a fresh id at worst shows one unnecessary "update available" prompt,
 # which is the failure worth having.
+# `RAILWAY_GIT_COMMIT_SHA` is injected into the build environment, but only
+# reaches the build if the ARG is declared — an undeclared one is silently
+# absent, which is how a deploy ends up stamped "build-20260901…" with no way
+# to tell which commit it is. Declared here so no dashboard configuration is
+# needed for the common case.
 ARG BUILD_ID
-RUN NEXT_PUBLIC_BUILD_ID="${BUILD_ID:-build-$(date -u +%Y%m%d%H%M%S)}" npm run build:app
+ARG RAILWAY_GIT_COMMIT_SHA
+RUN NEXT_PUBLIC_BUILD_ID="${BUILD_ID:-${RAILWAY_GIT_COMMIT_SHA:-build-$(date -u +%Y%m%d%H%M%S)}}" \
+    npm run build:app
 
 # --- runtime ---------------------------------------------------------------
 FROM node:22-bookworm-slim AS runtime

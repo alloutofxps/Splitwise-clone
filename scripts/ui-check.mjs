@@ -915,6 +915,39 @@ console.log("\nA sheet you can scroll without losing it");
   await ctx3.close();
 }
 
+/**
+ * The app says which build it is.
+ *
+ * There was no way to answer that, and it cost a whole round of debugging: a
+ * fix was merged, deployed and still absent from a phone, and a stalled deploy
+ * and a stale cache look identical from the outside. Both look like the fix
+ * never worked.
+ */
+console.log("\nThe app can say which build it is");
+{
+  const ctx4 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p4 = await ctx4.newPage();
+  await p4.goto(BASE, { waitUntil: "networkidle" });
+  await p4.evaluate(async () => {
+    await fetch("/api/identity", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Version Tester", avatarColor: "iris", defaultCurrency: "EUR" }),
+    });
+  });
+  await p4.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await p4.waitForTimeout(2000);
+
+  const text = await p4.locator("body").innerText();
+  const shown = /Version\s+(\S+)/.exec(text);
+  check("the account screen states a version", Boolean(shown), text.slice(-140).replace(/\n/g, " | "));
+  check(
+    "and it is a real build id, not the placeholder",
+    Boolean(shown) && shown[1] !== "dev" && shown[1].length > 3,
+    shown?.[1],
+  );
+  await ctx4.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
