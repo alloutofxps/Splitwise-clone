@@ -37,9 +37,14 @@ COPY . .
 # has the app installed, and it would go on serving last week's shell. Hosts
 # that know their own commit should pass it: Railway sets RAILWAY_GIT_COMMIT_SHA,
 # Fly sets FLY_MACHINE_VERSION, GitHub Actions sets GITHUB_SHA.
+#
+# The timestamp fallback is deliberate. Forgetting the argument is the easy
+# mistake and its symptom is invisible — the app deploys, looks fine, and every
+# installed phone quietly keeps the old shell. A rebuild of identical code
+# getting a fresh id at worst shows one unnecessary "update available" prompt,
+# which is the failure worth having.
 ARG BUILD_ID
-ENV NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
-RUN npm run build:app
+RUN NEXT_PUBLIC_BUILD_ID="${BUILD_ID:-build-$(date -u +%Y%m%d%H%M%S)}" npm run build:app
 
 # --- runtime ---------------------------------------------------------------
 FROM node:22-bookworm-slim AS runtime

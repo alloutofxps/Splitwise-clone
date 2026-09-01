@@ -191,7 +191,9 @@ reason worth knowing:
   the package version, which never changes — so an installed PWA would go on
   serving the previous shell after every deploy. Pass the platform's own commit
   variable: `RAILWAY_GIT_COMMIT_SHA` on Railway, `FLY_MACHINE_VERSION` on Fly,
-  `GITHUB_SHA` in Actions.
+  `GITHUB_SHA` in Actions. Omitting it is not fatal — the image falls back to a
+  build timestamp, so each build still differs — but a commit sha makes the id
+  mean something.
 
 The entrypoint refuses to start without a `DIVVY_SECRET` of at least sixteen
 characters. That check exists because the alternative is worse: the app boots,
