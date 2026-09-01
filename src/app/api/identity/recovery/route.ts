@@ -1,6 +1,6 @@
 import { json, route } from "@/lib/api";
 import { formatRecoveryKey } from "@/lib/codes";
-import { requireSession, rotateSecret, setIdentityCookie } from "@/lib/identity";
+import { requireSession, rotateSecret } from "@/lib/identity";
 
 /**
  * Issues a fresh recovery key.
@@ -13,10 +13,10 @@ import { requireSession, rotateSecret, setIdentityCookie } from "@/lib/identity"
 export const POST = route(async () => {
   const session = await requireSession();
 
+  // No cookie to re-issue: sessions are their own rows now, so replacing the
+  // recovery key no longer signs anybody out - not this device, and not the
+  // other ones the person is deliberately keeping.
   const secret = await rotateSecret(session.person.id);
-  // Re-issue this device's cookie against the new secret, or the caller would
-  // log themselves out by asking for a key.
-  await setIdentityCookie(session.person.id, secret);
 
   return json({
     recoveryKey: secret,

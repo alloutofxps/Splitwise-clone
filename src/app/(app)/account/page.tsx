@@ -14,6 +14,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Smartphone,
   Plus,
   Sun,
   Target,
@@ -28,6 +29,7 @@ import { useToast } from "@/components/ui/toast";
 import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
+import { DevicesSheet } from "@/components/identity/devices-sheet";
 import { clearRecoveryPending, recoveryPending } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
@@ -55,6 +57,7 @@ export default function AccountPage() {
   const [recovery, setRecovery] = React.useState(false);
   const [payments, setPayments] = React.useState(false);
   const [budgetsOpen, setBudgets] = React.useState(false);
+  const [devicesOpen, setDevices] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [keyUnsaved, setKeyUnsaved] = React.useState(false);
 
@@ -245,6 +248,12 @@ export default function AccountPage() {
             </button>
           ) : null}
           <Row
+            icon={<Smartphone className="size-[18px]" />}
+            label="Your devices"
+            value="Manage"
+            onClick={() => setDevices(true)}
+          />
+          <Row
             icon={<KeyRound className="size-[18px]" />}
             label="Recovery key"
             value={keyUnsaved ? "Not saved" : "Manage"}
@@ -303,6 +312,8 @@ export default function AccountPage() {
       <MyCodeSheet open={myCode} onClose={() => setMyCode(false)} me={me} />
 
       <BudgetsSheet open={budgetsOpen} onClose={() => setBudgets(false)} />
+
+      <DevicesSheet open={devicesOpen} onClose={() => setDevices(false)} />
 
       <RecoverySheet
         open={recovery}

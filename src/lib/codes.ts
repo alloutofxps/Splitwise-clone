@@ -10,7 +10,7 @@
  * guard an identity - so those are full-entropy random strings.
  */
 
-import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 
 // Re-exported so server code has one import site for anything code-related.
 export { normalizeInviteCode, formatRecoveryKey } from "./invite-code";
@@ -87,15 +87,11 @@ export function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
 }
 
-/** Constant-time compare, so a lookup cannot be turned into an oracle. */
-export function secretMatches(secret: string, expectedHash: string): boolean {
-  const actual = Buffer.from(hashSecret(secret), "hex");
-  let expected: Buffer;
-  try {
-    expected = Buffer.from(expectedHash, "hex");
-  } catch {
-    return false;
-  }
-  if (actual.length !== expected.length) return false;
-  return timingSafeEqual(actual, expected);
-}
+/*
+ * There was a `secretMatches` here, a constant-time comparison of a secret
+ * against a stored hash. Both callers now look the hash up directly — sessions
+ * and credentials are indexed by it — which is how bearer tokens are normally
+ * resolved and leaks nothing: reaching the comparison at all requires already
+ * holding a preimage of a 256-bit digest. Deleted rather than kept warm for a
+ * caller that no longer exists.
+ */

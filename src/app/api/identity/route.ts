@@ -2,11 +2,12 @@ import { z } from "zod";
 import { json, readBody, route, currencyCode, text } from "@/lib/api";
 import {
   claimGhost,
-  clearIdentityCookie,
   createIdentity,
+  describeDevice,
+  endCurrentSession,
   getSession,
   requireSession,
-  setIdentityCookie,
+  startSession,
 } from "@/lib/identity";
 import { formatRecoveryKey } from "@/lib/codes";
 import { prisma } from "@/lib/db";
@@ -51,7 +52,7 @@ export const POST = route(async (request: Request) => {
     ? await claimGhost(input.claimGhostId, input)
     : await createIdentity(input);
 
-  await setIdentityCookie(person.id, secret);
+  await startSession(person.id, describeDevice(request.headers.get("user-agent")));
 
   return json(
     {
@@ -82,10 +83,13 @@ export const PATCH = route(async (request: Request) => {
 });
 
 /**
- * Signs out by dropping the cookie. The Person row and all its history stay
- * put, so signing back in with the recovery key restores everything.
+ * Signs out this device.
+ *
+ * Deletes the session row as well as the cookie, so a cookie copied off the
+ * device before signing out is dead rather than merely forgotten. The Person
+ * row and all its history stay put — signing back in restores everything.
  */
 export const DELETE = route(async () => {
-  await clearIdentityCookie();
+  await endCurrentSession();
   return json({ ok: true });
 });

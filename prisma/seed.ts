@@ -36,7 +36,9 @@ async function main() {
       displayName: "Priya Raman",
       avatarColor: "iris",
       defaultCurrency: "EUR",
-      tokenHash: hash(priyaSecret),
+      credentials: {
+        create: { kind: "recovery", secretHash: hash(priyaSecret), label: "Recovery key" },
+      },
       inviteCode: "me-sunny-otter",
     },
   });
@@ -46,7 +48,9 @@ async function main() {
       displayName: "Ravi Menon",
       avatarColor: "amber",
       defaultCurrency: "EUR",
-      tokenHash: hash(secret()),
+      credentials: {
+        create: { kind: "recovery", secretHash: hash(secret()), label: "Recovery key" },
+      },
       inviteCode: "me-swift-heron",
     },
   });
@@ -56,7 +60,9 @@ async function main() {
       displayName: "Nadia Okonkwo",
       avatarColor: "teal",
       defaultCurrency: "EUR",
-      tokenHash: hash(secret()),
+      credentials: {
+        create: { kind: "recovery", secretHash: hash(secret()), label: "Recovery key" },
+      },
       inviteCode: "me-lunar-reef",
     },
   });

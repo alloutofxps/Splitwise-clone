@@ -20,6 +20,11 @@ import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
 import { clearRecoveryPending, markRecoveryPending } from "@/lib/client/recovery";
 import { colorForName, initials } from "@/lib/avatar";
+import {
+  PasskeyCancelled,
+  hasPlatformAuthenticator,
+  signInWithPasskey,
+} from "./identity/passkey";
 import { CURRENCIES } from "@/lib/money";
 import type { MeDto } from "@/lib/types";
 
@@ -99,6 +104,48 @@ function StepShell({ children }: { children: React.ReactNode }) {
 // ---------------------------------------------------------------------------
 
 function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () => void }) {
+  const toast = useToast();
+  const client = useQueryClient();
+  const [passkeyReady, setPasskeyReady] = React.useState(false);
+  const [signingIn, setSigningIn] = React.useState(false);
+
+  /*
+   * The passkey button appears only once the device says it actually holds
+   * one. Offering it unconditionally means most first-time visitors tap it and
+   * get a system sheet saying "no passkeys found", which teaches them the
+   * feature is broken before they have an account to use it with.
+   */
+  React.useEffect(() => {
+    let live = true;
+    void hasPlatformAuthenticator().then((ready) => {
+      if (live) setPasskeyReady(ready);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  async function withPasskey() {
+    setSigningIn(true);
+    try {
+      await signInWithPasskey();
+      await client.invalidateQueries();
+    } catch (error) {
+      if (!(error instanceof PasskeyCancelled)) {
+        toast({
+          tone: "error",
+          title: "Could not sign in with a passkey",
+          description:
+            error instanceof ApiError
+              ? error.message
+              : "Use your recovery key instead, then add a passkey from Account.",
+        });
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center py-10">
@@ -134,6 +181,17 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
           Get started
           <ArrowRight className="size-[18px]" />
         </Button>
+        {passkeyReady ? (
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={signingIn}
+            onClick={() => void withPasskey()}
+          >
+            Sign in with a passkey
+          </Button>
+        ) : null}
         <Button variant="ghost" size="md" fullWidth onClick={onRestore}>
           I already have a recovery key
         </Button>
