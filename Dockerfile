@@ -69,14 +69,28 @@ COPY next.config.ts ./
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-# The volume goes here rather than over `prisma/`, which would hide the
-# migrations the entrypoint needs to read.
-RUN mkdir -p /data && chown -R node:node /data /app
-VOLUME ["/data"]
-USER node
+# The database directory. `/data` rather than over `prisma/`, which would hide
+# the migrations the entrypoint needs to read.
+#
+# Deliberately *not* declared with `VOLUME`. Railway's builder rejects the
+# instruction outright — "docker VOLUME is not supported, use Railway Volumes"
+# — and refuses to build rather than ignoring it. The declaration was never
+# load-bearing anyway: it only controls whether Docker invents an anonymous
+# volume when you forget `-v`, and every host worth deploying to attaches a
+# named one. `docker run -v divvy-data:/data` behaves identically without it.
+RUN mkdir -p /data
 
+# Runs as root, which is a concession and worth naming as one.
+#
+# A managed volume is mounted root-owned, so a container that drops to an
+# unprivileged user cannot create the SQLite file inside it and dies on first
+# boot with a permission error that looks like a database problem. Doing this
+# properly means chowning the mount at runtime and stepping down with gosu —
+# more moving parts in the one place that must not fail. On a host where you
+# control the mount's ownership, add `USER node` back and chown `/data` to it.
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+# No HEALTHCHECK either. Railway's builder reports only the first instruction
+# it dislikes, so with VOLUME removed this would be the next candidate, and a
+# platform that does its own health checking gains nothing from it.
 ENTRYPOINT ["./docker-entrypoint.sh"]
