@@ -7,11 +7,12 @@ import { Onboarding } from "@/components/onboarding";
 import { ExpenseComposer } from "@/components/expense/composer";
 import { useDashboard } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
-import { Skeleton } from "@/components/ui/primitives";
+import { Skeleton, useMounted } from "@/components/ui/primitives";
 import { ComposerContext } from "@/components/expense/composer-context";
 import { useLaunchIntent } from "@/components/launch-intent";
 import { useToast } from "@/components/ui/toast";
 import { setBadge } from "@/lib/client/badge";
+import { stashedRecoveryKey } from "@/lib/client/recovery";
 import type { PendingAttachment } from "@/lib/client/attachments";
 
 /**
@@ -79,6 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
    */
   const unauthorized = error instanceof ApiError && error.isUnauthorized;
   const [setupOpen, setSetupOpen] = React.useState(false);
+  const mounted = useMounted();
 
   React.useEffect(() => {
     if (unauthorized) setSetupOpen(true);
@@ -114,7 +116,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) return <BootSkeleton />;
 
-  if (setupOpen || unauthorized) {
+  /*
+   * A setup interrupted on the recovery step resumes there, even though the
+   * account already exists and the dashboard would load perfectly well.
+   *
+   * The cookie is set at the profile step, so a reload during the recovery
+   * screen can land *inside* the app — past the one screen whose entire job is
+   * to make sure the key gets written down. Letting that through would mean
+   * somebody ends up with a working account and a key they never saw, and
+   * finding out later from a warning on the account page.
+   *
+   * `useMounted` rather than reading storage directly: `sessionStorage` does
+   * not exist during the server render, and this is cleared the moment the key
+   * is acknowledged, so it stops being true on its own.
+   */
+  const interruptedSetup = mounted && stashedRecoveryKey() !== null;
+
+  if (setupOpen || unauthorized || interruptedSetup) {
     return <Onboarding onFinished={() => setSetupOpen(false)} />;
   }
 

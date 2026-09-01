@@ -89,6 +89,50 @@ export function Sheet({
   );
 }
 
+/**
+ * How much of the layout viewport something is covering — in practice, the
+ * on-screen keyboard.
+ *
+ * A sheet is `position: fixed`, which anchors it to the *layout* viewport, and
+ * iOS does not shrink that when the keyboard opens; it shrinks the *visual*
+ * viewport and leaves the layout one alone. So a bottom-anchored sheet keeps
+ * its bottom edge underneath the keyboard, taking the footer and whatever
+ * field you are typing into with it. Creating a group meant typing into a box
+ * you could not see.
+ *
+ * `dvh` does not help — it accounts for retracting browser chrome, not for the
+ * keyboard. `visualViewport` is the only thing that actually reports this, and
+ * on a browser too old to have it the value stays 0 and the sheet behaves
+ * exactly as it did before.
+ */
+function useKeyboardInset(): number {
+  const [inset, setInset] = React.useState(0);
+
+  React.useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const update = () => {
+      // `offsetTop` matters as well: iOS scrolls the visual viewport down to
+      // reveal a focused field, and that offset is part of what is hidden.
+      const covered = window.innerHeight - viewport.height - viewport.offsetTop;
+      // Sub-pixel noise on every scroll frame would re-render the sheet
+      // constantly, and a few stray pixels are not a keyboard.
+      setInset(covered > 24 ? Math.round(covered) : 0);
+    };
+
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  return inset;
+}
+
 function SheetBody({
   onClose,
   children,
@@ -112,8 +156,16 @@ function SheetBody({
     }
   };
 
+  const keyboardInset = useKeyboardInset();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    // `bottom` rather than padding: it gives this box a definite height, which
+    // is what lets the sheet below size itself as a percentage of the space
+    // that is actually visible rather than of the whole screen.
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      style={keyboardInset ? { bottom: keyboardInset } : undefined}
+    >
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -143,7 +195,9 @@ function SheetBody({
           "relative flex w-full flex-col overflow-hidden bg-elevated shadow-sheet",
           "rounded-t-[var(--radius-2xl)] sm:rounded-[var(--radius-xl)]",
           "sm:max-w-[440px]",
-          tall ? "h-[92dvh] sm:h-[min(86dvh,760px)]" : "max-h-[90dvh]",
+          // Percentages, not `dvh`: they resolve against the container above,
+          // which has already had the keyboard subtracted from it.
+          tall ? "h-[92%] sm:h-[min(86dvh,760px)]" : "max-h-[90%]",
           className,
         )}
       >

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
+  ChevronRight,
   Copy,
   Database,
   Download,
@@ -30,6 +31,7 @@ import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { clearRecoveryPending, recoveryPending } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
@@ -38,7 +40,7 @@ import { clear as clearOutbox, pending } from "@/lib/client/outbox";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
-import { AVATAR_COLORS } from "@/lib/avatar";
+import { AVATAR_COLORS, initials } from "@/lib/avatar";
 import type { PaymentMethodDto } from "@/lib/types";
 
 export default function AccountPage() {
@@ -60,6 +62,7 @@ export default function AccountPage() {
   const [devicesOpen, setDevices] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [keyUnsaved, setKeyUnsaved] = React.useState(false);
+  const [emojiOpen, setEmojiOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (data) setName(data.me.displayName);
@@ -130,6 +133,38 @@ export default function AccountPage() {
             </p>
           </div>
         </div>
+
+        {/*
+          The colour was editable here and the emoji was not, which made the
+          emoji a one-shot decision taken during onboarding — the moment
+          somebody is least sure what they want to look like for the next year.
+        */}
+        <button
+          onClick={() => {
+            haptic();
+            setEmojiOpen(true);
+          }}
+          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-2.5 text-left transition active:scale-[0.985]"
+        >
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-body-lg font-bold text-white"
+            style={{ background: `var(--avatar-${me.avatarColor})` }}
+          >
+            {me.avatarEmoji ?? initials(me.displayName)}
+          </span>
+          <span className="flex-1 text-body-lg font-semibold text-text">
+            {me.avatarEmoji ? "Change your emoji" : "Pick an emoji"}
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-subtle" />
+        </button>
+
+        <EmojiPicker
+          open={emojiOpen}
+          onClose={() => setEmojiOpen(false)}
+          value={me.avatarEmoji}
+          onSelect={(avatarEmoji) => updateProfile.mutate({ avatarEmoji })}
+          initials={initials(me.displayName)}
+        />
 
         <div className="mt-4 flex flex-wrap gap-1.5">
           {AVATAR_COLORS.map((color) => (

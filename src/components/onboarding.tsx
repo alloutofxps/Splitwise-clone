@@ -18,7 +18,15 @@ import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
-import { clearRecoveryPending, markRecoveryPending } from "@/lib/client/recovery";
+import {
+  clearRecoveryPending,
+  clearStashedRecoveryKey,
+  markRecoveryPending,
+  stashRecoveryKey,
+  stashedRecoveryKey,
+} from "@/lib/client/recovery";
+import { EMOJI_QUICK_PICKS } from "@/lib/emoji";
+import { EmojiPicker } from "./ui/emoji-picker";
 import { colorForName, initials } from "@/lib/avatar";
 import {
   PasskeyCancelled,
@@ -44,11 +52,21 @@ import type { MeDto } from "@/lib/types";
 
 type Step = "welcome" | "profile" | "recovery" | "restore";
 
-const EMOJI_CHOICES = ["🙂", "😎", "🦊", "🐙", "🌵", "🍕", "⚡️", "🌊", "🎧", "🚲", "🪐", "🐝"];
 
 export function Onboarding({ onFinished }: { onFinished: () => void }) {
-  const [step, setStep] = React.useState<Step>("welcome");
-  const [recoveryKey, setRecoveryKey] = React.useState<string | null>(null);
+  /*
+   * Setup resumes where it was interrupted.
+   *
+   * Saving the key means leaving for a password manager, and a phone will
+   * happily discard a backgrounded tab while that happens. Reading the stash
+   * during the initial state means the reloaded page comes back to the
+   * recovery screen rather than to the welcome screen — which was the worse
+   * outcome twice over: the key was unrecoverable, and the obvious next move
+   * was to sign up again and end up with a second, empty account.
+   */
+  const resumed = typeof window === "undefined" ? null : stashedRecoveryKey();
+  const [step, setStep] = React.useState<Step>(resumed ? "recovery" : "welcome");
+  const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
@@ -63,6 +81,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
           <StepShell key="profile">
             <ProfileStep
               onDone={(key) => {
+                stashRecoveryKey(key);
                 setRecoveryKey(key);
                 setStep("recovery");
               }}
@@ -235,6 +254,7 @@ function ProfileStep({
 
   const [name, setName] = React.useState("");
   const [emoji, setEmoji] = React.useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const [currency, setCurrency] = React.useState(guessCurrency());
   const [saving, setSaving] = React.useState(false);
 
@@ -292,16 +312,39 @@ function ProfileStep({
           {emoji ?? (name.trim() ? initials(name) : "?")}
         </span>
 
-        <div className="no-scrollbar mt-5 flex w-full gap-2 overflow-x-auto pb-1">
+        {/*
+          `overflow-x-auto` clips the *other* axis too — the CSS spec computes
+          `overflow-y` to `auto` as soon as one axis is not `visible` — so the
+          selected chip's ring was being sliced off top and bottom. The padding
+          gives the ring somewhere to live and the negative margin takes the
+          space back, keeping the strip's spacing as designed.
+        */}
+        <div className="no-scrollbar -my-1.5 mt-4 flex w-full gap-2 overflow-x-auto px-0.5 py-1.5">
           <EmojiChip active={emoji === null} onClick={() => setEmoji(null)}>
             {name.trim() ? initials(name) : "Aa"}
           </EmojiChip>
-          {EMOJI_CHOICES.map((choice) => (
+          {EMOJI_QUICK_PICKS.map((choice) => (
             <EmojiChip key={choice} active={emoji === choice} onClick={() => setEmoji(choice)}>
               {choice}
             </EmojiChip>
           ))}
+          {/* A strip of twelve is a shortlist, not the choice. */}
+          <EmojiChip
+            active={emoji !== null && !EMOJI_QUICK_PICKS.includes(emoji)}
+            onClick={() => setPickerOpen(true)}
+            label="More emoji"
+          >
+            {emoji !== null && !EMOJI_QUICK_PICKS.includes(emoji) ? emoji : "···"}
+          </EmojiChip>
         </div>
+
+        <EmojiPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          value={emoji}
+          onSelect={setEmoji}
+          initials={name.trim() ? initials(name) : "Aa"}
+        />
       </div>
 
       <label className="mt-7 block">
@@ -358,13 +401,18 @@ function EmojiChip({
   active,
   onClick,
   children,
+  label,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  /** For the chips whose content is not readable aloud, like the "more" dots. */
+  label?: string;
 }) {
   return (
     <button
+      aria-label={label}
+      aria-pressed={active}
       onClick={() => {
         haptic();
         onClick();
@@ -479,6 +527,10 @@ function RecoveryStep({
           onClick={() => {
             haptic(10);
             clearRecoveryPending();
+            // The stash exists only to survive an interrupted setup. Once the
+            // key is confirmed saved, keeping it would be storing a live
+            // credential for no remaining reason.
+            clearStashedRecoveryKey();
             // Releasing the gate is what shows the app. The dashboard has very
             // likely loaded already - the cookie was set back at the profile
             // step - so this is usually just a refresh, but asking for it keeps
