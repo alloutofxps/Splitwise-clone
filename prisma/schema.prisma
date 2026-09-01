@@ -1,0 +1,491 @@
+// Divvy — shared expense tracking without accounts.
+//
+// Portability note: SQLite is the default so the app runs with zero external
+// services. To move to Postgres, change `provider` to "postgresql", point
+// DATABASE_URL at your instance, and re-run `prisma migrate dev`. Nothing in
+// the schema below uses SQLite-only features — enums are modelled as strings
+// and structured payloads as JSON-encoded text so both engines accept it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+/// A person. There are no accounts, emails or passwords: a Person is created
+/// on first launch and bound to the device through a signed cookie carrying a
+/// secret whose SHA-256 hash lives in `tokenHash`. The raw secret is also shown
+/// to the user once as a recovery key so they can restore the same identity on
+/// another device.
+model Person {
+  id              String  @id @default(cuid())
+  displayName     String
+  avatarColor     String  @default("iris")
+  avatarEmoji     String?
+  defaultCurrency String  @default("USD")
+
+  /// SHA-256 of the recovery secret. Null for ghosts that were never claimed.
+  tokenHash String? @unique
+
+  /// Personal invite code, used to add this person as a friend directly.
+  inviteCode String @unique
+
+  /// True while this Person is only a placeholder created by somebody else
+  /// (e.g. "Sam" added to a group before Sam ever opened the app). A ghost can
+  /// be claimed later, at which point it becomes a real identity.
+  isGhost Boolean @default(false)
+
+  /// Person who created this placeholder, for attribution in the activity feed.
+  createdByPersonId String?
+
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  memberships       Membership[]
+  paymentMethods    PaymentMethod[]
+  budgets           Budget[]
+
+  expensesCreated    Expense[]          @relation("ExpenseCreator")
+  expensePayers      ExpensePayer[]
+  expenseSplits      ExpenseSplit[]
+  itemShares         ExpenseItemShare[]
+  settlementsFrom    Settlement[]       @relation("SettlementFrom")
+  settlementsTo      Settlement[]       @relation("SettlementTo")
+  settlementsCreated Settlement[]       @relation("SettlementCreator")
+  comments           Comment[]
+  activities         Activity[]         @relation("ActivityActor")
+  nudgesReceived     Activity[]         @relation("ActivityTarget")
+  recurrences        Recurrence[]
+  friendshipsA       Friendship[]       @relation("FriendA")
+  friendshipsB       Friendship[]       @relation("FriendB")
+
+  @@index([inviteCode])
+}
+
+/// A direct (non-group) connection between two people. Ordered so that
+/// personAId < personBId, which makes the pair unique.
+model Friendship {
+  id        String   @id @default(cuid())
+  personAId String
+  personBId String
+  createdAt DateTime @default(now())
+
+  personA Person @relation("FriendA", fields: [personAId], references: [id], onDelete: Cascade)
+  personB Person @relation("FriendB", fields: [personBId], references: [id], onDelete: Cascade)
+
+  @@unique([personAId, personBId])
+  @@index([personAId])
+  @@index([personBId])
+}
+
+/// How to pay someone back. Purely informational — Divvy never moves money,
+/// it just renders a deep link / QR so the transfer happens in the user's own
+/// banking app.
+model PaymentMethod {
+  id        String  @id @default(cuid())
+  personId  String
+  /// upi | paypal | venmo | cashapp | revolut | iban | bank | custom
+  kind      String
+  label     String?
+  /// The handle itself: a UPI id, @venmo-handle, IBAN, paypal.me slug, ...
+  value     String
+  sortOrder Int     @default(0)
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------------------
+
+model Group {
+  id       String @id @default(cuid())
+  name     String
+  /// trip | home | couple | event | project | other
+  kind     String @default("other")
+  emoji    String @default("🧾")
+  color    String @default("iris")
+  currency String @default("USD")
+
+  /// When true, balances are collapsed with a min-cash-flow pass so the group
+  /// settles in the fewest possible transfers.
+  simplifyDebts Boolean @default(true)
+
+  /// Human-friendly join code, e.g. "MANGO-TIGER-42".
+  inviteCode       String  @unique
+  /// Set to rotate/disable the code without deleting the group.
+  inviteCodeActive Boolean @default(true)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  memberships Membership[]
+  expenses    Expense[]
+  settlements Settlement[]
+  activities  Activity[]
+  recurrences Recurrence[]
+  budgets     Budget[]
+
+  @@index([inviteCode])
+}
+
+model Membership {
+  id       String  @id @default(cuid())
+  groupId  String
+  personId String
+  /// owner | member
+  role     String  @default("member")
+  /// Optional per-group display override.
+  nickname String?
+
+  joinedAt           DateTime  @default(now())
+  leftAt             DateTime?
+  lastReadActivityAt DateTime  @default(now())
+
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, personId])
+  @@index([personId])
+  @@index([groupId])
+}
+
+// ---------------------------------------------------------------------------
+// Expenses
+// ---------------------------------------------------------------------------
+
+model Expense {
+  id      String  @id @default(cuid())
+  /// Null for a direct 1:1 expense between friends.
+  groupId String?
+
+  description String
+  notes       String?
+
+  /// Amount in the *minor units* of `currency` (cents, paise, yen...). Money is
+  /// never stored as a float.
+  amount   BigInt
+  currency String
+
+  /// Rate used to convert `currency` into the group's currency at entry time,
+  /// stored as a decimal string so it survives round-tripping. "1" when they
+  /// match.
+  exchangeRate    String @default("1")
+  /// `amount` converted into the settlement currency, cached for balance math.
+  convertedAmount BigInt
+
+  /// EQUAL | EXACT | PERCENT | SHARES | ADJUSTMENT | ITEMIZED
+  splitMode String @default("EQUAL")
+
+  /// Key into the static taxonomy in `src/lib/categories.ts`. Kept as a plain
+  /// string rather than a foreign key: the list ships with the code, so a table
+  /// would only add a seeding step and a class of constraint failures.
+  categoryId String?
+  date       DateTime @default(now())
+
+  createdByPersonId String
+  recurrenceId      String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  group      Group?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy  Person      @relation("ExpenseCreator", fields: [createdByPersonId], references: [id])
+  recurrence Recurrence? @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+
+  payers      ExpensePayer[]
+  splits      ExpenseSplit[]
+  items       ExpenseItem[]
+  comments    Comment[]
+  attachments Attachment[]
+  activities  Activity[]
+
+  @@index([groupId, date])
+  @@index([createdByPersonId])
+  @@index([recurrenceId])
+}
+
+/// Who actually put money down. Multiple payers per expense are supported.
+model ExpensePayer {
+  id        String @id @default(cuid())
+  expenseId String
+  personId  String
+  /// Minor units of the expense currency.
+  amount    BigInt
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, personId])
+  @@index([expenseId])
+}
+
+/// Who owes what. `amount` is always the resolved share in minor units; the
+/// `weight` / `percent` / `adjustment` columns keep the *intent* so the split
+/// editor can be reopened exactly as it was saved.
+model ExpenseSplit {
+  id        String @id @default(cuid())
+  expenseId String
+  personId  String
+  amount    BigInt
+
+  /// SHARES mode: number of shares (e.g. 2 for a couple).
+  weight     Float?
+  /// PERCENT mode: percentage points.
+  percent    Float?
+  /// ADJUSTMENT mode: fixed +/- adjustment in minor units before the split.
+  adjustment BigInt?
+  /// EQUAL / ITEMIZED mode: whether this person is in on it.
+  included   Boolean @default(true)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, personId])
+  @@index([expenseId])
+  @@index([personId])
+}
+
+/// A single line on an itemised receipt ("2x flat white — 8.40").
+model ExpenseItem {
+  id        String @id @default(cuid())
+  expenseId String
+  name      String
+  amount    BigInt
+  quantity  Int    @default(1)
+  sortOrder Int    @default(0)
+
+  expense Expense            @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  shares  ExpenseItemShare[]
+
+  @@index([expenseId])
+}
+
+model ExpenseItemShare {
+  id       String @id @default(cuid())
+  itemId   String
+  personId String
+  /// Relative weight for this item, normally 1.
+  weight   Float  @default(1)
+
+  item   ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  person Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, personId])
+  @@index([itemId])
+}
+
+/// Receipt photos and PDFs. Stored as bytes in the database on purpose: it
+/// keeps a self-hosted deployment to a single backup artefact and works on
+/// hosts with an ephemeral filesystem.
+model Attachment {
+  id        String   @id @default(cuid())
+  expenseId String
+  filename  String
+  mimeType  String
+  size      Int
+  width     Int?
+  height    Int?
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+}
+
+// ---------------------------------------------------------------------------
+// Settling up
+// ---------------------------------------------------------------------------
+
+model Settlement {
+  id      String  @id @default(cuid())
+  groupId String?
+
+  /// Links the rows of one cross-ledger payment.
+  ///
+  /// Settling with a person can span several ledgers at once — a group where
+  /// they owe you, another where you owe them, and the direct one — because
+  /// that is how the debt actually accumulated and how people square it up:
+  /// one transfer. Each ledger still gets its own row, so every group's books
+  /// stay internally correct and its other members see a payment of exactly
+  /// the amount that was outstanding in it.
+  ///
+  /// The batch is what makes that one *event* rather than several: it shows as
+  /// a single entry, and deleting it takes every row down together. Without it
+  /// a user who changed their mind would have to find and delete each ledger's
+  /// row by hand, and would have no way to know when they had got them all.
+  ///
+  /// Null for an ordinary single-ledger payment.
+  batchId String?
+
+  fromPersonId String
+  toPersonId   String
+
+  amount          BigInt
+  currency        String
+  exchangeRate    String @default("1")
+  convertedAmount BigInt
+
+  date   DateTime @default(now())
+  note   String?
+  /// Free-text label of how it was paid ("UPI", "cash", "Venmo").
+  method String?
+
+  createdByPersonId String
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  group      Group?     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromPerson Person     @relation("SettlementFrom", fields: [fromPersonId], references: [id], onDelete: Cascade)
+  toPerson   Person     @relation("SettlementTo", fields: [toPersonId], references: [id], onDelete: Cascade)
+  createdBy  Person     @relation("SettlementCreator", fields: [createdByPersonId], references: [id])
+  activities Activity[]
+
+  @@index([groupId, date])
+  @@index([fromPersonId])
+  @@index([toPersonId])
+  @@index([batchId])
+}
+
+// ---------------------------------------------------------------------------
+// Social + history
+// ---------------------------------------------------------------------------
+
+model Comment {
+  id        String    @id @default(cuid())
+  expenseId String
+  personId  String
+  body      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+}
+
+model Activity {
+  id      String  @id @default(cuid())
+  groupId String?
+  /// expense.created | expense.updated | expense.deleted | settlement.created |
+  /// settlement.deleted | comment.created | member.joined | member.added |
+  /// group.created | group.updated | recurrence.fired | nudge.sent
+  type    String
+
+  actorPersonId String
+  expenseId     String?
+  settlementId  String?
+  /// Set only for entries addressed to one person rather than to a group - a
+  /// nudge is between two people even when it concerns a group debt, so the
+  /// feed query uses this to keep it out of everybody else's timeline.
+  targetPersonId String?
+
+  /// JSON blob with a pre-rendered summary so the feed stays readable even
+  /// after the underlying record is edited or deleted.
+  data String @default("{}")
+
+  createdAt DateTime @default(now())
+
+  group      Group?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor      Person      @relation("ActivityActor", fields: [actorPersonId], references: [id], onDelete: Cascade)
+  target     Person?     @relation("ActivityTarget", fields: [targetPersonId], references: [id], onDelete: Cascade)
+  expense    Expense?    @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  settlement Settlement? @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt])
+  @@index([createdAt])
+  @@index([targetPersonId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Automation
+// ---------------------------------------------------------------------------
+
+/// A repeating expense. The template lives in `payersJson` / `splitsJson` so a
+/// fired occurrence is a plain Expense with no further indirection.
+model Recurrence {
+  id      String  @id @default(cuid())
+  groupId String?
+
+  description String
+  amount      BigInt
+  currency    String
+  categoryId  String?
+  splitMode   String  @default("EQUAL")
+  payersJson  String
+  splitsJson  String
+  notes       String?
+
+  /// DAILY | WEEKLY | BIWEEKLY | MONTHLY | QUARTERLY | YEARLY
+  frequency  String
+  interval   Int    @default(1)
+  /// For MONTHLY: clamp to the last day of shorter months.
+  dayOfMonth Int?
+
+  startDate DateTime
+  nextRunAt DateTime
+  lastRunAt DateTime?
+  endsAt    DateTime?
+  active    Boolean   @default(true)
+
+  createdByPersonId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy Person    @relation(fields: [createdByPersonId], references: [id])
+  expenses  Expense[]
+
+  @@index([nextRunAt, active])
+  @@index([groupId])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  personId   String
+  groupId    String?
+  categoryId String?
+  /// Minor units, per period, in `currency`.
+  amount     BigInt
+  currency   String
+  /// MONTHLY | WEEKLY | YEARLY
+  period     String   @default("MONTHLY")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  group  Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // No unique constraint: `groupId` and `categoryId` are nullable, and SQL
+  // treats NULL as distinct from NULL, so a constraint here would silently
+  // allow duplicate "all groups, all categories" budgets. Uniqueness is
+  // enforced in the route with a delete-then-create inside a transaction.
+  @@index([personId])
+}
+
+/// Cached FX rates so the app keeps converting while offline.
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  base      String
+  quote     String
+  /// Decimal string.
+  rate      String
+  fetchedAt DateTime @default(now())
+
+  @@unique([base, quote])
+}
