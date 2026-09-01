@@ -69,3 +69,65 @@ jobs:
 
       - name: End-to-end smoke test
         run: node scripts/smoke.mjs http://localhost:3000
+
+  # The image is how this actually gets deployed, so it is worth knowing that it
+  # still builds — a Dockerfile that only gets exercised at deploy time is a
+  # Dockerfile that breaks at deploy time. Separate job because it shares
+  # nothing with `verify` and there is no reason to make either wait.
+  image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The smoke script is dependency-free but not version-free; pin the
+      # runtime rather than inherit whatever the runner image ships this month.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: divvy:ci
+          build-args: BUILD_ID=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Building proves it compiles; starting it proves the entrypoint applies
+      # migrations to an empty volume and the server answers on a real port.
+      - name: Boot it against an empty volume
+        run: |
+          docker run -d --name divvy \
+            -p 3000:3000 \
+            -e DIVVY_SECRET=ci-only-secret-not-used-for-anything-real \
+            -v divvy-ci-data:/data \
+            divvy:ci
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/; then
+              echo "container up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "container did not answer within 120s"
+          docker logs divvy
+          exit 1
+
+      # The same end-to-end pass the non-container job runs, against the image
+      # that will actually be deployed.
+      - name: End-to-end smoke test
+        run: node scripts/smoke.mjs http://localhost:3000
+
+      - name: Refuse to start without a secret
+        run: |
+          if docker run --rm -v divvy-ci-data:/data divvy:ci; then
+            echo "the container started with no DIVVY_SECRET; it must not"
+            exit 1
+          fi
+          echo "refused, as it should"

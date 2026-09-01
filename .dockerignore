@@ -1,0 +1,14 @@
+# Everything the image does not need, or must not bake in.
+node_modules
+.next
+.git
+.github
+*.db
+*.db-journal
+prisma/dev.db*
+.env
+.env.*
+npm-debug.log*
+scripts/*.mjs
+coverage
+.DS_Store
