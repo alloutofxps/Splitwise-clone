@@ -345,6 +345,20 @@ export default function AccountPage() {
         <p className="mt-1 text-tiny text-subtle">
           No accounts, no ads, no tracking, no paywall.
         </p>
+        {/*
+          Which build this actually is.
+          
+          Added because there was no way to answer the question. A fix can be
+          merged, deployed and still absent from somebody's phone — a stalled
+          deploy and a stale cache look identical from the outside, and both
+          look like the fix never worked. One line settles it in two seconds
+          instead of a round of guessing.
+
+          Selectable on purpose: it exists to be read out and pasted.
+        */}
+        <p className="mt-3 select-text text-tiny text-subtle/70">
+          Version {process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
+        </p>
       </footer>
 
       {/* Sheets ------------------------------------------------------------- */}
