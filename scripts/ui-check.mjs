@@ -728,6 +728,128 @@ console.log("\nTyping into the split and payer editors");
   }
 }
 
+/**
+ * Three things a real person hit in the first ten minutes of using this.
+ *
+ * All three were invisible to every existing check, because each needs a
+ * browser doing something a test rarely does: reloading mid-flow, opening a
+ * second sheet, or having a keyboard appear.
+ */
+console.log("\nThings that only show up on a phone");
+{
+  const fresh = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p2 = await fresh.newPage();
+  await p2.goto(BASE, { waitUntil: "networkidle" });
+  await p2.getByRole("button", { name: /Get started|Set up/i }).first().click();
+  await p2.waitForTimeout(900);
+
+  // -- The emoji strip clipped its own selection ring ----------------------
+  // `overflow-x-auto` computes `overflow-y` to `auto` as well, so the chip's
+  // ring was being sliced off top and bottom.
+  const strip = p2.locator("div.no-scrollbar").first();
+  const more = p2.getByRole("button", { name: "More emoji" });
+  const stripBox = await strip.boundingBox();
+  const chipBox = await more.boundingBox();
+  check(
+    "an emoji chip is not clipped by its own scroller",
+    stripBox && chipBox && chipBox.y > stripBox.y && chipBox.y + chipBox.height < stripBox.y + stripBox.height,
+    `chip ${JSON.stringify(chipBox)} in strip ${JSON.stringify(stripBox)}`,
+  );
+
+  // -- Twelve emoji was a lottery, not a choice ----------------------------
+  await more.click();
+  await p2.waitForTimeout(700);
+  const offered = await p2.locator('[role="dialog"] button[aria-label]').count();
+  check("the full emoji set is more than a shortlist", offered > 100, `${offered} offered`);
+  await p2.getByRole("button", { name: "🦖" }).first().click();
+  await p2.waitForTimeout(600);
+
+  await p2.getByPlaceholder("Priya").fill("Reload Tester");
+  await p2.getByRole("button", { name: /Continue|Next|Done/i }).first().click();
+  await p2.waitForTimeout(2500);
+
+  // -- The recovery key did not survive going to a password manager --------
+  //
+  // Saving the key means leaving the app, and a phone will discard the tab
+  // while that happens. The key is generated once and only hashed on the
+  // server, so a reload used to lose it permanently — and drop the user back
+  // at "create an account", where the obvious next move made a second one.
+  const first = /dvy_[\w-]{20,}/.exec(await p2.locator("body").innerText())?.[0];
+  check("sign-up shows a recovery key", Boolean(first));
+
+  await p2.reload({ waitUntil: "networkidle" });
+  await p2.waitForTimeout(2500);
+  const afterReload = await p2.locator("body").innerText();
+  const second = /dvy_[\w-]{20,}/.exec(afterReload)?.[0];
+  check("a reload on the recovery step does not fall back to the welcome screen", !/Get started/i.test(afterReload));
+  check("and the same key is still there, not a lost one", Boolean(second) && second === first, `${first?.slice(0, 12)} vs ${second?.slice(0, 12)}`);
+
+  // Acknowledging it must not leave the key sitting in storage.
+  await p2.locator("input[type=checkbox]").check();
+  await p2.getByRole("button", { name: "Start using Divvy" }).click();
+  await p2.waitForTimeout(3000);
+  const stashed = await p2.evaluate(() => window.sessionStorage.getItem("divvy-recovery-key"));
+  check("and it is dropped from storage once saved", stashed === null, String(stashed));
+
+  // -- The emoji could never be changed afterwards -------------------------
+  await p2.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await p2.waitForTimeout(2000);
+  const emojiRow = p2.getByRole("button", { name: /Pick an emoji|Change your emoji/ });
+  check("the account screen can change the emoji", await emojiRow.count() > 0);
+  await emojiRow.first().click();
+  await p2.waitForTimeout(700);
+  await p2.getByRole("button", { name: "🦉" }).first().click();
+  await p2.waitForTimeout(2500);
+  const saved = await p2.evaluate(async () => (await (await fetch("/api/identity")).json()).me.avatarEmoji);
+  check("and the change reaches the server", saved === "🦉", JSON.stringify(saved));
+  check("and shows without a refresh", (await p2.locator("body").innerText()).includes("🦉"));
+
+  // -- A sheet sat underneath the on-screen keyboard -----------------------
+  //
+  // `position: fixed` anchors to the layout viewport, which iOS does not
+  // shrink for the keyboard, so the composer's footer and whatever field you
+  // were typing into were simply behind it. Simulated here the way iOS
+  // reports it: visual viewport shrinks, `window.innerHeight` does not.
+  await p2.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await p2.waitForTimeout(2000);
+  await p2.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p2.waitForTimeout(900);
+
+  const dialog = p2.locator('[role="dialog"]').last();
+  const KEYBOARD = 340;
+  const keyboardTop = 844 - KEYBOARD;
+  const before = await dialog.boundingBox();
+
+  await p2.evaluate((k) => {
+    const vv = window.visualViewport;
+    Object.defineProperty(vv, "height", { value: window.innerHeight - k, configurable: true });
+    Object.defineProperty(vv, "offsetTop", { value: 0, configurable: true });
+    vv.dispatchEvent(new Event("resize"));
+  }, KEYBOARD);
+  await p2.waitForTimeout(500);
+  const during = await dialog.boundingBox();
+  check(
+    "a sheet lifts clear of the keyboard instead of sitting under it",
+    during && during.y + during.height <= keyboardTop + 1,
+    `bottom ${Math.round(during?.y + during?.height)} vs keyboard top ${keyboardTop}`,
+  );
+
+  await p2.evaluate(() => {
+    const vv = window.visualViewport;
+    Object.defineProperty(vv, "height", { value: window.innerHeight, configurable: true });
+    vv.dispatchEvent(new Event("resize"));
+  });
+  await p2.waitForTimeout(500);
+  const after = await dialog.boundingBox();
+  check(
+    "and drops back when the keyboard goes away",
+    after && Math.round(after.y + after.height) === Math.round(before.y + before.height),
+    `${Math.round(after?.y + after?.height)} vs ${Math.round(before?.y + before?.height)}`,
+  );
+
+  await fresh.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

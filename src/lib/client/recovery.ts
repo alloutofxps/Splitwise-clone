@@ -30,3 +30,51 @@ export function clearRecoveryPending(): void {
 export function recoveryPending(): boolean {
   return readStored(KEY) === "1";
 }
+
+// ---------------------------------------------------------------------------
+
+/**
+ * The key itself, held only until the user says they have written it down.
+ *
+ * Not a nicety. The key is generated once, hashed on the server, and shown on
+ * exactly one screen — and saving it means leaving the app for a password
+ * manager, which is precisely when a phone is most likely to discard the page
+ * to reclaim memory. Coming back to a reloaded tab meant the key was gone for
+ * good; the only remedy was noticing the warning on the account screen and
+ * issuing a new one, which is a poor thing to discover later.
+ *
+ * `sessionStorage`, deliberately, and worth being straight about the tradeoff:
+ * this puts the account's master credential in browser storage for the minute
+ * or two between generating it and confirming it is saved. That is a real cost.
+ * It buys back the far likelier failure — the key being lost by the very act of
+ * going to save it — and the window is small, scoped to one tab, cleared on
+ * acknowledgement, and gone when the tab closes. `localStorage` would survive
+ * the tab and is not worth it for the same benefit.
+ */
+const PENDING_KEY = "divvy-recovery-key";
+
+export function stashRecoveryKey(key: string): void {
+  try {
+    window.sessionStorage.setItem(PENDING_KEY, key);
+  } catch {
+    // Private mode, or storage disabled. The key is still on screen; this only
+    // means a reload cannot bring it back.
+  }
+}
+
+/** The key from an interrupted setup, if there is one. */
+export function stashedRecoveryKey(): string | null {
+  try {
+    return window.sessionStorage.getItem(PENDING_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearStashedRecoveryKey(): void {
+  try {
+    window.sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    // Nothing to do; it will go when the tab does.
+  }
+}
