@@ -2,15 +2,23 @@
  * Identity without accounts.
  *
  * There is no sign-up, no password and no email. The first time someone opens
- * Divvy a Person row is created and a secret is minted. The secret is stored
- * two ways:
+ * Divvy a Person row is created, and from then on they can hold several ways
+ * of proving they are that person:
  *
- *   - in an httpOnly, signed cookie, which is what authenticates every request;
- *   - shown to the user once as a **recovery key** they can save, which is the
- *     only way back in if they clear their browser or change phone.
+ *   - a **passkey** per device — Face ID or a fingerprint, synced by the
+ *     platform, which is the everyday path;
+ *   - a **device link** — a QR code shown on a signed-in device and scanned by
+ *     a new one, for getting onto a second device in seconds;
+ *   - a **recovery key** — a long string, shown once, which works from
+ *     anywhere and is the backstop when there is no other device to hand.
  *
- * The server keeps only a SHA-256 of the secret, so a database dump does not
- * hand over anyone's identity.
+ * The server keeps only a SHA-256 of the recovery secret and a public key for
+ * each passkey, so a database dump hands over nobody's identity.
+ *
+ * Being signed in is separate from proving who you are. Each device gets its
+ * own `Session` row, minted by whichever credential vouched for it. That
+ * separation is what lets somebody rotate a recovery key without signing every
+ * device out, and revoke one lost phone without touching the others.
  *
  * The tradeoff versus real accounts is deliberate and worth naming: anyone
  * holding the recovery key *is* that person. That is the same security model as
@@ -28,7 +36,6 @@ import {
   generatePersonalCode,
   generateSecret,
   hashSecret,
-  secretMatches,
 } from "./codes";
 
 export const IDENTITY_COOKIE = "divvy_id";
@@ -86,6 +93,8 @@ export function decodeCookie(value: string): { personId: string; secret: string 
 
 export interface Session {
   person: Person;
+  /** The `Session` row backing this request, absent on a legacy cookie. */
+  sessionId?: string;
   /** Present only on the request that created the identity. */
   freshSecret?: string;
 }
@@ -105,16 +114,41 @@ export async function getSession(): Promise<Session | null> {
   const decoded = decodeCookie(raw);
   if (!decoded) return null;
 
-  const person = await prisma.person.findUnique({ where: { id: decoded.personId } });
-  if (!person || !person.tokenHash) return null;
-  // Constant-time, via `secretMatches`. Comparing two digests with `!==` is not
-  // itself exploitable - an attacker cannot grind a timing signal backwards
-  // through SHA-256 into a preimage - but the helper was written for exactly
-  // this comparison and then never called from it, which left the codebase
-  // claiming a property at one site that it did not apply at the other.
-  if (!secretMatches(decoded.secret, person.tokenHash)) return null;
+  const hash = hashSecret(decoded.secret);
 
-  return { person };
+  // The ordinary path: the cookie names a live session.
+  const session = await prisma.session.findUnique({
+    where: { secretHash: hash },
+    include: { person: true },
+  });
+  if (session && session.personId === decoded.personId) {
+    // Cheap enough to be worth it, and it is what makes the device list say
+    // something true about which of them is still in use. Not awaited: a
+    // request should not get slower to record its own timestamp.
+    void prisma.session
+      .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
+      .catch(() => {});
+    return { person: session.person, sessionId: session.id };
+  }
+
+  /*
+   * Cookies minted before sessions existed carried the recovery secret itself.
+   *
+   * Honouring them means nobody is signed out by the upgrade. It concedes
+   * nothing: whoever holds the recovery secret can sign in from anywhere
+   * anyway, so accepting it here grants no access they did not already have.
+   * Rotating the recovery key retires these along with the key, which is the
+   * documented way to cut off a device you no longer trust.
+   */
+  const legacy = await prisma.credential.findUnique({
+    where: { secretHash: hash },
+    include: { person: true },
+  });
+  if (legacy && legacy.kind === "recovery" && legacy.personId === decoded.personId) {
+    return { person: legacy.person };
+  }
+
+  return null;
 }
 
 /** Throws a typed error that the route wrapper turns into a 401. */
@@ -193,7 +227,7 @@ export interface NewIdentity {
   defaultCurrency?: string;
 }
 
-/** Creates a brand-new person and returns the secret exactly once. */
+/** Creates a brand-new person and returns the recovery secret exactly once. */
 export async function createIdentity(input: NewIdentity): Promise<{ person: Person; secret: string }> {
   const secret = generateSecret();
   const person = await prisma.person.create({
@@ -202,8 +236,10 @@ export async function createIdentity(input: NewIdentity): Promise<{ person: Pers
       avatarColor: input.avatarColor ?? "iris",
       avatarEmoji: input.avatarEmoji ?? null,
       defaultCurrency: input.defaultCurrency ?? "USD",
-      tokenHash: hashSecret(secret),
       inviteCode: await uniquePersonalCode(),
+      credentials: {
+        create: { kind: "recovery", secretHash: hashSecret(secret), label: "Recovery key" },
+      },
     },
   });
   return { person, secret };
@@ -220,9 +256,12 @@ export async function claimGhost(
   ghostId: string,
   input: NewIdentity,
 ): Promise<{ person: Person; secret: string }> {
-  const ghost = await prisma.person.findUnique({ where: { id: ghostId } });
+  const ghost = await prisma.person.findUnique({
+    where: { id: ghostId },
+    include: { credentials: { select: { id: true }, take: 1 } },
+  });
   if (!ghost) throw new NotFoundError("That placeholder no longer exists.");
-  if (!ghost.isGhost || ghost.tokenHash) {
+  if (!ghost.isGhost || ghost.credentials.length > 0) {
     throw new ForbiddenError("Someone has already claimed that name.");
   }
 
@@ -234,8 +273,10 @@ export async function claimGhost(
       avatarColor: input.avatarColor ?? ghost.avatarColor,
       avatarEmoji: input.avatarEmoji ?? ghost.avatarEmoji,
       defaultCurrency: input.defaultCurrency ?? ghost.defaultCurrency,
-      tokenHash: hashSecret(secret),
       isGhost: false,
+      credentials: {
+        create: { kind: "recovery", secretHash: hashSecret(secret), label: "Recovery key" },
+      },
     },
   });
   return { person, secret };
@@ -258,26 +299,100 @@ export async function restoreIdentity(
 ): Promise<{ person: Person; secret: string }> {
   const secret = normalizeSecret(input);
 
-  const person = await prisma.person.findUnique({
-    where: { tokenHash: hashSecret(secret) },
+  const credential = await prisma.credential.findUnique({
+    where: { secretHash: hashSecret(secret) },
+    include: { person: true },
   });
-  if (!person) throw new NotFoundError("That recovery key does not match any profile.");
+  if (!credential || credential.kind !== "recovery") {
+    throw new NotFoundError("That recovery key does not match any profile.");
+  }
 
-  await prisma.person.update({
-    where: { id: person.id },
-    data: { lastSeenAt: new Date() },
-  });
-  return { person, secret };
+  await prisma.$transaction([
+    prisma.person.update({ where: { id: credential.personId }, data: { lastSeenAt: new Date() } }),
+    prisma.credential.update({ where: { id: credential.id }, data: { lastUsedAt: new Date() } }),
+  ]);
+  return { person: credential.person, secret };
 }
 
-/** The raw secret for a person, re-derived is impossible - so this re-mints. */
+/**
+ * Mints a fresh recovery key, retiring the old one.
+ *
+ * Deliberately leaves passkeys and live sessions alone: rotating is what
+ * somebody does when they never saved the key or think it leaked, and signing
+ * every one of their devices out as a side effect would punish exactly the
+ * cautious behaviour the app wants. Cutting off other devices is what the
+ * device list is for.
+ */
 export async function rotateSecret(personId: string): Promise<string> {
   const secret = generateSecret();
-  await prisma.person.update({
-    where: { id: personId },
-    data: { tokenHash: hashSecret(secret) },
-  });
+  await prisma.$transaction([
+    prisma.credential.deleteMany({ where: { personId, kind: "recovery" } }),
+    prisma.credential.create({
+      data: { personId, kind: "recovery", secretHash: hashSecret(secret), label: "Recovery key" },
+    }),
+  ]);
   return secret;
+}
+
+// ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+
+/**
+ * Turns "this person proved who they are" into "this device is signed in".
+ *
+ * Every route in that produces a login — first run, recovery key, passkey,
+ * scanned device link — funnels through here, so there is one place that
+ * decides what a session is and exactly one shape of cookie.
+ */
+export async function startSession(
+  personId: string,
+  label = "This device",
+): Promise<string> {
+  const secret = generateSecret();
+  await prisma.session.create({
+    data: { personId, secretHash: hashSecret(secret), label: label.slice(0, 80) },
+  });
+  await setIdentityCookie(personId, secret);
+  return secret;
+}
+
+/** Ends the session the current cookie names, if it names one. */
+export async function endCurrentSession(): Promise<void> {
+  const store = await cookies();
+  const raw = store.get(IDENTITY_COOKIE)?.value;
+  const decoded = raw ? decodeCookie(raw) : null;
+  if (decoded) {
+    await prisma.session
+      .deleteMany({ where: { secretHash: hashSecret(decoded.secret) } })
+      .catch(() => {});
+  }
+  await clearIdentityCookie();
+}
+
+/**
+ * A human-readable guess at what device this is, from the User-Agent.
+ *
+ * Only ever shown back to its owner in their own device list, so being wrong
+ * costs nothing; being absent would make the list unreadable.
+ */
+export function describeDevice(userAgent: string | null): string {
+  const ua = userAgent ?? "";
+  const platform =
+    /iPhone/i.test(ua) ? "iPhone"
+    : /iPad/i.test(ua) ? "iPad"
+    : /Android/i.test(ua) ? "Android"
+    : /Macintosh|Mac OS X/i.test(ua) ? "Mac"
+    : /Windows/i.test(ua) ? "Windows"
+    : /Linux/i.test(ua) ? "Linux"
+    : "Device";
+  const browser =
+    /Edg\//i.test(ua) ? "Edge"
+    : /Chrome\//i.test(ua) && !/Edg\//i.test(ua) ? "Chrome"
+    : /Firefox\//i.test(ua) ? "Firefox"
+    : /Safari\//i.test(ua) ? "Safari"
+    : null;
+  return browser ? `${platform} · ${browser}` : platform;
 }
 
 // ---------------------------------------------------------------------------

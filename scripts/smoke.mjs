@@ -1349,6 +1349,100 @@ async function main() {
     activity.items.some((item) => item.type === "settlement.created"),
   );
 
+  // -- Devices, links and sessions -----------------------------------------
+  console.log("\nDevices and device links");
+  {
+    const link = await priya.call("/api/identity/link", { method: "POST" });
+    check("a signed-in device can mint a link code", link.status === 200, String(link.status));
+
+    // The whole point: a second device gets in without transcribing anything.
+    const newPhone = makeClient();
+    const claimed = await newPhone.call(
+      `/api/identity/link/${encodeURIComponent(link.body.code)}/claim`,
+      { method: "POST", allowError: true },
+    );
+    check("a scanned code signs a second device in", claimed.status === 200, String(claimed.status));
+    check(
+      "and it lands on the same account, not a new one",
+      claimed.body?.me?.id === priyaId,
+      `${claimed.body?.me?.id} vs ${priyaId}`,
+    );
+
+    const reachesData = await newPhone.call("/api/dashboard", { allowError: true });
+    check("the second device is genuinely signed in", reachesData.status === 200);
+
+    // A bearer code that survived its first use would be a credential lying
+    // around in whatever chat or camera roll it passed through.
+    const replay = await makeClient().call(
+      `/api/identity/link/${encodeURIComponent(link.body.code)}/claim`,
+      { method: "POST", allowError: true },
+    );
+    check("the same code cannot be used twice", replay.status === 422, String(replay.status));
+
+    const stranger = await makeClient().call("/api/identity/link/not-a-real-code/claim", {
+      method: "POST",
+      allowError: true,
+    });
+    check("an invented code is refused", stranger.status === 404, String(stranger.status));
+
+    const devices = await priya.call("/api/identity/devices");
+    check("the account lists its devices", devices.status === 200);
+    check(
+      "both sessions are listed",
+      devices.body.sessions.length >= 2,
+      `${devices.body.sessions.length} sessions`,
+    );
+    check("and the recovery key is accounted for", devices.body.hasRecoveryKey === true);
+
+    // Revoking one device must not disturb the other, which is the entire
+    // reason sessions are rows rather than one shared secret. Deliberately not
+    // this device: the list marks which row is the caller's own, and picking
+    // blindly here signed the test out and then failed three checks later with
+    // an unexplained 401 — which is precisely what `current` now prevents a
+    // real person walking into.
+    check(
+      "the list says which device you are holding",
+      devices.body.sessions.filter((s) => s.current).length === 1,
+      JSON.stringify(devices.body.sessions.map((s) => s.current)),
+    );
+    const target = devices.body.sessions.find((s) => !s.current);
+    const revoked = await priya.call(`/api/identity/devices/${target.id}`, {
+      method: "DELETE",
+      allowError: true,
+    });
+    check("a device can be revoked", revoked.status === 200, String(revoked.status));
+
+    /*
+     * Rotating the recovery key used to be the thing that signed everybody out,
+     * because the cookie carried the key. It must not any more: rotating is
+     * what a cautious person does, and punishing it with a mass logout is how
+     * you teach people not to.
+     */
+    const rotated = await priya.call("/api/identity/recovery", { method: "POST" });
+    check("the recovery key can be rotated", rotated.status === 200, String(rotated.status));
+    const stillIn = await priya.call("/api/dashboard", { allowError: true });
+    check("rotating it does not sign this device out", stillIn.status === 200, String(stillIn.status));
+
+    // The last way in cannot be removed. Somebody tidying a list should not be
+    // able to strand their own ledger with one tap.
+    const lastOne = await priya.call("/api/identity/devices/does-not-exist", {
+      method: "DELETE",
+      allowError: true,
+    });
+    check("removing something that is gone says so", lastOne.status === 404, String(lastOne.status));
+  }
+
+  console.log("\nRelated origins");
+  {
+    const wellKnown = await priya.call("/.well-known/webauthn", { allowError: true });
+    check("the related-origins file is served", wellKnown.status === 200, String(wellKnown.status));
+    check(
+      "and is a list, so a domain move has somewhere to declare the old address",
+      Array.isArray(wellKnown.body?.origins),
+      JSON.stringify(wellKnown.body),
+    );
+  }
+
   // -- Deleting a settled group --------------------------------------------
   console.log("\nLifecycle");
   const deleted = await priya.call(`/api/groups/${groupId}`, {

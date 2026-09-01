@@ -114,10 +114,50 @@ why each is deliberate rather than pending.
 
 ### Configuration
 
-| Variable       | Purpose                                                          |
-| -------------- | ---------------------------------------------------------------- |
-| `DATABASE_URL` | Defaults to `file:./dev.db`.                                      |
-| `DIVVY_SECRET` | Signs identity cookies. **Required in production.** Generate with `openssl rand -hex 32`. |
+| Variable                 | Purpose                                                          |
+| ------------------------ | ---------------------------------------------------------------- |
+| `DATABASE_URL`           | Defaults to `file:./dev.db`.                                      |
+| `DIVVY_SECRET`           | Signs identity cookies. **Required in production.** Generate with `openssl rand -hex 32`. |
+| `DIVVY_RP_ID`            | Domain that passkeys belong to. Defaults to the request's host. Set it deliberately — see below. |
+| `DIVVY_ORIGIN`           | Full origin, e.g. `https://divvy.example.com`. Only needed behind a proxy that rewrites the host. |
+| `DIVVY_RELATED_ORIGINS`  | Comma-separated other origins whose passkeys are still honoured. Used while moving domains. |
+
+### Signing in, and what happens when the domain changes
+
+There are three ways into an account, and they exist in that order on purpose:
+
+- **A passkey** — Face ID or a fingerprint, one per device. Platform keychains
+  sync these, so a replaced phone signed into the same Apple or Google account
+  already has it.
+- **A device link** — a QR code shown on a signed-in device and scanned by the
+  new one. Works in seconds, lasts five minutes, and can be used once.
+- **A recovery key** — a long string shown at sign-up. It works from anywhere
+  and knows nothing about domains, which is what makes it the backstop.
+
+A passkey is bound to a domain. Change the app's address and every passkey
+stops being offered, and because cookies are domain-scoped too, every session
+ends with them. That is a property of WebAuthn, not something an app can opt
+out of, so plan for it:
+
+**Set `DIVVY_RP_ID` before anyone registers a passkey.** Point it at the domain
+you intend to keep. An apex domain (`example.com`) covers every subdomain under
+it, which makes a later move from `app.example.com` to `divvy.example.com` a
+non-event.
+
+**To move to a genuinely different domain:**
+
+1. Keep the old domain resolving to the server.
+2. Set `DIVVY_RELATED_ORIGINS=https://old.example.com` on the new one. It is
+   served at `/.well-known/webauthn`, and browsers that support Related Origin
+   Requests will go on honouring the old passkeys.
+3. Leave `DIVVY_RP_ID` on the old value until everyone has signed in at the new
+   address at least once and added a passkey there.
+4. Then switch `DIVVY_RP_ID`, drop `DIVVY_RELATED_ORIGINS`, and let people
+   remove the stale passkeys their account screen is already flagging.
+
+Anyone who falls through that — an unsupported browser, a domain that lapsed —
+signs in with their recovery key and adds a passkey again. Nobody is stranded,
+which is the reason the recovery key was kept rather than replaced.
 
 ---
 

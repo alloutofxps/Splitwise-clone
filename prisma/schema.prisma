@@ -31,9 +31,6 @@ model Person {
   avatarEmoji     String?
   defaultCurrency String  @default("USD")
 
-  /// SHA-256 of the recovery secret. Null for ghosts that were never claimed.
-  tokenHash String? @unique
-
   /// Personal invite code, used to add this person as a friend directly.
   inviteCode String @unique
 
@@ -66,8 +63,107 @@ model Person {
   recurrences        Recurrence[]
   friendshipsA       Friendship[]       @relation("FriendA")
   friendshipsB       Friendship[]       @relation("FriendB")
+  credentials        Credential[]
+  deviceLinks        DeviceLink[]
+  sessions           Session[]
 
   @@index([inviteCode])
+}
+
+/// One signed-in device.
+///
+/// The cookie used to carry the recovery secret itself, which tied three
+/// things together that want to move independently: proving who you are,
+/// staying signed in, and getting back in later. A passkey has no secret to
+/// put in a cookie, and rotating a recovery key would have signed every device
+/// out. So a session is its own row, minted by whichever credential proved the
+/// identity, and revocable on its own.
+model Session {
+  id       String @id @default(cuid())
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 of the session secret held in the cookie.
+  secretHash String @unique
+
+  /// Best-effort device description, for the "where you are signed in" list.
+  label String
+
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([personId])
+}
+
+/// One way of proving you are a Person.
+///
+/// This used to be a single `tokenHash` column, which quietly made the recovery
+/// key do three jobs at once: the password, the only route onto a second
+/// device, and the only way back after losing a phone. One lost key meant an
+/// account nobody could reach and balances no one could settle.
+///
+/// Splitting it into rows means a person can hold several ways in at once — a
+/// passkey on each device plus the recovery key as backstop — and can revoke
+/// one without disturbing the others.
+model Credential {
+  id       String @id @default(cuid())
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  /// "recovery" or "passkey".
+  kind String
+
+  /// SHA-256 of the recovery secret. Null on passkeys.
+  secretHash String? @unique
+
+  /// WebAuthn credential id, base64url. Null on recovery keys.
+  externalId String? @unique
+  /// COSE public key bytes, as returned by the authenticator.
+  publicKey  Bytes?
+  /// Signature counter, for detecting a cloned authenticator.
+  counter    Int     @default(0)
+  /// Comma-separated transport hints ("internal,hybrid"), purely advisory.
+  transports String?
+
+  /// The Relying Party ID this passkey was registered against — in practice
+  /// the domain. Kept because a passkey is bound to it: if the app later moves
+  /// to another domain, credentials made for the old one silently stop
+  /// working, and storing this is the difference between the account screen
+  /// explaining that and the user staring at a button that does nothing.
+  rpId String?
+
+  /// What the owner sees in their device list.
+  label String
+
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([personId])
+}
+
+/// A short-lived, single-use code that hands an account to another device.
+///
+/// Shown as a QR code on a device that is already signed in and scanned by the
+/// new one, so getting the app onto a second device is a five-second job
+/// rather than transcribing a 64-character key.
+///
+/// The code is a bearer token — whoever holds it becomes that person — so it
+/// lives for minutes, works once, and is only ever rendered on an already
+/// authenticated screen.
+model DeviceLink {
+  id       String @id @default(cuid())
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 of the code. The raw value is shown once and never stored.
+  codeHash String @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([personId])
+  @@index([expiresAt])
 }
 
 /// A direct (non-group) connection between two people. Ordered so that

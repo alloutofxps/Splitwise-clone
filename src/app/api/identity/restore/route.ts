@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { json, readBody, route } from "@/lib/api";
-import { restoreIdentity, setIdentityCookie } from "@/lib/identity";
+import { describeDevice, restoreIdentity, startSession } from "@/lib/identity";
 import { meDto } from "@/server/me";
 import { limitByAddress, RECOVERY_ATTEMPT } from "@/server/rate-limit";
 
@@ -21,11 +21,12 @@ export const POST = route(async (request: Request) => {
 
   const { recoveryKey } = await readBody(request, schema);
 
-  // The same secret is re-signed into a cookie rather than rotated, so the key
-  // keeps working on the old device too - which is what "restore" should mean
-  // when someone is moving between a phone and a laptop.
-  const { person, secret } = await restoreIdentity(recoveryKey);
-  await setIdentityCookie(person.id, secret);
+  // The key itself is left alone rather than rotated, so it keeps working on
+  // the old device too - which is what "restore" should mean when someone is
+  // moving between a phone and a laptop. What this mints is a session for
+  // *this* device, listed and revocable separately from every other one.
+  const { person } = await restoreIdentity(recoveryKey);
+  await startSession(person.id, describeDevice(request.headers.get("user-agent")));
 
   return json({ me: await meDto(person) });
 });
