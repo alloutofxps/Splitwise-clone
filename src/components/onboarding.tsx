@@ -602,7 +602,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-body-lg text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
       />
 
       <div className="mt-auto pt-8">

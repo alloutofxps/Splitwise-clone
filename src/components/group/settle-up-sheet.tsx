@@ -297,7 +297,7 @@ export function SettleUpSheet({
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 500))}
               placeholder="Add a note (optional)"
-              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </>
         )}

@@ -208,7 +208,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 }}
                 placeholder="Add a name"
                 enterKeyHint="done"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-subhead text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
               />
               <button
                 onClick={addName}

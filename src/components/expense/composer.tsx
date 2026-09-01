@@ -530,7 +530,7 @@ export function ExpenseComposer({
             rows={5}
             autoFocus
             placeholder="Anything worth remembering about this expense…"
-            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-subhead leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
           <Button
             variant="primary"
@@ -680,7 +680,7 @@ function ScopePicker({
           const option = options.find((o) => o.key === event.target.value);
           if (option) onChange(option.apply());
         }}
-        className="min-w-0 flex-1 bg-transparent text-subhead font-semibold text-text outline-none"
+        className="min-w-0 flex-1 bg-transparent text-input font-semibold text-text outline-none"
       >
         {current === "" ? <option value="">Choose a group or friend…</option> : null}
         {data.groups.length > 0 ? (
@@ -916,7 +916,7 @@ function ConversionNote({
               value={rate}
               onChange={(event) => onRateChange(event.target.value.replace(/[^\d.]/g, ""))}
               inputMode="decimal"
-              className="w-16 bg-transparent text-right font-semibold text-text outline-none"
+              className="w-[72px] bg-transparent text-right text-input font-semibold text-text outline-none"
               aria-label={`Exchange rate from ${from} to ${to}`}
             />{" "}
             {to}

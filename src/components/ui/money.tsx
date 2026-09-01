@@ -262,7 +262,7 @@ export function CompactAmountInput({
           onChange(masked === "" ? 0n : (parseAmount(masked, currency) ?? 0n));
         }}
         className={cn(
-          "tabular w-[76px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60",
+          "tabular w-[84px] bg-transparent text-right text-input font-bold text-text outline-none placeholder:text-subtle/60",
           className,
         )}
       />

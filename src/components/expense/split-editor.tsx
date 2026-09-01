@@ -366,7 +366,7 @@ function ModeInput({
               onUpdate({ percent: Number.isFinite(value) ? value : 0 });
             }}
             onFocus={(event) => event.currentTarget.select()}
-            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-body-lg font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
+            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-input font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
           />
           <span className="text-body font-semibold text-subtle">%</span>
         </div>
@@ -578,7 +578,7 @@ function ItemEditor({
                   )
                 }
                 placeholder={`Item ${index + 1}`}
-                className="min-w-0 flex-1 bg-transparent text-body-lg font-semibold text-text outline-none placeholder:text-subtle/70"
+                className="min-w-0 flex-1 bg-transparent text-input font-semibold text-text outline-none placeholder:text-subtle/70"
               />
               <CompactAmountInput
                 value={item.amount ?? 0n}
