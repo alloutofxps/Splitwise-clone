@@ -50,7 +50,7 @@ export function CurrencyPicker({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search currencies"
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-subhead text-text outline-none placeholder:text-subtle/70"
+              className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
             />
           </label>
         </div>
