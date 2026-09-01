@@ -850,6 +850,71 @@ console.log("\nThings that only show up on a phone");
   await fresh.close();
 }
 
+/**
+ * Scrolling a sheet must not throw it away.
+ *
+ * `drag` was listening on the whole sheet, so a downward swipe over the form
+ * was a dismissal gesture competing with a scroll — and once the keyboard made
+ * scrolling necessary to see the field being typed into, the two collided
+ * constantly. A slightly firm scroll dismissed the sheet and lost the input.
+ */
+console.log("\nA sheet you can scroll without losing it");
+{
+  const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const p3 = await ctx3.newPage();
+  await p3.goto(BASE, { waitUntil: "networkidle" });
+  await p3.evaluate(async () => {
+    await fetch("/api/identity", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Sheet Tester", avatarColor: "iris", defaultCurrency: "EUR" }),
+    });
+  });
+  await p3.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await p3.waitForTimeout(2000);
+  await p3.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p3.waitForTimeout(900);
+
+  const sheet = p3.locator('[role="dialog"]').last();
+  const box = await sheet.boundingBox();
+  const x = box.x + box.width / 2;
+
+  const swipe = async (fromY, steps, step) => {
+    await p3.mouse.move(x, fromY);
+    await p3.mouse.down();
+    for (let i = 1; i <= steps; i++) await p3.mouse.move(x, fromY + i * step);
+    await p3.mouse.up();
+    await p3.waitForTimeout(900);
+  };
+
+  await swipe(box.y + box.height * 0.55, 12, 25);
+  check("a hard downward swipe over the content leaves the sheet open", await sheet.count() > 0);
+
+  // The handle must still work, or this trades one broken thing for another.
+  await swipe(box.y + 8, 14, 30);
+  check("but dragging the handle still dismisses it", await p3.locator('[role="dialog"]').count() === 0);
+
+  // And the field being typed into ends up somewhere it can be read.
+  await p3.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p3.waitForTimeout(900);
+  const field = p3.locator('[role="dialog"] input').first();
+  await field.click();
+  await p3.evaluate(() => {
+    const vv = window.visualViewport;
+    Object.defineProperty(vv, "height", { value: window.innerHeight - 340, configurable: true });
+    Object.defineProperty(vv, "offsetTop", { value: 0, configurable: true });
+    vv.dispatchEvent(new Event("resize"));
+  });
+  await p3.waitForTimeout(900);
+  const fb = await field.boundingBox();
+  check(
+    "the field being typed into stays on screen when the keyboard opens",
+    fb && fb.y > 0 && fb.y + fb.height <= 844 - 340,
+    `field bottom ${Math.round(fb?.y + fb?.height)}, keyboard top ${844 - 340}`,
+  );
+
+  await ctx3.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
