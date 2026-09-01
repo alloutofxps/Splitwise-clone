@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { currencyCode, dateInput, json, minorUnits, readBody, route, text } from "@/lib/api";
+import {
+  currencyCode,
+  dateInput,
+  exchangeRateInput,
+  json,
+  minorUnits,
+  readBody,
+  route,
+  text,
+} from "@/lib/api";
 import { requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { convert } from "@/lib/money";
@@ -15,7 +24,7 @@ const schema = z.object({
   toPersonId: z.string().min(1),
   amount: minorUnits("The amount"),
   currency: currencyCode,
-  exchangeRate: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  exchangeRate: exchangeRateInput.optional(),
   date: dateInput.optional(),
   note: text(500, "The note").nullable().optional(),
   method: text(40, "The payment method").nullable().optional(),

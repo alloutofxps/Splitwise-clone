@@ -210,6 +210,29 @@ export const currencyCode = z
   .regex(/^[A-Za-z]{3}$/, "Expected a three-letter currency code.")
   .transform((value) => value.toUpperCase());
 
+/**
+ * An exchange rate: quote currency per one unit of base.
+ *
+ * A string rather than a number, all the way to the database, because a rate
+ * is decimal data and a float would round it before it was ever used.
+ *
+ * `> 0` is the part that has to be enforced rather than assumed. The regex on
+ * its own accepts "0" and "0.000000000000001", and both convert every amount
+ * to nothing: the expense stores its real `amount`, renders "€50.00" in the
+ * ledger, and moves no balance at all. Anyone in a group can file an expense,
+ * so that is a way to make a shared ledger disagree with itself — visibly
+ * spent, invisibly settled — and it is equally reachable by accident the day a
+ * rate provider answers with a zero.
+ *
+ * Twelve fraction digits is where `convert` truncates, so anything smaller
+ * rounds to zero downstream and is refused here rather than silently flattened.
+ */
+export const exchangeRateInput = z
+  .string()
+  .trim()
+  .regex(/^\d+(\.\d{1,12})?$/, "The exchange rate has to be a positive decimal number.")
+  .refine((value) => Number(value) > 0, "The exchange rate has to be greater than zero.");
+
 /** An ISO date string or timestamp, as a Date. */
 export const dateInput = z
   .union([z.string(), z.number(), z.date()])

@@ -5,7 +5,8 @@ import { Check, Users } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
-import { currencySymbol, decimalsFor, parseAmount, toDecimalString } from "@/lib/money";
+import { currencySymbol, toDecimalString } from "@/lib/money";
+import { CompactAmountInput } from "../ui/money";
 import { apportion } from "@/lib/split";
 import type { PersonDto } from "@/lib/types";
 
@@ -167,18 +168,17 @@ export function PayerPicker({
                   </button>
 
                   {multiple && selected ? (
-                    <PayerAmount
+                    <CompactAmountInput
                       value={payer!.amount}
                       currency={currency}
                       onChange={(amount) =>
                         setLocal((current) =>
                           current.map((entry) =>
-                            entry.personId === member.id
-                              ? { ...entry, amount: amount ?? 0n }
-                              : entry,
+                            entry.personId === member.id ? { ...entry, amount } : entry,
                           ),
                         )
                       }
+                      label={`Paid by ${member.id === meId ? "you" : member.displayName}`}
                     />
                   ) : null}
                 </div>
@@ -191,49 +191,3 @@ export function PayerPicker({
   );
 }
 
-function PayerAmount({
-  value,
-  currency,
-  onChange,
-}: {
-  value: bigint;
-  currency: string;
-  onChange: (value: bigint | null) => void;
-}) {
-  const decimals = decimalsFor(currency);
-  const [text, setText] = React.useState(() =>
-    value === 0n ? "" : toDecimalString(value, currency),
-  );
-
-  React.useEffect(() => {
-    if (parseAmount(text, currency) !== value) {
-      setText(value === 0n ? "" : toDecimalString(value, currency));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, currency]);
-
-  return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
-      <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
-      <input
-        inputMode="decimal"
-        value={text}
-        placeholder="0"
-        onFocus={(event) => event.currentTarget.select()}
-        onChange={(event) => {
-          let next = event.target.value.replace(/[^\d.,]/g, "").replace(/,/g, ".");
-          const dot = next.indexOf(".");
-          if (dot !== -1) {
-            next =
-              decimals === 0
-                ? next.slice(0, dot)
-                : `${next.slice(0, dot)}.${next.slice(dot + 1).replace(/\./g, "").slice(0, decimals)}`;
-          }
-          setText(next);
-          onChange(next === "" ? 0n : parseAmount(next, currency));
-        }}
-        className="tabular w-[76px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60"
-      />
-    </div>
-  );
-}

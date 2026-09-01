@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Check, Delete } from "lucide-react";
 import { cn, haptic } from "./primitives";
-import { maskAmount } from "./money";
-import { currencySymbol, decimalsFor, parseAmount, toDecimalString } from "@/lib/money";
+import { maskAmount, useAmountText } from "./money";
+import { currencySymbol, decimalsFor, parseAmount } from "@/lib/money";
 
 /**
  * The amount field, with its own keypad.
@@ -53,22 +53,10 @@ export function AmountPad({
   const decimals = decimalsFor(currency);
   const symbol = currencySymbol(currency);
 
-  const [text, setText] = React.useState(() =>
-    value === null ? "" : toDecimalString(value, currency),
-  );
+  const [text, setText] = useAmountText(value, currency);
   // Editing an existing expense opens with the amount already right, so the pad
   // starts out of the way; a new one opens with it ready.
   const [open, setOpen] = React.useState(() => value === null);
-
-  // Reconcile only when the parent's value genuinely disagrees, so setting the
-  // amount programmatically (picking a suggested payment, say) lands, while
-  // typing is never fought mid-keystroke.
-  React.useEffect(() => {
-    const parsed = parseAmount(text, currency);
-    if (value === null && text !== "") setText("");
-    else if (value !== null && parsed !== value) setText(toDecimalString(value, currency));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, currency]);
 
   const commit = (next: string) => {
     const masked = maskAmount(next, decimals);

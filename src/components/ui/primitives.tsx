@@ -438,3 +438,29 @@ export function SectionHeader({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+
+/**
+ * False while rendering on the server and through hydration, true after.
+ *
+ * The gate every portal needs: `createPortal` reaches for `document.body`,
+ * which does not exist during a server render, and painting a sheet on the
+ * first client pass would make the markup disagree with the server's and blow
+ * up hydration.
+ *
+ * `useSyncExternalStore` rather than the usual `useState(false)` +
+ * `useEffect(() => setMounted(true))`. Same three lines, one fewer render: the
+ * effect version paints `false`, commits, sets state, and paints again, so
+ * every sheet in the app costs an extra render pass on open. This one reads
+ * `false` from the server snapshot and `true` from the client one, and React
+ * picks the right answer on the first pass. Nothing is ever subscribed to,
+ * hence the no-op `subscribe`.
+ */
+const neverChanges = () => () => {};
+const onTheClient = () => true;
+const onTheServer = () => false;
+
+export function useMounted(): boolean {
+  return React.useSyncExternalStore(neverChanges, onTheClient, onTheServer);
+}

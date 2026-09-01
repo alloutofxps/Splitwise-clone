@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CloudOff, Info, TriangleAlert, Undo2 } from "lucide-react";
-import { cn, haptic } from "./primitives";
+import { cn, haptic, useMounted } from "./primitives";
 
 export type ToastTone = "success" | "error" | "info" | "offline";
 
@@ -103,8 +103,7 @@ function ToastViewport({
   toasts: ToastRecord[];
   onDismiss: (id: number) => void;
 }) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
   if (!mounted) return null;
 
   return createPortal(

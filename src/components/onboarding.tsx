@@ -578,7 +578,22 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
 function guessCurrency(): string {
   if (typeof navigator === "undefined") return "USD";
 
-  const region = new Intl.Locale(navigator.language).maximize().region;
+  /*
+   * Both halves of this line throw on inputs that exist in the wild.
+   * `new Intl.Locale("")` is a RangeError, and `navigator.language` is empty
+   * or non-standard in more embedded webviews than one would like; `maximize`
+   * is absent in browsers older than the app otherwise supports, which makes
+   * it a TypeError rather than an undefined. This runs on the very first
+   * screen anybody sees, so an exception here is a blank page on first run —
+   * the guess is not worth a single one of those.
+   */
+  let region: string | undefined;
+  try {
+    region = new Intl.Locale(navigator.language).maximize().region;
+  } catch {
+    return "USD";
+  }
+
   const byRegion: Record<string, string> = {
     US: "USD", GB: "GBP", IN: "INR", JP: "JPY", AU: "AUD", CA: "CAD",
     CH: "CHF", CN: "CNY", SG: "SGD", HK: "HKD", NZ: "NZD", SE: "SEK",

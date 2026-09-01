@@ -788,6 +788,43 @@ async function main() {
   const rate = await priya.call("/api/rates?base=EUR&quote=USD", { allowError: true });
   check("the rates endpoint answers", rate.status === 200, String(rate.status));
 
+  // `base` is interpolated into an outbound provider URL and used as a cache
+  // primary key, so anything that is not three letters has to stop here rather
+  // than reshape the request the server makes or add a row to the rate table.
+  for (const bogus of ["../../../v6/latest/USD", "US", "USDX", "US%2F", "usd?x=1"]) {
+    const answer = await priya.call(
+      `/api/rates?base=${encodeURIComponent(bogus)}&quote=USD`,
+      { allowError: true },
+    );
+    check(
+      `a malformed currency code is refused a lookup (${bogus})`,
+      answer.status === 200 && answer.body.rate === null,
+      `${answer.status} ${JSON.stringify(answer.body?.rate)}`,
+    );
+  }
+
+  // A zero exchange rate stores a real amount and converts it to nothing: the
+  // expense shows in the ledger and moves no balance.
+  const zeroRate = await priya.call("/api/expenses", {
+    method: "POST",
+    body: {
+      groupId,
+      description: "Rate of nothing",
+      amount: "5000",
+      currency: "EUR",
+      exchangeRate: "0",
+      splitMode: "EQUAL",
+      payers: [{ personId: priyaId, amount: "5000" }],
+      splits: [{ personId: priyaId, amount: "5000" }],
+    },
+    allowError: true,
+  });
+  check(
+    "an exchange rate of zero is refused",
+    zeroRate.status === 422,
+    `${zeroRate.status} ${JSON.stringify(zeroRate.body)}`,
+  );
+
   // -- Rate limiting --------------------------------------------------------
   //
   // Invite codes are three short words, so a cap on attempts is what protects
