@@ -26,5 +26,3 @@ export const TEXT_SCALE = [
   "display-lg",
   "hero",
 ] as const;
-
-export type TextStep = (typeof TEXT_SCALE)[number];

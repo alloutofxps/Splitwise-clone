@@ -180,10 +180,6 @@ export class NotFoundError extends Error {
 }
 
 /**
- * Thrown when a caller has used up an endpoint's allowance. Carries the number
- * of seconds until the next attempt so the route wrapper can set Retry-After.
- */
-/**
  * Somebody else changed the row first.
  *
  * Distinct from a 403: the caller is entitled to the edit, they are just
@@ -199,6 +195,10 @@ export class ConflictError extends Error {
   }
 }
 
+/**
+ * Thrown when a caller has used up an endpoint's allowance. Carries the number
+ * of seconds until the next attempt so the route wrapper can set Retry-After.
+ */
 export class RateLimitError extends Error {
   retryAfterSeconds: number;
   constructor(retryAfterSeconds: number, message = "Too many attempts. Wait a moment and try again.") {
@@ -341,20 +341,22 @@ export async function rotateSecret(personId: string): Promise<string> {
 /**
  * Turns "this person proved who they are" into "this device is signed in".
  *
- * Every route in that produces a login — first run, recovery key, passkey,
+ * Every route that produces a login — first run, recovery key, passkey,
  * scanned device link — funnels through here, so there is one place that
  * decides what a session is and exactly one shape of cookie.
  */
 export async function startSession(
   personId: string,
   label = "This device",
-): Promise<string> {
+): Promise<void> {
   const secret = generateSecret();
   await prisma.session.create({
     data: { personId, secretHash: hashSecret(secret), label: label.slice(0, 80) },
   });
+  // Returns nothing on purpose. The secret's only destination is the httpOnly
+  // cookie set here; handing it back would put a live session credential in
+  // reach of a response body, and no caller has ever wanted it.
   await setIdentityCookie(personId, secret);
-  return secret;
 }
 
 /** Ends the session the current cookie names, if it names one. */
@@ -388,7 +390,7 @@ export function describeDevice(userAgent: string | null): string {
     : "Device";
   const browser =
     /Edg\//i.test(ua) ? "Edge"
-    : /Chrome\//i.test(ua) && !/Edg\//i.test(ua) ? "Chrome"
+    : /Chrome\//i.test(ua) ? "Chrome"
     : /Firefox\//i.test(ua) ? "Firefox"
     : /Safari\//i.test(ua) ? "Safari"
     : null;

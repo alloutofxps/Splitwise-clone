@@ -596,6 +596,138 @@ console.log("\nSign-up shows the recovery key");
   await fresh.close();
 }
 
+/**
+ * The amount fields inside the split and payer editors.
+ *
+ * Every one of them keeps a text buffer of its own so a half-typed "12."
+ * survives a re-render, while still following the value when a parent moves
+ * it. That reconciliation is the fiddly part, and it had been copied into four
+ * components; it is now one hook, which is exactly the change that needs a
+ * browser to believe. An API test cannot see a field that clears itself on the
+ * next render, and a unit test of the hook alone cannot see it wired to an
+ * input.
+ *
+ * So: type into them, save, and check the server got the numbers on screen.
+ */
+console.log("\nTyping into the split and payer editors");
+{
+  const seed = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const group = (await post("/api/groups", { name: "Editors", currency: "USD", placeholderNames: ["Ada"] })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const me = (await (await fetch("/api/identity")).json()).me;
+    return {
+      groupId: group.id,
+      meId: me.id,
+      adaId: detail.group.members.find((m) => m.displayName === "Ada").id,
+    };
+  });
+
+  await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(2000);
+  await page.getByRole("button", { name: /Add an expense|Add expense/i }).first().click();
+  await page.waitForTimeout(1500);
+
+  const amount = page.getByLabel("Amount");
+  check("the composer opens on an amount field", await amount.count() > 0);
+  await amount.first().fill("30");
+  await page.getByPlaceholder(/What was it for|Description/i).first().fill("Editor test");
+  await page.waitForTimeout(400);
+
+  // -- Two people paid ------------------------------------------------------
+  await page.getByRole("button", { name: /Paid by/i }).first().click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: /More than one person paid/i }).first().click();
+  await page.waitForTimeout(500);
+  // Only selected payers get an amount field, so Ada has to be added first.
+  await page.getByRole("button", { name: /^Ada$/ }).first().click();
+  await page.waitForTimeout(500);
+
+  const mine = page.getByLabel("Paid by you", { exact: true });
+  const theirs = page.getByLabel("Paid by Ada", { exact: true });
+  check(
+    "each payer row names its own amount field",
+    (await mine.count()) > 0 && (await theirs.count()) > 0,
+    `${await mine.count()} / ${await theirs.count()}`,
+  );
+
+  await mine.first().fill("20");
+  await theirs.first().fill("10");
+  await page.waitForTimeout(500);
+  check(
+    "both typed payer amounts stay on screen",
+    (await mine.first().inputValue()) === "20" && (await theirs.first().inputValue()) === "10",
+    `${await mine.first().inputValue()} / ${await theirs.first().inputValue()}`,
+  );
+
+  // Done is disabled until the payments reach the total, which is itself the
+  // signal that the fields are feeding the parent rather than only themselves.
+  // `.last()`: the numpad inside the composer has a Done of its own, and it
+  // sits earlier in the DOM than the sheet portal opened on top of it.
+  const payerDone = page.getByRole("button", { name: "Done", exact: true }).last();
+  check("the payments adding up re-enables Done", !(await payerDone.isDisabled()));
+  await payerDone.click();
+  await page.waitForTimeout(900);
+
+  // -- Exact shares ---------------------------------------------------------
+  await page.getByRole("button", { name: /^Split/i }).first().click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: /Exactly/ }).first().click();
+  await page.waitForTimeout(700);
+
+  const myShare = page.getByLabel("Share for you", { exact: true });
+  const theirShare = page.getByLabel("Share for Ada", { exact: true });
+  check(
+    "each split row names its own amount field",
+    (await myShare.count()) > 0 && (await theirShare.count()) > 0,
+    `${await myShare.count()} / ${await theirShare.count()}`,
+  );
+
+  await myShare.first().fill("12.5");
+  await theirShare.first().fill("17.5");
+  await page.waitForTimeout(600);
+  check(
+    "both typed shares stay on screen",
+    (await myShare.first().inputValue()) === "12.5" &&
+      (await theirShare.first().inputValue()) === "17.5",
+    `${await myShare.first().inputValue()} / ${await theirShare.first().inputValue()}`,
+  );
+
+  await page.getByRole("button", { name: "Done", exact: true }).last().click();
+  await page.waitForTimeout(900);
+
+  await page.getByRole("button", { name: /^(Save|Add expense|Add)$/i }).last().click();
+  await page.waitForTimeout(3500);
+
+  const filed = await page.evaluate(async (g) => {
+    const r = await (await fetch(`/api/groups/${g}/expenses`)).json();
+    const row = (r.items ?? [])
+      .map((i) => i.expense)
+      .filter(Boolean)
+      .find((e) => e.description === "Editor test");
+    return row ? { amount: row.amount, payers: row.payers, splits: row.splits } : null;
+  }, seed.groupId);
+
+  check("the expense reached the server", filed !== null);
+  if (filed) {
+    check("with the amount that was typed", filed.amount === "3000", filed.amount);
+    const paid = Object.fromEntries(filed.payers.map((p) => [p.personId, p.amount]));
+    const owed = Object.fromEntries(filed.splits.map((p) => [p.personId, p.amount]));
+    check(
+      "the payer amounts are the ones typed, not the defaults",
+      paid[seed.meId] === "2000" && paid[seed.adaId] === "1000",
+      JSON.stringify(paid),
+    );
+    check(
+      "the exact shares are the ones typed",
+      owed[seed.meId] === "1250" && owed[seed.adaId] === "1750",
+      JSON.stringify(owed),
+    );
+  }
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

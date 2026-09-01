@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { currencyCode, dateInput, minorUnits, text } from "@/lib/api";
+import { currencyCode, dateInput, exchangeRateInput, minorUnits, text } from "@/lib/api";
 import { ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { SPLIT_MODES } from "@/lib/split";
@@ -25,10 +25,7 @@ export const expenseInputSchema = z.object({
   notes: text(2000, "The note").nullable().optional(),
   amount: minorUnits("The amount"),
   currency: currencyCode,
-  exchangeRate: z
-    .string()
-    .regex(/^\d+(\.\d+)?$/, "The exchange rate has to be a positive number.")
-    .optional(),
+  exchangeRate: exchangeRateInput.optional(),
 
   splitMode: z.enum(SPLIT_MODES),
   categoryId: z.string().max(40).nullable().optional(),
@@ -116,14 +113,14 @@ export async function prepareExpense(
   ];
   await assertCanInvolve(involved, actorId, groupId);
 
-  const exchangeRate =
-    settlementCurrency === input.currency ? "1" : (input.exchangeRate ?? "1");
-
   if (settlementCurrency !== input.currency && !input.exchangeRate) {
     throw new ValidationError(
       `This group settles in ${settlementCurrency}, so an exchange rate is needed for a ${input.currency} expense.`,
     );
   }
+
+  const exchangeRate =
+    settlementCurrency === input.currency ? "1" : (input.exchangeRate ?? "1");
 
   const categoryId =
     input.categoryId && CATEGORY_BY_ID.has(input.categoryId)

@@ -5,7 +5,8 @@ import { Equal, Hash, Percent, Plus, Receipt, SlidersHorizontal, Trash2 } from "
 import { Sheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
-import { currencySymbol, decimalsFor, parseAmount, toDecimalString } from "@/lib/money";
+import { currencySymbol, toDecimalString } from "@/lib/money";
+import { CompactAmountInput } from "../ui/money";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
 import type { PersonDto } from "@/lib/types";
 
@@ -317,7 +318,15 @@ function ParticipantRow({
         </span>
       </button>
 
-      {included ? <ModeInput mode={mode} entry={entry} currency={currency} onUpdate={onUpdate} /> : null}
+      {included ? (
+        <ModeInput
+          mode={mode}
+          entry={entry}
+          currency={currency}
+          onUpdate={onUpdate}
+          personName={isMe ? "you" : member.displayName}
+        />
+      ) : null}
     </li>
   );
 }
@@ -327,19 +336,22 @@ function ModeInput({
   entry,
   currency,
   onUpdate,
+  personName,
 }: {
   mode: SplitMode;
   entry: SplitParticipant;
   currency: string;
   onUpdate: (changes: Partial<SplitParticipant>) => void;
+  personName: string;
 }) {
   switch (mode) {
     case "EXACT":
       return (
-        <MoneyField
+        <CompactAmountInput
           value={entry.amount ?? 0n}
           currency={currency}
-          onChange={(amount) => onUpdate({ amount: amount ?? 0n })}
+          onChange={(amount) => onUpdate({ amount })}
+          label={`Share for ${personName}`}
         />
       );
 
@@ -372,10 +384,11 @@ function ModeInput({
       return (
         <div className="flex shrink-0 items-center gap-1">
           <span className="text-body font-bold text-subtle">+</span>
-          <MoneyField
+          <CompactAmountInput
             value={entry.adjustment ?? 0n}
             currency={currency}
-            onChange={(adjustment) => onUpdate({ adjustment: adjustment ?? 0n })}
+            onChange={(adjustment) => onUpdate({ adjustment })}
+            label={`Extra for ${personName}`}
           />
         </div>
       );
@@ -385,52 +398,6 @@ function ModeInput({
   }
 }
 
-function MoneyField({
-  value,
-  currency,
-  onChange,
-}: {
-  value: bigint;
-  currency: string;
-  onChange: (value: bigint | null) => void;
-}) {
-  const [text, setText] = React.useState(() =>
-    value === 0n ? "" : toDecimalString(value, currency),
-  );
-
-  React.useEffect(() => {
-    const parsed = parseAmount(text, currency);
-    if (parsed !== value) setText(value === 0n ? "" : toDecimalString(value, currency));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, currency]);
-
-  const decimals = decimalsFor(currency);
-
-  return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
-      <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
-      <input
-        inputMode="decimal"
-        value={text}
-        placeholder="0"
-        onFocus={(event) => event.currentTarget.select()}
-        onChange={(event) => {
-          let next = event.target.value.replace(/[^\d.,]/g, "").replace(/,/g, ".");
-          const dot = next.indexOf(".");
-          if (dot !== -1) {
-            next =
-              decimals === 0
-                ? next.slice(0, dot)
-                : `${next.slice(0, dot)}.${next.slice(dot + 1).replace(/\./g, "").slice(0, decimals)}`;
-          }
-          setText(next);
-          onChange(next === "" ? 0n : parseAmount(next, currency));
-        }}
-        className="tabular w-[72px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60"
-      />
-    </div>
-  );
-}
 
 function Stepper({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   return (
@@ -613,7 +580,7 @@ function ItemEditor({
                 placeholder={`Item ${index + 1}`}
                 className="min-w-0 flex-1 bg-transparent text-body-lg font-semibold text-text outline-none placeholder:text-subtle/70"
               />
-              <MoneyField
+              <CompactAmountInput
                 value={item.amount ?? 0n}
                 currency={currency}
                 onChange={(amount) =>
@@ -623,6 +590,8 @@ function ItemEditor({
                     ),
                   )
                 }
+                label={item.name.trim() ? `Price of ${item.name.trim()}` : `Price of item ${index + 1}`}
+                className="w-[72px]"
               />
               <button
                 onClick={() => {

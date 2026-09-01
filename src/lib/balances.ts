@@ -73,8 +73,23 @@ const pairKey = (a: string, b: string) => `${a}\u0000${b}`;
  * With a single payer this is simply "everyone owes the payer their share".
  * With several payers there is no single right answer, so each debtor's
  * shortfall is apportioned across the creditors in proportion to how much each
- * creditor is out of pocket - the choice that keeps every creditor's incoming
- * total equal to their surplus exactly, with no rounding drift.
+ * creditor is still out of pocket.
+ *
+ * "Still" is doing real work in that sentence. Weighting by each creditor's
+ * *original* surplus balances every row and no column: apportionment rounds in
+ * the creditors' favour independently for each debtor, and those roundings do
+ * not cancel. A ten-pound dinner where Ana puts in 7 and Ben 3, split evenly
+ * between two other people, produced a ledger reading "Ana is owed 8, Ben is
+ * owed 2" - both wrong by a unit, against a net map that correctly said 7 and
+ * 3. Two screens, two answers, from the same expense.
+ *
+ * Weighting by what is *left* to allocate fixes it structurally rather than by
+ * patching up the total afterwards. Largest-remainder never hands anybody more
+ * than the ceiling of their ideal share, and once the weights are the remaining
+ * capacities that ceiling is the capacity itself, so no creditor can be
+ * over-paid; the debts and the credits sum to the same figure, so the last
+ * debtor drains what is left to exactly zero. Rows and columns both balance,
+ * for every input, with no rounding drift.
  */
 function expenseEdges(paid: PersonAmount[], owed: PersonAmount[]): DebtEdge[] {
   const net = new Map<string, bigint>();
@@ -102,18 +117,23 @@ function expenseEdges(paid: PersonAmount[], owed: PersonAmount[]): DebtEdge[] {
     }));
   }
 
-  const creditWeights = creditors.map((c) => Number(c.amount));
+  const remaining = creditors.map((c) => c.amount);
   const edges: DebtEdge[] = [];
   for (const debtor of debtors) {
-    const shares = apportion(debtor.amount, creditWeights);
+    // Defensive: reachable only if the paid and owed sides disagree, which the
+    // API refuses to store. Stopping leaves the surplus unattributed rather
+    // than inventing a creditor to hang it on.
+    if (sum(remaining) <= 0n) break;
+
+    const shares = apportion(debtor.amount, remaining.map(Number));
     creditors.forEach((creditor, i) => {
-      if (shares[i] > 0n) {
-        edges.push({
-          fromPersonId: debtor.personId,
-          toPersonId: creditor.personId,
-          amount: shares[i],
-        });
-      }
+      if (shares[i] <= 0n) return;
+      remaining[i] -= shares[i];
+      edges.push({
+        fromPersonId: debtor.personId,
+        toPersonId: creditor.personId,
+        amount: shares[i],
+      });
     });
   }
   return edges;

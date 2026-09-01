@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
-import { cn, haptic, IconButton } from "./primitives";
+import { cn, haptic, IconButton, useMounted } from "./primitives";
 
 /**
  * Bottom sheet / centred dialog.
@@ -46,8 +46,7 @@ export function Sheet({
   tall = false,
   className,
 }: SheetProps) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   // Body scroll lock. Recording the previous value rather than assuming
   // "visible" keeps nested sheets from unlocking the page early.

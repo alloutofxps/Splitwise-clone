@@ -56,10 +56,3 @@ export function initials(name: string): string {
   const last = [...words[words.length - 1]][0] ?? "";
   return (first + last).toUpperCase();
 }
-
-/** Short label used where space is tight, e.g. "Ana M." */
-export function shortName(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return name.trim();
-  return `${words[0]} ${[...words[words.length - 1]][0]}.`;
-}

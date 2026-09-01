@@ -332,8 +332,23 @@ export function convert(
   if (fromCode.toUpperCase() === toCode.toUpperCase()) return minor;
 
   const PRECISION = 12n;
-  const scaled = decimalStringToScaled(String(rate), PRECISION);
-  if (scaled === null) return minor;
+  const parsed = decimalStringToScaled(String(rate), PRECISION);
+
+  /*
+   * A rate this cannot read falls back to 1:1 *through the scaling*, not to
+   * returning the input untouched.
+   *
+   * Returning `minor` looks like the safe answer and is the wrong one whenever
+   * the two currencies count minor units differently: 5000 US cents handed
+   * back unchanged is ¥5000, a hundred times the ¥50 it should be. Treating an
+   * unreadable rate as parity at least keeps the magnitude right.
+   *
+   * Both API schemas reject anything this cannot parse, so reaching here means
+   * a rate that predates that validation or one the client made up. Neither is
+   * worth throwing over inside a pure arithmetic helper the offline composer
+   * also runs.
+   */
+  const scaled = parsed !== null && parsed > 0n ? parsed : 10n ** PRECISION;
 
   const fromScale = minorUnitScale(fromCode);
   const toScale = minorUnitScale(toCode);

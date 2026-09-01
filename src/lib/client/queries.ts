@@ -807,9 +807,34 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (input: Partial<Pick<MeDto, "displayName" | "avatarColor" | "avatarEmoji" | "defaultCurrency">>) =>
       api.patch<{ me: MeDto }>("/api/identity", input),
+    /*
+     * A name and an avatar are copied into every payload that renders the
+     * person rather than looked up from one place: `groupDto` carries its own
+     * `members`, the friend screens carry their counterpart, and the activity
+     * feed carries the actor. Invalidating only the dashboard therefore leaves
+     * a copy of the old name in every one of those cache entries.
+     *
+     * Measured, the screens do currently update: the account screen is a
+     * different route, so the group query is inactive while the rename
+     * happens, and with no `staleTime` configured (the default is 0) it
+     * refetches when the group remounts. Renaming and going back showed the
+     * new initial.
+     *
+     * These calls are here because that correctness is accidental. It rests
+     * entirely on a global default in `providers.tsx` that nothing connects to
+     * this mutation — the day somebody sets `staleTime` to keep the app quiet
+     * on a slow connection, every group and friend screen starts showing the
+     * old name with nothing to explain why. Invalidating here states the
+     * dependency where it can be read.
+     */
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.dashboard });
       void client.invalidateQueries({ queryKey: keys.people });
+      // Prefix keys: one call each covers every group and every friend.
+      void client.invalidateQueries({ queryKey: ["group"] });
+      void client.invalidateQueries({ queryKey: ["friend"] });
+      void client.invalidateQueries({ queryKey: keys.friends });
+      void client.invalidateQueries({ queryKey: keys.activity });
     },
   });
 }

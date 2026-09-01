@@ -146,4 +146,15 @@ describe("convert", () => {
   it("preserves sign", () => {
     expect(convert(-10000n, "USD", "EUR", "0.92")).toBe(-9200n);
   });
+
+  it("falls back to parity through the scaling, not to the raw input", () => {
+    // A rate this cannot read used to be handed back untouched, which is only
+    // harmless when both currencies count minor units the same way. Across a
+    // decimal boundary it is a factor of a hundred: 50.00 USD arriving as ¥5000
+    // rather than ¥50.
+    for (const bad of ["", "abc", "1e-7", "-2", "0", "0.0000000000001"]) {
+      expect(convert(5_000n, "USD", "JPY", bad)).toBe(50n);
+      expect(convert(5_000n, "USD", "EUR", bad)).toBe(5_000n);
+    }
+  });
 });

@@ -101,23 +101,7 @@ export function AmountInput({
 }) {
   const decimals = decimalsFor(currency);
   const symbol = currencySymbol(currency);
-
-  // The raw text is local state so a half-typed "12." survives a re-render.
-  // It is reconciled with `value` only when they disagree numerically, which
-  // lets a parent set the amount programmatically without fighting the cursor.
-  const [text, setText] = React.useState(() =>
-    value === null ? "" : toDecimalString(value, currency),
-  );
-
-  React.useEffect(() => {
-    const parsed = parseAmount(text, currency);
-    if (value === null && text !== "") setText("");
-    else if (value !== null && parsed !== value) {
-      setText(toDecimalString(value, currency));
-    }
-    // Reconcile only on external value or currency change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, currency]);
+  const [text, setText] = useAmountText(value, currency);
 
   const handleChange = (next: string) => {
     const masked = maskAmount(next, decimals);
@@ -182,6 +166,105 @@ export function AmountInput({
           size === "hero" && "text-center",
         )}
         aria-label="Amount"
+      />
+    </div>
+  );
+}
+
+/**
+ * A text buffer that tracks a `bigint` amount without fighting the typist.
+ *
+ * Every amount field in the app needs the same two things at once: the raw
+ * string has to be local state, so a half-typed "12." survives a re-render and
+ * the caret stays put; and it still has to follow the value when a *parent*
+ * moves it — picking a suggested settlement, switching currency, loading an
+ * expense to edit. Four fields had grown their own copy of the reconciliation,
+ * and they had already drifted: two compared against a `null` empty value and
+ * two against `0n`, and only one of the four enforced the digit ceiling.
+ *
+ * The reconcile runs during render rather than in an effect, which is React's
+ * documented way to adjust state when a prop changes. An effect gets there one
+ * commit late — the field paints the old number, then corrects itself — and
+ * costs a second render every time a parent nudges the value.
+ *
+ * `null` is the empty amount. A field whose empty value is `0n` passes
+ * `value === 0n ? null : value` and gets identical behaviour.
+ */
+export function useAmountText(
+  value: bigint | null,
+  currency: string,
+): [string, (next: string) => void] {
+  const render = (amount: bigint | null) =>
+    amount === null ? "" : toDecimalString(amount, currency);
+
+  const [text, setText] = React.useState(() => render(value));
+  const [seen, setSeen] = React.useState<{ value: bigint | null; currency: string }>({
+    value,
+    currency,
+  });
+
+  if (seen.value !== value || seen.currency !== currency) {
+    setSeen({ value, currency });
+    // Compared numerically, not textually: "12.50" and "12.5" are the same
+    // amount, and rewriting the first into the second mid-keystroke is exactly
+    // the caret-stealing this indirection exists to avoid.
+    const parsed = text === "" ? null : parseAmount(text, currency);
+    if (parsed !== value) setText(render(value));
+  }
+
+  return [text, setText];
+}
+
+/**
+ * The small amount field used inside a list row.
+ *
+ * Distinct from `AmountInput` only in size and chrome — this one sits beside a
+ * person's name in the payer and split editors, where the label is the row
+ * rather than the field. It shares the masking and the reconciliation, which
+ * is the point: the two list editors previously carried a copy each, neither
+ * of which capped the digit count, so a share could be typed past the range
+ * the API accepts while the main amount field stopped at fifteen digits.
+ */
+export function CompactAmountInput({
+  value,
+  currency,
+  onChange,
+  label,
+  className,
+}: {
+  /** Minor units. `0n` shows an empty field. */
+  value: bigint;
+  currency: string;
+  onChange: (value: bigint) => void;
+  /** Names the field for screen readers, e.g. "Amount for Priya". */
+  label: string;
+  className?: string;
+}) {
+  const decimals = decimalsFor(currency);
+  const [text, setText] = useAmountText(value === 0n ? null : value, currency);
+
+  return (
+    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
+      <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        value={text}
+        placeholder="0"
+        aria-label={label}
+        onFocus={(event) => event.currentTarget.select()}
+        onChange={(event) => {
+          const masked = maskAmount(event.target.value, decimals);
+          setText(masked);
+          onChange(masked === "" ? 0n : (parseAmount(masked, currency) ?? 0n));
+        }}
+        className={cn(
+          "tabular w-[76px] bg-transparent text-right text-body-lg font-bold text-text outline-none placeholder:text-subtle/60",
+          className,
+        )}
       />
     </div>
   );

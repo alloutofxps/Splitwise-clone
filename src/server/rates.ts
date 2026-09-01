@@ -62,14 +62,50 @@ async function fetchRates(base: string): Promise<Record<string, number> | null> 
   return null;
 }
 
-/** Rates are stored as decimal strings to avoid float drift in the database. */
+/**
+ * Rates are stored as decimal strings to avoid float drift in the database.
+ *
+ * `toFixed` rather than `toPrecision`, because `toPrecision(12)` switches to
+ * exponential notation outside a band it does not announce — anything at or
+ * above 1e12, and anything below 1e-7 — and "1.20000000000e-7" is not a
+ * decimal string. Nothing downstream reads it: the API schema refuses it and
+ * `convert` cannot parse it, so a currency pair with a very small rate would
+ * be cached in a form that silently converted at parity forever after.
+ *
+ * Twelve fraction digits is not an arbitrary cut: it is exactly the precision
+ * `convert` reads, so anything finer is discarded downstream anyway.
+ */
 function toRateString(value: number): string {
-  return value.toPrecision(12).replace(/0+$/, "").replace(/\.$/, "");
+  const trimmed = value.toFixed(12).replace(/\.?0+$/, "");
+  return trimmed === "" ? "0" : trimmed;
+}
+
+/**
+ * Rates worth caching.
+ *
+ * The upper bound keeps `toFixed` out of the range where it, too, goes
+ * exponential; the lower one drops rates that would round to a stored "0",
+ * which converts every amount to nothing.
+ */
+function usableRate(value: number): boolean {
+  return Number.isFinite(value) && value >= 1e-12 && value < 1e21;
 }
 
 export async function getRate(base: string, quote: string): Promise<RateResult | null> {
-  const from = base.toUpperCase();
-  const to = quote.toUpperCase();
+  const from = base.trim().toUpperCase();
+  const to = quote.trim().toUpperCase();
+
+  /*
+   * Refused here rather than trusted to the caller, because `from` is
+   * interpolated into a provider URL and used as a primary-key column.
+   *
+   * The path form (`.../latest/${base}`) means anything with a slash or a
+   * question mark in it rewrites the request the server makes, and the cache
+   * is keyed on whatever came in — so an authenticated caller could fill the
+   * rate table with arbitrary rows just by asking for currencies that do not
+   * exist. Three letters is the whole of what a currency code can be.
+   */
+  if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) return null;
 
   if (from === to) {
     return { base: from, quote: to, rate: "1", fetchedAt: new Date().toISOString(), stale: false };
@@ -97,7 +133,7 @@ export async function getRate(base: string, quote: string): Promise<RateResult |
     // this group is very likely another currency from the same trip.
     await Promise.all(
       Object.entries(rates)
-        .filter(([, value]) => Number.isFinite(value) && value > 0)
+        .filter(([code, value]) => /^[A-Z]{3}$/.test(code) && usableRate(value))
         .map(([code, value]) =>
           prisma.exchangeRate.upsert({
             where: { base_quote: { base: from, quote: code } },
@@ -108,7 +144,7 @@ export async function getRate(base: string, quote: string): Promise<RateResult |
     );
 
     const value = rates[to];
-    if (value) {
+    if (value !== undefined && usableRate(value)) {
       return {
         base: from,
         quote: to,
