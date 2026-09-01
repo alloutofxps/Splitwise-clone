@@ -107,7 +107,21 @@ export default function AccountPage() {
       {/* Profile ----------------------------------------------------------- */}
       <section className="rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
         <div className="flex items-center gap-4">
-          <Avatar person={me} size="lg" />
+          {/*
+            The avatar is the obvious thing to tap to change how you look, so
+            it opens the picker as well as the row below. A control nobody
+            finds is not a control.
+          */}
+          <button
+            onClick={() => {
+              haptic();
+              setEmojiOpen(true);
+            }}
+            aria-label="Change your emoji"
+            className="shrink-0 rounded-full transition active:scale-90"
+          >
+            <Avatar person={me} size="lg" />
+          </button>
           <div className="min-w-0 flex-1">
             <input
               value={name}

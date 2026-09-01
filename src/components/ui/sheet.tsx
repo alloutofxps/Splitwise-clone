@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useDragControls,
+  useMotionValue,
+  useTransform,
+  type PanInfo,
+} from "framer-motion";
 import { X } from "lucide-react";
 import { cn, haptic, IconButton, useMounted } from "./primitives";
 
@@ -157,6 +164,42 @@ function SheetBody({
   };
 
   const keyboardInset = useKeyboardInset();
+  const scroller = React.useRef<HTMLDivElement>(null);
+
+  /*
+   * Dismissal is driven from the handle and the title bar only.
+   *
+   * With `drag` listening on the whole sheet, a downward swipe anywhere —
+   * including over the form you are trying to read — was a dismissal gesture
+   * competing with a scroll. Scrolling up to see the field you were typing in
+   * would sometimes throw the sheet off the bottom of the screen instead, and
+   * lose what had been typed. The grab handle is what the affordance already
+   * promises, so make it the only thing that means it.
+   */
+  const dragControls = useDragControls();
+
+  /*
+   * Bring the focused field back into view once the keyboard has taken its
+   * space.
+   *
+   * Shrinking the sheet is only half the job: the field that was in the middle
+   * of the sheet can end up below the fold of a sheet half the height, and the
+   * browser's own scroll-into-view already ran against the pre-resize layout.
+   * The delay lets the resize settle so the measurement is against the sheet
+   * as it now is.
+   */
+  React.useEffect(() => {
+    if (!keyboardInset) return;
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return;
+    if (!scroller.current?.contains(active)) return;
+
+    const timer = window.setTimeout(
+      () => active.scrollIntoView({ block: "center", behavior: "smooth" }),
+      60,
+    );
+    return () => window.clearTimeout(timer);
+  }, [keyboardInset]);
 
   return (
     // `bottom` rather than padding: it gives this box a definite height, which
@@ -185,6 +228,9 @@ function SheetBody({
         exit={{ y: "100%" }}
         transition={SPRING}
         drag="y"
+        dragControls={dragControls}
+        // The handle starts the gesture; the body never does.
+        dragListener={false}
         // Negative top constraint with elasticity gives the rubber-band feel
         // when dragging *up*, which signals "this does not go any further".
         dragConstraints={{ top: 0, bottom: 0 }}
@@ -201,13 +247,26 @@ function SheetBody({
           className,
         )}
       >
-        {/* Grab handle. Decorative on desktop, load-bearing on a phone. */}
-        <div className="flex shrink-0 justify-center pt-2.5 sm:hidden">
-          <div className="h-1 w-9 rounded-full bg-line-strong" />
+        {/*
+          Grab handle. Decorative on desktop, load-bearing on a phone — and now
+          literally the handle: it and the title bar are what start a drag.
+          `touch-action: none` stops the browser claiming the gesture as a
+          scroll before framer-motion sees it.
+        */}
+        <div
+          onPointerDown={(event) => dragControls.start(event)}
+          style={{ touchAction: "none" }}
+          className="flex shrink-0 cursor-grab justify-center px-5 pb-1 pt-2.5 active:cursor-grabbing"
+        >
+          <div className="h-1 w-9 rounded-full bg-line-strong sm:hidden" />
         </div>
 
         {title ? (
-          <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-3">
+          <div
+            onPointerDown={(event) => dragControls.start(event)}
+            style={{ touchAction: "none" }}
+            className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-1"
+          >
             <h2 className="text-title font-bold tracking-[-0.01em] text-text">{title}</h2>
             {dismissible ? (
               <IconButton label="Close" size="sm" onClick={onClose} className="-mr-2">
@@ -217,7 +276,7 @@ function SheetBody({
           </div>
         ) : null}
 
-        <div className="scroll-area min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div ref={scroller} className="scroll-area min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {children}
         </div>
 
