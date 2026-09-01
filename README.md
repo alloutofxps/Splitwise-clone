@@ -164,19 +164,55 @@ which is the reason the recovery key was kept rather than replaced.
 ## Deploying it
 
 The app is a single Next.js server plus one SQLite file, so anything that can
-run Node and keep a disk will host it.
+run a container and keep a disk will host it.
 
-**A box with a disk** (Fly.io, Railway, Render, a Raspberry Pi):
+### With the Dockerfile
+
+```bash
+docker build --build-arg BUILD_ID=$(git rev-parse --short=12 HEAD) -t divvy .
+docker run -p 3000:3000 \
+  -e DIVVY_SECRET=$(openssl rand -hex 32) \
+  -e DIVVY_RP_ID=divvy.example.com \
+  -v divvy-data:/data \
+  divvy
+```
+
+Three things the image does that a plain `next start` does not, each for a
+reason worth knowing:
+
+- **Migrations run at boot, not at build.** The database lives on the volume,
+  which does not exist while the image is being made. `migrate deploy` is a
+  no-op when nothing is pending, so a redeploy that adds a migration applies it
+  without anybody remembering a release step.
+- **The volume mounts at `/data`, not at `prisma/`.** Mounting over `prisma/`
+  would hide the migration files the entrypoint needs to read.
+- **`BUILD_ID` is a real build argument.** The service worker names its caches
+  after it and registers as `/sw.js?v=<id>`. Without it the build falls back to
+  the package version, which never changes — so an installed PWA would go on
+  serving the previous shell after every deploy. Pass the platform's own commit
+  variable: `RAILWAY_GIT_COMMIT_SHA` on Railway, `FLY_MACHINE_VERSION` on Fly,
+  `GITHUB_SHA` in Actions.
+
+The entrypoint refuses to start without a `DIVVY_SECRET` of at least sixteen
+characters. That check exists because the alternative is worse: the app boots,
+serves a page, and 500s the moment somebody signs in.
+
+Backing up the whole app is copying one file out of the volume — receipts are
+stored inside it.
+
+### Without Docker
 
 ```bash
 DIVVY_SECRET=$(openssl rand -hex 32) npm run build && npm start
 ```
 
-Mount a volume at `prisma/` so the database survives restarts. Backing up the
-app means copying one `.db` file — receipts are stored inside it.
+`npm run build` applies migrations as well as building, which is what makes it
+work on a host with a persistent disk. Keep `prisma/` on that disk.
 
-**Vercel or another serverless host** needs Postgres, since the filesystem is
-ephemeral. Change the datasource in `prisma/schema.prisma`:
+### On a serverless host
+
+Vercel and friends need Postgres, since the filesystem is ephemeral. Change the
+datasource in `prisma/schema.prisma`:
 
 ```prisma
 datasource db {
@@ -189,9 +225,11 @@ then point `DATABASE_URL` at a Postgres instance and run `npx prisma migrate
 dev`. Nothing in the schema uses SQLite-only features — enums are strings and
 structured payloads are JSON text — so it moves across unchanged.
 
-**Recurring expenses** fire whenever anybody opens the app, so no scheduler is
-required. If you would rather the rent posted at 08:00 than whenever someone
-first checks, point a cron at `POST /api/recurrences/run`.
+### Recurring expenses
+
+They fire whenever anybody opens the app, so no scheduler is required. If you
+would rather the rent posted at 08:00 than whenever someone first checks, point
+a cron at `POST /api/recurrences/run`.
 
 ---
 
