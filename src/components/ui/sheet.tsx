@@ -36,6 +36,15 @@ export interface SheetProps {
   title?: React.ReactNode;
   /** Rendered against the bottom edge, above the home indicator. */
   footer?: React.ReactNode;
+  /**
+   * Pinned directly under the title, outside the scrolling body.
+   *
+   * For the one field a form is fundamentally about. With the keyboard open a
+   * sheet has a few hundred usable pixels, and anything in the scrolling body
+   * can be scrolled out from under the caret — so the thing being typed into
+   * goes here and stays put, and everything secondary scrolls behind it.
+   */
+  header?: React.ReactNode;
   /** Stops the sheet closing on backdrop tap - used for destructive confirms. */
   dismissible?: boolean;
   /** Fills the screen height, for the expense composer. */
@@ -49,6 +58,7 @@ export function Sheet({
   children,
   title,
   footer,
+  header,
   dismissible = true,
   tall = false,
   className,
@@ -84,6 +94,7 @@ export function Sheet({
           onClose={onClose}
           title={title}
           footer={footer}
+          header={header}
           dismissible={dismissible}
           tall={tall}
           className={className}
@@ -97,35 +108,42 @@ export function Sheet({
 }
 
 /**
- * How much of the layout viewport something is covering — in practice, the
- * on-screen keyboard.
+ * Where the visible part of the screen actually is.
  *
- * A sheet is `position: fixed`, which anchors it to the *layout* viewport, and
- * iOS does not shrink that when the keyboard opens; it shrinks the *visual*
- * viewport and leaves the layout one alone. So a bottom-anchored sheet keeps
- * its bottom edge underneath the keyboard, taking the footer and whatever
- * field you are typing into with it. Creating a group meant typing into a box
- * you could not see.
+ * A sheet is `position: fixed`, which pins it to the **layout** viewport — and
+ * when the keyboard opens, iOS does two things to that, not one. It shrinks the
+ * *visual* viewport, and it also scrolls it, so that `visualViewport.offsetTop`
+ * becomes non-zero while the layout viewport stays exactly where it was.
  *
- * `dvh` does not help — it accounts for retracting browser chrome, not for the
- * keyboard. `visualViewport` is the only thing that actually reports this, and
- * on a browser too old to have it the value stays 0 and the sheet behaves
- * exactly as it did before.
+ * Compensating only for the height is what a first attempt does, and it is why
+ * the group form still could not be read while being typed into: the sheet was
+ * correctly shortened and then left behind by a page that had slid out from
+ * under it, so the field was above the top of the screen and had to be hunted
+ * for by scrolling.
+ *
+ * So take over both edges rather than one. `top` and `height` set from the
+ * visual viewport put the sheet exactly over the part of the screen the user
+ * can actually see, whatever iOS does underneath — and `null` while nothing is
+ * covering anything, which lets the plain `inset-0` do its job on a desktop
+ * that has no visual viewport worth tracking.
  */
-function useKeyboardInset(): number {
-  const [inset, setInset] = React.useState(0);
+function useVisibleViewport(): { top: number; height: number } | null {
+  const [rect, setRect] = React.useState<{ top: number; height: number } | null>(null);
 
   React.useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
 
     const update = () => {
-      // `offsetTop` matters as well: iOS scrolls the visual viewport down to
-      // reveal a focused field, and that offset is part of what is hidden.
       const covered = window.innerHeight - viewport.height - viewport.offsetTop;
-      // Sub-pixel noise on every scroll frame would re-render the sheet
-      // constantly, and a few stray pixels are not a keyboard.
-      setInset(covered > 24 ? Math.round(covered) : 0);
+      // A few stray pixels are not a keyboard, and re-rendering on every scroll
+      // frame of sub-pixel noise would make the sheet judder.
+      const engaged = covered > 24 || viewport.offsetTop > 1;
+      setRect(
+        engaged
+          ? { top: Math.round(viewport.offsetTop), height: Math.round(viewport.height) }
+          : null,
+      );
     };
 
     update();
@@ -137,7 +155,7 @@ function useKeyboardInset(): number {
     };
   }, []);
 
-  return inset;
+  return rect;
 }
 
 function SheetBody({
@@ -145,6 +163,7 @@ function SheetBody({
   children,
   title,
   footer,
+  header,
   dismissible,
   tall,
   className,
@@ -163,7 +182,7 @@ function SheetBody({
     }
   };
 
-  const keyboardInset = useKeyboardInset();
+  const visible = useVisibleViewport();
   const scroller = React.useRef<HTMLDivElement>(null);
 
   /*
@@ -179,35 +198,44 @@ function SheetBody({
   const dragControls = useDragControls();
 
   /*
-   * Bring the focused field back into view once the keyboard has taken its
-   * space.
+   * Bring the focused field into view once the keyboard has taken its space —
+   * by moving this sheet's own scroll container, and nothing else.
    *
-   * Shrinking the sheet is only half the job: the field that was in the middle
-   * of the sheet can end up below the fold of a sheet half the height, and the
-   * browser's own scroll-into-view already ran against the pre-resize layout.
-   * The delay lets the resize settle so the measurement is against the sheet
-   * as it now is.
+   * `scrollIntoView` is the obvious call and the wrong one here: it walks every
+   * scrollable ancestor, and on iOS nudging ancestors of a `position: fixed`
+   * element while the keyboard is opening is a good way to shove the sheet
+   * somewhere nobody asked for. Setting `scrollTop` on one known element cannot
+   * reach past that element.
+   *
+   * The field a form is fundamentally about belongs in `header`, where it sits
+   * outside this container and cannot be scrolled away from at all. This is for
+   * the secondary fields further down.
    */
   React.useEffect(() => {
-    if (!keyboardInset) return;
+    if (!visible) return;
+    const box = scroller.current;
     const active = document.activeElement;
-    if (!(active instanceof HTMLElement)) return;
-    if (!scroller.current?.contains(active)) return;
+    if (!box || !(active instanceof HTMLElement) || !box.contains(active)) return;
 
-    const timer = window.setTimeout(
-      () => active.scrollIntoView({ block: "center", behavior: "smooth" }),
-      60,
-    );
+    // After the resize has settled, so the measurement is against the sheet as
+    // it now is rather than as it was a frame ago.
+    const timer = window.setTimeout(() => {
+      const field = active.getBoundingClientRect();
+      const view = box.getBoundingClientRect();
+      if (field.top >= view.top && field.bottom <= view.bottom) return;
+      box.scrollTop += field.top - view.top - (view.height - field.height) / 2;
+    }, 60);
     return () => window.clearTimeout(timer);
-  }, [keyboardInset]);
+  }, [visible]);
 
   return (
-    // `bottom` rather than padding: it gives this box a definite height, which
-    // is what lets the sheet below size itself as a percentage of the space
-    // that is actually visible rather than of the whole screen.
+    // Explicit `top`/`height` rather than padding: it pins this box to the part
+    // of the screen that is visible *and* gives it a definite height, which is
+    // what lets the sheet below size itself as a percentage of the space that
+    // actually exists rather than of the whole page.
     <div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={keyboardInset ? { bottom: keyboardInset } : undefined}
+      style={visible ? { top: visible.top, height: visible.height, bottom: "auto" } : undefined}
     >
       <motion.div
         initial={{ opacity: 0 }}
@@ -275,6 +303,8 @@ function SheetBody({
             ) : null}
           </div>
         ) : null}
+
+        {header ? <div className="shrink-0 px-5 pb-4">{header}</div> : null}
 
         <div ref={scroller} className="scroll-area min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {children}
