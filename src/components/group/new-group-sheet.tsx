@@ -103,20 +103,13 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
         onClose={onClose}
         tall
         title="New group"
-        footer={
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={!name.trim()}
-            loading={createGroup.isPending}
-            onClick={() => void submit()}
-          >
-            Create group
-          </Button>
-        }
-      >
-        <div className="px-5 pb-6">
+        /*
+          The name is the only thing this form actually requires, and it is what
+          the keyboard opens for — so it is pinned here rather than left as the
+          first item of a body that scrolls. Everything below it is a default
+          somebody can ignore.
+        */
+        header={
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
@@ -138,11 +131,26 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
               placeholder="Lisbon 2026"
               autoFocus
               enterKeyHint="done"
+              aria-label="Group name"
               className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
             />
           </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
+        }
+        footer={
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!name.trim()}
+            loading={createGroup.isPending}
+            onClick={() => void submit()}
+          >
+            Create group
+          </Button>
+        }
+      >
+        <div className="px-5 pb-6">
+          <div className="flex flex-wrap gap-2">
             {KINDS.map((entry) => (
               <button
                 key={entry.value}

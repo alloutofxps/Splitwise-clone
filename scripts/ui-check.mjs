@@ -893,23 +893,58 @@ console.log("\nA sheet you can scroll without losing it");
   await swipe(box.y + 8, 14, 30);
   check("but dragging the handle still dismisses it", await p3.locator('[role="dialog"]').count() === 0);
 
-  // And the field being typed into ends up somewhere it can be read.
+  /*
+   * The field being typed into stays on screen — with the viewport *scrolled*,
+   * not just shrunk.
+   *
+   * iOS does both when the keyboard opens: `visualViewport.height` shrinks and
+   * `offsetTop` becomes non-zero, because it scrolls the visual viewport while
+   * the layout viewport stays put. A fix that compensates only for the height
+   * passes a test that only simulates the height, and still leaves a fixed
+   * sheet behind a page that has slid out from under it — which is exactly what
+   * happened: the group form was correctly shortened and still unreadable.
+   *
+   * So this simulates both, and the offset is what makes it a real test.
+   */
   await p3.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
   await p3.waitForTimeout(900);
   const field = p3.locator('[role="dialog"] input').first();
   await field.click();
-  await p3.evaluate(() => {
+
+  const KEYBOARD_H = 340;
+  const OFFSET = 90;
+  await p3.evaluate(([kb, off]) => {
     const vv = window.visualViewport;
-    Object.defineProperty(vv, "height", { value: window.innerHeight - 340, configurable: true });
-    Object.defineProperty(vv, "offsetTop", { value: 0, configurable: true });
+    Object.defineProperty(vv, "height", { value: window.innerHeight - kb, configurable: true });
+    Object.defineProperty(vv, "offsetTop", { value: off, configurable: true });
     vv.dispatchEvent(new Event("resize"));
-  });
+  }, [KEYBOARD_H, OFFSET]);
   await p3.waitForTimeout(900);
-  const fb = await field.boundingBox();
+
+  const visibleTop = OFFSET;
+  const visibleBottom = OFFSET + (844 - KEYBOARD_H);
+  const onScreen = (box) => box && box.y >= visibleTop - 1 && box.y + box.height <= visibleBottom + 1;
+
+  const withKeyboard = await field.boundingBox();
   check(
     "the field being typed into stays on screen when the keyboard opens",
-    fb && fb.y > 0 && fb.y + fb.height <= 844 - 340,
-    `field bottom ${Math.round(fb?.y + fb?.height)}, keyboard top ${844 - 340}`,
+    onScreen(withKeyboard),
+    `field ${Math.round(withKeyboard?.y)}..${Math.round(withKeyboard?.y + withKeyboard?.height)}, visible ${visibleTop}..${visibleBottom}`,
+  );
+
+  // Pinned, not merely scrolled to. Anything in the scrolling body can be
+  // scrolled out from under the caret; the one field the form is about must
+  // not be able to leave.
+  await p3.evaluate(() => {
+    const scroller = document.querySelector('[role="dialog"] .scroll-area');
+    if (scroller) scroller.scrollTop = 9999;
+  });
+  await p3.waitForTimeout(600);
+  const afterScroll = await field.boundingBox();
+  check(
+    "and it cannot be scrolled away from",
+    onScreen(afterScroll),
+    `field ${Math.round(afterScroll?.y)}..${Math.round(afterScroll?.y + afterScroll?.height)}`,
   );
 
   await ctx3.close();
