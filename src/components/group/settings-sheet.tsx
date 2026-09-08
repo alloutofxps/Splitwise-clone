@@ -3,15 +3,16 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, LogOut, Repeat, Trash2, UserPlus, X } from "lucide-react";
+import { Archive, Download, LogOut, Merge, Repeat, Trash2, UserPlus, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { RecurringSheet } from "./recurring-sheet";
+import { MergePersonSheet } from "./merge-person-sheet";
 import { useAddMember, useDashboard, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
-import type { GroupDetailDto } from "@/lib/types";
+import type { GroupDetailDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 
 /**
@@ -46,6 +47,7 @@ export function GroupSettingsSheet({
   const [confirmLeave, setConfirmLeave] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [recurring, setRecurring] = React.useState(false);
+  const [merging, setMerging] = React.useState<PersonDto | null>(null);
 
   useResetOnOpen(open, () => {
     setName(group.name);
@@ -68,6 +70,18 @@ export function GroupSettingsSheet({
   const addable = (dashboard?.people ?? []).filter(
     (person) => !inGroup.has(person.id) && !person.isGhost && person.id !== dashboard?.me.id,
   );
+
+  /*
+   * Who a placeholder could turn out to be: any real account the viewer can
+   * see, themselves included, whether or not they are already in this group.
+   * Already being in the group is in fact the common case — somebody was added
+   * by name last month and has since joined properly — and excluding them
+   * would hide the merge exactly when it is needed.
+   */
+  const mergeCandidates = [
+    ...(dashboard ? [dashboard.me] : []),
+    ...(dashboard?.people ?? []).filter((person) => !person.isGhost),
+  ].filter((person) => person.id !== merging?.id);
 
   const addExisting = async (person: { id: string; displayName: string }) => {
     try {
@@ -207,6 +221,26 @@ export function GroupSettingsSheet({
                       ) : null}
                     </span>
 
+                    {/*
+                      A placeholder can turn out to be somebody who is already
+                      here under another spelling. Offered on the row itself
+                      because that is where you notice it — reading the member
+                      list and seeing the same person twice.
+                    */}
+                    {member.isGhost ? (
+                      <button
+                        onClick={() => {
+                          haptic();
+                          setMerging(member);
+                        }}
+                        aria-label={`${member.displayName} is somebody I already know`}
+                        title="This is somebody already on Divvy"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2 hover:text-text"
+                      >
+                        <Merge className="size-4" />
+                      </button>
+                    ) : null}
+
                     {member.id !== meId ? (
                       <button
                         onClick={() => {
@@ -345,6 +379,13 @@ export function GroupSettingsSheet({
         onClose={() => setRecurring(false)}
         group={group}
         meId={meId}
+      />
+
+      <MergePersonSheet
+        open={merging !== null}
+        onClose={() => setMerging(null)}
+        ghost={merging}
+        candidates={mergeCandidates}
       />
 
       <ConfirmSheet

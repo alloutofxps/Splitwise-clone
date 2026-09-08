@@ -505,6 +505,31 @@ function describe(
       };
     }
 
+    case "member.merged": {
+      const target = people.get(typeof data.personId === "string" ? data.personId : "");
+      const was = typeof data.ghostName === "string" ? data.ghostName : null;
+      // The name is stored on the entry as well as looked up, because the
+      // placeholder half of it no longer exists to be looked up at all.
+      const now =
+        target?.displayName ?? (typeof data.name === "string" ? data.name : "someone");
+      return {
+        icon: <UserPlus className="size-[16px]" />,
+        tone: "neutral",
+        // Both names, when they differ, because a merge between two spellings
+        // of one person is exactly the case somebody scrolls back to check.
+        sentence:
+          was && was !== now ? (
+            <>
+              {strong(actorName)} merged {strong(was)} into {strong(now)}
+            </>
+          ) : (
+            <>
+              {strong(actorName)} merged a placeholder into {strong(now)}
+            </>
+          ),
+      };
+    }
+
     case "member.left":
     case "member.removed": {
       const other = people.get((data.otherPersonId as string) ?? "");

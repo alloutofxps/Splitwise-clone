@@ -795,6 +795,27 @@ export function useAddMember(groupId: string) {
   });
 }
 
+/**
+ * Says a placeholder and a real person are the same person.
+ *
+ * Every cache is dropped rather than a chosen few: the merge rewrites who owes
+ * what across every group the placeholder appeared in, not just the one being
+ * looked at, and a stale list somewhere else would still be offering a name
+ * that no longer exists.
+ */
+export function useMergePerson() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ghostId: string; intoPersonId: string }) =>
+      api.post<{ person: PersonDto }>(`/api/people/${input.ghostId}/merge`, {
+        intoPersonId: input.intoPersonId,
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries();
+    },
+  });
+}
+
 export function useRemoveMember(groupId: string) {
   const client = useQueryClient();
   return useMutation({
