@@ -759,9 +759,14 @@ export function useCreateGroup() {
       currency: string;
       simplifyDebts: boolean;
       placeholderNames: string[];
+      /** People already on your list, added without making a second copy of them. */
+      memberIds?: string[];
     }) => api.post<{ group: { id: string } }>("/api/groups", input),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.dashboard });
+      // A new group changes who each of these screens shows.
+      void client.invalidateQueries({ queryKey: keys.people });
+      void client.invalidateQueries({ queryKey: keys.friends });
     },
   });
 }
@@ -780,12 +785,33 @@ export function useUpdateGroup(groupId: string) {
 export function useAddMember(groupId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name?: string; inviteCode?: string }) =>
+    mutationFn: (input: { name?: string; inviteCode?: string; personId?: string }) =>
       api.post<{ member: PersonDto }>(`/api/groups/${groupId}/members`, input),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.group(groupId) });
       void client.invalidateQueries({ queryKey: keys.people });
       void client.invalidateQueries({ queryKey: keys.dashboard });
+    },
+  });
+}
+
+/**
+ * Says a placeholder and a real person are the same person.
+ *
+ * Every cache is dropped rather than a chosen few: the merge rewrites who owes
+ * what across every group the placeholder appeared in, not just the one being
+ * looked at, and a stale list somewhere else would still be offering a name
+ * that no longer exists.
+ */
+export function useMergePerson() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ghostId: string; intoPersonId: string }) =>
+      api.post<{ person: PersonDto }>(`/api/people/${input.ghostId}/merge`, {
+        intoPersonId: input.intoPersonId,
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries();
     },
   });
 }

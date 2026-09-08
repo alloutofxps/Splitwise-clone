@@ -983,6 +983,83 @@ console.log("\nThe app can say which build it is");
   await ctx4.close();
 }
 
+/*
+ * Merging a placeholder into somebody who is already here.
+ *
+ * The server-side proof that no balance moves lives in the smoke test. What
+ * this one is for is the half that was missing for a week: the endpoint
+ * existed and there was no way to reach it. So it clicks — opens settings on a
+ * group holding both a stale placeholder and the real person, finds the
+ * control on the placeholder's row, picks the account, confirms, and checks
+ * the member list afterwards.
+ *
+ * Deliberately uses two different names for the two rows, because that is the
+ * case that makes a merge necessary at all.
+ */
+console.log("\nMerging a placeholder from the group screen");
+{
+  const ctx5 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p5 = await ctx5.newPage();
+  const errs5 = [];
+  p5.on("pageerror", e => errs5.push(String(e)));
+  await p5.goto(BASE, { waitUntil: "networkidle" });
+
+  const built = await p5.evaluate(async () => {
+    const post = (path, body) => fetch(path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }).then(r => r.json());
+
+    const host = (await post("/api/identity", { displayName: "Host", defaultCurrency: "EUR" })).me;
+    const group = (await post("/api/groups", {
+      name: "Merge me", currency: "EUR", placeholderNames: ["Sansa S"],
+    })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const ghost = detail.group.members.find(m => m.displayName === "Sansa S");
+    return { groupId: group.id, hostId: host.id, ghostId: ghost.id, ghostIsGhost: ghost.isGhost };
+  });
+
+  check("seeded a group holding a placeholder", built.ghostIsGhost === true, JSON.stringify(built));
+
+  await p5.goto(`${BASE}/groups/${built.groupId}`, { waitUntil: "networkidle" });
+  await p5.waitForTimeout(600);
+
+  // Settings is behind the header button on the group screen.
+  const settings = p5.locator('button[aria-label="Group settings"]').first();
+  await settings.click();
+  await p5.waitForTimeout(700);
+
+  const mergeButton = p5.locator('button[aria-label="Sansa S is somebody I already know"]');
+  check("the placeholder's row offers a merge", await mergeButton.count() === 1);
+
+  await mergeButton.first().click();
+  await p5.waitForTimeout(700);
+
+  const body = await p5.locator("body").innerText();
+  check("the picker names the placeholder it is resolving", body.includes("Who is Sansa S?"), body.slice(0, 200).replace(/\n/g, " | "));
+  check("and offers the viewer's own account, which is the common case", /\bYou\b/.test(body));
+
+  // The host says the placeholder is themselves — different name, which is the
+  // whole point — then confirms.
+  await p5.getByRole("button", { name: /^You$/ }).first().click();
+  await p5.waitForTimeout(600);
+  const confirmText = await p5.locator("body").innerText();
+  check("confirming says what is about to happen", confirmText.includes("cannot be undone"), confirmText.slice(0, 200).replace(/\n/g, " | "));
+
+  await p5.getByRole("button", { name: "Merge them" }).first().click();
+  await p5.waitForTimeout(1500);
+
+  const after = await p5.evaluate(async (groupId) => {
+    const detail = await (await fetch(`/api/groups/${groupId}`)).json();
+    return detail.group.members.map(m => [m.displayName, m.isGhost]);
+  }, built.groupId);
+
+  check("the placeholder is gone from the member list", !after.some(([name]) => name === "Sansa S"), JSON.stringify(after));
+  check("and the group still has its real member", after.some(([, isGhost]) => !isGhost), JSON.stringify(after));
+  check("merging raised no page error", errs5.length === 0, errs5.slice(0, 1).join(" | "));
+
+  await ctx5.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

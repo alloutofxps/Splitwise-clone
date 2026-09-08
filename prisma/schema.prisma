@@ -480,7 +480,8 @@ model Activity {
   groupId String?
   /// expense.created | expense.updated | expense.deleted | settlement.created |
   /// settlement.deleted | comment.created | member.joined | member.added |
-  /// group.created | group.updated | recurrence.fired | nudge.sent
+  /// member.left | member.removed | member.merged | group.created |
+  /// group.updated | recurrence.fired | nudge.sent
   type    String
 
   actorPersonId String

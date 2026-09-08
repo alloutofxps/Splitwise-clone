@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { Avatar } from "../ui/avatar";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -45,6 +46,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
   const [simplify, setSimplify] = React.useState(true);
   const [names, setNames] = React.useState<string[]>([]);
   const [draftName, setDraftName] = React.useState("");
+  const [picked, setPicked] = React.useState<string[]>([]);
   const [currencyOpen, setCurrencyOpen] = React.useState(false);
 
   useResetOnOpen(open, () => {
@@ -55,7 +57,28 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
     setSimplify(true);
     setNames([]);
     setDraftName("");
+    setPicked([]);
   });
+
+  /*
+   * People already on your list come first, and typing a name is the fallback
+   * for somebody genuinely new.
+   *
+   * The other way round is what produced two of the same person: the only
+   * control here was a name box, so adding a friend you already had created a
+   * placeholder copy of them instead, and the two collected balances that could
+   * never meet.
+   */
+  const known = (data?.people ?? []).filter(
+    (person) => person.id !== data?.me.id && !person.isGhost,
+  );
+
+  const togglePerson = (id: string) => {
+    haptic();
+    setPicked((current) =>
+      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+    );
+  };
 
   const addName = () => {
     const trimmed = draftName.trim();
@@ -82,6 +105,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
         // Fold in a name still sitting in the input, so the user does not lose
         // it by tapping Create instead of the plus.
         placeholderNames: draftName.trim() ? [...names, draftName.trim()] : names,
+        memberIds: picked,
       });
       haptic([8, 30, 8]);
       toast({ tone: "success", title: `${name.trim()} created` });
@@ -200,9 +224,35 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
           <div className="mt-6">
             <p className="text-body font-semibold text-text">Who else is in?</p>
             <p className="mt-1 text-caption leading-relaxed text-muted">
-              Add names now and start splitting straight away — they can claim
-              their name later with the invite code.
+              Pick from people you already split with, or add a name for someone
+              new — they can claim it later with the invite code.
             </p>
+
+            {known.length > 0 ? (
+              <ul className="mt-3 space-y-1.5">
+                {known.map((person) => {
+                  const on = picked.includes(person.id);
+                  return (
+                    <li key={person.id}>
+                      <button
+                        onClick={() => togglePerson(person.id)}
+                        aria-pressed={on}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-left transition active:scale-[0.985]",
+                          on ? "border-brand/40 bg-brand-soft" : "border-line bg-surface",
+                        )}
+                      >
+                        <Avatar person={person} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                          {person.displayName}
+                        </span>
+                        {on ? <Check className="size-[18px] shrink-0 text-brand" strokeWidth={3} /> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
 
             <div className="mt-3 flex gap-2">
               <input

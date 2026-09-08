@@ -4,6 +4,7 @@ import { NotFoundError, requireSession, ValidationError } from "@/lib/identity";
 import { normalizeInviteCode } from "@/lib/codes";
 import { prisma } from "@/lib/db";
 import { friendshipPair } from "@/server/access";
+import { absorbGhost } from "@/server/merge";
 import { personDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
 import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
@@ -53,14 +54,25 @@ export const POST = route(async (request: Request, { params }: Params) => {
     if (already) return json({ kind: "group", groupId: group.id, alreadyMember: true });
 
     if (input.claimPersonId) {
-      await mergeGhostInto(input.claimPersonId, me.id, group.id);
-    } else {
-      await prisma.membership.upsert({
-        where: { groupId_personId: { groupId: group.id, personId: me.id } },
-        create: { groupId: group.id, personId: me.id },
-        update: { leftAt: null },
+      // The code proves they were invited; naming a placeholder that is in
+      // this group is what makes it theirs to claim. `absorbGhost` re-checks
+      // inside its transaction that the row is still an unclaimed placeholder,
+      // so two people racing for the same "Sam" cannot both win.
+      const inGroup = await prisma.membership.findUnique({
+        where: { groupId_personId: { groupId: group.id, personId: input.claimPersonId } },
       });
+      if (!inGroup) throw new NotFoundError("That name is not in this group.");
+      await absorbGhost(input.claimPersonId, me.id);
     }
+
+    // Either way they end up an active member: after a claim the placeholder's
+    // membership row has become theirs, but it could have been marked as left,
+    // and joining is not the moment to inherit that.
+    await prisma.membership.upsert({
+      where: { groupId_personId: { groupId: group.id, personId: me.id } },
+      create: { groupId: group.id, personId: me.id },
+      update: { leftAt: null },
+    });
 
     // Everyone in a group is implicitly a contact, which is what makes direct
     // expenses with them possible afterwards.
@@ -92,120 +104,6 @@ export const POST = route(async (request: Request, { params }: Params) => {
 
   return json({ kind: "person", person: personDto(person) });
 });
-
-/**
- * Repoints every reference from a ghost to a real person, then deletes it.
- *
- * Each table needs its own pass because most of them carry a uniqueness
- * constraint on (parent, personId): if the claimer somehow already has a row on
- * the same expense, repointing blindly would violate it, so those cases are
- * merged by summing instead.
- */
-async function mergeGhostInto(ghostId: string, personId: string, groupId: string) {
-  await prisma.$transaction(async (tx) => {
-    const ghost = await tx.person.findUnique({ where: { id: ghostId } });
-    if (!ghost) throw new NotFoundError("That name has already been taken.");
-    if (!ghost.isGhost) throw new ValidationError("Somebody has already claimed that name.");
-
-    const membership = await tx.membership.findUnique({
-      where: { groupId_personId: { groupId, personId: ghostId } },
-    });
-    if (!membership) throw new NotFoundError("That name is not in this group.");
-
-    // Payers: sum on collision, otherwise repoint.
-    for (const payer of await tx.expensePayer.findMany({ where: { personId: ghostId } })) {
-      const existing = await tx.expensePayer.findUnique({
-        where: { expenseId_personId: { expenseId: payer.expenseId, personId } },
-      });
-      if (existing) {
-        await tx.expensePayer.update({
-          where: { id: existing.id },
-          data: { amount: existing.amount + payer.amount },
-        });
-        await tx.expensePayer.delete({ where: { id: payer.id } });
-      } else {
-        await tx.expensePayer.update({ where: { id: payer.id }, data: { personId } });
-      }
-    }
-
-    for (const split of await tx.expenseSplit.findMany({ where: { personId: ghostId } })) {
-      const existing = await tx.expenseSplit.findUnique({
-        where: { expenseId_personId: { expenseId: split.expenseId, personId } },
-      });
-      if (existing) {
-        await tx.expenseSplit.update({
-          where: { id: existing.id },
-          data: { amount: existing.amount + split.amount, included: true },
-        });
-        await tx.expenseSplit.delete({ where: { id: split.id } });
-      } else {
-        await tx.expenseSplit.update({ where: { id: split.id }, data: { personId } });
-      }
-    }
-
-    for (const share of await tx.expenseItemShare.findMany({ where: { personId: ghostId } })) {
-      const existing = await tx.expenseItemShare.findUnique({
-        where: { itemId_personId: { itemId: share.itemId, personId } },
-      });
-      if (existing) await tx.expenseItemShare.delete({ where: { id: share.id } });
-      else await tx.expenseItemShare.update({ where: { id: share.id }, data: { personId } });
-    }
-
-    await tx.settlement.updateMany({
-      where: { fromPersonId: ghostId },
-      data: { fromPersonId: personId },
-    });
-    await tx.settlement.updateMany({
-      where: { toPersonId: ghostId },
-      data: { toPersonId: personId },
-    });
-    await tx.settlement.updateMany({
-      where: { createdByPersonId: ghostId },
-      data: { createdByPersonId: personId },
-    });
-    await tx.expense.updateMany({
-      where: { createdByPersonId: ghostId },
-      data: { createdByPersonId: personId },
-    });
-    await tx.comment.updateMany({ where: { personId: ghostId }, data: { personId } });
-    await tx.activity.updateMany({
-      where: { actorPersonId: ghostId },
-      data: { actorPersonId: personId },
-    });
-    await tx.recurrence.updateMany({
-      where: { createdByPersonId: ghostId },
-      data: { createdByPersonId: personId },
-    });
-
-    // A settlement that ends up pointing at the same person on both sides is
-    // meaningless - it can only arise from the merge itself.
-    await tx.settlement.deleteMany({
-      where: { fromPersonId: personId, toPersonId: personId },
-    });
-
-    // Take over the ghost's group memberships, then remove the ghost.
-    for (const ghostMembership of await tx.membership.findMany({
-      where: { personId: ghostId },
-    })) {
-      const mine = await tx.membership.findUnique({
-        where: {
-          groupId_personId: { groupId: ghostMembership.groupId, personId },
-        },
-      });
-      if (mine) {
-        await tx.membership.update({ where: { id: mine.id }, data: { leftAt: null } });
-        await tx.membership.delete({ where: { id: ghostMembership.id } });
-      } else {
-        await tx.membership.update({
-          where: { id: ghostMembership.id },
-          data: { personId, leftAt: null },
-        });
-      }
-    }
-
-    await tx.person.delete({ where: { id: ghostId } });
-  });
-}
 
 /** Everyone already in the group becomes a contact of the new arrival. */
 async function connectToGroupMembers(personId: string, groupId: string) {

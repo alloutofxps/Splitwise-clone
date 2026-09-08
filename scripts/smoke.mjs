@@ -1480,6 +1480,333 @@ async function main() {
     );
   }
 
+  // -- Adding somebody you already know -------------------------------------
+  //
+  // The only way to put a person in a group used to be to type their name, and
+  // a typed name creates a *placeholder*. So adding a friend you already had
+  // produced a second, unclaimed copy of them, and the two collected balances
+  // that could never meet. Both entry points now take a person id.
+  console.log("\nAdding somebody you already know");
+  {
+    const peopleBefore = (await priya.call("/api/dashboard")).body.people.length;
+
+    const atCreation = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Known people", currency: "EUR", memberIds: [raviId] },
+    });
+    const knownId = atCreation.body.group.id;
+    const known = (await priya.call(`/api/groups/${knownId}`)).body.group;
+
+    check(
+      "a new group can include somebody you already know",
+      known.members.some((member) => member.id === raviId),
+      known.members.map((m) => m.displayName).join(", "),
+    );
+    check(
+      "and it is that person, not a fresh placeholder",
+      !known.members.some((member) => member.isGhost),
+      JSON.stringify(known.members.map((m) => [m.displayName, m.isGhost])),
+    );
+    check(
+      "so no second copy of them appears in your people",
+      (await priya.call("/api/dashboard")).body.people.length === peopleBefore,
+      `${peopleBefore} people before`,
+    );
+
+    // The same on a group that already exists.
+    const later = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Added later", currency: "EUR" },
+    });
+    const laterId = later.body.group.id;
+    const added = await priya.call(`/api/groups/${laterId}/members`, {
+      method: "POST",
+      body: { personId: raviId },
+      allowError: true,
+    });
+    check("an existing group accepts a person id", added.status === 200, String(added.status));
+    const laterGroup = (await priya.call(`/api/groups/${laterId}`)).body.group;
+    check(
+      "and adds the real person rather than a placeholder",
+      laterGroup.members.some((member) => member.id === raviId && !member.isGhost),
+      JSON.stringify(laterGroup.members.map((m) => [m.displayName, m.isGhost])),
+    );
+
+    // It stays an access decision, not a free-for-all.
+    const stranger = await priya.call(`/api/groups/${laterId}/members`, {
+      method: "POST",
+      body: { personId: outsiderId },
+      allowError: true,
+    });
+    check(
+      "somebody you share nothing with is refused",
+      stranger.status === 422,
+      `${stranger.status} ${JSON.stringify(stranger.body)}`,
+    );
+    const smuggled = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Nope", currency: "EUR", memberIds: [outsiderId] },
+      allowError: true,
+    });
+    check(
+      "and cannot be smuggled in at creation either",
+      smuggled.status === 422,
+      `${smuggled.status} ${JSON.stringify(smuggled.body)}`,
+    );
+  }
+
+  // -- Merging a placeholder into a real person -----------------------------
+  //
+  // Claiming only works while the person has no account. Once they have one —
+  // added by a friend last month, or joined the group from a link — there is a
+  // real row and a stale placeholder, and somebody has to say they are one
+  // person. The names being different is the whole reason it needs saying.
+  //
+  // The property under test is that merging moves no money. Every other
+  // member's net is identical afterwards, and the survivor's net is exactly
+  // the two halves added together.
+  console.log("\nMerging a placeholder");
+  {
+    const sansa = makeClient();
+    await sansa.call("/api/identity", { method: "POST", body: { displayName: "Sansa" } });
+    const sansaMe = (await sansa.call("/api/identity")).body.me;
+    const sansaId = sansaMe.id;
+
+    // Priya and Sansa know each other directly, which is how Priya is entitled
+    // to say a placeholder is her.
+    await priya.call(`/api/invite/${sansaMe.inviteCode}/join`, { method: "POST", body: {} });
+
+    const trip = await priya.call("/api/groups", {
+      method: "POST",
+      body: {
+        name: "Merge trip",
+        currency: "EUR",
+        memberIds: [raviId, sansaId],
+        // Typed from memory a month ago, before she was on the app. The second
+        // is a placeholder for somebody who never turns up, kept as the target
+        // of the "into a placeholder" refusal below.
+        placeholderNames: ["Sansa S", "Someone Else"],
+      },
+    });
+    const tripId = trip.body.group.id;
+    let tripGroup = (await priya.call(`/api/groups/${tripId}`)).body.group;
+    const ghostId = tripGroup.members.find((m) => m.displayName === "Sansa S").id;
+    const otherGhostId = tripGroup.members.find((m) => m.displayName === "Someone Else").id;
+
+    check(
+      "the group holds both the placeholder and the real person",
+      Boolean(ghostId) && tripGroup.members.some((m) => m.id === sansaId),
+      tripGroup.members.map((m) => `${m.displayName}${m.isGhost ? " (ghost)" : ""}`).join(", "),
+    );
+
+    // Debts on both names, and on the same expense, so the collision path in
+    // payers and splits is exercised rather than only the clean repoint.
+    await priya.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: tripId,
+        description: "Hotel",
+        amount: "40000",
+        currency: "EUR",
+        splitMode: "EXACT",
+        payers: [{ personId: priyaId, amount: "40000" }],
+        splits: [
+          { personId: priyaId, amount: "10000", included: true },
+          { personId: raviId, amount: "10000", included: true },
+          { personId: sansaId, amount: "8000", included: true },
+          { personId: ghostId, amount: "8000", included: true },
+          { personId: otherGhostId, amount: "4000", included: true },
+        ],
+      },
+    });
+
+    // The placeholder also paid for something, and so did the real account, on
+    // one bill — after the merge that has to be a single payer row of the sum.
+    await priya.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: tripId,
+        description: "Taxis",
+        amount: "12000",
+        currency: "EUR",
+        splitMode: "EXACT",
+        payers: [
+          { personId: ghostId, amount: "5000" },
+          { personId: sansaId, amount: "7000" },
+        ],
+        splits: [
+          { personId: priyaId, amount: "3000", included: true },
+          { personId: raviId, amount: "3000", included: true },
+          { personId: sansaId, amount: "3000", included: true },
+          { personId: ghostId, amount: "2000", included: true },
+          { personId: otherGhostId, amount: "1000", included: true },
+        ],
+      },
+    });
+
+    const before = (await priya.call(`/api/groups/${tripId}`)).body.group.balances.net;
+    const netBefore = (id) => BigInt(before[id] ?? "0");
+    const combinedBefore = netBefore(sansaId) + netBefore(ghostId);
+
+    check(
+      "both names carry a balance before the merge",
+      netBefore(ghostId) !== 0n && netBefore(sansaId) !== 0n,
+      `ghost ${before[ghostId]}, real ${before[sansaId]}`,
+    );
+
+    // A stranger cannot fold a placeholder into somebody.
+    const byStranger = await outsider.call(`/api/people/${ghostId}/merge`, {
+      method: "POST",
+      body: { intoPersonId: sansaId },
+      allowError: true,
+    });
+    check(
+      "somebody outside the group cannot merge its placeholder",
+      byStranger.status === 403,
+      `${byStranger.status} ${JSON.stringify(byStranger.body)}`,
+    );
+
+    // Nor can a real account be dissolved — that is somebody's login.
+    const realAway = await priya.call(`/api/people/${raviId}/merge`, {
+      method: "POST",
+      body: { intoPersonId: sansaId },
+      allowError: true,
+    });
+    check(
+      "a real account cannot be merged away",
+      realAway.status === 403,
+      `${realAway.status} ${JSON.stringify(realAway.body)}`,
+    );
+
+    // Nor merged into a placeholder, which would leave the ledger pointing at
+    // a row with no way to sign in.
+    const intoGhost = await priya.call(`/api/people/${ghostId}/merge`, {
+      method: "POST",
+      body: { intoPersonId: otherGhostId },
+      allowError: true,
+    });
+    check(
+      "a placeholder cannot be merged into another placeholder",
+      intoGhost.status === 403,
+      `${intoGhost.status} ${JSON.stringify(intoGhost.body)}`,
+    );
+
+    const merged = await priya.call(`/api/people/${ghostId}/merge`, {
+      method: "POST",
+      body: { intoPersonId: sansaId },
+      allowError: true,
+    });
+    check("the placeholder merges", merged.status === 200, JSON.stringify(merged.body));
+
+    tripGroup = (await priya.call(`/api/groups/${tripId}`)).body.group;
+    const after = tripGroup.balances.net;
+
+    check(
+      "the placeholder is gone from the group",
+      !tripGroup.members.some((m) => m.id === ghostId),
+      tripGroup.members.map((m) => m.displayName).join(", "),
+    );
+    check(
+      "and gone from the people you can see",
+      !(await priya.call("/api/dashboard")).body.people.some((p) => p.id === ghostId),
+    );
+    check(
+      "the survivor's balance is exactly the two halves added up",
+      BigInt(after[sansaId] ?? "0") === combinedBefore,
+      `${after[sansaId]} vs ${combinedBefore}`,
+    );
+    check(
+      "nobody else's balance moved",
+      BigInt(after[priyaId] ?? "0") === netBefore(priyaId) &&
+        BigInt(after[raviId] ?? "0") === netBefore(raviId) &&
+        BigInt(after[otherGhostId] ?? "0") === netBefore(otherGhostId),
+      `Priya ${before[priyaId]}->${after[priyaId]}, Ravi ${before[raviId]}->${after[raviId]}`,
+    );
+    check(
+      "the group still sums to zero",
+      sum(Object.values(after)) === 0n,
+      JSON.stringify(after),
+    );
+
+    // The member list changed for the whole group, so the whole group sees it.
+    // Recording it against `targetPersonId` would have marked it *addressed*,
+    // which the feed query treats as private to the two ends of a nudge — and
+    // Ravi, who is in the group and whose ledger just changed shape, would
+    // have been told nothing.
+    const raviSaw = (await ravi.call("/api/activity")).body.items.some(
+      (item) => item.type === "member.merged",
+    );
+    check("another member sees that the merge happened", raviSaw);
+
+    // The two payer rows on the taxi bill became one, rather than one of them
+    // being dropped on the unique constraint.
+    const taxis = (await priya.call(`/api/groups/${tripId}/expenses`)).body.items.find(
+      (item) => item.kind === "expense" && item.expense.description === "Taxis",
+    ).expense;
+    check(
+      "two payers on one bill became a single payer for the sum",
+      taxis.payers.length === 1 && taxis.payers[0].amount === "12000",
+      JSON.stringify(taxis.payers),
+    );
+    check(
+      "and two shares of it became a single share for the sum",
+      taxis.splits.find((split) => split.personId === sansaId)?.amount === "5000",
+      JSON.stringify(taxis.splits),
+    );
+    check(
+      "the bill still adds up after the two rows were combined",
+      sum(taxis.splits.map((split) => split.amount)) === 12000n,
+    );
+
+    // Merging is not repeatable: the row is gone.
+    const again = await priya.call(`/api/people/${ghostId}/merge`, {
+      method: "POST",
+      body: { intoPersonId: sansaId },
+      allowError: true,
+    });
+    check(
+      "merging the same placeholder twice is refused",
+      again.status === 403 || again.status === 404,
+      String(again.status),
+    );
+
+    // A payment recorded between the two names would become a payment to
+    // oneself, so the merge stops rather than quietly deleting it.
+    const second = await priya.call("/api/groups", {
+      method: "POST",
+      body: {
+        name: "Self payment",
+        currency: "EUR",
+        memberIds: [sansaId],
+        placeholderNames: ["Sansa Stark"],
+      },
+    });
+    const secondId = second.body.group.id;
+    const secondGhost = (await priya.call(`/api/groups/${secondId}`)).body.group.members.find(
+      (m) => m.displayName === "Sansa Stark",
+    ).id;
+    await priya.call("/api/settlements", {
+      method: "POST",
+      body: {
+        groupId: secondId,
+        fromPersonId: secondGhost,
+        toPersonId: sansaId,
+        amount: "1000",
+        currency: "EUR",
+      },
+    });
+    const conflicted = await priya.call(`/api/people/${secondGhost}/merge`, {
+      method: "POST",
+      body: { intoPersonId: sansaId },
+      allowError: true,
+    });
+    check(
+      "a payment recorded between the two blocks the merge",
+      conflicted.status === 409,
+      `${conflicted.status} ${JSON.stringify(conflicted.body)}`,
+    );
+  }
+
   // -- Deleting a settled group --------------------------------------------
   console.log("\nLifecycle");
   const deleted = await priya.call(`/api/groups/${groupId}`, {
