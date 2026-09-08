@@ -108,6 +108,30 @@ export function Sheet({
 }
 
 /**
+ * Whether this element is the reason a keyboard would be on screen.
+ *
+ * The viewport being short is not on its own evidence of a keyboard, and
+ * trusting it alone shipped a bug: opening the expense composer produced a
+ * sheet sized as though a keyboard were up when none was, cut off halfway down
+ * the screen with the page showing underneath. A reading taken while the
+ * viewport happened to be short — mid-transition, or just after a keyboard
+ * elsewhere dismissed — latched, and nothing dislodged it.
+ *
+ * `inputMode="none"` matters: the amount pad is a real, focusable `<input>`
+ * that deliberately suppresses the system keyboard in favour of its own
+ * on-screen pad. It must not count.
+ */
+function summonsKeyboard(element: Element | null): boolean {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element.isContentEditable) return true;
+  const tag = element.tagName;
+  if (tag !== "INPUT" && tag !== "TEXTAREA") return false;
+  if (element.getAttribute("inputmode") === "none") return false;
+  const type = element.getAttribute("type");
+  return type !== "checkbox" && type !== "radio" && type !== "file";
+}
+
+/**
  * Where the visible part of the screen actually is.
  *
  * A sheet is `position: fixed`, which pins it to the **layout** viewport — and
@@ -138,9 +162,9 @@ function useVisibleViewport(): { top: number; height: number } | null {
       const covered = window.innerHeight - viewport.height - viewport.offsetTop;
       // A few stray pixels are not a keyboard, and re-rendering on every scroll
       // frame of sub-pixel noise would make the sheet judder.
-      const engaged = covered > 24 || viewport.offsetTop > 1;
+      const shrunk = covered > 24 || viewport.offsetTop > 1;
       setRect(
-        engaged
+        shrunk && summonsKeyboard(document.activeElement)
           ? { top: Math.round(viewport.offsetTop), height: Math.round(viewport.height) }
           : null,
       );
@@ -149,9 +173,16 @@ function useVisibleViewport(): { top: number; height: number } | null {
     update();
     viewport.addEventListener("resize", update);
     viewport.addEventListener("scroll", update);
+    // Focus, not just size. A reading taken while the viewport happened to be
+    // short would otherwise stay latched with nothing to dislodge it, and these
+    // are what say the keyboard has genuinely gone.
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", update);
     return () => {
       viewport.removeEventListener("resize", update);
       viewport.removeEventListener("scroll", update);
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", update);
     };
   }, []);
 

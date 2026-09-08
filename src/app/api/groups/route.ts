@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { currencyCode, json, readBody, route, text } from "@/lib/api";
-import { requireSession, uniqueGroupCode } from "@/lib/identity";
+import { ValidationError, requireSession, uniqueGroupCode } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { groupSummaries } from "@/server/read";
+import { visiblePeople } from "@/server/me";
 import { colorForName } from "@/lib/avatar";
 import { recordActivity } from "@/server/write";
 
@@ -17,6 +18,15 @@ const createSchema = z.object({
   simplifyDebts: z.boolean().default(true),
   /** Names to seed as placeholder members, for people not on the app yet. */
   placeholderNames: z.array(text(60, "A name")).max(40).default([]),
+  /**
+   * People the creator already knows, by id.
+   *
+   * Without this the only way to put somebody in a new group was to type their
+   * name, which creates a *placeholder* — so adding a friend you already had
+   * produced a second, unclaimed copy of them, and the two accumulated
+   * balances that would never meet.
+   */
+  memberIds: z.array(z.string().min(1)).max(40).default([]),
 });
 
 /**
@@ -30,6 +40,22 @@ const createSchema = z.object({
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
   const input = await readBody(request, createSchema);
+
+  /*
+   * Only people the creator already shares a group or a friendship with.
+   *
+   * `visiblePeople` is the same set the app renders names from, so this refuses
+   * an id somebody guessed or scraped without needing a second notion of who
+   * you are allowed to involve.
+   */
+  const memberIds = [...new Set(input.memberIds)].filter((id) => id !== session.person.id);
+  if (memberIds.length > 0) {
+    const allowed = new Set((await visiblePeople(session.person.id)).map((person) => person.id));
+    const stranger = memberIds.find((id) => !allowed.has(id));
+    if (stranger) {
+      throw new ValidationError("You can only add people you already share a group with.");
+    }
+  }
 
   const inviteCode = await uniqueGroupCode();
 
@@ -48,6 +74,12 @@ export const POST = route(async (request: Request) => {
         },
       },
     });
+
+    for (const personId of memberIds) {
+      await tx.membership.create({
+        data: { groupId: created.id, personId, role: "member" },
+      });
+    }
 
     for (const name of input.placeholderNames) {
       if (!name) continue;

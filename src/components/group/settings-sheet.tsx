@@ -9,7 +9,7 @@ import { Avatar } from "../ui/avatar";
 import { Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { RecurringSheet } from "./recurring-sheet";
-import { useAddMember, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
+import { useAddMember, useDashboard, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import type { GroupDetailDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
@@ -56,6 +56,31 @@ export function GroupSettingsSheet({
     const trimmed = name.trim();
     if (!trimmed || trimmed === group.name) return;
     updateGroup.mutate({ name: trimmed });
+  };
+
+  /*
+   * People you already split with who are not in this group yet. Placeholders
+   * are excluded: a placeholder belongs to the group that made it, and pulling
+   * one into a second group would entangle two sets of balances.
+   */
+  const { data: dashboard } = useDashboard();
+  const inGroup = new Set(group.members.map((member) => member.id));
+  const addable = (dashboard?.people ?? []).filter(
+    (person) => !inGroup.has(person.id) && !person.isGhost && person.id !== dashboard?.me.id,
+  );
+
+  const addExisting = async (person: { id: string; displayName: string }) => {
+    try {
+      await addMember.mutateAsync({ personId: person.id });
+      haptic();
+      toast({ tone: "success", title: `${person.displayName} added` });
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not add them",
+        description: error instanceof ApiError ? error.message : undefined,
+      });
+    }
   };
 
   const add = async () => {
@@ -205,6 +230,32 @@ export function GroupSettingsSheet({
                 );
               })}
             </ul>
+
+            {/*
+              People you already split with, offered before the name box.
+              Typing a name makes a *placeholder* — so reaching for it to add
+              somebody you already had produced a second, unclaimed copy of
+              them, with balances that could never meet.
+            */}
+            {addable.length > 0 ? (
+              <ul className="mt-2.5 space-y-1.5">
+                {addable.map((person) => (
+                  <li key={person.id}>
+                    <button
+                      onClick={() => void addExisting(person)}
+                      disabled={addMember.isPending}
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2 text-left transition active:scale-[0.985] disabled:opacity-50"
+                    >
+                      <Avatar person={person} size="sm" />
+                      <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                        {person.displayName}
+                      </span>
+                      <UserPlus className="size-4 shrink-0 text-subtle" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
             <div className="mt-2.5 flex gap-2">
               <input

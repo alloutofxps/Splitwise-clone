@@ -1480,6 +1480,81 @@ async function main() {
     );
   }
 
+  // -- Adding somebody you already know -------------------------------------
+  //
+  // The only way to put a person in a group used to be to type their name, and
+  // a typed name creates a *placeholder*. So adding a friend you already had
+  // produced a second, unclaimed copy of them, and the two collected balances
+  // that could never meet. Both entry points now take a person id.
+  console.log("\nAdding somebody you already know");
+  {
+    const peopleBefore = (await priya.call("/api/dashboard")).body.people.length;
+
+    const atCreation = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Known people", currency: "EUR", memberIds: [raviId] },
+    });
+    const knownId = atCreation.body.group.id;
+    const known = (await priya.call(`/api/groups/${knownId}`)).body.group;
+
+    check(
+      "a new group can include somebody you already know",
+      known.members.some((member) => member.id === raviId),
+      known.members.map((m) => m.displayName).join(", "),
+    );
+    check(
+      "and it is that person, not a fresh placeholder",
+      !known.members.some((member) => member.isGhost),
+      JSON.stringify(known.members.map((m) => [m.displayName, m.isGhost])),
+    );
+    check(
+      "so no second copy of them appears in your people",
+      (await priya.call("/api/dashboard")).body.people.length === peopleBefore,
+      `${peopleBefore} people before`,
+    );
+
+    // The same on a group that already exists.
+    const later = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Added later", currency: "EUR" },
+    });
+    const laterId = later.body.group.id;
+    const added = await priya.call(`/api/groups/${laterId}/members`, {
+      method: "POST",
+      body: { personId: raviId },
+      allowError: true,
+    });
+    check("an existing group accepts a person id", added.status === 200, String(added.status));
+    const laterGroup = (await priya.call(`/api/groups/${laterId}`)).body.group;
+    check(
+      "and adds the real person rather than a placeholder",
+      laterGroup.members.some((member) => member.id === raviId && !member.isGhost),
+      JSON.stringify(laterGroup.members.map((m) => [m.displayName, m.isGhost])),
+    );
+
+    // It stays an access decision, not a free-for-all.
+    const stranger = await priya.call(`/api/groups/${laterId}/members`, {
+      method: "POST",
+      body: { personId: outsiderId },
+      allowError: true,
+    });
+    check(
+      "somebody you share nothing with is refused",
+      stranger.status === 422,
+      `${stranger.status} ${JSON.stringify(stranger.body)}`,
+    );
+    const smuggled = await priya.call("/api/groups", {
+      method: "POST",
+      body: { name: "Nope", currency: "EUR", memberIds: [outsiderId] },
+      allowError: true,
+    });
+    check(
+      "and cannot be smuggled in at creation either",
+      smuggled.status === 422,
+      `${smuggled.status} ${JSON.stringify(smuggled.body)}`,
+    );
+  }
+
   // -- Deleting a settled group --------------------------------------------
   console.log("\nLifecycle");
   const deleted = await priya.call(`/api/groups/${groupId}`, {

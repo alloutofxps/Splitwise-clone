@@ -6,6 +6,7 @@ import { colorForName } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/codes";
 import { requireGroupAccess } from "@/server/access";
 import { personDto } from "@/server/read";
+import { visiblePeople } from "@/server/me";
 import { recordActivity } from "@/server/write";
 import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
 
@@ -16,6 +17,15 @@ const schema = z.object({
   name: text(60, "That name").optional(),
   /** Or add an existing person you already know, by their personal code. */
   inviteCode: z.string().trim().max(60).optional(),
+  /**
+   * Or by id, for somebody already on your list.
+   *
+   * A personal code is for adding a stranger who read it out. Somebody already
+   * in your people needs no code, and requiring one meant the only reachable
+   * path was typing their name — which makes a second, placeholder copy of a
+   * person you already had.
+   */
+  personId: z.string().min(1).optional(),
 });
 
 /**
@@ -32,6 +42,31 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const session = await requireSession();
   const { group } = await requireGroupAccess(id, session.person.id);
   const input = await readBody(request, schema);
+
+  if (input.personId) {
+    const allowed = (await visiblePeople(session.person.id)).some(
+      (person) => person.id === input.personId,
+    );
+    if (!allowed) throw new ValidationError("You do not share a group with that person.");
+
+    const person = await prisma.person.findUnique({ where: { id: input.personId } });
+    if (!person) throw new ValidationError("That person no longer exists.");
+
+    const existing = await prisma.membership.findUnique({
+      where: { groupId_personId: { groupId: id, personId: person.id } },
+    });
+    if (existing && !existing.leftAt) {
+      throw new ValidationError(`${person.displayName} is already in this group.`);
+    }
+
+    await prisma.membership.upsert({
+      where: { groupId_personId: { groupId: id, personId: person.id } },
+      create: { groupId: id, personId: person.id },
+      update: { leftAt: null },
+    });
+
+    return json({ person: personDto(person) });
+  }
 
   if (input.inviteCode) {
     limitByAddress(request, "member-add-by-code", CODE_LOOKUP);

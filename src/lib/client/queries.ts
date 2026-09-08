@@ -759,9 +759,14 @@ export function useCreateGroup() {
       currency: string;
       simplifyDebts: boolean;
       placeholderNames: string[];
+      /** People already on your list, added without making a second copy of them. */
+      memberIds?: string[];
     }) => api.post<{ group: { id: string } }>("/api/groups", input),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.dashboard });
+      // A new group changes who each of these screens shows.
+      void client.invalidateQueries({ queryKey: keys.people });
+      void client.invalidateQueries({ queryKey: keys.friends });
     },
   });
 }
@@ -780,7 +785,7 @@ export function useUpdateGroup(groupId: string) {
 export function useAddMember(groupId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name?: string; inviteCode?: string }) =>
+    mutationFn: (input: { name?: string; inviteCode?: string; personId?: string }) =>
       api.post<{ member: PersonDto }>(`/api/groups/${groupId}/members`, input),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.group(groupId) });
