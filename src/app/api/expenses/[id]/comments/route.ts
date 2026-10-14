@@ -24,7 +24,7 @@ async function assertCanSee(expenseId: string, personId: string) {
     expense.createdByPersonId === personId ||
     expense.payers.some((p) => p.personId === personId) ||
     expense.splits.some((s) => s.personId === personId);
-  if (!involved) throw new ForbiddenError("That expense is not yours to see.");
+  if (!involved) throw new ForbiddenError("You can't see that expense.");
   return expense;
 }
 
@@ -42,7 +42,7 @@ export const GET = route(async (_request: Request, { params }: Params) => {
 });
 
 const schema = z.object({
-  body: text(2000, "That comment").refine((v) => v.length > 0, "Say something first."),
+  body: text(2000, "That comment").refine((v) => v.length > 0, "Type a comment first."),
 });
 
 /**

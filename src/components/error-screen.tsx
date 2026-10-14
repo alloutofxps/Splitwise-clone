@@ -17,8 +17,8 @@ import { Button } from "./ui/primitives";
 export function ErrorScreen({
   error,
   reset,
-  title = "This screen stopped working",
-  description = "Nothing was lost — your expenses live on the server, not in this screen. Try again, and if it keeps happening, reopen the app.",
+  title = "Something went wrong",
+  description = "Your expenses are safe. Try again, and if it keeps happening, close and reopen the app.",
 }: {
   error: Error & { digest?: string };
   reset: () => void;

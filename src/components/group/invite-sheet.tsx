@@ -40,7 +40,7 @@ export function InviteSheet({
   const url =
     typeof window !== "undefined" ? `${window.location.origin}/join/${code}` : "";
 
-  const message = `Join "${group.name}" on Divvy to split expenses with me.\n\nCode: ${code}\n${url}`;
+  const message = `Join "${group.name}" on Divvy so we can split costs.\n\nCode: ${code}\n${url}`;
 
   const share = async () => {
     haptic();
@@ -83,11 +83,11 @@ export function InviteSheet({
       await client.invalidateQueries({ queryKey: keys.group(group.id) });
       toast({
         tone: "success",
-        title: "New code generated",
-        description: "The old link no longer works.",
+        title: "New code made",
+        description: "The old code and link don't work any more.",
       });
     } catch {
-      toast({ tone: "error", title: "Could not change the code" });
+      toast({ tone: "error", title: "Couldn't change the code" });
     } finally {
       setRotating(false);
     }
@@ -104,7 +104,7 @@ export function InviteSheet({
             {code}
           </p>
           <p className="mt-2 text-caption text-muted">
-            They enter this in Divvy, or open the link below.
+            They can type this in Divvy, or just open the link.
           </p>
         </div>
 
@@ -140,9 +140,9 @@ export function InviteSheet({
           <p className="flex items-start gap-2 text-caption leading-relaxed text-muted">
             <MessageCircle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Anyone with this code can join the group and see its expenses. If
-              it ends up somewhere it should not, generate a new one — everyone
-              already in the group stays in.
+              Anyone with this code can join and see the group&rsquo;s expenses. If
+              it gets shared by mistake, make a new one. People already in the
+              group stay in.
             </span>
           </p>
           <button
@@ -151,7 +151,7 @@ export function InviteSheet({
             className="mt-2.5 flex items-center gap-1.5 text-caption font-bold text-brand transition active:scale-95 disabled:opacity-50"
           >
             <RefreshCw className={rotating ? "size-3.5 animate-spin" : "size-3.5"} />
-            Generate a new code
+            Make a new code
           </button>
         </div>
       </div>

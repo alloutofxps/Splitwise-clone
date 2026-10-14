@@ -81,7 +81,7 @@ export default function HomePage() {
                 <EmptyState
                   icon={<UsersRound className="size-6" />}
                   title="No groups yet"
-                  description="A trip, a flat, a Friday night. Start one and the maths takes care of itself."
+                  description="Make a group for a trip, your flat or a night out. Add what people paid and Divvy works out who owes who."
                   action={
                     <Button variant="primary" onClick={() => setNewGroup(true)}>
                       Create a group
@@ -198,9 +198,9 @@ function Hero({ data }: { data: DashboardPayload }) {
         {totals.length === 0 ? (
           <div className="mt-3">
             <p className="font-serif text-display-lg italic leading-none text-text">
-              All square <Sparkles className="inline size-7 -translate-y-1 text-brand" />
+              All settled up <Sparkles className="inline size-7 -translate-y-1 text-brand" />
             </p>
-            <p className="mt-2 text-body-lg text-muted">Not a cent outstanding, anywhere.</p>
+            <p className="mt-2 text-body-lg text-muted">Nobody owes anybody anything.</p>
           </div>
         ) : totals.length === 1 ? (
           <div className="mt-2">
@@ -229,7 +229,7 @@ function Hero({ data }: { data: DashboardPayload }) {
                 )}
               />
             ))}
-            <span className="w-full text-body font-semibold text-muted">across {totals.length} currencies</span>
+            <span className="w-full text-body font-semibold text-muted">in {totals.length} currencies</span>
           </div>
         )}
 
@@ -301,14 +301,14 @@ function breakdown(data: DashboardPayload): { currency: string; owedToYou: bigin
 }
 
 function moodLine(mood: "owed" | "owe" | "square"): string {
-  if (mood === "owed") return "The table owes you. Nice.";
-  if (mood === "owe") return "You owe a little. Nothing a transfer can't fix.";
-  return "Swings and roundabouts — it all evens out.";
+  if (mood === "owed") return "In total, people owe you this much.";
+  if (mood === "owe") return "In total, you owe this much.";
+  return "Overall, you're even.";
 }
 
 function greeting(): string {
   const hour = new Date().getHours();
-  if (hour < 5) return "Still up";
+  if (hour < 5) return "Hi";
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
@@ -429,11 +429,11 @@ function FirstRun({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => vo
       </div>
 
       <h2 className="mt-5 font-display text-heading font-extrabold tracking-[-0.03em] text-text">
-        Let&rsquo;s <span className="font-serif font-normal italic">get you</span> set up
+        Start <span className="font-serif font-normal italic">your first</span> group
       </h2>
       <p className="mt-1.5 text-body-lg leading-relaxed text-muted">
-        Start a group for a trip or a flat share, or join one a friend has already made
-        using their invite code.
+        Make a group for a trip or the people you live with. Or join a friend&rsquo;s
+        group with their invite code.
       </p>
 
       <div className="mt-5 space-y-2.5">

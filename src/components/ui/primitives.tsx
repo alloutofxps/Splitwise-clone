@@ -66,10 +66,10 @@ type ButtonVariant =
 type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // The sunset gradient, lit along its top edge and glowing faintly in its own
+  // The brand gradient, lit along its top edge and glowing faintly in its own
   // colour - the one thing on a screen that is meant to be pressed.
   primary:
-    "bg-gradient-brand text-white [box-shadow:inset_0_1px_0_oklch(1_0_0/0.3),0_10px_22px_-10px_var(--sunset-2),0_2px_6px_-2px_var(--sunset-1)] hover:brightness-110 active:brightness-95 disabled:saturate-50",
+    "bg-gradient-brand text-white [box-shadow:inset_0_1px_0_oklch(1_0_0/0.3),0_10px_22px_-10px_var(--accent-2),0_2px_6px_-2px_var(--accent-1)] hover:brightness-110 active:brightness-95 disabled:saturate-50",
   secondary:
     "surface-card text-text hover:bg-surface-2 active:bg-surface-3",
   outline: "border border-line-strong text-text hover:bg-surface-2 active:bg-surface-2",

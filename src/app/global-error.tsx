@@ -51,7 +51,7 @@ export default function GlobalError({
         `}</style>
         <main style={{ maxWidth: "24rem", textAlign: "center" }}>
           <h1 style={{ fontSize: "1.0625rem", fontWeight: 600, margin: 0 }}>
-            Divvy could not start
+            Divvy couldn&rsquo;t open
           </h1>
           <p
             className="divvy-muted"
@@ -62,8 +62,7 @@ export default function GlobalError({
               color: "#6c6a75",
             }}
           >
-            Your data is safe on the server. Reloading fixes this almost every
-            time.
+            Your data is safe. Reloading the page usually fixes this.
           </p>
           <div
             style={{

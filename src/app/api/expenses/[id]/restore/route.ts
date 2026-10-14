@@ -47,7 +47,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       expense.createdByPersonId === session.person.id ||
       expense.payers.some((payer) => payer.personId === session.person.id) ||
       expense.splits.some((split) => split.personId === session.person.id);
-    if (!involved) throw new ForbiddenError("That expense is not yours to restore.");
+    if (!involved) throw new ForbiddenError("You can't bring that expense back.");
   }
 
   if (!expense.deletedAt) {
@@ -80,7 +80,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     });
     if (members.length !== involved.length) {
       throw new ValidationError(
-        "Somebody on this expense has left the group. Add them back before restoring it.",
+        "Someone on this expense has left the group. Add them back first.",
       );
     }
   }

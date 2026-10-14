@@ -15,9 +15,9 @@ export default function OfflinePage() {
         You&rsquo;re offline
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
-        Divvy needs a connection to load this page for the first time. Anything
-        you have already opened still works, and anything you add now will sync
-        when you reconnect.
+        This page needs the internet the first time you open it. Pages you&rsquo;ve
+        already opened still work, and anything you add now will be saved when
+        you&rsquo;re back online.
       </p>
       {/*
         A plain anchor rather than next/link, deliberately: a client-side

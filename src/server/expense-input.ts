@@ -22,7 +22,7 @@ const GROUP_ATTACHMENT_QUOTA = 250 * 1024 * 1024;
 const PERSON_ATTACHMENT_QUOTA = 100 * 1024 * 1024;
 
 export const expenseInputSchema = z.object({
-  id: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/, "That id is not valid.").optional(),
+  id: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/, "Something went wrong. Please try again.").optional(),
   /**
    * The `updatedAt` the client last saw. Required for an edit (the route
    * checks); ignored on a create.
@@ -44,7 +44,7 @@ export const expenseInputSchema = z.object({
 
   payers: z
     .array(z.object({ personId: z.string().min(1).max(80), amount: minorUnits("A payment") }))
-    .min(1, "Somebody has to have paid.")
+    .min(1, "Pick who paid.")
     .max(100),
 
   splits: z
@@ -127,7 +127,7 @@ export async function prepareExpense(
 
   if (settlementCurrency !== input.currency && !input.exchangeRate) {
     throw new ValidationError(
-      `This group settles in ${settlementCurrency}, so an exchange rate is needed for a ${input.currency} expense.`,
+      `This group uses ${settlementCurrency}, so add an exchange rate for this ${input.currency} expense.`,
     );
   }
 

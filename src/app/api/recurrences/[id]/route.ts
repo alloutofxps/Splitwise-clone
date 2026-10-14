@@ -15,7 +15,7 @@ async function loadEditable(id: string, personId: string) {
 
   if (recurrence.groupId) await requireGroupAccess(recurrence.groupId, personId);
   else if (recurrence.createdByPersonId !== personId) {
-    throw new ForbiddenError("That repeating expense is not yours.");
+    throw new ForbiddenError("You can't change that repeating expense.");
   }
   return recurrence;
 }

@@ -117,7 +117,7 @@ export function route<Args extends unknown[]>(
       // is a 404; a unique key somebody else just took is a 409.
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === "P2025") {
-          return errorResponse(404, { error: "That no longer exists.", code: "not_found" });
+          return errorResponse(404, { error: "That doesn't exist any more.", code: "not_found" });
         }
         if (error.code === "P2002") {
           return errorResponse(409, { error: "That is already in use.", code: "conflict" });
@@ -128,7 +128,7 @@ export function route<Args extends unknown[]>(
         if (TRANSIENT_DB_CODES.has(error.code)) {
           log.warn("database busy", { requestId: requestIdOf(args[0]), code: error.code });
           return json(
-            { error: "The server is busy. Try again in a moment.", code: "busy" },
+            { error: "Divvy is busy right now. Try again in a moment.", code: "busy" },
             { status: 503, headers: { "Retry-After": "2" } },
           );
         }
@@ -136,7 +136,7 @@ export function route<Args extends unknown[]>(
 
       log.error("unhandled route error", { requestId: requestIdOf(args[0]), error });
       return errorResponse(500, {
-        error: "Something went wrong on our side. Your data is safe - try again.",
+        error: "Something went wrong on our side. Your data is safe. Please try again.",
         code: "server_error",
       });
     }
@@ -242,7 +242,7 @@ export const MAX_MINOR_UNITS = BigInt(Number.MAX_SAFE_INTEGER);
 export function parseMinorUnits(value: unknown, field = "amount"): bigint {
   const bounded = (amount: bigint): bigint => {
     if (amount > MAX_MINOR_UNITS || amount < -MAX_MINOR_UNITS) {
-      throw new ValidationError(`${field} is too large to be represented exactly.`);
+      throw new ValidationError(`${field} is too big.`);
     }
     return amount;
   };
@@ -250,14 +250,14 @@ export function parseMinorUnits(value: unknown, field = "amount"): bigint {
   if (typeof value === "bigint") return bounded(value);
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value)) {
-      throw new ValidationError(`${field} must be a whole number of minor units.`);
+      throw new ValidationError(`${field} isn't a valid amount.`);
     }
     return bounded(BigInt(value));
   }
   if (typeof value === "string" && /^-?\d+$/.test(value.trim())) {
     return bounded(BigInt(value.trim()));
   }
-  throw new ValidationError(`${field} must be an integer amount in minor units.`);
+  throw new ValidationError(`${field} isn't a valid amount.`);
 }
 
 /**
@@ -280,7 +280,7 @@ export const minorUnits = (field = "amount") =>
         message:
           error instanceof ValidationError
             ? error.message
-            : `${field} must be a whole number of minor units, as a string.`,
+            : `${field} isn't a valid amount.`,
       });
       return z.NEVER;
     }
@@ -298,7 +298,7 @@ export const currencyCode = z
   .trim()
   .regex(/^[A-Za-z]{3}$/, "Expected a three-letter currency code.")
   .transform((value) => value.toUpperCase())
-  .refine((value) => isKnownCurrency(value), "That is not a currency we know.");
+  .refine((value) => isKnownCurrency(value), "We don't know that currency.");
 
 /**
  * An exchange rate: quote currency per one unit of base.
@@ -320,8 +320,8 @@ export const currencyCode = z
 export const exchangeRateInput = z
   .string()
   .trim()
-  .regex(/^\d+(\.\d{1,12})?$/, "The exchange rate has to be a positive decimal number.")
-  .refine((value) => Number(value) > 0, "The exchange rate has to be greater than zero.");
+  .regex(/^\d+(\.\d{1,12})?$/, "The exchange rate has to be a number above zero.")
+  .refine((value) => Number(value) > 0, "The exchange rate has to be more than zero.");
 
 /** An ISO date string or timestamp, as a Date. */
 export const dateInput = z
@@ -337,7 +337,7 @@ export const dateInput = z
     // and a recurrence anchored there catches up forever. Routes that need a
     // tighter window apply their own on top.
     if (date.getTime() < DATE_FLOOR || date.getTime() > Date.now() + DATE_CEILING_AHEAD) {
-      ctx.addIssue({ code: "custom", message: "That date is out of range." });
+      ctx.addIssue({ code: "custom", message: "That date is too far in the past or future." });
       return z.NEVER;
     }
     return date;

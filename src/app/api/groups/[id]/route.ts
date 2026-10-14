@@ -89,7 +89,7 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     ]);
     if (expenseCount + settlementCount + recurrenceCount > 0) {
       throw new ValidationError(
-        "The group currency can only change while the group has no expenses.",
+        "You can only change the currency before any expenses are added.",
       );
     }
   }
@@ -127,7 +127,7 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     changes.push(`set the currency to ${updated.currency}`);
   }
   if (input.simplifyDebts !== undefined && input.simplifyDebts !== group.simplifyDebts) {
-    changes.push(input.simplifyDebts ? "turned on debt simplification" : "turned off debt simplification");
+    changes.push(input.simplifyDebts ? "turned on Simplify debts" : "turned off Simplify debts");
   }
   if (input.archived !== undefined && input.archived !== Boolean(group.archivedAt)) {
     changes.push(input.archived ? "archived it" : "unarchived it");
@@ -162,7 +162,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   const outstanding = [...sheet.net.values()].some((value) => value !== 0n);
   if (outstanding) {
     throw new ForbiddenError(
-      "Settle the group up before deleting it, or archive it instead to keep the history.",
+      "Everyone needs to be settled up before you delete the group. Or archive it to hide it and keep its history.",
     );
   }
 

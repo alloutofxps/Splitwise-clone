@@ -221,7 +221,7 @@ async function blocker(recurrence: Recurrence, personIds: string[]): Promise<str
     });
     if (!group) return "its group no longer exists";
     if (group.currency !== recurrence.currency) {
-      return `it is in ${recurrence.currency} but the group settles in ${group.currency}`;
+      return `it is in ${recurrence.currency} but the group uses ${group.currency}`;
     }
     const active = await prisma.membership.findMany({
       where: { groupId: recurrence.groupId, personId: { in: personIds }, leftAt: null },
@@ -235,7 +235,7 @@ async function blocker(recurrence: Recurrence, personIds: string[]): Promise<str
         select: { displayName: true },
       });
       const names = people.map((person) => person.displayName).join(", ") || "somebody";
-      return `${names} left the group - edit the split and turn it back on`;
+      return `${names} left the group. Change the split and turn it back on.`;
     }
     return null;
   }
@@ -250,7 +250,7 @@ async function blocker(recurrence: Recurrence, personIds: string[]): Promise<str
       ]),
     },
   });
-  return friendships === others.length ? null : "somebody in it is no longer a friend";
+  return friendships === others.length ? null : "someone in it is no longer your friend";
 }
 
 /** Posts what is due for one recurrence. Returns how many occurrences it filed. */
@@ -258,7 +258,7 @@ async function processRecurrence(recurrence: Recurrence, now: Date): Promise<num
   const payers = parseTemplate(recurrence.payersJson);
   const splits = parseTemplate(recurrence.splitsJson);
   if (payers.length === 0 || splits.length === 0) {
-    await pause(recurrence, "its split could not be read");
+    await pause(recurrence, "its split couldn't be read");
     return 0;
   }
 
@@ -331,7 +331,7 @@ async function processRecurrence(recurrence: Recurrence, now: Date): Promise<num
       }
     } catch (error) {
       if (isPermanent(error)) {
-        await pause(recurrence, error instanceof Error ? error.message : "it could not be posted");
+        await pause(recurrence, error instanceof Error ? error.message : "it couldn't be added");
         return posted;
       }
       // Busy database, network blip: leave the schedule where this occurrence

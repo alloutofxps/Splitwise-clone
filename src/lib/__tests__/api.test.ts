@@ -25,14 +25,14 @@ describe("parseMinorUnits", () => {
 
   it("refuses one unit past it, in either direction", () => {
     // This exact value used to persist and then come back a minor unit short.
-    expect(() => parseMinorUnits((MAX_MINOR_UNITS + 1n).toString())).toThrow(/too large/);
-    expect(() => parseMinorUnits((-MAX_MINOR_UNITS - 1n).toString())).toThrow(/too large/);
+    expect(() => parseMinorUnits((MAX_MINOR_UNITS + 1n).toString())).toThrow(/too big/);
+    expect(() => parseMinorUnits((-MAX_MINOR_UNITS - 1n).toString())).toThrow(/too big/);
   });
 
   it("refuses an amount past the database's own range, as a 422 not a 500", () => {
     // SQLite's 64-bit column used to be the only thing catching this, which
     // surfaced as an opaque server error.
-    expect(() => parseMinorUnits("9".repeat(400))).toThrow(/too large/);
+    expect(() => parseMinorUnits("9".repeat(400))).toThrow(/too big/);
   });
 
   it("refuses shapes that are not whole minor units", () => {

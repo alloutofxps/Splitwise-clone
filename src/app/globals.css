@@ -107,16 +107,18 @@
      Golden hour (see DESIGN-AUDIT.md)
      -------------------------------------------------------------------------- */
 
-  /* The brand mark: dusk to sunset. Used sparingly - the Add button, the
-     wordmark, celebrations - so it still means something when it appears. */
-  --sunset-1: oklch(0.58 0.22 283);
-  --sunset-2: oklch(0.63 0.24 340);
-  --sunset-3: oklch(0.76 0.16 55);
-  --grad-brand: linear-gradient(135deg, var(--sunset-1) 0%, var(--sunset-2) 55%, var(--sunset-3) 100%);
+  /* The brand mark: one deep indigo, darkening slightly across the shape so
+     a button has some depth without turning into a rainbow. Used sparingly -
+     the Add button, the wordmark, primary buttons - so it still means
+     something when it appears. */
+  --accent-1: oklch(0.53 0.2 281);
+  --accent-2: oklch(0.48 0.19 274);
+  --accent-3: oklch(0.43 0.17 267);
+  --grad-brand: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 55%, var(--accent-3) 100%);
 
   /* Mood: the colour of where you stand. Set on <html data-mood>. */
   --mood: var(--brand);
-  --mood-2: var(--sunset-2);
+  --mood-2: var(--accent-2);
   --glow-strength: 0.55;
 
   /* A lit top edge, so a card reads as a surface catching light. */
@@ -217,9 +219,9 @@ html[data-mood="square"] {
   --shadow-lg: 0 4px 8px oklch(0 0 0 / 0.34), 0 12px 32px oklch(0 0 0 / 0.4);
   --shadow-xl: 0 8px 16px oklch(0 0 0 / 0.38), 0 24px 56px oklch(0 0 0 / 0.5);
 
-  --sunset-1: oklch(0.66 0.2 283);
-  --sunset-2: oklch(0.7 0.21 340);
-  --sunset-3: oklch(0.8 0.14 60);
+  --accent-1: oklch(0.6 0.18 281);
+  --accent-2: oklch(0.55 0.18 274);
+  --accent-3: oklch(0.5 0.17 267);
   --glow-strength: 0.42;
   --highlight: inset 0 1px 0 oklch(1 0 0 / 0.07);
   --card-border: oklch(1 0 0 / 0.07);

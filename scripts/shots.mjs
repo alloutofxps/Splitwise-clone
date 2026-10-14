@@ -66,10 +66,10 @@ async function run(theme) {
   await page.goto(BASE, { waitUntil: "networkidle" });
   await shot("01-welcome");
 
-  await page.getByText("I already have a recovery key").click();
+  await page.getByText("Sign in with a recovery key").click();
   await page.waitForTimeout(400);
   await page.locator("textarea").fill(KEY);
-  await page.getByRole("button", { name: /Restore my account/i }).click();
+  await page.getByRole("button", { name: /Get my account back/i }).click();
   await page.waitForTimeout(2600);
   await shot("02-home");
 
@@ -135,10 +135,10 @@ async function desktop() {
   const page = await context.newPage();
 
   await page.goto(BASE, { waitUntil: "networkidle" });
-  await page.getByText("I already have a recovery key").click();
+  await page.getByText("Sign in with a recovery key").click();
   await page.waitForTimeout(400);
   await page.locator("textarea").fill(KEY);
-  await page.getByRole("button", { name: /Restore my account/i }).click();
+  await page.getByRole("button", { name: /Get my account back/i }).click();
   await page.waitForTimeout(2600);
   await page.screenshot({ path: `${OUT}/desktop-home.png` });
   console.log("  desktop/home");

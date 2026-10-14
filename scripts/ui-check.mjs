@@ -153,7 +153,7 @@ console.log("\nSettling up");
   const rowLabels = await page.evaluate(() =>
     [...document.querySelectorAll("button")]
       .map((b) => (b.getAttribute("aria-label") ?? "").trim())
-      .filter((n) => /^(Pay|Record) /.test(n)),
+      .filter((n) => /^(Pay|Add) /.test(n)),
   );
   check("a suggested transfer is a control, not a list item", rowLabels.length > 0, rowLabels.join(" / "));
 
@@ -233,9 +233,9 @@ console.log("\nSettling with a person, across ledgers");
     await settleButton.click();
     await page.waitForTimeout(1000);
     const sheet = await page.locator("[role=dialog]").first().innerText();
-    check("the sheet lists the ledgers it is about to write", /This records/i.test(sheet), sheet.replace(/\n+/g, " | ").slice(0, 160));
+    check("the sheet lists the ledgers it is about to write", /This will save/i.test(sheet), sheet.replace(/\n+/g, " | ").slice(0, 160));
 
-    await page.getByRole("button", { name: /^Record / }).click();
+    await page.getByRole("button", { name: /^Save / }).click();
     await page.waitForTimeout(3000);
 
     const cleared = await page.evaluate(async (id) => {
@@ -506,8 +506,8 @@ console.log("\nUndoing from the activity feed");
   await page.goto(`${BASE}/activity`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2500);
 
-  const undoExpense = page.getByRole("button", { name: /restore this expense/i });
-  const undoPayment = page.getByRole("button", { name: /restore this payment/i });
+  const undoExpense = page.getByRole("button", { name: /bring this expense back/i });
+  const undoPayment = page.getByRole("button", { name: /bring this payment back/i });
   const expensesBefore = await undoExpense.count();
   const paymentsBefore = await undoPayment.count();
   check("both removals offer an undo in the feed",
@@ -589,7 +589,7 @@ console.log("\nSign-up shows the recovery key");
     const after = await signup.locator("body").innerText();
     check(
       "acknowledging it enters the app",
-      /Let.s get you set up|All settled up/.test(after),
+      /Start your first group|All settled up/.test(after),
       after.slice(0, 120).replace(/\n/g, " | "),
     );
   }
@@ -1175,7 +1175,7 @@ console.log("\nMerging a placeholder from the group screen");
   await settings.click();
   await p5.waitForTimeout(700);
 
-  const mergeButton = p5.locator('button[aria-label="Sansa S is somebody I already know"]');
+  const mergeButton = p5.locator('button[aria-label="Sansa S is someone already on Divvy"]');
   check("the placeholder's row offers a merge", await mergeButton.count() === 1);
 
   await mergeButton.first().click();
@@ -1190,9 +1190,9 @@ console.log("\nMerging a placeholder from the group screen");
   await p5.getByRole("button", { name: /^You$/ }).first().click();
   await p5.waitForTimeout(600);
   const confirmText = await p5.locator("body").innerText();
-  check("confirming says what is about to happen", confirmText.includes("cannot be undone"), confirmText.slice(0, 200).replace(/\n/g, " | "));
+  check("confirming says what is about to happen", confirmText.includes("can't undo this"), confirmText.slice(0, 200).replace(/\n/g, " | "));
 
-  await p5.getByRole("button", { name: "Merge them" }).first().click();
+  await p5.getByRole("button", { name: "Move it over" }).first().click();
   await p5.waitForTimeout(1500);
 
   const after = await p5.evaluate(async (groupId) => {

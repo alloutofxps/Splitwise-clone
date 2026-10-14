@@ -83,7 +83,7 @@ export function BalancesPanel({
       <section className="mt-4">
         <div className="mb-2.5 flex items-center justify-between gap-3 px-1">
           <h3 className="text-caption font-bold uppercase tracking-[0.06em] text-subtle">
-            {simplified ? "Fewest payments" : "Who owes whom"}
+            {simplified ? "Fewest payments" : "Who owes who"}
           </h3>
           <div className="flex items-center gap-2">
             <span className="text-caption font-semibold text-muted">Simplify</span>
@@ -101,9 +101,9 @@ export function BalancesPanel({
         {edges.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
             <Sparkles className="mx-auto size-6 text-positive-text" />
-            <p className="mt-2 text-subhead font-bold text-text">Everyone is square</p>
+            <p className="mt-2 text-subhead font-bold text-text">Everyone is settled up</p>
             <p className="mt-1 text-body text-muted">
-              Nothing outstanding in this group.
+              Nobody in this group owes anything.
             </p>
           </div>
         ) : (
@@ -151,7 +151,7 @@ export function BalancesPanel({
                       involvesMe
                         ? edge.fromPersonId === meId
                           ? `Pay ${to.displayName} ${toDecimalString(BigInt(edge.amount), group.currency)}`
-                          : `Record ${from.displayName} paying you ${toDecimalString(BigInt(edge.amount), group.currency)}`
+                          : `Add ${from.displayName} paying you ${toDecimalString(BigInt(edge.amount), group.currency)}`
                         : undefined
                     }
                   >
@@ -192,16 +192,16 @@ export function BalancesPanel({
           <p className="mt-3 flex gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-caption leading-relaxed text-muted">
             <Info className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Simplifying turned {group.balances.pairwise.length} payments into{" "}
-              {group.balances.simplified.length}. Everyone ends up exactly where
-              they should — turn it off to see the original debts.
+              This cuts {group.balances.pairwise.length} payments down to{" "}
+              {group.balances.simplified.length}. Everyone still ends up even. Turn it
+              off to see who owes who directly.
             </span>
           </p>
         ) : null}
 
         {edges.length > 0 ? (
           <Button variant="primary" size="lg" fullWidth className="mt-4" onClick={() => onSettle()}>
-            Record a payment
+            Add a payment
           </Button>
         ) : null}
       </section>
@@ -279,12 +279,12 @@ function NudgeButton({
       toast({
         tone: "success",
         title: `Reminded ${name.split(" ")[0]}`,
-        description: "It will show up in their activity feed.",
+        description: "They'll see it in their Activity.",
       });
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not send that",
+        title: "Couldn't send that",
         // The server's refusals are written to be read: "you already reminded
         // them today", "they do not owe you anything right now".
         description: error instanceof ApiError ? error.message : undefined,

@@ -226,7 +226,7 @@ function equalSplit(
 ): SplitResult {
   const included = participants.filter((p) => p.included !== false);
   if (included.length === 0) {
-    return { splits: [], errors: ["Everyone has been switched off — nobody would owe anything."] };
+    return { splits: [], errors: ["Nobody is selected, so nobody would owe anything."] };
   }
 
   const amounts = apportion(
@@ -336,7 +336,7 @@ function adjustmentSplit(
   const errors: string[] = [];
   const included = participants.filter((p) => p.included !== false);
   if (included.length === 0) {
-    return { splits: [], errors: ["Pick at least one person to split the remainder."] };
+    return { splits: [], errors: ["Pick at least one person to split the rest."] };
   }
 
   const adjustments = participants.map((p) => p.adjustment ?? 0n);
@@ -461,7 +461,7 @@ export function validateExpenseBalance(
     errors.push(`Shares add up to ${owed} but the expense is ${total}. They have to match.`);
   }
 
-  if (payers.some((p) => p.amount < 0n)) errors.push("A payer cannot pay a negative amount.");
+  if (payers.some((p) => p.amount < 0n)) errors.push("What someone paid can't be below zero.");
 
   /*
    * A negative share passes both conservation checks above - pair a +2000 with
@@ -477,7 +477,7 @@ export function validateExpenseBalance(
    * to the same question, from the same row.
    */
   if (splits.some((s) => s.amount < 0n)) {
-    errors.push("A share cannot be negative.");
+    errors.push("A share can't be below zero.");
   }
 
   return errors;

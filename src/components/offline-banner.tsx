@@ -92,9 +92,9 @@ export function OfflineBanner() {
                   <CloudOff className="size-3.5 shrink-0" />
                   {!online
                     ? queue.length > 0
-                      ? `Offline · ${queue.length} change${queue.length === 1 ? "" : "s"} will sync`
-                      : "Offline · your changes are saved here"
-                    : `${queue.length} change${queue.length === 1 ? "" : "s"} waiting to sync`}
+                      ? `Offline · ${queue.length} change${queue.length === 1 ? "" : "s"} will be sent later`
+                      : "Offline · your changes are saved on this phone"
+                    : `${queue.length} change${queue.length === 1 ? "" : "s"} waiting to send`}
                 </span>
 
                 {online && queue.length > 0 ? (
@@ -125,8 +125,8 @@ export function OfflineBanner() {
                   <TriangleAlert className="size-3.5 shrink-0 text-negative-text" />
                   <p className="flex-1 text-caption font-bold text-negative-text">
                     {failures.length === 1
-                      ? "1 change could not be saved"
-                      : `${failures.length} changes could not be saved`}
+                      ? "1 change couldn't be saved"
+                      : `${failures.length} changes couldn't be saved`}
                   </p>
                   {failures.length > 1 ? (
                     <button

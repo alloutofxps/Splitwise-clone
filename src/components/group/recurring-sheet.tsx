@@ -62,7 +62,7 @@ export function RecurringSheet({
       await api.patch(`/api/recurrences/${id}`, { active });
       await refresh();
     } catch {
-      toast({ tone: "error", title: "Could not update that" });
+      toast({ tone: "error", title: "Couldn't change that" });
     }
   };
 
@@ -74,10 +74,10 @@ export function RecurringSheet({
       toast({
         tone: "success",
         title: "Stopped repeating",
-        description: "Expenses it already posted are unchanged.",
+        description: "Expenses it already added won't change.",
       });
     } catch {
-      toast({ tone: "error", title: "Could not stop that" });
+      toast({ tone: "error", title: "Couldn't stop that" });
     }
   };
 
@@ -105,7 +105,7 @@ export function RecurringSheet({
             <EmptyState
               icon={<Repeat className="size-6" />}
               title="Nothing repeats yet"
-              description="Set up the rent or a monthly bill once and it posts itself from then on."
+              description="Add rent or a monthly bill once, and Divvy adds it for you each time."
             />
           ) : (
             <ul className="space-y-2">
@@ -251,7 +251,7 @@ function NewRecurrenceSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not set that up",
+        title: "Couldn't set that up",
         description: error instanceof ApiError ? error.message : undefined,
       });
     } finally {
@@ -360,9 +360,9 @@ function NewRecurrenceSheet({
         </div>
 
         <p className="mt-5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-caption leading-relaxed text-muted">
-          Splits equally between all {group.members.length} members, and keeps
-          that split even if the group changes. Edit or stop it any time — past
-          expenses it created stay put.
+          Split equally between all {group.members.length} people, even if people
+          join or leave later. You can change or stop it any time. Expenses it
+          already added won&rsquo;t change.
         </p>
       </div>
     </Sheet>

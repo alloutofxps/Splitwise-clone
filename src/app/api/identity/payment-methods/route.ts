@@ -11,7 +11,7 @@ const KINDS = ["upi", "paypal", "venmo", "cashapp", "revolut", "monzo", "iban", 
 const schema = z.object({
   kind: z.enum(KINDS),
   label: text(40, "The label").nullable().optional(),
-  value: text(140, "The handle").refine((v) => v.length > 0, "Add the handle itself."),
+  value: text(140, "The handle").refine((v) => v.length > 0, "Add your ID or username."),
 });
 
 /**

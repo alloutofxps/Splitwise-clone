@@ -89,9 +89,9 @@ export function PayerPicker({
               )}
             >
               {remaining === 0n
-                ? "Adds up exactly"
+                ? "Adds up to the total"
                 : remaining > 0n
-                  ? `${currencySymbol(currency)}${toDecimalString(remaining, currency)} still unaccounted for`
+                  ? `${currencySymbol(currency)}${toDecimalString(remaining, currency)} still to add`
                   : `${currencySymbol(currency)}${toDecimalString(-remaining, currency)} over the total`}
             </p>
             <Button

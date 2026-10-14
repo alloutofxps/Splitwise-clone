@@ -169,7 +169,7 @@ export function ExpenseComposer({
   const blockers: string[] = [];
   if (!draft.description.trim()) blockers.push("Add a description");
   if (amount <= 0n) blockers.push("Enter an amount");
-  if (payerMismatch) blockers.push("Payments must add up to the total");
+  if (payerMismatch) blockers.push("What people paid has to add up to the total");
   blockers.push(...split.errors);
 
   const canSave = blockers.length === 0;
@@ -261,8 +261,8 @@ export function ExpenseComposer({
           result === null
             ? {
                 tone: "offline",
-                title: "Saved on your device",
-                description: "It will sync as soon as you are back online.",
+                title: "Saved on your phone",
+                description: "It'll be sent when you're back online.",
               }
             : { tone: "success", title: `${draft.description.trim()} added` },
         );
@@ -275,7 +275,7 @@ export function ExpenseComposer({
         // draft on screen inviting a second attempt at the same overwrite.
         toast({
           tone: "error",
-          title: "Somebody got there first",
+          title: "Someone changed this first",
           description: error.message,
         });
         void client.invalidateQueries({ queryKey: keys.expense(expense?.id ?? "") });
@@ -285,9 +285,9 @@ export function ExpenseComposer({
 
       toast({
         tone: "error",
-        title: "Could not save",
+        title: "Couldn't save",
         description:
-          error instanceof ApiError ? error.message : "Something went wrong. Try again.",
+          error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
       });
     }
   };
@@ -561,7 +561,7 @@ export function ExpenseComposer({
             onChange={(event) => patch({ notes: event.target.value.slice(0, 2000) })}
             rows={5}
             autoFocus
-            placeholder="Anything worth remembering about this expense…"
+            placeholder="Add a note…"
             className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
           />
           <Button
@@ -721,7 +721,7 @@ function ScopePicker({
         }}
         className="min-w-0 flex-1 bg-transparent text-input font-semibold text-text outline-none"
       >
-        {current === "" ? <option value="">Choose a group or friend…</option> : null}
+        {current === "" ? <option value="">Pick a group or a friend…</option> : null}
         {data.groups.length > 0 ? (
           <optgroup label="Groups">
             {options
@@ -944,10 +944,10 @@ function ConversionNote({
     <div className="mt-3 w-full rounded-[var(--radius-md)] bg-surface px-3 py-2.5">
       <div className="flex items-center justify-between gap-2 text-caption">
         <span className="font-semibold text-muted">
-          Group settles in {to}
+          Group uses {to}
         </span>
         {fetching ? (
-          <span className="text-subtle">finding rate…</span>
+          <span className="text-subtle">getting the rate…</span>
         ) : (
           <span className="tabular text-subtle">
             1 {from} ={" "}

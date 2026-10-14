@@ -86,14 +86,14 @@ export const POST = route(async (request: Request) => {
   }).catch(() => null);
 
   if (!verification?.verified || !verification.registrationInfo) {
-    throw new ValidationError("That passkey could not be verified.");
+    throw new ValidationError("That passkey didn't work. Please try again.");
   }
 
   const owned = await prisma.credential.count({
     where: { personId: session.person.id, kind: "passkey" },
   });
   if (owned >= MAX_PASSKEYS) {
-    throw new ValidationError("You have too many passkeys. Remove one you no longer use first.");
+    throw new ValidationError("You have too many passkeys. Remove one you don't use first.");
   }
 
   const { credential } = verification.registrationInfo;

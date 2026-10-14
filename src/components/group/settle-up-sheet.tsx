@@ -147,12 +147,12 @@ export function SettleUpSheet({
       haptic([8, 30, 8]);
       // Settling up is the best moment in a money app; it gets a little party.
       celebrate();
-      toast({ tone: "success", title: "Payment recorded", description: "Squaring up feels good." });
+      toast({ tone: "success", title: "Payment saved", description: "Nice one." });
       onClose();
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not record that",
+        title: "Couldn't save that",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -174,7 +174,7 @@ export function SettleUpSheet({
             loading={settle.isPending}
             onClick={() => void submit()}
           >
-            Record this payment
+            Save payment
           </Button>
         ) : undefined
       }
@@ -260,7 +260,7 @@ export function SettleUpSheet({
                   }}
                   className="mx-auto mt-2 block text-caption font-semibold text-brand"
                 >
-                  Settle the full {toDecimalString(selected.amount, currency)}
+                  Pay the full {toDecimalString(selected.amount, currency)}
                 </button>
               ) : null}
             </div>
@@ -375,7 +375,7 @@ function SuggestionList({
         <div className="pt-4 text-center">
           <p className="text-subhead font-semibold text-text">Nothing to settle</p>
           <p className="mt-1.5 text-body text-muted">
-            You are square with everyone in this group.
+            Nobody in this group owes you, and you don&rsquo;t owe anyone.
           </p>
         </div>
       )}
@@ -383,7 +383,7 @@ function SuggestionList({
       {rest.length > 0 ? (
         <div>
           <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
-            {suggestions.length > 0 ? "Someone else" : "Record a payment anyway"}
+            {suggestions.length > 0 ? "Someone else" : "Add a payment anyway"}
           </p>
           <ul className="space-y-1.5">
             {rest.map((person) => (
@@ -513,8 +513,8 @@ function PayThem({
         })}
       </ul>
       <p className="mt-2.5 text-tiny leading-relaxed text-subtle">
-        Divvy never touches your money — these just open your own banking app.
-        Record the payment below once it has gone through.
+        Divvy never moves money. These buttons open your own payment app. Once
+        you&rsquo;ve paid, save the payment below.
       </p>
     </div>
   );

@@ -25,13 +25,13 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   if (credential) {
     if (credential.kind === "recovery") {
       throw new ValidationError(
-        "The recovery key cannot be removed, only replaced — rotate it instead.",
+        "You can't remove your recovery key, but you can make a new one on the Account screen.",
       );
     }
     const remaining = await prisma.credential.count({ where: { personId, id: { not: id } } });
     if (remaining === 0) {
       throw new ValidationError(
-        "That is the only way you can sign in. Add another passkey, or save a recovery key, first.",
+        "That's the only way you can sign in. Add another passkey or save a recovery key first.",
       );
     }
     await prisma.credential.delete({ where: { id } });

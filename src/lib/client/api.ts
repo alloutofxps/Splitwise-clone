@@ -57,7 +57,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new ApiError(0, "You're offline. This will sync when you're back.");
+    throw new ApiError(0, "You're offline. This will be sent when you're back online.");
   }
 
   if (response.status === 204) return undefined as T;
@@ -78,7 +78,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         payload?.code,
       );
     }
-    throw new ApiError(response.status, `Request failed (${response.status}).`);
+    throw new ApiError(response.status, `Something went wrong (${response.status}).`);
   }
 
   return isJson ? ((await response.json()) as T) : (undefined as T);

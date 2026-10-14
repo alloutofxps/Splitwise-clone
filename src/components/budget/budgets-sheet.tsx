@@ -62,7 +62,7 @@ export function BudgetsSheet({ open, onClose }: { open: boolean; onClose: () => 
             <EmptyState
               icon={<Target className="size-6" />}
               title="No budgets yet"
-              description="Set a limit on what you spend - on everything, or on one category, or in one group. It counts your share, not the group's total."
+              description="Set a spending limit for everything, one category or one group. It counts only your share, not what the whole group spent."
               action={
                 <Button
                   variant="primary"
@@ -133,7 +133,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
       haptic([10, 40, 10]);
       toast({ tone: "success", title: "Budget removed" });
     } catch {
-      toast({ tone: "error", title: "Could not remove that budget" });
+      toast({ tone: "error", title: "Couldn't remove that budget" });
     }
   };
 
@@ -254,7 +254,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
       toast({ tone: "success", title: "Budget set" });
       onClose();
     } catch {
-      toast({ tone: "error", title: "Could not save that budget" });
+      toast({ tone: "error", title: "Couldn't save that budget" });
     }
   };
 

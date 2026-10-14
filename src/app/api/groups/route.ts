@@ -65,7 +65,7 @@ export const POST = route(async (request: Request) => {
     const ghosts = visible.filter((person) => person.isGhost && memberIds.includes(person.id));
     if (ghosts.length > 0) {
       throw new ValidationError(
-        `${ghosts[0].displayName} has not joined Divvy yet. Add them by name instead.`,
+        `${ghosts[0].displayName} isn't on Divvy yet. Add them by name instead.`,
       );
     }
   }

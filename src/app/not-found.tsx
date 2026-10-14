@@ -23,11 +23,11 @@ export default function NotFound() {
       </span>
 
       <h1 className="mt-6 text-heading font-black tracking-[-0.03em] text-text">
-        There is nothing here
+        Nothing here
       </h1>
       <p className="mt-2 text-body-lg leading-relaxed text-muted">
-        This link may be out of date, or whatever it pointed at has been
-        deleted. Your groups and expenses are unaffected.
+        This link may be old, or what it pointed to was deleted. Your groups
+        and expenses are fine.
       </p>
 
       <Link

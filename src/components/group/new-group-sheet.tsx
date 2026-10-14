@@ -84,7 +84,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
     const trimmed = draftName.trim();
     if (!trimmed) return;
     if (names.some((entry) => entry.toLowerCase() === trimmed.toLowerCase())) {
-      toast({ tone: "error", title: "That name is already on the list" });
+      toast({ tone: "error", title: "That name is already added" });
       return;
     }
     haptic();
@@ -114,7 +114,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not create the group",
+        title: "Couldn't make the group",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -201,11 +201,11 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             onClick={() => setCurrencyOpen(true)}
             className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985]"
           >
-            <span className="text-body-lg font-semibold text-muted">Settles in</span>
+            <span className="text-body-lg font-semibold text-muted">Main currency</span>
             <span className="text-body-lg font-bold text-text">{currency}</span>
           </button>
           <p className="mt-1.5 px-1 text-caption leading-relaxed text-subtle">
-            Expenses can be in any currency; balances are totted up in this one.
+            You can add expenses in any currency. Totals are shown in this one.
           </p>
 
           <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
@@ -214,8 +214,8 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
                 Simplify debts
               </span>
               <span className="mt-0.5 block text-caption leading-relaxed text-muted">
-                Collapse the balances into the fewest possible payments, rather
-                than everyone settling with everyone.
+                Fewer payments to settle up. Instead of everyone paying everyone,
+                Divvy works out the shortest way.
               </span>
             </span>
             <Switch checked={simplify} onChange={setSimplify} label="Simplify debts" />
@@ -225,8 +225,8 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
           <div className="mt-6">
             <p className="text-body font-semibold text-text">Who else is in?</p>
             <p className="mt-1 text-caption leading-relaxed text-muted">
-              Pick from people you already split with, or add a name for someone
-              new — they can claim it later with the invite code.
+              Pick people you&rsquo;ve split with before, or type a name. People who
+              aren&rsquo;t on Divvy yet can join later with the invite code.
             </p>
 
             {known.length > 0 ? (

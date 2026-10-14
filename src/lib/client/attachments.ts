@@ -70,7 +70,7 @@ export async function processFiles(
     } catch (error) {
       failures.push({
         name: file.name || "that file",
-        reason: error instanceof Error ? error.message : "It could not be read.",
+        reason: error instanceof Error ? error.message : "It couldn't be opened.",
       });
     }
   }
@@ -90,7 +90,7 @@ function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.onerror = () => reject(new Error("Couldn't open that file."));
     reader.readAsDataURL(file);
   });
 }
@@ -115,7 +115,7 @@ async function compressImage(
   canvas.height = height;
 
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Your browser could not process that image.");
+  if (!context) throw new Error("Couldn't use that photo. Try a different one.");
 
   // White underneath, so a transparent PNG receipt does not become black text
   // on a black background.
@@ -137,7 +137,7 @@ async function compressImage(
   small.width = Math.round(width * 0.6);
   small.height = Math.round(height * 0.6);
   const smallContext = small.getContext("2d");
-  if (!smallContext) throw new Error("Your browser could not process that image.");
+  if (!smallContext) throw new Error("Couldn't use that photo. Try a different one.");
   smallContext.fillStyle = "#ffffff";
   smallContext.fillRect(0, 0, small.width, small.height);
   smallContext.drawImage(canvas, 0, 0, small.width, small.height);
@@ -162,7 +162,7 @@ async function loadBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new window.Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("That image could not be opened."));
+      image.onerror = () => reject(new Error("Couldn't open that photo."));
       image.src = url;
     });
   } finally {

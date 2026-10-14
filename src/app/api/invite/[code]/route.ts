@@ -68,5 +68,5 @@ export const GET = route(async (request: Request, { params }: Params) => {
     return json({ kind: "person" as const, person: personDto(person) });
   }
 
-  throw new NotFoundError("That code does not match a group or a person.");
+  throw new NotFoundError("That code doesn't match any group or person.");
 });

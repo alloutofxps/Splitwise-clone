@@ -279,7 +279,7 @@ export async function restoreIdentity(
     include: { person: true },
   });
   if (!credential || credential.kind !== "recovery" || credential.person.deletedAt) {
-    throw new NotFoundError("That recovery key does not match any profile.");
+    throw new NotFoundError("That recovery key doesn't match any account.");
   }
 
   await prisma.$transaction([

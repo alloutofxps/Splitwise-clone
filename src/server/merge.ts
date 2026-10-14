@@ -79,7 +79,7 @@ export interface MergeResult {
  */
 async function assertMayMerge(actorId: string, ghostId: string, intoId: string): Promise<void> {
   if (!(await sharesAGroup(actorId, ghostId))) {
-    throw new ForbiddenError("You are not in a group with that placeholder.");
+    throw new ForbiddenError("You're not in a group with that name.");
   }
   // Saying "that placeholder is me" is always yours to say.
   if (intoId === actorId) return;
@@ -105,7 +105,7 @@ async function assertMayMerge(actorId: string, ghostId: string, intoId: string):
   });
   if (present !== groupIds.length) {
     throw new ForbiddenError(
-      "They are not in every group this placeholder is in. Ask them to join with the invite link and pick the name themselves.",
+      "That name is in a group they're not in. Ask them to join with the invite link and pick the name themselves.",
     );
   }
 }
@@ -132,7 +132,7 @@ async function assertNoSelfPayment(tx: Tx, ghostId: string, intoId: string): Pro
   });
   if (between > 0) {
     throw new ConflictError(
-      "There is a payment recorded between those two. Delete it first, then merge — keeping it would mean somebody paid themselves.",
+      "There's a payment between these two. Delete it first, or it would look like someone paid themselves.",
     );
   }
 }
@@ -221,7 +221,7 @@ function addNumber(a: number | null | undefined, b: number | null | undefined): 
  */
 export async function absorbGhost(ghostId: string, intoPersonId: string): Promise<MergeResult> {
   if (ghostId === intoPersonId) {
-    throw new ConflictError("That placeholder is already that person.");
+    throw new ConflictError("That's already the same person.");
   }
 
   return prisma.$transaction(async (tx) => {
@@ -233,7 +233,7 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
       tx.person.findUnique({ where: { id: intoPersonId } }),
     ]);
 
-    if (!ghost) throw new NotFoundError("That placeholder no longer exists.");
+    if (!ghost) throw new NotFoundError("That name doesn't exist any more.");
     if (!into) throw new NotFoundError("That person no longer exists.");
 
     // Only a placeholder may be dissolved. Two real accounts are two real
@@ -245,11 +245,11 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
     // then merge a row the winner had already dissolved.
     if (!ghost.isGhost || ghost.credentials.length > 0) {
       throw new ForbiddenError(
-        "That is a real account, not a placeholder. It cannot be merged away.",
+        "That person is already on Divvy, so their name can't be moved.",
       );
     }
     if (into.isGhost || into.deletedAt) {
-      throw new ForbiddenError("A placeholder can only be merged into a real account.");
+      throw new ForbiddenError("You can only move a name to someone who's on Divvy.");
     }
 
     await assertNoSelfPayment(tx, ghostId, intoPersonId);

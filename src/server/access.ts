@@ -32,7 +32,7 @@ export async function requireGroupAccess(
     where: { groupId_personId: { groupId, personId } },
   });
   if (!membership || membership.leftAt) {
-    throw new ForbiddenError("You are not a member of that group.");
+    throw new ForbiddenError("You're not in that group.");
   }
 
   return { group, membership, isOwner: membership.role === "owner" };
@@ -44,7 +44,7 @@ export async function requireGroupOwner(
 ): Promise<GroupAccess> {
   const access = await requireGroupAccess(groupId, personId);
   if (!access.isOwner) {
-    throw new ForbiddenError("Only whoever created the group can do that.");
+    throw new ForbiddenError("Only the person who made the group can do that.");
   }
   return access;
 }
@@ -84,7 +84,7 @@ export async function assertCanInvolve(
     const members = new Set(await groupMemberIds(groupId));
     const outsiders = unique.filter((id) => !members.has(id) && !grandfathered.has(id));
     if (outsiders.length > 0) {
-      throw new ForbiddenError("Somebody in that split is not in the group.");
+      throw new ForbiddenError("Someone in that split isn't in the group.");
     }
     return;
   }
@@ -106,7 +106,7 @@ export async function assertCanInvolve(
   );
   const strangers = others.filter((id) => !connected.has(id));
   if (strangers.length > 0) {
-    throw new ForbiddenError("You can only split directly with people you have added.");
+    throw new ForbiddenError("You can only split with friends you've added.");
   }
 }
 
@@ -164,6 +164,6 @@ export async function requireSettlementAccess(
     return;
   }
   if (settlement.fromPersonId !== personId && settlement.toPersonId !== personId) {
-    throw new ForbiddenError("That payment is not yours.");
+    throw new ForbiddenError("You can't change that payment.");
   }
 }

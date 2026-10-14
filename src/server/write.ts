@@ -106,14 +106,14 @@ export function validateExpense(input: ExpenseWriteInput): void {
   if (!input.description.trim()) errors.push("Give the expense a description.");
   if (input.description.length > 140) errors.push("That description is too long.");
 
-  if (!isKnownCurrency(input.currency)) errors.push("That currency code is not valid.");
+  if (!isKnownCurrency(input.currency)) errors.push("We don't know that currency.");
 
   if (input.categoryId && !CATEGORY_BY_ID.has(input.categoryId)) {
-    errors.push("That category does not exist.");
+    errors.push("That category doesn't exist.");
   }
 
   if (input.splits.length === 0) errors.push("Nobody is in this split.");
-  if (input.payers.length === 0) errors.push("Somebody has to have paid.");
+  if (input.payers.length === 0) errors.push("Pick who paid.");
 
   // The same person twice used to reach the database's unique constraint and
   // come back as a 500. It is a malformed request, so it is said as one.
@@ -126,7 +126,7 @@ export function validateExpense(input: ExpenseWriteInput): void {
 
   for (const split of input.splits) {
     if (split.weight !== null && !(split.weight >= 0 && split.weight <= 1_000_000)) {
-      errors.push("A share weight is out of range.");
+      errors.push("One of the shares is too big or too small.");
       break;
     }
     if (split.percent !== null && !(split.percent >= 0 && split.percent <= 100)) {
@@ -139,7 +139,7 @@ export function validateExpense(input: ExpenseWriteInput): void {
   // their own, but they are shown and exported, so they have to make sense.
   if (input.items.length > 0) {
     if (input.items.some((item) => item.amount < 0n)) {
-      errors.push("An item cannot cost a negative amount.");
+      errors.push("An item can't cost less than zero.");
     }
     const itemTotal = input.items.reduce((total, item) => total + item.amount, 0n);
     // Overshooting is a data-entry mistake worth surfacing; undershooting is
@@ -151,7 +151,7 @@ export function validateExpense(input: ExpenseWriteInput): void {
     // else attached an arbitrary person's id to a row they cannot see.
     const onExpense = new Set(input.splits.map((s) => s.personId));
     if (input.items.some((item) => item.participantIds.some((id) => !onExpense.has(id)))) {
-      errors.push("An item names somebody who is not in the split.");
+      errors.push("One item is ticked for someone who isn't in the split.");
     }
   }
 
@@ -163,7 +163,7 @@ function convertedFor(input: ExpenseWriteInput): bigint {
   // A huge rate can push a valid amount past the point where the balance maths
   // stays exact; refuse it at the door rather than corrupt it on the way out.
   if (converted > MAX_MINOR_UNITS || converted <= 0n) {
-    throw new ValidationError("That exchange rate produces an amount that cannot be stored.");
+    throw new ValidationError("That exchange rate gives an amount that's too big. Check the rate.");
   }
   return converted;
 }
@@ -253,7 +253,7 @@ export async function createExpense(
     ) {
       return { record: existing, created: false };
     }
-    throw new ConflictError("That id is already in use. Try saving again.");
+    throw new ConflictError("Something clashed. Please try saving again.");
   }
 }
 
@@ -292,7 +292,7 @@ export async function updateExpense(input: ExpenseWriteInput) {
     current.lastEditedById !== input.createdByPersonId
   ) {
     throw new ConflictError(
-      "Somebody else edited this expense while you had it open. Close and reopen it to see their version.",
+      "Someone else changed this expense while you had it open. Close it and open it again to see their changes.",
     );
   }
 
@@ -328,7 +328,7 @@ export async function updateExpense(input: ExpenseWriteInput) {
   } catch (error) {
     if (isRecordNotFound(error)) {
       throw new ConflictError(
-        "Somebody else edited this expense at the same moment. Close and reopen it to see their version.",
+        "Someone else changed this expense at the same time. Close it and open it again to see their changes.",
       );
     }
     throw error;
@@ -387,22 +387,22 @@ export function decodeDataUrl(dataUrl: string, filename: string): {
   data: Buffer;
 } {
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]*)$/s.exec(dataUrl);
-  if (!match) throw new ValidationError("That attachment could not be read.");
+  if (!match) throw new ValidationError("That file couldn't be opened.");
 
   const [, mimeType, payload] = match;
   const check = SIGNATURES[mimeType];
   if (!check) {
-    throw new ValidationError("Attachments have to be an image or a PDF.");
+    throw new ValidationError("You can only attach photos and PDFs.");
   }
 
   const data = Buffer.from(payload, "base64");
 
-  if (data.byteLength === 0) throw new ValidationError("That attachment is empty.");
+  if (data.byteLength === 0) throw new ValidationError("That file is empty.");
   if (data.byteLength > MAX_ATTACHMENT_BYTES) {
-    throw new ValidationError("Attachments have to be under 4 MB.");
+    throw new ValidationError("Files have to be smaller than 4 MB.");
   }
   if (!check(data)) {
-    throw new ValidationError("That file is not the kind of file it says it is.");
+    throw new ValidationError("That file looks broken, or isn't really a photo or PDF.");
   }
 
   return { filename: cleanFilename(filename), mimeType, data };

@@ -107,10 +107,10 @@ export default function AccountPage() {
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not sign out",
+        title: "Couldn't sign out",
         description:
           error instanceof ApiError && error.isOffline
-            ? "Connect to the internet first, so this device is signed out on the server too."
+            ? "You're offline. Connect to the internet and try again."
             : error instanceof ApiError
               ? error.message
               : undefined,
@@ -128,12 +128,12 @@ export default function AccountPage() {
       await api.del("/api/identity/account");
       await wipeLocalData(client);
       setConfirmDelete(false);
-      toast({ tone: "success", title: "Your account has been deleted" });
+      toast({ tone: "success", title: "Your account is deleted" });
       router.refresh();
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not delete your account",
+        title: "Couldn't delete your account",
         description: error instanceof ApiError ? error.message : undefined,
       });
     } finally {
@@ -288,15 +288,14 @@ export default function AccountPage() {
           <span className="min-w-0 flex-1">
             <span className="block text-body-lg font-semibold text-text">Privacy screen</span>
             <span className="mt-0.5 block text-caption leading-snug text-subtle">
-              Cover the screen when you switch apps, so balances stay out of the
-              app switcher. It is a curtain, not a lock — anyone holding an
-              unlocked phone can still open Divvy.
+              Hides your balances when you switch apps. It doesn&rsquo;t lock the
+              app, so anyone with your unlocked phone can still open it.
             </span>
           </span>
           <Switch
             checked={privacyScreen}
             onChange={setPrivacyScreen}
-            label="Cover the screen when the app is in the background"
+            label="Hide balances when you switch apps"
           />
         </div>
 
@@ -330,10 +329,9 @@ export default function AccountPage() {
             >
               <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
               <span className="text-body leading-relaxed text-negative-text">
-                <b className="font-semibold">You never saved a recovery key.</b> Divvy
-                keeps only a one-way hash of it, so the one made when you signed up
-                cannot be shown again — without a key you cannot get this account back
-                if you lose this device. Generate a new one now.
+                <b className="font-semibold">You haven&rsquo;t saved a recovery key.</b> If you
+                lose this phone, you won&rsquo;t be able to get your account back. Tap here
+                to make a new key and save it.
               </span>
             </button>
           ) : null}
@@ -376,9 +374,8 @@ export default function AccountPage() {
         </div>
 
         <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">
-          The backup holds every group, expense and payment you can see, with
-          the amounts as text so nothing is rounded. Receipts are listed but not
-          included.
+          The backup is a file with all your groups, expenses and payments.
+          Receipt photos aren&rsquo;t included.
         </p>
 
         <StorageRow />
@@ -386,11 +383,11 @@ export default function AccountPage() {
 
       <footer className="mt-8 pb-4 text-center">
         <p className="flex items-center justify-center gap-1.5 text-caption text-subtle">
-          Divvy · every feature, free
+          Divvy is free to use
           <Heart className="size-3" />
         </p>
         <p className="mt-1 text-tiny text-subtle">
-          No accounts, no ads, no tracking, no paywall.
+          No ads. No tracking.
         </p>
         <p className="mt-2 text-tiny">
           <a href="/privacy" className="font-semibold text-subtle underline underline-offset-2">
@@ -448,7 +445,7 @@ export default function AccountPage() {
         onClose={() => setConfirmSignOut(false)}
         onConfirm={() => void signOut()}
         title="Sign out on this device?"
-        description="Your data stays on the server and is removed from this device. You will need a passkey or your recovery key to get back in — make sure you have one."
+        description="Your groups and expenses stay safe, but they'll be removed from this phone. To sign back in you'll need your recovery key or a passkey, so make sure you have one."
         confirmLabel="Sign out"
       />
 
@@ -456,9 +453,9 @@ export default function AccountPage() {
         open={discardCount > 0}
         onClose={() => setDiscardCount(0)}
         onConfirm={() => void signOut(true)}
-        title={`${discardCount} change${discardCount === 1 ? " hasn't" : "s haven't"} synced`}
-        description="Signing out now throws them away - they exist only on this device. Reconnect and wait for them to sync if you want to keep them."
-        confirmLabel="Sign out and discard"
+        title={`${discardCount} change${discardCount === 1 ? " hasn't" : "s haven't"} been sent yet`}
+        description="These changes are only on this phone. If you sign out now, they'll be lost. To keep them, connect to the internet and wait a moment."
+        confirmLabel="Sign out and lose them"
       />
 
       <ConfirmSheet
@@ -467,7 +464,7 @@ export default function AccountPage() {
         onConfirm={() => void deleteAccount()}
         loading={deleting}
         title="Delete your account?"
-        description="Your name, payment details, budgets, passkeys and comments are erased, and you leave every group. Expenses you shared stay on the other people's books, shown as “Deleted user”. You have to be settled up everywhere first. This cannot be undone."
+        description="This removes your name, payment details, budgets and comments, and takes you out of every group. Other people still see the expenses you shared, under the name “Deleted user”. You need to be settled up with everyone first. You can't undo this."
         confirmLabel="Delete my account"
       />
     </div>
@@ -508,12 +505,12 @@ function StorageRow() {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-body-lg font-semibold text-text">
-          {status.persisted ? "Kept on this device" : "Not protected from cleanup"}
+          {status.persisted ? "Saved on this phone" : "May be cleared by your phone"}
         </p>
         <p className="mt-0.5 text-caption leading-snug text-subtle">
           {status.persisted
-            ? "This browser has agreed not to clear Divvy's offline data to reclaim space."
-            : "This browser may clear Divvy's offline data if the device runs low on space. Installing the app usually earns the guarantee."}
+            ? "Your browser won't delete Divvy's offline copy to free up space."
+            : "If your phone runs low on space, your browser may delete Divvy's offline copy. Adding Divvy to your home screen usually stops this."}
           {status.usage !== null ? ` Using ${formatBytes(status.usage)}.` : ""}
         </p>
       </div>
@@ -613,7 +610,7 @@ function RecoverySheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not generate a key",
+        title: "Couldn't make a new key",
         description: error instanceof ApiError ? error.message : undefined,
       });
     } finally {
@@ -656,23 +653,22 @@ function RecoverySheet({
               {copied ? "Copied" : "Copy key"}
             </Button>
             <p className="mt-4 rounded-[var(--radius-md)] bg-warning-soft p-3.5 text-body leading-relaxed text-text">
-              Save this now. Any older key has stopped working, and this one is
-              not retrievable later — the server only keeps a hash of it.
+              Save this now. You won&rsquo;t be able to see it again, and your old key
+              no longer works.
             </p>
           </>
         ) : (
           <>
             <p className="text-subhead leading-relaxed text-muted">
-              Your recovery key is the only way to open this account on another
-              device. Divvy stores a one-way hash of it, so it cannot be shown to
-              you again — it can only be replaced.
+              Your recovery key is how you get into your account on a new phone.
+              We can&rsquo;t show you your old key again, but you can make a new one.
             </p>
 
             <div className="mt-5 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
               <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
               <p className="text-body leading-relaxed text-negative-text">
-                Generating a new key immediately invalidates the old one. Any
-                other device signed in with it will be locked out.
+                Making a new key stops the old one from working. Any other phone
+                signed in with the old key will be signed out.
               </p>
             </div>
 
@@ -683,7 +679,7 @@ function RecoverySheet({
               loading={busy}
               onClick={() => void rotate()}
             >
-              Generate a new recovery key
+              Make a new recovery key
             </Button>
           </>
         )}
@@ -724,7 +720,7 @@ function PaymentMethodsSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not save that",
+        title: "Couldn't save that",
         description: error instanceof ApiError ? error.message : undefined,
       });
     } finally {
@@ -742,8 +738,8 @@ function PaymentMethodsSheet({
     <Sheet open={open} onClose={onClose} tall title="How people can pay you">
       <div className="px-5 pb-6">
         <p className="text-body-lg leading-relaxed text-muted">
-          Divvy never handles money. These handles just give your friends a
-          tappable shortcut into their own banking app when they settle up.
+          Divvy never moves money. Add your UPI ID, bank details or payment app
+          username so friends know how to pay you back.
         </p>
 
         {methods.length > 0 ? (
@@ -778,7 +774,7 @@ function PaymentMethodsSheet({
         ) : null}
 
         <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
-          <p className="mb-2.5 text-body font-semibold text-text">Add a method</p>
+          <p className="mb-2.5 text-body font-semibold text-text">Add a way to pay</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
             {PAYMENT_KINDS.map((entry) => (

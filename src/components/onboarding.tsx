@@ -10,8 +10,8 @@ import {
   Copy,
   KeyRound,
   ShieldCheck,
-  Sparkles,
   TriangleAlert,
+  WifiOff,
 } from "lucide-react";
 import { Button, cn, haptic } from "./ui/primitives";
 import { useToast } from "./ui/toast";
@@ -156,11 +156,11 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
       if (!(error instanceof PasskeyCancelled)) {
         toast({
           tone: "error",
-          title: "Could not sign in with a passkey",
+          title: "Couldn't sign you in",
           description:
             error instanceof ApiError
               ? error.message
-              : "Use your recovery key instead, then add a passkey from Account.",
+              : "Try your recovery key instead.",
         });
       }
     } finally {
@@ -178,22 +178,22 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
         <Receipts />
 
         <h1 className="mt-8 font-display text-display-lg font-extrabold leading-[1.02] tracking-[-0.045em] text-text">
-          Split anything.
+          Split bills with friends.
           <br />
           <span className="text-gradient-brand font-serif font-normal italic tracking-[-0.02em]">
-            Settle everything.
+            See who owes what.
           </span>
         </h1>
 
         <p className="mt-4 text-input leading-relaxed text-muted">
-          Trips, flats, dinners, the lot. Every feature is free — receipts,
-          itemised bills, any currency, charts and exports.
+          Add what you spent on a trip, at home or on a night out. Divvy works
+          out who owes who, and the easiest way to pay each other back.
         </p>
 
         <ul className="mt-6 flex flex-wrap gap-2">
-          <Feature icon={<Sparkles className="size-3.5" />}>No accounts</Feature>
-          <Feature icon={<ShieldCheck className="size-3.5" />}>No paywall</Feature>
-          <Feature icon={<KeyRound className="size-3.5" />}>Yours to keep</Feature>
+          <Feature icon={<KeyRound className="size-3.5" />}>No email or password</Feature>
+          <Feature icon={<ShieldCheck className="size-3.5" />}>Free, no ads</Feature>
+          <Feature icon={<WifiOff className="size-3.5" />}>Works offline</Feature>
         </ul>
       </div>
 
@@ -210,11 +210,11 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
             loading={signingIn}
             onClick={() => void withPasskey()}
           >
-            Sign in with a passkey
+            Sign in with fingerprint or face
           </Button>
         ) : null}
         <Button variant="ghost" size="md" fullWidth onClick={onRestore}>
-          I already have a recovery key
+          Sign in with a recovery key
         </Button>
       </div>
     </div>
@@ -278,7 +278,7 @@ function Receipts() {
         transition={{ delay: 0.6, type: "spring", stiffness: 260, damping: 12 }}
         className="bg-gradient-brand absolute bottom-1 right-0 rounded-full px-3.5 py-1.5 font-serif text-subhead italic text-white shadow-float"
       >
-        all square ✨
+        all paid up ✓
       </motion.span>
     </div>
   );
@@ -324,7 +324,7 @@ function ProfileStep({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not set that up",
+        title: "Something went wrong",
         description: error instanceof ApiError ? error.message : "Please try again.",
       });
       setSaving(false);
@@ -341,10 +341,10 @@ function ProfileStep({
       </button>
 
       <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
-        What should we call you?
+        What&rsquo;s your name?
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
-        This is the name your friends will see next to every expense.
+        Your friends will see this next to your expenses.
       </p>
 
       <div className="mt-8 flex flex-col items-center">
@@ -415,12 +415,12 @@ function ProfileStep({
         >
           {CURRENCIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
-              {entry.flag} {entry.code} — {entry.name}
+              {entry.flag} {entry.code} · {entry.name}
             </option>
           ))}
         </select>
         <span className="mt-1.5 block text-caption text-subtle">
-          You can use any currency on any expense; this is just the default.
+          We&rsquo;ll pick this one first. You can change it on any expense.
         </span>
       </label>
 
@@ -492,15 +492,15 @@ function RecoveryStep({
       await navigator.clipboard.writeText(recoveryKey);
       setCopied(true);
       haptic([8, 30, 8]);
-      toast({ tone: "success", title: "Recovery key copied" });
+      toast({ tone: "success", title: "Copied" });
       setTimeout(() => setCopied(false), 2500);
     } catch {
       // Clipboard is blocked in some in-app browsers; the key is on screen and
       // selectable, so this is a degraded path rather than a failure.
       toast({
         tone: "info",
-        title: "Copy it by hand",
-        description: "Your browser blocked clipboard access.",
+        title: "Couldn't copy",
+        description: "Please copy it by hand or write it down.",
       });
     }
   };
@@ -515,8 +515,8 @@ function RecoveryStep({
         Save your recovery key
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
-        There is no password to reset and no email to send. This key is the only
-        way back into your account on another device.
+        Divvy doesn&rsquo;t use passwords or email. If you lose this phone or get a
+        new one, this key is the only way to get your account back.
       </p>
 
       <div className="mt-6 rounded-[var(--radius-lg)] border border-line bg-surface-2 p-4">
@@ -544,8 +544,8 @@ function RecoveryStep({
       <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
         <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
         <p className="text-body leading-relaxed text-negative-text">
-          Anyone with this key can open your account. Keep it in a password
-          manager or notes app — not in the group chat.
+          Anyone with this key can open your account. Keep it somewhere private,
+          like a password manager, and don&rsquo;t share it.
         </p>
       </div>
 
@@ -557,7 +557,7 @@ function RecoveryStep({
           className="mt-0.5 size-5 shrink-0 accent-[var(--brand)]"
         />
         <span className="text-body-lg leading-snug text-text">
-          I have saved my recovery key somewhere safe.
+          I&rsquo;ve saved my key somewhere safe.
         </span>
       </label>
 
@@ -613,7 +613,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
     } catch (error) {
       toast({
         tone: "error",
-        title: "That key did not work",
+        title: "That key didn't work",
         description:
           error instanceof ApiError ? error.message : "Check it and try again.",
       });
@@ -634,8 +634,8 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         Enter your recovery key
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
-        Paste the key you saved when you first set up Divvy. Everything comes
-        back exactly as you left it.
+        Paste the key you saved when you first used Divvy. All your groups and
+        expenses will come back.
       </p>
 
       <textarea
@@ -659,7 +659,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
           disabled={!key.trim()}
           onClick={() => void submit()}
         >
-          Restore my account
+          Get my account back
         </Button>
       </div>
     </div>
