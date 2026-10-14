@@ -451,22 +451,34 @@ export function ExpenseComposer({
 
           {/* Extras ---------------------------------------------------------- */}
           <div className="mt-5 flex flex-wrap gap-2">
-            <Chip
-              icon={<CalendarDays className="size-3.5" />}
-              active={!isToday(draft.date)}
-              onClick={() => {
-                const input = document.createElement("input");
-                input.type = "date";
-                input.value = toDateInput(draft.date);
-                input.onchange = () => {
-                  if (input.value) patch({ date: fromDateInput(input.value) });
-                };
-                input.showPicker?.();
-                input.click();
-              }}
-            >
-              {formatDateChip(draft.date)}
-            </Chip>
+            {/*
+              A real date field laid invisibly over the chip. The chip used to
+              build a date input in memory and ask the browser to open it, which
+              browsers refuse for an element that is not on the page - so the
+              date could not be changed at all. A tap on this field opens the
+              native picker on phones; showPicker() covers desktop browsers.
+            */}
+            <span className="relative inline-flex">
+              <Chip icon={<CalendarDays className="size-3.5" />} active={!isToday(draft.date)} onClick={() => {}}>
+                {formatDateChip(draft.date)}
+              </Chip>
+              <input
+                type="date"
+                aria-label="Date"
+                value={toDateInput(draft.date)}
+                onChange={(event) => {
+                  if (event.target.value) patch({ date: fromDateInput(event.target.value) });
+                }}
+                onClick={(event) => {
+                  try {
+                    event.currentTarget.showPicker?.();
+                  } catch {
+                    // Not supported: the native tap behaviour still applies.
+                  }
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer text-input opacity-0"
+              />
+            </span>
 
             <Chip
               icon={<Camera className="size-3.5" />}

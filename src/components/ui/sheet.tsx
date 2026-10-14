@@ -6,6 +6,7 @@ import {
   AnimatePresence,
   motion,
   useDragControls,
+  useIsPresent,
   useMotionValue,
   useTransform,
   type PanInfo,
@@ -50,6 +51,8 @@ export interface SheetProps {
   /** Fills the screen height, for the expense composer. */
   tall?: boolean;
   className?: string;
+  /** What a screen reader announces when the title is not plain text. */
+  ariaLabel?: string;
 }
 
 export function Sheet({
@@ -62,6 +65,7 @@ export function Sheet({
   dismissible = true,
   tall = false,
   className,
+  ariaLabel,
 }: SheetProps) {
   const mounted = useMounted();
 
@@ -98,6 +102,7 @@ export function Sheet({
           dismissible={dismissible}
           tall={tall}
           className={className}
+          ariaLabel={ariaLabel}
         >
           {children}
         </SheetBody>
@@ -198,6 +203,7 @@ function SheetBody({
   dismissible,
   tall,
   className,
+  ariaLabel,
 }: Omit<SheetProps, "open">) {
   const y = useMotionValue(0);
   // The backdrop fades as the sheet is dragged down, so the gesture feels
@@ -215,6 +221,19 @@ function SheetBody({
 
   const visible = useVisibleViewport();
   const scroller = React.useRef<HTMLDivElement>(null);
+
+  /*
+   * False from the moment the sheet is told to close until its exit animation
+   * finishes and it unmounts.
+   *
+   * During that time the full-screen wrapper below was still there, fully
+   * clickable, just fading - so a tap on the page in the half-second after
+   * closing a sheet landed on an invisible layer and did nothing. Closing a
+   * sheet and tapping the next thing is exactly what people do, which made it
+   * the most common "I pressed it and nothing happened". A sheet on its way
+   * out now lets every tap through.
+   */
+  const present = useIsPresent();
 
   /*
    * Dismissal is driven from the handle and the title bar only.
@@ -266,7 +285,11 @@ function SheetBody({
     // actually exists rather than of the whole page.
     <div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={visible ? { top: visible.top, height: visible.height, bottom: "auto" } : undefined}
+      style={{
+        ...(visible ? { top: visible.top, height: visible.height, bottom: "auto" } : {}),
+        pointerEvents: present ? undefined : "none",
+      }}
+      aria-hidden={present ? undefined : true}
     >
       <motion.div
         initial={{ opacity: 0 }}
@@ -281,7 +304,7 @@ function SheetBody({
       <motion.div
         role="dialog"
         aria-modal="true"
-        aria-label={typeof title === "string" ? title : "Dialog"}
+        aria-label={typeof title === "string" ? title : (ariaLabel ?? "Dialog")}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}

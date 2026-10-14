@@ -168,7 +168,7 @@ export default function GroupPage() {
           key={tab}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
+          exit={{ opacity: 0, y: -6, pointerEvents: "none" }}
           transition={{ duration: 0.18 }}
           className="mt-4"
         >

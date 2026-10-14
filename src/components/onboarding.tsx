@@ -111,7 +111,7 @@ function StepShell({ children }: { children: React.ReactNode }) {
     <motion.div
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -24 }}
+      exit={{ opacity: 0, x: -24, pointerEvents: "none" }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-1 flex-col"
     >

@@ -119,7 +119,12 @@ export function ExpenseDetailSheet({
 
   return (
     <>
-      <Sheet open={Boolean(expenseId) && !editing} onClose={onClose} tall>
+      <Sheet
+        open={Boolean(expenseId) && !editing}
+        onClose={onClose}
+        tall
+        ariaLabel={expense ? `Expense: ${expense.description}` : "Expense"}
+      >
         {isLoading || !expense ? (
           <div className="space-y-3 px-5 py-4">
             <Skeleton className="h-8 w-40" />

@@ -50,9 +50,11 @@ export function InviteSheet({
       try {
         await navigator.share({ title: `Join ${group.name}`, text: message });
         return;
-      } catch {
-        // The user dismissed the share sheet - not a failure worth reporting.
-        return;
+      } catch (error) {
+        // Cancelling the share sheet is a choice, not a failure. Anything else -
+        // no share targets, a browser that refuses - falls back to copying,
+        // instead of the button silently doing nothing.
+        if (error instanceof DOMException && error.name === "AbortError") return;
       }
     }
     await copy(message);
