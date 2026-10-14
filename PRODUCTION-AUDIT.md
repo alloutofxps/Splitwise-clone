@@ -795,7 +795,7 @@ Every finding above was worked through. A second bug-hunting pass over the scree
 | M13 | No CSP / HSTS | ✅ | Nonce-based Content-Security-Policy, HSTS over HTTPS, Permissions-Policy, framing denied. Browser-tested with no violations. |
 | M14 | No monitoring | 🟦 | JSON logs with request ids, `/api/health` (checks the database), uncaught-error hook, optional `DIVVY_ALERT_WEBHOOK`. **Add an uptime monitor and, ideally, the webhook.** |
 | M15 | Root container, no health check | ✅ | Runs as `node` via gosu; `railway.json` health check; pre-migration backup. (One instance only on SQLite — see "Still open".) |
-| M16 | No account deletion or privacy page | 🟦 | Account deletion (only when settled up) and a `/privacy` page. **Have the page reviewed and set `NEXT_PUBLIC_DIVVY_CONTACT`.** |
+| M16 | No account deletion or privacy page | 🟦 | Account deletion (only when settled up) and a `/privacy` page. **Have the page reviewed and set `DIVVY_CONTACT`.** |
 | M17 | No billing | ⏸ | A business decision, not a bug: it needs a payment provider, customer email and pricing. Not started. |
 | M18 | Tests missed the serious bugs | ✅ | Per-finding assertions in the end-to-end test, new unit and browser tests, all run in CI. |
 | M19 | Races in claim and settle | ✅ | Claim is transactional via the join route; settle-ups serialised per pair of people and per group. |

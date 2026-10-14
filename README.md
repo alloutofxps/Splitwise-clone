@@ -127,7 +127,7 @@ why each is deliberate rather than pending.
 | `LITESTREAM_REPLICA_URL` | Docker image only: stream every database change to S3-compatible storage, and restore from it onto an empty volume. Credentials via `LITESTREAM_ACCESS_KEY_ID` / `LITESTREAM_SECRET_ACCESS_KEY`. |
 | `DIVVY_BACKUP_DIR`       | Where daily and pre-migration snapshots go. Defaults to `backups/` next to the database. |
 | `DIVVY_ALERT_WEBHOOK`    | URL that receives every logged error (Slack/Discord-compatible), at most once a minute. |
-| `NEXT_PUBLIC_DIVVY_CONTACT` | Who runs this server, shown on `/privacy`. |
+| `DIVVY_CONTACT` | Who runs this server, shown on `/privacy`. Read at request time, so changing it needs no rebuild. |
 | `DIVVY_DISABLE_JOBS`     | `1` to serve requests without running the background scheduler. |
 
 ### Signing in, and what happens when the domain changes

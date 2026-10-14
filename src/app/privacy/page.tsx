@@ -3,16 +3,22 @@ import Link from "next/link";
 
 export const metadata: Metadata = { title: "Privacy" };
 
+// Read on each request rather than at build time. A `NEXT_PUBLIC_` variable is
+// baked in by `next build`, and the Docker build never sees the host's
+// variables, so a contact set in the dashboard silently never appeared.
+export const dynamic = "force-dynamic";
+
 /**
  * What Divvy stores, why, and how to remove it.
  *
  * Written to be true of this codebase rather than borrowed boilerplate. Whoever
  * runs a deployment should add who they are and how to reach them (set
- * `NEXT_PUBLIC_DIVVY_CONTACT`), and have it reviewed for their jurisdiction
- * before charging anyone.
+ * `DIVVY_CONTACT`), and have it reviewed for their jurisdiction before
+ * charging anyone.
  */
 export default function PrivacyPage() {
-  const contact = process.env.NEXT_PUBLIC_DIVVY_CONTACT;
+  // The old name is still honoured for deployments that already set it.
+  const contact = process.env.DIVVY_CONTACT || process.env["NEXT_PUBLIC_DIVVY_CONTACT"];
 
   return (
     <main className="mx-auto w-full max-w-[640px] px-6 py-12 text-body-lg leading-relaxed text-text">
