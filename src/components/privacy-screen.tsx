@@ -91,6 +91,9 @@ export function PrivacyScreen() {
     // iOS fires `pagehide` on the way into the switcher in cases where
     // visibilitychange arrives too late to matter.
     window.addEventListener("pagehide", show);
+    // And `pageshow` on the way back from the back-forward cache, where no
+    // visibilitychange may follow.
+    window.addEventListener("pageshow", hide);
 
     /**
      * `blur` is the earliest signal, and the only one that fires before iOS
@@ -111,6 +114,7 @@ export function PrivacyScreen() {
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", show);
+      window.removeEventListener("pageshow", hide);
       window.removeEventListener("blur", show);
       window.removeEventListener("focus", hide);
       root.classList.remove(CLASS);
@@ -120,7 +124,17 @@ export function PrivacyScreen() {
   if (!enabled) return null;
 
   return (
-    <div className="privacy-veil no-print" aria-hidden="true">
+    <div
+      className="privacy-veil no-print"
+      aria-hidden="true"
+      // Somebody touching the screen is looking at it, whatever the focus
+      // events said. The tap only lifts the curtain; nothing under it fires.
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        document.documentElement.classList.remove(CLASS);
+      }}
+    >
       <span className="flex size-16 items-center justify-center rounded-[var(--radius-lg)] bg-brand text-display-sm font-black text-white">
         D
       </span>

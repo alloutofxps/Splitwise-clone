@@ -39,6 +39,30 @@ const context = await browser.newContext({
   hasTouch: true,
 });
 await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
+// Record calls into native UI (share sheet, date picker, clipboard), which a
+// headless browser never draws, so "opened the share sheet" counts as an
+// effect rather than looking like nothing happened.
+await context.addInitScript(() => {
+  window.__nativeCalls = [];
+  const note = (what) => window.__nativeCalls.push(what);
+  navigator.share = async () => note("opened the share sheet");
+  const picker = HTMLInputElement.prototype.showPicker;
+  HTMLInputElement.prototype.showPicker = function () {
+    note(`opened a ${this.type} picker`);
+    try {
+      return picker?.call(this);
+    } catch {
+      return undefined;
+    }
+  };
+  if (navigator.clipboard) {
+    const write = navigator.clipboard.writeText.bind(navigator.clipboard);
+    navigator.clipboard.writeText = (text) => {
+      note("copied to the clipboard");
+      return write(text).catch(() => undefined);
+    };
+  }
+});
 const page = await context.newPage();
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(String(error)));
@@ -118,13 +142,17 @@ async function controls(scope) {
       const style = getComputedStyle(el);
       if (rect.width < 2 || rect.height < 2 || style.visibility === "hidden" || style.display === "none") continue;
       if (rect.bottom < 0 || rect.top > window.innerHeight * 3) continue;
-      const label = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || "").replace(/\s+/g, " ").trim().slice(0, 60);
+      // Relative times ("10m ago") change between reloads; they are not part
+      // of what a control is.
+      const label = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || "").replace(/\s+/g, " ").replace(/\b(\d+[smhd] ago|just now|yesterday)\b/g, "").trim().slice(0, 60);
       const key = `${el.tagName}|${label}`;
       const n = (seen.get(key) ?? 0) + 1;
       seen.set(key, n);
       found.push({
         key, label: label || `(unlabelled ${el.tagName.toLowerCase()})`, nth: n - 1,
         disabled: el.disabled === true || el.getAttribute("aria-disabled") === "true",
+        // Tapping the option that is already chosen rightly does nothing.
+        selected: ["aria-selected", "aria-pressed", "aria-checked"].some((a) => el.getAttribute(a) === "true"),
         tag: el.tagName, href: el.getAttribute("href"),
       });
     }
@@ -142,7 +170,7 @@ async function locate(control, scope) {
     if (!(await el.isVisible().catch(() => false))) continue;
     const info = await el.evaluate((node, inDialogScope) => {
       if (!inDialogScope && node.closest('[role="dialog"]')) return null;
-      const label = (node.getAttribute("aria-label") || node.textContent || node.getAttribute("title") || "").replace(/\s+/g, " ").trim().slice(0, 60);
+      const label = (node.getAttribute("aria-label") || node.textContent || node.getAttribute("title") || "").replace(/\s+/g, " ").replace(/\b(\d+[smhd] ago|just now|yesterday)\b/g, "").trim().slice(0, 60);
       return `${node.tagName}|${label}`;
     }, Boolean(scope)).catch(() => null);
     if (info !== control.key) continue;
@@ -161,6 +189,9 @@ async function coveredBy(el) {
     const y = r.top + r.height / 2;
     const hit = document.elementFromPoint(x, y);
     if (!hit || node === hit || node.contains(hit)) return null;
+    // A real field laid over its own button on purpose (the date chip): the
+    // tap reaches the field, which is the point.
+    if (hit.tagName === "INPUT" && hit.parentElement?.contains(node)) return null;
     const describe = (e) => `${e.tagName.toLowerCase()}${e.getAttribute("role") ? `[role=${e.getAttribute("role")}]` : ""}${e.className && typeof e.className === "string" ? `.${e.className.split(" ").slice(0, 4).join(".")}` : ""}`;
     return describe(hit);
   });
@@ -184,6 +215,8 @@ async function snapshot() {
   return page.evaluate(() => ({
     url: location.href,
     dialogs: document.querySelectorAll('[role="dialog"]').length,
+    dialogNames: [...document.querySelectorAll('[role="dialog"]')].map((d) => d.getAttribute("aria-label")).join("|"),
+    native: [...(window.__nativeCalls ?? [])],
     text: document.body.innerText.length,
     theme: document.documentElement.className,
     focus: document.activeElement ? `${document.activeElement.tagName}:${document.activeElement.getAttribute("aria-label") ?? ""}` : "",
@@ -217,10 +250,15 @@ async function tap(el) {
   const changes = [];
   if (after.url !== before.url) changes.push("navigated");
   if (after.dialogs !== before.dialogs) changes.push(after.dialogs > before.dialogs ? "opened a sheet" : "closed a sheet");
+  else if (after.dialogNames !== before.dialogNames) changes.push("switched sheets");
+  // Native UI the page cannot see into: the share sheet, a date picker, the
+  // clipboard. Recorded by the init script below.
+  for (const call of (after.native ?? []).slice(before.native?.length ?? 0)) changes.push(call);
   if (requests > requestsBefore) changes.push("made a request");
   if (after.theme !== before.theme) changes.push("changed theme");
   if (after.focus !== before.focus && /INPUT|TEXTAREA/.test(after.focus)) changes.push("focused a field");
   if (after.mutations > 2) changes.push(`changed the page (${after.mutations})`);
+  else if (after.text !== before.text) changes.push("changed the text");
   if (popup) changes.push("opened a tab");
   if (await download) changes.push("downloaded");
   return { effect: changes.length > 0, changes, opened: after.dialogs > before.dialogs };
@@ -233,7 +271,7 @@ async function tap(el) {
 const results = [];
 const record = (screen, label, outcome) => {
   results.push({ screen, label, ...outcome });
-  const mark = outcome.covered ? "⛔ covered" : outcome.disabled ? "· disabled" : outcome.effect ? "✓" : "✗ NO EFFECT";
+  const mark = outcome.covered ? "⛔ covered" : outcome.selected ? "· already selected" : outcome.disabled ? "· disabled" : outcome.effect ? "✓" : "✗ NO EFFECT";
   console.log(`  ${mark}  ${label}${outcome.changes?.length ? ` — ${outcome.changes.join(", ")}` : ""}${outcome.covered ? ` — by ${outcome.covered}` : ""}${outcome.error ? ` — ${outcome.error}` : ""}`);
 };
 
@@ -245,6 +283,10 @@ for (const screen of SCREENS) {
   for (const control of list) {
     if (control.disabled) {
       record(screen.name, control.label, { disabled: true, effect: false });
+      continue;
+    }
+    if (control.selected) {
+      record(screen.name, control.label, { selected: true, effect: false });
       continue;
     }
     await openScreen(screen.path);
@@ -273,6 +315,10 @@ for (const screen of SCREENS) {
         }
         if (child.disabled) {
           record(`${screen.name} › ${control.label}`, child.label, { disabled: true, effect: false });
+          continue;
+        }
+        if (child.selected) {
+          record(`${screen.name} › ${control.label}`, child.label, { selected: true, effect: false });
           continue;
         }
         await openScreen(screen.path);
@@ -320,8 +366,8 @@ console.log("\nTapping straight after a sheet closes");
 
 await browser.close();
 
-const dead = results.filter((r) => !r.effect && !r.disabled);
-const disabled = results.filter((r) => r.disabled);
-console.log(`\n${results.length} controls tapped · ${results.length - dead.length - disabled.length} worked · ${dead.length} did nothing or were covered · ${disabled.length} disabled`);
+const dead = results.filter((r) => !r.effect && !r.disabled && !r.selected);
+const disabled = results.filter((r) => r.disabled || r.selected);
+console.log(`\n${results.length} controls tapped · ${results.length - dead.length - disabled.length} worked · ${dead.length} did nothing or were covered · ${disabled.length} disabled or already selected`);
 if (pageErrors.length) console.log(`page errors: ${[...new Set(pageErrors)].slice(0, 5).join(" | ")}`);
 process.exit(dead.length === 0 ? 0 : 1);
