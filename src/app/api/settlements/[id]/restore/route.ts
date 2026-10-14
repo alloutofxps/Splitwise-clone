@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireSettlementAccess } from "@/server/access";
 import { settlementDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
+import { bumpLedgerQuery } from "@/server/ledger";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -60,10 +61,31 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     if (!group) throw new ValidationError("A group this payment belonged to is gone.");
   }
 
-  await prisma.settlement.updateMany({
-    where: { id: { in: siblings.map((row) => row.id) } },
-    data: { deletedAt: null },
-  });
+  // Both people still have to be in the group: restoring a payment to someone
+  // who has since left reopens a balance nobody in the group can see to fix.
+  for (const row of siblings) {
+    if (!row.groupId) continue;
+    const present = await prisma.membership.count({
+      where: {
+        groupId: row.groupId,
+        personId: { in: [row.fromPersonId, row.toPersonId] },
+        leftAt: null,
+      },
+    });
+    if (present !== 2) {
+      throw new ValidationError(
+        "Somebody on this payment has left the group. Add them back before restoring it.",
+      );
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.settlement.updateMany({
+      where: { id: { in: siblings.map((row) => row.id) } },
+      data: { deletedAt: null },
+    }),
+    bumpLedgerQuery(siblings.map((row) => row.groupId)),
+  ]);
 
   const restored = await prisma.settlement.findMany({
     where: { id: { in: siblings.map((row) => row.id) } },

@@ -4,24 +4,29 @@ import {
   dateInput,
   exchangeRateInput,
   json,
+  MAX_MINOR_UNITS,
   minorUnits,
   readBody,
   route,
   text,
 } from "@/lib/api";
-import { requireSession, ValidationError } from "@/lib/identity";
+import { ConflictError, requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { convert } from "@/lib/money";
 import { newId } from "@/lib/ids";
 import { areFriends, requireGroupAccess } from "@/server/access";
-import { settlementDto } from "@/server/read";
+import { groupBalanceSheet, settlementDto } from "@/server/read";
+import { bumpLedgerQuery } from "@/server/ledger";
+import { checkRateIsPlausible } from "@/server/rates";
+import { limitByAccount, WRITE } from "@/server/rate-limit";
+import { pairKey, serialize } from "@/server/mutex";
 import { isUniqueViolation, recordActivity } from "@/server/write";
 
 const schema = z.object({
-  id: z.string().min(6).max(80).optional(),
-  groupId: z.string().nullable().optional(),
-  fromPersonId: z.string().min(1),
-  toPersonId: z.string().min(1),
+  id: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/, "That id is not valid.").optional(),
+  groupId: z.string().max(80).nullable().optional(),
+  fromPersonId: z.string().min(1).max(80),
+  toPersonId: z.string().min(1).max(80),
   amount: minorUnits("The amount"),
   currency: currencyCode,
   exchangeRate: exchangeRateInput.optional(),
@@ -40,7 +45,9 @@ const schema = z.object({
  */
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
+  limitByAccount(session.person.id, "settlement-write", WRITE);
   const input = await readBody(request, schema);
+  const me = session.person.id;
 
   if (input.fromPersonId === input.toPersonId) {
     throw new ValidationError("A payment needs two different people.");
@@ -49,20 +56,23 @@ export const POST = route(async (request: Request) => {
     throw new ValidationError("A payment has to be more than zero.");
   }
 
-  // The payer or the payee can record it, but a bystander cannot invent a
-  // payment between two other people - except inside a group, where everyone
-  // shares the ledger and settling on someone's behalf is normal.
-  const isParticipant =
-    input.fromPersonId === session.person.id || input.toPersonId === session.person.id;
+  const isParticipant = input.fromPersonId === me || input.toPersonId === me;
+  const groupId = input.groupId ?? null;
+  const id = input.id ?? newId("stl");
+
+  // A replay of something already filed is answered before any check that
+  // depends on the balance - which the original has, by now, already moved.
+  const replay = await existingReplay(id, me, groupId);
+  if (replay) return json({ settlement: settlementDto(replay) }, { status: 200 });
 
   let settlementCurrency = input.currency;
 
-  if (input.groupId) {
-    const { group } = await requireGroupAccess(input.groupId, session.person.id);
+  if (groupId) {
+    const { group } = await requireGroupAccess(groupId, me);
     settlementCurrency = group.currency;
 
     const members = await prisma.membership.findMany({
-      where: { groupId: input.groupId, leftAt: null },
+      where: { groupId, leftAt: null },
       select: { personId: true },
     });
     const memberIds = new Set(members.map((m) => m.personId));
@@ -70,15 +80,13 @@ export const POST = route(async (request: Request) => {
       throw new ValidationError("Both people have to be in the group.");
     }
   } else {
+    // The payer or the payee can record a direct payment; nobody else can.
     if (!isParticipant) {
       throw new ValidationError("You can only record payments you are part of.");
     }
-    const other =
-      input.fromPersonId === session.person.id ? input.toPersonId : input.fromPersonId;
-    // No implicit friendship here: `areFriends` passing already means the row
-    // exists, and creating one when it does not would let a person id stand in
-    // for the invite code that is supposed to be the consent.
-    if (!(await areFriends(session.person.id, other))) {
+    const other = input.fromPersonId === me ? input.toPersonId : input.fromPersonId;
+    // No implicit friendship here: a person id is not consent.
+    if (!(await areFriends(me, other))) {
       throw new ValidationError("You can only settle up with people you have added.");
     }
   }
@@ -91,47 +99,70 @@ export const POST = route(async (request: Request) => {
 
   const exchangeRate =
     settlementCurrency === input.currency ? "1" : (input.exchangeRate ?? "1");
-  const convertedAmount = convert(
-    input.amount,
-    input.currency,
-    settlementCurrency,
-    exchangeRate,
-  );
-
-  const id = input.id ?? newId("stl");
-
-  let settlement;
-  let created = true;
-  try {
-    settlement = await prisma.settlement.create({
-      data: {
-        id,
-        groupId: input.groupId ?? null,
-        fromPersonId: input.fromPersonId,
-        toPersonId: input.toPersonId,
-        amount: input.amount,
-        currency: input.currency,
-        exchangeRate,
-        convertedAmount,
-        date: input.date ?? new Date(),
-        note: input.note ?? null,
-        method: input.method ?? null,
-        createdByPersonId: session.person.id,
-      },
-    });
-  } catch (error) {
-    // Replayed from the offline outbox.
-    if (!isUniqueViolation(error)) throw error;
-    const existing = await prisma.settlement.findUnique({ where: { id } });
-    if (!existing) throw error;
-    settlement = existing;
-    created = false;
+  if (settlementCurrency !== input.currency) {
+    await checkRateIsPlausible(input.currency, settlementCurrency, exchangeRate);
+  }
+  const convertedAmount = convert(input.amount, input.currency, settlementCurrency, exchangeRate);
+  if (convertedAmount <= 0n || convertedAmount > MAX_MINOR_UNITS) {
+    throw new ValidationError("That exchange rate produces an amount that cannot be stored.");
   }
 
-  if (created) {
+  /*
+   * Recording a payment on somebody else's behalf.
+   *
+   * Inside a group that is normal - one person squares the books for the
+   * table - but it used to be unlimited, so any member could record "Bob paid
+   * Alice 1,000,000" and erase every debt in the group without either of them
+   * knowing. A third party may now record at most what the payer actually owes
+   * and the payee is actually owed; anything beyond that is for the two people
+   * themselves to record.
+   */
+  const key = groupId ? `group:${groupId}` : pairKey(input.fromPersonId, input.toPersonId);
+  return serialize(key, async () => {
+    if (groupId && !isParticipant) {
+      const sheet = await groupBalanceSheet(groupId);
+      const payerOwes = -(sheet.net.get(input.fromPersonId) ?? 0n);
+      const payeeIsOwed = sheet.net.get(input.toPersonId) ?? 0n;
+      const ceiling = payerOwes < payeeIsOwed ? payerOwes : payeeIsOwed;
+      if (ceiling <= 0n || convertedAmount > ceiling) {
+        throw new ValidationError(
+          "You can record a payment between two other people only up to what is actually owed. Ask one of them to record the rest.",
+        );
+      }
+    }
+
+    let settlement;
+    try {
+      [settlement] = await prisma.$transaction([
+        prisma.settlement.create({
+          data: {
+            id,
+            groupId,
+            fromPersonId: input.fromPersonId,
+            toPersonId: input.toPersonId,
+            amount: input.amount,
+            currency: input.currency,
+            exchangeRate,
+            convertedAmount,
+            date: input.date ?? new Date(),
+            note: input.note ?? null,
+            method: input.method ?? null,
+            createdByPersonId: me,
+          },
+        }),
+        bumpLedgerQuery([groupId]),
+      ]);
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      // Lost a race with our own replay - or the id belongs to somebody else.
+      const existing = await existingReplay(id, me, groupId);
+      if (existing) return json({ settlement: settlementDto(existing) }, { status: 200 });
+      throw new ConflictError("That id is already in use. Try again.");
+    }
+
     await recordActivity({
       type: "settlement.created",
-      actorPersonId: session.person.id,
+      actorPersonId: me,
       groupId: settlement.groupId,
       settlementId: settlement.id,
       data: {
@@ -141,7 +172,21 @@ export const POST = route(async (request: Request) => {
         toPersonId: settlement.toPersonId,
       },
     });
-  }
 
-  return json({ settlement: settlementDto(settlement) }, { status: 201 });
+    return json({ settlement: settlementDto(settlement) }, { status: 201 });
+  });
 });
+
+/**
+ * The row with this id, if it is the caller's own earlier submission of the
+ * same payment. A row with this id that somebody else filed is not returned:
+ * answering with it would let anyone read any payment by quoting its id.
+ */
+async function existingReplay(id: string, me: string, groupId: string | null) {
+  const existing = await prisma.settlement.findUnique({ where: { id } });
+  if (!existing) return null;
+  if (existing.createdByPersonId !== me || existing.groupId !== groupId) {
+    throw new ConflictError("That id is already in use. Try again.");
+  }
+  return existing;
+}

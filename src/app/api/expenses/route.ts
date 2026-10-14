@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 import { EXPENSE_INCLUDE, expenseDto } from "@/server/read";
 import { createExpense, recordActivity } from "@/server/write";
-import { expenseInputSchema, prepareExpense } from "@/server/expense-input";
+import { EXPENSE_BODY_LIMIT, expenseInputSchema, prepareExpense } from "@/server/expense-input";
+import { limitByAccount, WRITE } from "@/server/rate-limit";
 import { newId } from "@/lib/ids";
 
 /**
@@ -12,12 +13,14 @@ import { newId } from "@/lib/ids";
  *
  * The client supplies the id so a mutation replayed from the offline outbox
  * lands on the same row rather than filing the dinner twice. `createExpense`
- * returns the existing record on a key collision, which makes this endpoint
- * safe to retry indefinitely.
+ * returns the existing record on a key collision - but only to the person who
+ * created it, for the same ledger - which makes this endpoint safe to retry
+ * indefinitely without making it a way to read other people's expenses.
  */
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  const input = await readBody(request, expenseInputSchema);
+  limitByAccount(session.person.id, "expense-write", WRITE);
+  const input = await readBody(request, expenseInputSchema, { maxBytes: EXPENSE_BODY_LIMIT });
 
   if (input.groupId) {
     await requireGroupAccess(input.groupId, session.person.id);
@@ -51,5 +54,5 @@ export const POST = route(async (request: Request) => {
     include: EXPENSE_INCLUDE,
   });
 
-  return json({ expense: expenseDto(full!, session.person.id) }, { status: 201 });
+  return json({ expense: expenseDto(full!, session.person.id) }, { status: created ? 201 : 200 });
 });

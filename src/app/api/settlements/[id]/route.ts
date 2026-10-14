@@ -3,6 +3,7 @@ import { ForbiddenError, NotFoundError, requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 import { recordActivity } from "@/server/write";
+import { bumpLedgerQuery } from "@/server/ledger";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,9 +24,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   const session = await requireSession();
 
   const settlement = await prisma.settlement.findUnique({ where: { id } });
-  if (!settlement || settlement.deletedAt) {
-    throw new NotFoundError("That payment is already gone.");
-  }
+  if (!settlement) throw new NotFoundError("That payment is already gone.");
 
   if (settlement.groupId) {
     await requireGroupAccess(settlement.groupId, session.person.id);
@@ -35,6 +34,10 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
       settlement.toPersonId === session.person.id;
     if (!involved) throw new ForbiddenError("That payment is not yours to undo.");
   }
+
+  // Already deleted is the state the caller asked for - an offline replay, or
+  // a second tap - so it is a success rather than a 404.
+  if (settlement.deletedAt) return json({ ok: true, removed: 0 });
 
   // The batch, or just this row when it stands alone.
   const siblings = settlement.batchId
@@ -58,10 +61,13 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   }
 
   const deletedAt = new Date();
-  await prisma.settlement.updateMany({
-    where: { id: { in: siblings.map((row) => row.id) } },
-    data: { deletedAt },
-  });
+  await prisma.$transaction([
+    prisma.settlement.updateMany({
+      where: { id: { in: siblings.map((row) => row.id) } },
+      data: { deletedAt },
+    }),
+    bumpLedgerQuery(siblings.map((row) => row.groupId)),
+  ]);
 
   const total = siblings.reduce((sum, row) => sum + row.amount, 0n);
   await recordActivity({
