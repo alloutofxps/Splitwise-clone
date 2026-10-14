@@ -22,7 +22,7 @@ jobs:
       DIVVY_SECRET: ci-only-secret-not-used-for-anything-real
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # The smoke script is dependency-free but not version-free; pin the
       # runtime rather than inherit whatever the runner image ships this month.
