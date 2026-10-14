@@ -45,8 +45,10 @@ export interface SplitEditorProps {
   total: bigint;
   mode: SplitMode;
   participants: SplitParticipant[];
+  /** The receipt lines of an itemised split, so reopening the editor keeps them. */
+  items: ReceiptItem[];
   payerIds: string[];
-  onChange: (mode: SplitMode, participants: SplitParticipant[]) => void;
+  onChange: (mode: SplitMode, participants: SplitParticipant[], items: ReceiptItem[]) => void;
 }
 
 export function SplitEditor({
@@ -58,6 +60,7 @@ export function SplitEditor({
   total,
   mode,
   participants,
+  items: initialItems,
   payerIds,
   onChange,
 }: SplitEditorProps) {
@@ -68,6 +71,10 @@ export function SplitEditor({
   React.useEffect(() => {
     if (!open) return;
     setLocalMode(mode);
+    // The lines come from the draft, not from whatever this editor last held:
+    // editing an itemised expense opens with its receipt, and a fresh expense
+    // opens empty.
+    setItems(initialItems);
     // Anyone who joined the group since this draft was started still needs a
     // row, or they silently drop out of the split.
     setLocal(
@@ -79,7 +86,7 @@ export function SplitEditor({
           },
       ),
     );
-  }, [open, mode, participants, members]);
+  }, [open, mode, participants, members, initialItems]);
 
   const resolved = resolveSplit({
     mode: localMode,
@@ -146,7 +153,10 @@ export function SplitEditor({
 
   const commit = () => {
     // Itemised splits resolve to plain amounts before saving, so the stored
-    // expense is a normal one and every balance path stays identical.
+    // expense is a normal one and every balance path stays identical. The
+    // lines go back too: they used to be dropped here, and the composer then
+    // re-resolved "by item" with no items - an even split - so the per-item
+    // amounts the person had just entered were thrown away on save.
     if (localMode === "ITEMIZED") {
       onChange(
         "ITEMIZED",
@@ -155,9 +165,10 @@ export function SplitEditor({
           included: split.included,
           amount: split.amount,
         })),
+        items,
       );
     } else {
-      onChange(localMode, local);
+      onChange(localMode, local, []);
     }
     onClose();
   };
@@ -516,7 +527,7 @@ function friendlyError(message: string, currency: string): string {
 // Itemised
 // ---------------------------------------------------------------------------
 
-interface ReceiptItem {
+export interface ReceiptItem {
   id: string;
   name: string;
   amount: bigint | null;

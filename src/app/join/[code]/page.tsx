@@ -121,10 +121,10 @@ export default function JoinPage() {
       await api.post("/api/identity", {
         displayName: name.trim(),
         avatarColor: colorForName(name),
-        // Claiming a placeholder folds this person into the existing member
-        // rather than creating a second one, so it happens at creation time.
-        claimGhostId: claimId ?? undefined,
       });
+      // Claiming a placeholder happens on the join itself, which checks the
+      // invite code is still live; the placeholder's history is merged into
+      // the account that was just created.
       await join(claimId);
     } catch (caught) {
       toast({

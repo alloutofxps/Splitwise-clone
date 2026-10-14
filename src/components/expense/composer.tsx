@@ -9,7 +9,7 @@ import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
-import { SplitEditor } from "./split-editor";
+import { SplitEditor, type ReceiptItem } from "./split-editor";
 import { CategoryPicker } from "./category-picker";
 import { PayerPicker } from "./payer-picker";
 import { CurrencyPicker } from "./currency-picker";
@@ -69,6 +69,8 @@ interface Draft {
   splitMode: SplitMode;
   payers: { personId: string; amount: bigint }[];
   participants: SplitParticipant[];
+  /** Receipt lines, for an itemised split. */
+  items: ReceiptItem[];
   attachments: PendingAttachment[];
   exchangeRate: string;
 }
@@ -154,6 +156,11 @@ export function ExpenseComposer({
     total: amount,
     participants: draft.participants,
     payerIds: draft.payers.map((p) => p.personId),
+    items: draft.items.map((item) => ({
+      id: item.id,
+      amount: item.amount ?? 0n,
+      participantIds: item.participantIds,
+    })),
   });
 
   const payersTotal = draft.payers.reduce((total, p) => total + p.amount, 0n);
@@ -225,6 +232,18 @@ export function ExpenseComposer({
         percent: s.percent ?? null,
         adjustment: s.adjustment?.toString() ?? null,
       })),
+      // The receipt lines themselves, so an itemised expense can be reopened
+      // and shown line by line. Only meaningful in that mode.
+      items:
+        draft.splitMode === "ITEMIZED"
+          ? draft.items
+              .filter((item) => (item.amount ?? 0n) > 0n)
+              .map((item) => ({
+                name: item.name.trim() || "Item",
+                amount: (item.amount ?? 0n).toString(),
+                participantIds: item.participantIds,
+              }))
+          : [],
       attachments: draft.attachments.map((attachment) => ({
         filename: attachment.filename,
         mimeType: attachment.mimeType,
@@ -480,8 +499,9 @@ export function ExpenseComposer({
         total={amount}
         mode={draft.splitMode}
         participants={draft.participants}
+        items={draft.items}
         payerIds={draft.payers.map((p) => p.personId)}
-        onChange={(mode, participants) => patch({ splitMode: mode, participants })}
+        onChange={(mode, participants, items) => patch({ splitMode: mode, participants, items })}
       />
 
       <PayerPicker
@@ -577,6 +597,7 @@ function freshDraft(
       personId,
       included: true,
     })),
+    items: [],
     attachments: [],
     exchangeRate: "1",
   };
@@ -601,6 +622,12 @@ function draftFromExpense(expense: ExpenseDto): Draft {
       weight: s.weight ?? undefined,
       percent: s.percent ?? undefined,
       adjustment: s.adjustment ? BigInt(s.adjustment) : undefined,
+    })),
+    items: expense.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      amount: BigInt(item.amount),
+      participantIds: item.participantIds,
     })),
     attachments: [],
     exchangeRate: expense.exchangeRate,

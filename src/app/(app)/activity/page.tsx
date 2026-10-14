@@ -557,6 +557,18 @@ function describe(
         ),
       };
 
+    case "recurrence.paused":
+      return {
+        icon: <Repeat className="size-[16px]" />,
+        tone: "warning",
+        sentence: (
+          <>
+            {strong(String(data.description ?? "A repeating expense"))} was paused
+            {typeof data.reason === "string" && data.reason ? <> · {data.reason}</> : null}
+          </>
+        ),
+      };
+
     case "nudge.sent": {
       const target = people.get(activity.targetPersonId ?? "");
       // Reads differently depending on which end you are: "you reminded Ravi"
