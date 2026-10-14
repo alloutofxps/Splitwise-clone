@@ -34,6 +34,8 @@ export default tseslint.config(
       "public/ocr/**",
       "src/generated/**",
       "next-env.d.ts",
+      // Railway's CLI evaluates this, not the app's TypeScript program.
+      ".railway/**",
     ],
   },
 
