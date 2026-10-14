@@ -46,9 +46,13 @@ model Person {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  memberships       Membership[]
-  paymentMethods    PaymentMethod[]
-  budgets           Budget[]
+  /// Set when the owner deleted their account. The row stays so other
+  /// people's ledgers keep a name to render; everything personal is wiped.
+  deletedAt DateTime?
+
+  memberships    Membership[]
+  paymentMethods PaymentMethod[]
+  budgets        Budget[]
 
   expensesCreated    Expense[]          @relation("ExpenseCreator")
   expensePayers      ExpensePayer[]
@@ -93,6 +97,7 @@ model Session {
   lastSeenAt DateTime @default(now())
 
   @@index([personId])
+  @@index([lastSeenAt])
 }
 
 /// One way of proving you are a Person.
@@ -226,6 +231,10 @@ model Group {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  /// Bumped by every write that changes the group's balances, so a computed
+  /// balance sheet can be reused until something actually moves.
+  ledgerVersion Int @default(0)
+
   memberships Membership[]
   expenses    Expense[]
   settlements Settlement[]
@@ -292,6 +301,9 @@ model Expense {
 
   createdByPersonId String
   recurrenceId      String?
+  /// Who saved the current version, so a person can overwrite their own
+  /// queued offline edit without tripping the conflict check meant for others.
+  lastEditedById    String?
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -326,6 +338,7 @@ model ExpensePayer {
 
   @@unique([expenseId, personId])
   @@index([expenseId])
+  @@index([personId])
 }
 
 /// Who owes what. `amount` is always the resolved share in minor units; the
@@ -380,6 +393,7 @@ model ExpenseItemShare {
   person Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([itemId, personId])
+  @@index([personId])
   @@index([itemId])
 }
 
@@ -454,6 +468,7 @@ model Settlement {
   @@index([groupId, date])
   @@index([fromPersonId])
   @@index([toPersonId])
+  @@index([createdByPersonId])
   @@index([batchId])
 }
 
@@ -473,6 +488,7 @@ model Comment {
   person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@index([expenseId])
+  @@index([personId])
 }
 
 model Activity {
@@ -484,9 +500,9 @@ model Activity {
   /// group.updated | recurrence.fired | nudge.sent
   type    String
 
-  actorPersonId String
-  expenseId     String?
-  settlementId  String?
+  actorPersonId  String
+  expenseId      String?
+  settlementId   String?
   /// Set only for entries addressed to one person rather than to a group - a
   /// nudge is between two people even when it concerns a group debt, so the
   /// feed query uses this to keep it out of everybody else's timeline.
@@ -507,6 +523,7 @@ model Activity {
   @@index([groupId, createdAt])
   @@index([createdAt])
   @@index([targetPersonId, createdAt])
+  @@index([actorPersonId])
 }
 
 // ---------------------------------------------------------------------------
@@ -534,6 +551,12 @@ model Recurrence {
   /// For MONTHLY: clamp to the last day of shorter months.
   dayOfMonth Int?
 
+  /// IANA zone the schedule is kept in, so "the 1st" means the creator's 1st
+  /// rather than the server's.
+  timeZone  String  @default("UTC")
+  /// Why the recurrence last stopped or skipped, shown to the group.
+  lastError String?
+
   startDate DateTime
   nextRunAt DateTime
   lastRunAt DateTime?
@@ -550,6 +573,7 @@ model Recurrence {
 
   @@index([nextRunAt, active])
   @@index([groupId])
+  @@index([createdByPersonId])
 }
 
 model Budget {
@@ -573,6 +597,29 @@ model Budget {
   // allow duplicate "all groups, all categories" budgets. Uniqueness is
   // enforced in the route with a delete-then-create inside a transaction.
   @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Infrastructure
+// ---------------------------------------------------------------------------
+
+/// A WebAuthn challenge, held server-side so it is single-use and cannot be
+/// swapped by a client that edits its own cookies.
+model WebAuthnChallenge {
+  id        String   @id @default(cuid())
+  challenge String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+/// A lease on a background job, so two processes - or two ticks of one -
+/// never run the same job at once.
+model JobLock {
+  name      String   @id
+  holder    String
+  expiresAt DateTime
 }
 
 /// Cached FX rates so the app keeps converting while offline.
