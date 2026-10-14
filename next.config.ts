@@ -52,11 +52,11 @@ const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   // eslint-disable-next-line @typescript-eslint/require-await
   generateBuildId: async () => BUILD_ID,
-  // Receipt uploads arrive as base64 inside a JSON body; the client downscales
-  // to well under this, but leave room for a burst of several photos.
-  experimental: {
-    serverActions: { bodySizeLimit: "12mb" },
-  },
+  // There are no Server Actions in this app. The 12 MB `serverActions` limit
+  // that used to sit here looked like a request-size cap and was not one: it
+  // applies only to Server Actions, not to route handlers. Request bodies are
+  // capped in `lib/api.ts` (`readBody`) and `middleware.ts` instead.
+  poweredByHeader: false,
   // `async` with nothing to await, because `NextConfig` types `headers` as
   // returning a promise and this is the shape Next's own documentation uses.
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -73,10 +73,17 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/:path*",
+        // The Content-Security-Policy and HSTS are set per request in
+        // `middleware.ts`, because the CSP carries a fresh nonce each time.
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+          },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
     ];

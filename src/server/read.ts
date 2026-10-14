@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/db";
 import { computeBalances, type BalanceEvent, type BalanceSheet } from "@/lib/balances";
 import { convertedBreakdown } from "@/lib/split";
+import { groupSheets } from "./ledger";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import type {
   ActivityDto,
@@ -68,45 +69,12 @@ export { convertedBreakdown, type ConvertedBreakdown } from "@/lib/split";
 // Balances
 // ---------------------------------------------------------------------------
 
-/** Loads every expense and settlement in a group and folds them into a sheet. */
+/**
+ * A group's balance sheet. Served from `server/ledger.ts`, which only refolds
+ * the history when the group's ledger has actually changed.
+ */
 export async function groupBalanceSheet(groupId: string): Promise<BalanceSheet> {
-  const [expenses, settlements] = await Promise.all([
-    prisma.expense.findMany({
-      where: { groupId, deletedAt: null },
-      select: {
-        id: true,
-        convertedAmount: true,
-        payers: { select: { personId: true, amount: true } },
-        splits: { select: { personId: true, amount: true } },
-      },
-    }),
-    prisma.settlement.findMany({
-      where: { groupId, deletedAt: null },
-      select: {
-        id: true,
-        fromPersonId: true,
-        toPersonId: true,
-        convertedAmount: true,
-      },
-    }),
-  ]);
-
-  const events: BalanceEvent[] = [];
-  for (const expense of expenses) {
-    const { paid, owed } = convertedBreakdown(expense);
-    events.push({ kind: "expense", id: expense.id, paid, owed });
-  }
-  for (const settlement of settlements) {
-    events.push({
-      kind: "settlement",
-      id: settlement.id,
-      fromPersonId: settlement.fromPersonId,
-      toPersonId: settlement.toPersonId,
-      amount: settlement.convertedAmount,
-    });
-  }
-
-  return computeBalances(events);
+  return (await groupSheets([groupId])).get(groupId) ?? EMPTY_SHEET;
 }
 
 /**
@@ -447,9 +415,7 @@ export async function groupSheetsFor(personId: string): Promise<Map<string, Bala
     where: { personId, leftAt: null },
     select: { groupId: true },
   });
-  const ids = memberships.map((membership) => membership.groupId);
-  const sheets = await Promise.all(ids.map((id) => groupBalanceSheet(id)));
-  return new Map(ids.map((id, index) => [id, sheets[index]] as const));
+  return groupSheets(memberships.map((membership) => membership.groupId));
 }
 
 /**
@@ -507,9 +473,9 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
     }
   }
 
-  const sheets = await Promise.all(groups.map((group) => groupBalanceSheet(group.id)));
-  groups.forEach((group, index) => {
-    const net = pairwiseNet(sheets[index], meId, otherId);
+  const sheets = await groupSheets(groups.map((group) => group.id));
+  groups.forEach((group) => {
+    const net = pairwiseNet(sheets.get(group.id) ?? EMPTY_SHEET, meId, otherId);
     if (net !== 0n) {
       ledgers.push({
         groupId: group.id,
@@ -581,9 +547,8 @@ export async function groupSummaries(
   // A group with nothing unread produces no row at all, hence the ?? 0 below.
   const unreadByGroup = new Map(unread.map((row) => [row.groupId, row._count._all]));
 
-  const sheets = precomputed
-    ? groupIds.map((id) => precomputed.get(id) ?? EMPTY_SHEET)
-    : await Promise.all(groupIds.map((id) => groupBalanceSheet(id)));
+  const fetched = precomputed ?? (await groupSheets(groupIds));
+  const sheets = groupIds.map((id) => fetched.get(id) ?? EMPTY_SHEET);
 
   return memberships.map((membership, index) => {
     const group = membership.group;

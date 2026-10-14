@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -68,7 +69,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The Content-Security-Policy only lets scripts carrying this request's
+  // nonce run (see `middleware.ts`), so the one inline script carries it.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
@@ -78,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           which is the most visible way to look unfinished.
         */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
 (function () {

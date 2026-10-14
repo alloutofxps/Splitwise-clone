@@ -13,3 +13,4 @@ data/
 *.log
 .vercel
 coverage/
+prisma/backups/
