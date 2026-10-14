@@ -32,18 +32,26 @@ function check(name, condition, detail) {
 }
 
 /** A person is just a cookie jar, which is the whole point of the auth model. */
+let nextAddress = 1;
+
 function makeClient() {
   let cookie = "";
+  // Each person arrives from their own address, as real people do. Sign-up is
+  // now limited per address, so a suite that ran everybody through one would
+  // be testing the limiter rather than the app.
+  const address = `192.0.2.${nextAddress++ % 250}`;
   return {
     get cookie() {
       return cookie;
     },
+    address,
     async call(path, options = {}) {
       const response = await fetch(`${BASE}${path}`, {
         method: options.method ?? "GET",
         headers: {
           ...(options.body ? { "Content-Type": "application/json" } : {}),
           ...(cookie ? { Cookie: cookie } : {}),
+          "X-Forwarded-For": address,
           ...(options.headers ?? {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
@@ -133,7 +141,8 @@ async function main() {
   check("creates a group", created.status === 201);
   const groupId = created.body.group.id;
   const inviteCode = created.body.group.inviteCode;
-  check("issues a readable invite code", /^[a-z]+-[a-z]+-\d+$/.test(inviteCode), inviteCode);
+  // Words for reading aloud, plus a random tail so the code cannot be guessed.
+  check("issues a readable invite code", /^[a-z]+-[a-z]+-\d+-[a-z0-9]{4}$/.test(inviteCode), inviteCode);
 
   await priya.call(`/api/groups/${groupId}/members`, {
     method: "POST",
@@ -331,7 +340,7 @@ async function main() {
   // -- Idempotent replay ----------------------------------------------------
   console.log("\nOffline replay");
   const payload = {
-    id: "exp_smoke_replay_test",
+    id: `exp_smoke_replay_${Date.now().toString(36)}`,
     groupId,
     description: "Replayed coffee",
     amount: "600",
@@ -725,16 +734,22 @@ async function main() {
     outsiderRecurrences.recurrences.length === 0,
   );
 
-  const fired = (await priya.call("/api/recurrences/run", { method: "POST" })).body;
-  check("catching up posts every missed occurrence", fired.posted >= 3, `posted=${fired.posted}`);
+  // The server's own scheduler may already have posted these by now; asking
+  // for a run brings them up to date either way.
+  await priya.call("/api/recurrences/run", { method: "POST" });
+  const rentRows = (await priya.call(`/api/groups/${homeId}/expenses?q=Rent`)).body.items;
+  check("catching up posts every missed occurrence", rentRows.length >= 3, `${rentRows.length} rows`);
 
   // Running again must post nothing: the occurrence id is derived from the
   // recurrence and the due date, so a replay collides on the primary key.
   const firedAgain = (await priya.call("/api/recurrences/run", { method: "POST" })).body;
   check("running again posts nothing", firedAgain.posted === 0, `posted=${firedAgain.posted}`);
-
-  const rentRows = (await priya.call(`/api/groups/${homeId}/expenses?q=Rent`)).body.items;
-  check("each occurrence is filed once", rentRows.length === fired.posted, `${rentRows.length} rows`);
+  const rentRowsAgain = (await priya.call(`/api/groups/${homeId}/expenses?q=Rent`)).body.items;
+  check(
+    "each occurrence is filed once",
+    rentRowsAgain.length === rentRows.length,
+    `${rentRows.length} then ${rentRowsAgain.length} rows`,
+  );
   const rentDates = new Set(rentRows.map((row) => row.date.slice(0, 10)));
   check("occurrences are dated when they were due, not today", rentDates.size === rentRows.length);
 
@@ -1079,17 +1094,31 @@ async function main() {
   });
   check("re-opening and saving again works", retry.status === 200, String(retry.status));
 
-  // An offline replay carries no expectation and must still land, because the
-  // queue cannot resolve a race that happened while the phone had no signal.
+  // An edit that does not say which version it was based on is refused. It
+  // used to be let through "for offline replay" - which is exactly how a
+  // three-day-old queued edit silently overwrote everything since.
   const replayed = await ravi.call(`/api/expenses/${contested.id}`, {
     method: "PATCH",
     body: editPayload("Replayed from the outbox", null),
     allowError: true,
   });
   check(
-    "an edit with no expectation still lands, for offline replay",
-    replayed.status === 200,
+    "an edit with no version is refused rather than overwriting newer work",
+    replayed.status === 409,
     String(replayed.status),
+  );
+
+  // The editor's own newer version is theirs to overwrite: a second offline
+  // edit queued behind their first must still land.
+  const ownStale = await ravi.call(`/api/expenses/${contested.id}`, {
+    method: "PATCH",
+    body: editPayload("Ravi again, from an older copy", survivor.updatedAt),
+    allowError: true,
+  });
+  check(
+    "an editor can overwrite their own newer version",
+    ownStale.status === 200,
+    `${ownStale.status} ${JSON.stringify(ownStale.body)}`,
   );
 
   // -- Undoing a payment ----------------------------------------------------
@@ -1144,10 +1173,18 @@ async function main() {
       (item) => item.settlement?.id === settlementId,
     ),
   );
+  // Undoing twice - an offline replay, a second tap - is a success that moves
+  // nothing, rather than an error the outbox would park as a failure.
+  const undoneAgain = await priya.call(`/api/settlements/${settlementId}`, {
+    method: "DELETE",
+    allowError: true,
+  });
+  const afterSecondUndo = (await priya.call(`/api/groups/${homeId}`)).body.group;
   check(
-    "undoing it twice is refused rather than double-counted",
-    (await priya.call(`/api/settlements/${settlementId}`, { method: "DELETE", allowError: true }))
-      .status === 404,
+    "undoing it twice succeeds without double-counting",
+    undoneAgain.status === 200 &&
+      BigInt(afterSecondUndo.balances.net[raviId] ?? "0") === undoNetBefore,
+    `${undoneAgain.status} ${afterSecondUndo.balances.net[raviId]}`,
   );
 
   // -- An expense cannot change hands ---------------------------------------
@@ -1524,7 +1561,7 @@ async function main() {
       body: { personId: raviId },
       allowError: true,
     });
-    check("an existing group accepts a person id", added.status === 200, String(added.status));
+    check("an existing group accepts a person id", added.status === 201, String(added.status));
     const laterGroup = (await priya.call(`/api/groups/${laterId}`)).body.group;
     check(
       "and adds the real person rather than a placeholder",
@@ -1785,6 +1822,20 @@ async function main() {
     const secondGhost = (await priya.call(`/api/groups/${secondId}`)).body.group.members.find(
       (m) => m.displayName === "Sansa Stark",
     ).id;
+    // A debt first: somebody other than the two people can only record a
+    // payment between them up to what is actually owed.
+    await priya.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: secondId,
+        description: "Lent a tenner",
+        amount: "1000",
+        currency: "EUR",
+        splitMode: "EXACT",
+        payers: [{ personId: sansaId, amount: "1000" }],
+        splits: [{ personId: secondGhost, amount: "1000", included: true }],
+      },
+    });
     await priya.call("/api/settlements", {
       method: "POST",
       body: {
@@ -1807,6 +1858,8 @@ async function main() {
     );
   }
 
+  await auditRegressions();
+
   // -- Deleting a settled group --------------------------------------------
   console.log("\nLifecycle");
   const deleted = await priya.call(`/api/groups/${groupId}`, {
@@ -1817,6 +1870,279 @@ async function main() {
 
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed === 0 ? 0 : 1);
+}
+
+/**
+ * Every finding from the production audit (PRODUCTION-AUDIT.md), as an
+ * assertion against the running server, so none of them can come back
+ * unnoticed. Each check names the audit item it guards.
+ */
+async function auditRegressions() {
+  console.log("\nProduction audit regressions");
+  const tag = Date.now().toString(36);
+
+  const alice = makeClient();
+  const mallory = makeClient();
+  const aliceMe = (await alice.call("/api/identity", { method: "POST", body: { displayName: "Alice" } })).body.me;
+  const malloryMe = (await mallory.call("/api/identity", { method: "POST", body: { displayName: "Mallory" } })).body.me;
+
+  // C8 - personal codes carry a random tail.
+  check(
+    "C8: personal codes are not guessable word pairs",
+    /^me-[a-z]+-[a-z]+-[a-z0-9]{6}$/.test(aliceMe.inviteCode),
+    aliceMe.inviteCode,
+  );
+
+  const flat = (
+    await alice.call("/api/groups", {
+      method: "POST",
+      body: { name: "Private flat", currency: "USD", placeholderNames: ["Sam"] },
+    })
+  ).body.group;
+  let flatDetail = (await alice.call(`/api/groups/${flat.id}`)).body.group;
+  const samId = flatDetail.members.find((m) => m.displayName === "Sam").id;
+
+  const secretWord = `nobu${tag}`;
+  const dinner = (
+    await alice.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: flat.id,
+        description: `Dinner at ${secretWord}`,
+        notes: "card ending 4242",
+        amount: "50000",
+        currency: "USD",
+        splitMode: "EQUAL",
+        payers: [{ personId: aliceMe.id, amount: "50000" }],
+        splits: [
+          { personId: aliceMe.id, amount: "25000", included: true },
+          { personId: samId, amount: "25000", included: true },
+        ],
+      },
+    })
+  ).body.expense;
+
+  // C1 - search stays inside what the caller can see.
+  const malloryFound = (await mallory.call(`/api/search?q=${secretWord}`)).body.items;
+  check("C1: search never returns another person's expenses", malloryFound.length === 0, JSON.stringify(malloryFound.map((e) => e.description)));
+  const aliceFound = (await alice.call(`/api/search?q=${secretWord}`)).body.items;
+  check("C1: search still finds your own", aliceFound.some((e) => e.id === dinner.id));
+
+  // C2 - quoting somebody else's id in a create discloses nothing.
+  const malloryGroup = (await mallory.call("/api/groups", { method: "POST", body: { name: "Mine", currency: "USD" } })).body.group;
+  const hijack = await mallory.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      id: dinner.id,
+      groupId: malloryGroup.id,
+      description: "x",
+      amount: "1",
+      currency: "USD",
+      splitMode: "EQUAL",
+      payers: [{ personId: malloryMe.id, amount: "1" }],
+      splits: [{ personId: malloryMe.id, amount: "1" }],
+    },
+  });
+  check(
+    "C2: re-using another person's expense id is refused without disclosing it",
+    hijack.status === 409 && !JSON.stringify(hijack.body).includes(secretWord),
+    `${hijack.status} ${JSON.stringify(hijack.body)}`,
+  );
+
+  const alicePayment = (
+    await alice.call("/api/settlements", {
+      method: "POST",
+      body: { groupId: flat.id, fromPersonId: samId, toPersonId: aliceMe.id, amount: "100", currency: "USD", note: `private-${tag}` },
+    })
+  ).body.settlement;
+  const paymentHijack = await mallory.call("/api/settlements", {
+    method: "POST",
+    allowError: true,
+    body: { id: alicePayment.id, groupId: malloryGroup.id, fromPersonId: malloryMe.id, toPersonId: malloryMe.id, amount: "1", currency: "USD" },
+  });
+  check(
+    "C2: re-using another person's payment id discloses nothing",
+    paymentHijack.status >= 400 && !JSON.stringify(paymentHijack.body).includes(`private-${tag}`),
+    `${paymentHijack.status} ${JSON.stringify(paymentHijack.body)}`,
+  );
+
+  // C4 - switching the link off really closes the group.
+  const stranger = makeClient();
+  const preview = (await stranger.call(`/api/invite/${flatDetail.inviteCode}`)).body;
+  const previewGhost = preview.group.unclaimedMembers[0].id;
+  await alice.call(`/api/groups/${flat.id}/invite`, { method: "POST", body: { action: "disable" } });
+  await stranger.call("/api/identity", { method: "POST", body: { displayName: "Totally Sam", claimGhostId: previewGhost } });
+  const strangerAccess = await stranger.call(`/api/groups/${flat.id}`, { allowError: true });
+  check("C4: a placeholder id is not a way into a group", strangerAccess.status === 403, String(strangerAccess.status));
+  const strangerJoin = await stranger.call(`/api/invite/${flatDetail.inviteCode}/join`, {
+    method: "POST",
+    allowError: true,
+    body: { claimPersonId: previewGhost },
+  });
+  check("C4: a switched-off link cannot be redeemed", strangerJoin.status === 404, String(strangerJoin.status));
+
+  // m1 - only the owner can switch the link back on.
+  const malloryEnable = await mallory.call(`/api/groups/${flat.id}/invite`, { method: "POST", allowError: true, body: { action: "enable" } });
+  check("m1: a non-member cannot touch the invite link", malloryEnable.status === 403, String(malloryEnable.status));
+
+  // C5 - a recurrence must be in its group's currency.
+  const recurrenceBody = (overrides) => ({
+    groupId: flat.id,
+    description: "Storage",
+    amount: "10000",
+    currency: "USD",
+    payers: [{ personId: aliceMe.id, amount: "10000" }],
+    splits: [{ personId: aliceMe.id, amount: "5000" }, { personId: samId, amount: "5000" }],
+    frequency: "MONTHLY",
+    startDate: new Date(Date.now() + 86_400_000).toISOString(),
+    ...overrides,
+  });
+  const yen = await alice.call("/api/recurrences", { method: "POST", allowError: true, body: recurrenceBody({ currency: "JPY" }) });
+  check("C5: a recurrence in another currency is refused", yen.status === 422, `${yen.status} ${JSON.stringify(yen.body)}`);
+
+  // C6 - no back-dated floods.
+  const ancient = await alice.call("/api/recurrences", {
+    method: "POST",
+    allowError: true,
+    body: recurrenceBody({ frequency: "DAILY", startDate: "2000-01-01T00:00:00Z" }),
+  });
+  check("C6: a recurrence cannot start decades ago", ancient.status === 422, String(ancient.status));
+  const backlog = await alice.call("/api/recurrences", {
+    method: "POST",
+    allowError: true,
+    body: recurrenceBody({ frequency: "DAILY", startDate: new Date(Date.now() - 200 * 86_400_000).toISOString() }),
+  });
+  check("C6: a recurrence cannot post hundreds of expenses at once", backlog.status === 422, String(backlog.status));
+  const created = (await alice.call("/api/recurrences", { method: "POST", body: recurrenceBody({ timeZone: "Asia/Kolkata" }) })).body.recurrence;
+  const reschedule = await alice.call(`/api/recurrences/${created.id}`, {
+    method: "PATCH",
+    allowError: true,
+    body: { nextRunAt: "2001-01-01T00:00:00Z" },
+  });
+  check("C6: a recurrence cannot be rescheduled into the past", reschedule.status === 422, String(reschedule.status));
+  check("M8: the creator's time zone is kept", created.timeZone === "Asia/Kolkata", created.timeZone);
+  const malloryRun = (await mallory.call("/api/recurrences/run", { method: "POST" })).body;
+  check("C6: a person's run only covers their own recurrences", malloryRun.scope === "mine", JSON.stringify(malloryRun));
+
+  // C9 - request bodies are capped.
+  const huge = await fetch(`${BASE}/api/identity`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Forwarded-For": "198.18.99.1" },
+    body: JSON.stringify({ displayName: "x", pad: "a".repeat(300 * 1024) }),
+  });
+  check("C9: an oversized body is refused", huge.status === 413, String(huge.status));
+
+  // C3 - the limiter keys on the address the proxy saw, not one the client chose.
+  let limitedAt = null;
+  for (let i = 0; i < 30 && limitedAt === null; i++) {
+    const response = await fetch(`${BASE}/api/invite/wrong-guess-${tag}-${i}`, {
+      // The client forges the left-hand entry; the proxy appends the real one.
+      headers: { "X-Forwarded-For": `203.0.113.${i}, 198.18.42.42` },
+    });
+    if (response.status === 429) limitedAt = i + 1;
+  }
+  check("C3: forging X-Forwarded-For does not reset the limit", limitedAt !== null && limitedAt <= 21, `limited at ${limitedAt}`);
+
+  // M1 - account creation is limited per address.
+  let signUpLimited = false;
+  for (let i = 0; i < 12 && !signUpLimited; i++) {
+    const response = await fetch(`${BASE}/api/identity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Forwarded-For": `198.18.77.${tag.length}` },
+      body: JSON.stringify({ displayName: `Bot ${i}` }),
+    });
+    if (response.status === 429) signUpLimited = true;
+  }
+  check("M1: one address cannot create accounts without limit", signUpLimited);
+
+  // N2, N4, N5 - malformed expenses are 422s, not 500s or silent junk.
+  const base = {
+    groupId: flat.id,
+    description: "Probe",
+    amount: "1000",
+    currency: "USD",
+    splitMode: "EXACT",
+    payers: [{ personId: aliceMe.id, amount: "1000" }],
+    splits: [{ personId: aliceMe.id, amount: "1000" }],
+  };
+  const twicePaid = await alice.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: { ...base, payers: [{ personId: aliceMe.id, amount: "500" }, { personId: aliceMe.id, amount: "500" }] },
+  });
+  check("N2: the same payer twice is a 422, not a 500", twicePaid.status === 422, String(twicePaid.status));
+  const fakeCurrency = await alice.call("/api/expenses", { method: "POST", allowError: true, body: { ...base, currency: "ZZZ" } });
+  check("N4: a made-up currency is refused", fakeCurrency.status === 422, String(fakeCurrency.status));
+  const oldDate = await alice.call("/api/expenses", { method: "POST", allowError: true, body: { ...base, date: "1899-01-01T00:00:00Z" } });
+  check("N5: an absurd date is refused", oldDate.status === 422, String(oldDate.status));
+  const upsideDown = await alice.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: { ...base, currency: "INR", exchangeRate: "0" },
+  });
+  check("M12: a zero exchange rate is refused", upsideDown.status === 422, String(upsideDown.status));
+
+  // m6 - a file has to be what it says it is.
+  const disguised = await alice.call("/api/expenses", {
+    method: "POST",
+    allowError: true,
+    body: {
+      ...base,
+      attachments: [
+        {
+          filename: "receipt.png",
+          mimeType: "image/png",
+          dataUrl: `data:image/png;base64,${Buffer.from("<html><script>alert(1)</script></html>").toString("base64")}`,
+        },
+      ],
+    },
+  });
+  check("m6: an HTML page labelled as a PNG is refused", disguised.status === 422, String(disguised.status));
+
+  // M2 - a bystander cannot record more than is owed between two others.
+  await alice.call(`/api/groups/${flat.id}/invite`, { method: "POST", body: { action: "enable" } });
+  flatDetail = (await alice.call(`/api/groups/${flat.id}`)).body.group;
+  await mallory.call(`/api/invite/${flatDetail.inviteCode}/join`, { method: "POST", body: {} });
+  const forged = await mallory.call("/api/settlements", {
+    method: "POST",
+    allowError: true,
+    body: { groupId: flat.id, fromPersonId: samId, toPersonId: aliceMe.id, amount: "100000000", currency: "USD" },
+  });
+  check("M2: a member cannot record a fake payment between two others", forged.status === 422, `${forged.status} ${JSON.stringify(forged.body)}`);
+
+  // M3 - a placeholder cannot be handed to somebody outside its groups.
+  const outsiderPerson = makeClient();
+  const outsiderMe = (await outsiderPerson.call("/api/identity", { method: "POST", body: { displayName: "Bystander" } })).body.me;
+  await alice.call(`/api/invite/${outsiderMe.inviteCode}/join`, { method: "POST", body: {} });
+  const pushed = await alice.call(`/api/people/${samId}/merge`, {
+    method: "POST",
+    allowError: true,
+    body: { intoPersonId: outsiderMe.id },
+  });
+  check("M3: a placeholder's debts cannot be pushed onto somebody outside the group", pushed.status === 403, String(pushed.status));
+
+  // Idempotent deletes, so an offline replay is not parked as a failure.
+  const scratch = (await alice.call("/api/expenses", { method: "POST", body: base })).body.expense;
+  const firstDelete = await alice.call(`/api/expenses/${scratch.id}`, { method: "DELETE", allowError: true });
+  const secondDelete = await alice.call(`/api/expenses/${scratch.id}`, { method: "DELETE", allowError: true });
+  check("deleting an expense twice is a success", firstDelete.status === 200 && secondDelete.status === 200, `${firstDelete.status}/${secondDelete.status}`);
+
+  // M16 - accounts can be deleted, but not to escape a debt.
+  const mallorySettled = await mallory.call("/api/identity/account", { method: "DELETE", allowError: true });
+  check("M16: an account with nothing owed can be deleted", mallorySettled.status === 200, `${mallorySettled.status} ${JSON.stringify(mallorySettled.body)}`);
+  const gone = await mallory.call("/api/identity", { allowError: true });
+  check("M16: a deleted account is signed out everywhere", gone.status === 401, String(gone.status));
+  const aliceWithDebts = await alice.call("/api/identity/account", { method: "DELETE", allowError: true });
+  check("M16: an account with open balances cannot be deleted", aliceWithDebts.status === 422, String(aliceWithDebts.status));
+
+  // M14, M13 - health and security headers.
+  const health = await fetch(`${BASE}/api/health`);
+  check("M14: the health check answers", health.status === 200, String(health.status));
+  const page = await fetch(`${BASE}/offline`);
+  const csp = page.headers.get("content-security-policy") ?? "";
+  check("M13: pages carry a Content-Security-Policy with a nonce", /script-src[^;]*'nonce-/.test(csp), csp);
+  check("M13: pages refuse to be framed", (page.headers.get("x-frame-options") ?? "") === "DENY");
 }
 
 main().catch((error) => {

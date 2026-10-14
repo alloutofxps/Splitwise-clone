@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nextOccurrence, occurrenceExpenseId } from "../recurrence";
+import { countOccurrences, nextOccurrence, occurrenceExpenseId } from "../recurrence";
+import { fromWallClock, wallClock } from "@/lib/zoned";
 import type { RecurrenceFrequency } from "@/lib/types";
 
 /**
@@ -132,6 +133,47 @@ describe("nextOccurrence: invariants", () => {
     const next = nextOccurrence(at, "MONTHLY", 1, 31);
     expect(next.getHours()).toBe(9);
     expect(next.getMinutes()).toBe(30);
+  });
+});
+
+describe("nextOccurrence: in the creator's time zone", () => {
+  /**
+   * Rent "on the 1st" for somebody in India is midnight IST - 18:30 UTC on the
+   * last day of the previous month. Done in the server's UTC this anchored to
+   * the 31st and drifted onto the 30th; done in the zone it stays on the 1st.
+   */
+  it("keeps a monthly date on the creator's 1st", () => {
+    const zone = "Asia/Kolkata";
+    let cursor = new Date("2026-01-31T18:30:00Z"); // 1 Feb, 00:00 IST
+    const days: number[] = [];
+    for (let i = 0; i < 14; i++) {
+      cursor = nextOccurrence(cursor, "MONTHLY", 1, 1, zone);
+      days.push(wallClock(cursor, zone).day);
+    }
+    expect(new Set(days)).toEqual(new Set([1]));
+  });
+
+  it("clamps the 31st to short months in the zone", () => {
+    const zone = "America/Los_Angeles";
+    const jan31 = fromWallClock({ year: 2026, month: 1, day: 31, hour: 9, minute: 0, second: 0 }, zone);
+    const feb = wallClock(nextOccurrence(jan31, "MONTHLY", 1, 31, zone), zone);
+    expect([feb.month, feb.day, feb.hour]).toEqual([2, 28, 9]);
+  });
+
+  it("keeps the local time of day across a daylight-saving change", () => {
+    const zone = "Europe/London";
+    const march = fromWallClock({ year: 2026, month: 3, day: 20, hour: 9, minute: 0, second: 0 }, zone);
+    const next = wallClock(nextOccurrence(march, "WEEKLY", 1, null, zone), zone);
+    expect([next.day, next.hour]).toEqual([27, 9]);
+  });
+});
+
+describe("countOccurrences", () => {
+  it("counts the backlog a start date would post, and stops at the cap", () => {
+    const start = new Date("2026-01-01T00:00:00Z");
+    const until = new Date("2026-01-10T12:00:00Z");
+    expect(countOccurrences(start, until, "DAILY", 1, null, "UTC", 100)).toBe(10);
+    expect(countOccurrences(start, new Date("2027-01-01T00:00:00Z"), "DAILY", 1, null, "UTC", 62)).toBe(63);
   });
 });
 

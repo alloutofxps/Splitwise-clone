@@ -729,6 +729,153 @@ console.log("\nTyping into the split and payer editors");
 }
 
 /**
+ * "By item" keeps the items.
+ *
+ * The split editor resolved the receipt into per-person amounts and then threw
+ * the lines away; the composer re-resolved "by item" with no lines, which is an
+ * even split. So a steak and a salad of different prices came out 50/50, and
+ * reopening the expense showed no receipt at all. Found in the production
+ * audit; asserted here because only a browser driving both sheets shows it.
+ */
+console.log("\nSplitting by item");
+{
+  const seed = await page.evaluate(async () => {
+    const post = (p, b) =>
+      fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then((r) => r.json());
+    const group = (await post("/api/groups", { name: "Itemised", currency: "USD", placeholderNames: ["Ada"] })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const me = (await (await fetch("/api/identity")).json()).me;
+    return {
+      groupId: group.id,
+      meId: me.id,
+      adaId: detail.group.members.find((m) => m.displayName === "Ada").id,
+    };
+  });
+
+  await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(2000);
+  await page.getByRole("button", { name: /Add an expense|Add expense/i }).first().click();
+  await page.waitForTimeout(1500);
+  await page.getByLabel("Amount").first().fill("30");
+  await page.getByPlaceholder(/What was it for|Description/i).first().fill("Itemised dinner");
+  await page.waitForTimeout(400);
+
+  await page.getByRole("button", { name: /^Split/i }).first().click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: /By item/ }).first().click();
+  await page.waitForTimeout(600);
+
+  // Steak, 18, only me. Salad, 12, only Ada. An even split would be 15/15.
+  const addItem = page.getByRole("button", { name: "Add an item" });
+  await addItem.click();
+  await page.waitForTimeout(300);
+  await addItem.click();
+  await page.waitForTimeout(300);
+  await page.getByPlaceholder("Item 1").fill("Steak");
+  await page.getByLabel("Price of Steak").fill("18");
+  await page.getByPlaceholder("Item 2").fill("Salad");
+  await page.getByLabel("Price of Salad").fill("12");
+  await page.waitForTimeout(300);
+  const steakRow = page.locator("li").filter({ has: page.getByPlaceholder("Item 1") });
+  const saladRow = page.locator("li").filter({ has: page.getByPlaceholder("Item 2") });
+  await steakRow.getByRole("button", { name: "Ada" }).click();
+  await saladRow.getByRole("button", { name: "You" }).click();
+  await page.waitForTimeout(500);
+
+  await page.getByRole("button", { name: "Done", exact: true }).last().click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: /^(Save|Add expense|Add)$/i }).last().click();
+  await page.waitForTimeout(3500);
+
+  const filed = await page.evaluate(async (g) => {
+    const r = await (await fetch(`/api/groups/${g}/expenses`)).json();
+    const row = (r.items ?? [])
+      .map((i) => i.expense)
+      .filter(Boolean)
+      .find((e) => e.description === "Itemised dinner");
+    return row ? { id: row.id, splits: row.splits, items: row.items, mode: row.splitMode } : null;
+  }, seed.groupId);
+
+  check("the itemised expense reached the server", filed !== null);
+  if (filed) {
+    const owed = Object.fromEntries(filed.splits.map((s) => [s.personId, s.amount]));
+    check(
+      "each person owes what they ordered, not half each",
+      owed[seed.meId] === "1800" && owed[seed.adaId] === "1200",
+      JSON.stringify(owed),
+    );
+    check(
+      "the receipt lines were saved with the expense",
+      filed.items.length === 2 && filed.items.some((i) => i.name === "Steak" && i.amount === "1800"),
+      JSON.stringify(filed.items),
+    );
+
+    // Reopening it for an edit brings the lines back.
+    await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(2000);
+    await page.getByText("Itemised dinner").first().click();
+    await page.waitForTimeout(1200);
+    await page.getByRole("button", { name: /^Edit$/i }).first().click();
+    await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: /^Split|By item/i }).first().click();
+    await page.waitForTimeout(900);
+    const reopened = await page.getByPlaceholder("Item 1").inputValue().catch(() => "");
+    check("editing it shows the receipt lines again", reopened === "Steak", reopened);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(600);
+  }
+}
+
+/**
+ * Signing out leaves nothing behind.
+ *
+ * The service worker keeps a copy of every API response for offline use, and
+ * signing out used to leave all of it - balances, ledgers, friends - for the
+ * next person on a shared device to read.
+ */
+console.log("\nSigning out");
+{
+  const signOutCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const so = await signOutCtx.newPage();
+  await so.goto(BASE, { waitUntil: "networkidle" });
+  await so.evaluate(async () => {
+    await fetch("/api/identity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Leaving" }),
+    });
+  });
+  // Let the worker take control and cache an API response or two.
+  await so.reload({ waitUntil: "networkidle" });
+  await so.waitForTimeout(2500);
+  await so.reload({ waitUntil: "networkidle" });
+  await so.waitForTimeout(2500);
+  const before = await so.evaluate(async () => (await caches.keys()).filter((n) => n.includes("-api")));
+
+  await so.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await so.waitForTimeout(2000);
+  await so.getByRole("button", { name: /Sign out on this device/ }).click();
+  await so.waitForTimeout(700);
+  await so.getByRole("button", { name: "Sign out", exact: true }).last().click();
+  await so.waitForTimeout(3000);
+
+  const after = await so.evaluate(async () => {
+    const names = await caches.keys();
+    let apiEntries = 0;
+    for (const name of names.filter((n) => n.includes("-api"))) {
+      apiEntries += (await (await caches.open(name)).keys()).length;
+    }
+    return { names, apiEntries };
+  });
+  check("there was cached account data to clear", before.length > 0, JSON.stringify(before));
+  check("signing out removes every cached API response", after.apiEntries === 0, JSON.stringify(after));
+  await signOutCtx.close();
+}
+
+/**
  * Three things a real person hit in the first ten minutes of using this.
  *
  * All three were invisible to every existing check, because each needs a
