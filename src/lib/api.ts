@@ -9,14 +9,18 @@
  */
 
 import { z, ZodError, type ZodType } from "zod";
+import { Prisma } from "@prisma/client";
 import {
   ForbiddenError,
   NotFoundError,
+  PayloadTooLargeError,
   RateLimitError,
   UnauthorizedError,
   ConflictError,
   ValidationError,
-} from "./identity";
+} from "./errors";
+import { log } from "./log";
+import { isKnownCurrency } from "./money";
 
 /** Recursively replaces BigInt with string and Date with an ISO string. */
 function serialize(value: unknown): unknown {
@@ -104,7 +108,33 @@ export function route<Args extends unknown[]>(
         return errorResponse(422, { error: details[0], details, code: "invalid" });
       }
 
-      console.error("[divvy] unhandled route error", error);
+      if (error instanceof PayloadTooLargeError) {
+        return errorResponse(413, { error: error.message, code: "too_large" });
+      }
+
+      // Database errors that say something about the request rather than about
+      // the server. A row that vanished between the access check and the write
+      // is a 404; a unique key somebody else just took is a 409.
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+          return errorResponse(404, { error: "That no longer exists.", code: "not_found" });
+        }
+        if (error.code === "P2002") {
+          return errorResponse(409, { error: "That is already in use.", code: "conflict" });
+        }
+        // Busy or timed-out database. Transient by definition, so it is a 503
+        // with a hint to retry - which the offline outbox honours - rather than
+        // a 500 that reads as "your data is broken".
+        if (TRANSIENT_DB_CODES.has(error.code)) {
+          log.warn("database busy", { requestId: requestIdOf(args[0]), code: error.code });
+          return json(
+            { error: "The server is busy. Try again in a moment.", code: "busy" },
+            { status: 503, headers: { "Retry-After": "2" } },
+          );
+        }
+      }
+
+      log.error("unhandled route error", { requestId: requestIdOf(args[0]), error });
       return errorResponse(500, {
         error: "Something went wrong on our side. Your data is safe - try again.",
         code: "server_error",
@@ -113,11 +143,64 @@ export function route<Args extends unknown[]>(
   };
 }
 
+/** Prisma codes for a database that was busy or slow, not a request that was wrong. */
+const TRANSIENT_DB_CODES = new Set(["P1008", "P2024", "P2028", "P2034"]);
+
+function requestIdOf(value: unknown): string | undefined {
+  return value instanceof Request ? (value.headers.get("x-request-id") ?? undefined) : undefined;
+}
+
+/**
+ * The most a JSON body may be, in bytes, by default.
+ *
+ * Every endpoint used to read the whole body before looking at it, with no cap
+ * at all - a 150 MB request was accepted without even an account. Ordinary
+ * requests are a few kilobytes; routes that legitimately carry receipts pass a
+ * larger limit explicitly.
+ */
+export const DEFAULT_BODY_LIMIT = 64 * 1024;
+
+/**
+ * Reads a request body as text, refusing it once it passes `maxBytes`.
+ *
+ * Streams rather than trusting Content-Length, which a client can leave out or
+ * lie about; the read stops - and the connection is released - the moment the
+ * limit is crossed, so an oversized body never sits in memory whole.
+ */
+export async function readLimitedText(request: Request, maxBytes: number): Promise<string> {
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await request.body?.cancel().catch(() => {});
+    throw new PayloadTooLargeError();
+  }
+  if (!request.body) return "";
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new PayloadTooLargeError();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 /** Parses and validates a JSON body, throwing a ValidationError on bad shape. */
-export async function readBody<T>(request: Request, schema: ZodType<T>): Promise<T> {
+export async function readBody<T>(
+  request: Request,
+  schema: ZodType<T>,
+  { maxBytes = DEFAULT_BODY_LIMIT }: { maxBytes?: number } = {},
+): Promise<T> {
+  const text = await readLimitedText(request, maxBytes);
   let raw: unknown;
   try {
-    raw = await request.json();
+    raw = text.trim() === "" ? undefined : JSON.parse(text);
   } catch {
     throw new ValidationError("Expected a JSON body.");
   }
@@ -203,12 +286,19 @@ export const minorUnits = (field = "amount") =>
     }
   });
 
-/** A three-letter ISO currency code, normalised to upper case. */
+/**
+ * A real ISO 4217 currency code, normalised to upper case.
+ *
+ * The shape check alone let "ZZZ" through, and a made-up code silently assumes
+ * two decimals - wrong for real three- and zero-decimal currencies, and
+ * meaningless for invented ones.
+ */
 export const currencyCode = z
   .string()
   .trim()
   .regex(/^[A-Za-z]{3}$/, "Expected a three-letter currency code.")
-  .transform((value) => value.toUpperCase());
+  .transform((value) => value.toUpperCase())
+  .refine((value) => isKnownCurrency(value), "That is not a currency we know.");
 
 /**
  * An exchange rate: quote currency per one unit of base.
@@ -242,8 +332,19 @@ export const dateInput = z
       ctx.addIssue({ code: "custom", message: "Expected a valid date." });
       return z.NEVER;
     }
+    // A year-1 or year-9999 date is a typo or an attack, and either breaks
+    // something downstream: month charts span centuries, budgets never match,
+    // and a recurrence anchored there catches up forever. Routes that need a
+    // tighter window apply their own on top.
+    if (date.getTime() < DATE_FLOOR || date.getTime() > Date.now() + DATE_CEILING_AHEAD) {
+      ctx.addIssue({ code: "custom", message: "That date is out of range." });
+      return z.NEVER;
+    }
     return date;
   });
+
+const DATE_FLOOR = Date.UTC(2000, 0, 1);
+const DATE_CEILING_AHEAD = 10 * 366 * 86_400_000;
 
 /** Trimmed, length-capped free text. */
 export const text = (max: number, label = "This") =>

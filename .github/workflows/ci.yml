@@ -34,6 +34,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      # A known high or critical vulnerability in anything that ships fails the
+      # build. The production audit found a critical Next.js advisory that
+      # nothing had flagged; this is what flags the next one.
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -69,6 +75,18 @@ jobs:
 
       - name: End-to-end smoke test
         run: node scripts/smoke.mjs http://localhost:3000
+
+      # The browser checks drive the real UI: the split editors, settling up,
+      # the offline outbox, the service worker's update lifecycle, and that the
+      # Content-Security-Policy blocks nothing the app itself needs.
+      - name: Install a browser
+        run: npx playwright install --with-deps chromium
+
+      - name: UI checks
+        run: node scripts/ui-check.mjs http://localhost:3000
+
+      - name: PWA checks
+        run: node scripts/pwa-check.mjs http://localhost:3000
 
   # The image is how this actually gets deployed, so it is worth knowing that it
   # still builds — a Dockerfile that only gets exercised at deploy time is a

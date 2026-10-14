@@ -180,7 +180,7 @@ export function GroupSettingsSheet({
             />
           </label>
 
-          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
                 Simplify debts
@@ -207,7 +207,7 @@ export function GroupSettingsSheet({
                 return (
                   <li
                     key={member.id}
-                    className="flex items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5"
                   >
                     <Avatar person={member} size="sm" />
                     <span className="min-w-0 flex-1">
@@ -278,7 +278,7 @@ export function GroupSettingsSheet({
                     <button
                       onClick={() => void addExisting(person)}
                       disabled={addMember.isPending}
-                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2 text-left transition active:scale-[0.985] disabled:opacity-50"
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2 text-left transition active:scale-[0.985] disabled:opacity-50"
                     >
                       <Avatar person={person} size="sm" />
                       <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
@@ -428,7 +428,7 @@ function ActionRow({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
     >
       <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
         {icon}

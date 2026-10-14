@@ -121,10 +121,10 @@ export default function JoinPage() {
       await api.post("/api/identity", {
         displayName: name.trim(),
         avatarColor: colorForName(name),
-        // Claiming a placeholder folds this person into the existing member
-        // rather than creating a second one, so it happens at creation time.
-        claimGhostId: claimId ?? undefined,
       });
+      // Claiming a placeholder happens on the join itself, which checks the
+      // invite code is still live; the placeholder's history is merged into
+      // the account that was just created.
       await join(claimId);
     } catch (caught) {
       toast({
@@ -213,7 +213,7 @@ export default function JoinPage() {
 
         {/* Placeholder claiming ------------------------------------------- */}
         {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
-          <div className="mt-7 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
             <p className="flex items-center gap-1.5 text-body-lg font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
               Which one are you?

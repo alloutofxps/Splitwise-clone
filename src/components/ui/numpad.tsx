@@ -79,7 +79,7 @@ export function AmountPad({
   return (
     <div className={cn("select-none", className)}>
       <div className="flex items-baseline justify-center gap-1.5 px-2 py-1">
-        <span className="display-number shrink-0 text-display font-bold text-subtle">
+        <span className="display-number shrink-0 font-display text-display font-bold text-subtle">
           {symbol}
         </span>
         <input
@@ -101,7 +101,7 @@ export function AmountPad({
             if (event.key === "Enter") onSubmit?.();
           }}
           style={{ width: `${Math.max(1, (text || "0").length)}ch` }}
-          className="display-number min-w-0 bg-transparent text-center text-hero font-bold leading-none text-text outline-none placeholder:text-subtle/60"
+          className="display-number min-w-0 bg-transparent text-center font-display text-hero font-extrabold leading-none tracking-[-0.04em] text-text outline-none placeholder:text-subtle/60"
           aria-label="Amount"
         />
       </div>
@@ -167,8 +167,9 @@ function Key({
       disabled={disabled}
       aria-label={label}
       className={cn(
-        "display-number flex h-12 items-center justify-center rounded-[var(--radius-md)] bg-surface text-title-lg font-semibold text-text",
-        "border border-line transition active:scale-95 active:bg-surface-3",
+        "display-number flex h-12 items-center justify-center rounded-[16px] bg-surface font-display text-title-lg font-semibold text-text",
+        // Keys that feel pressed: a lit top edge and a springy squash on tap.
+        "border border-[var(--card-border)] [box-shadow:var(--highlight),var(--shadow-sm)] transition duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-90 active:bg-surface-3 active:[box-shadow:none]",
         "disabled:opacity-30 disabled:active:scale-100",
       )}
     >

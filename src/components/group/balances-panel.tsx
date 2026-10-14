@@ -50,7 +50,7 @@ export function BalancesPanel({
   return (
     <div>
       {/* Per-person net ---------------------------------------------------- */}
-      <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4 shadow-card">
+      <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
         <h3 className="mb-3 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
           Where everyone stands
         </h3>

@@ -238,7 +238,7 @@ function InstallPrompt() {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
+          exit={{ opacity: 0, y: 24, pointerEvents: "none" }}
           transition={{ type: "spring", stiffness: 400, damping: 34 }}
           className="no-print fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[55] px-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[380px] sm:px-0"
         >

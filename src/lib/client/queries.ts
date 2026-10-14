@@ -203,7 +203,13 @@ export function useBudgets() {
   return useQuery({
     queryKey: keys.budgets,
     queryFn: ({ signal }) =>
-      api.get<{ budgets: BudgetDto[] }>("/api/budgets", signal).then((r) => r.budgets),
+      api
+        .get<{ budgets: BudgetDto[] }>(
+          // "This month" on the viewer's calendar rather than the server's.
+          `/api/budgets?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          signal,
+        )
+        .then((r) => r.budgets),
     staleTime: 60_000,
   });
 }
@@ -664,11 +670,31 @@ export function useRemoveFriend() {
   });
 }
 
+/**
+ * Undoes a payment. Queued when offline, like deleting an expense - it used to
+ * be the one delete in the app that simply failed without a connection. The
+ * server treats deleting twice as success, so a replay is harmless.
+ */
 export function useDeleteSettlement() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id }: { id: string; groupId?: string | null }) =>
-      api.del(`/api/settlements/${id}`),
+    mutationFn: async ({ id }: { id: string; groupId?: string | null }) => {
+      try {
+        await api.del(`/api/settlements/${id}`);
+      } catch (error) {
+        if (error instanceof ApiError && error.isOffline) {
+          await enqueue({
+            id: `del_stl_${id}`,
+            path: `/api/settlements/${id}`,
+            method: "DELETE",
+            body: undefined,
+            label: "Removed payment",
+          });
+          return;
+        }
+        throw error;
+      }
+    },
     onSuccess: (_result, variables) => invalidateLedger(client, variables.groupId),
   });
 }

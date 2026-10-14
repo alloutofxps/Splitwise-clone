@@ -229,7 +229,7 @@ function Row({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface p-3",
+        "flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3",
         dimmed && "opacity-60",
       )}
     >

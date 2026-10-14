@@ -15,11 +15,12 @@ open the app, type your name, and share an invite code.
 Three decisions shape everything else.
 
 **Invite codes instead of login.** A person is created on first launch and bound
-to the device by a signed, httpOnly cookie. Group codes are three short words so
-they survive being read across a dinner table, which means entropy is not what
-protects them: every endpoint that resolves a code is rate-limited per address
-instead (see `src/server/rate-limit.ts`, which is honest about what per-process
-counters do and do not cover). The server stores only a SHA-256 of
+to the device by a signed, httpOnly cookie. Group codes are short words so they
+survive being read across a dinner table, plus a four-character random tail
+(`mango-tiger-42-k7fq`) so they cannot be guessed; personal codes carry a
+six-character one. Every endpoint that resolves a code is also rate-limited, by
+the address the proxy saw and by account (`src/server/rate-limit.ts`). The
+server stores only a SHA-256 of
 the secret; the raw value is shown once as a *recovery key*, which is the only
 way to restore the same identity on another device. The tradeoff is explicit:
 whoever holds the recovery key is that person. That is the security model of a
@@ -121,6 +122,13 @@ why each is deliberate rather than pending.
 | `DIVVY_RP_ID`            | Domain that passkeys belong to. Defaults to the request's host. Set it deliberately — see below. |
 | `DIVVY_ORIGIN`           | Full origin, e.g. `https://divvy.example.com`. Only needed behind a proxy that rewrites the host. |
 | `DIVVY_RELATED_ORIGINS`  | Comma-separated other origins whose passkeys are still honoured. Used while moving domains. |
+| `DIVVY_TRUSTED_PROXIES`  | Proxies in front of the app that append to `X-Forwarded-For`. Default `1` (Railway, Fly, Render, one nginx). `0` with no proxy, which turns per-address rate limits off. |
+| `DIVVY_CRON_SECRET`      | Bearer token for an external cron calling `POST /api/recurrences/run`. Optional — the server runs its own scheduler. |
+| `LITESTREAM_REPLICA_URL` | Docker image only: stream every database change to S3-compatible storage, and restore from it onto an empty volume. Credentials via `LITESTREAM_ACCESS_KEY_ID` / `LITESTREAM_SECRET_ACCESS_KEY`. |
+| `DIVVY_BACKUP_DIR`       | Where daily and pre-migration snapshots go. Defaults to `backups/` next to the database. |
+| `DIVVY_ALERT_WEBHOOK`    | URL that receives every logged error (Slack/Discord-compatible), at most once a minute. |
+| `NEXT_PUBLIC_DIVVY_CONTACT` | Who runs this server, shown on `/privacy`. |
+| `DIVVY_DISABLE_JOBS`     | `1` to serve requests without running the background scheduler. |
 
 ### Signing in, and what happens when the domain changes
 
@@ -166,6 +174,14 @@ which is the reason the recovery key was kept rather than replaced.
 The app is a single Next.js server plus one SQLite file, so anything that can
 run a container and keep a disk will host it.
 
+**How far one server goes.** SQLite allows one writer at a time, so the app
+queues writes through a single connection in WAL mode instead of letting them
+collide (`src/lib/db.ts`). Measured on a laptop: 200 people saving at the same
+instant all succeed in under a second, and 1,000 simultaneous saves or
+home-screen loads produce no server errors. That is far beyond what a few
+thousand active users generate. Past that, or to run more than one server, move
+to Postgres (below) and a shared rate limiter.
+
 ### With the Dockerfile
 
 ```bash
@@ -199,8 +215,25 @@ The entrypoint refuses to start without a `DIVVY_SECRET` of at least sixteen
 characters. That check exists because the alternative is worse: the app boots,
 serves a page, and 500s the moment somebody signs in.
 
-Backing up the whole app is copying one file out of the volume — receipts are
-stored inside it.
+**Backups.** Receipts are stored inside the database, so the database is the
+whole app. Three layers protect it:
+
+- a snapshot before every migration (`/data/backups/pre-migrate-*.db`, newest
+  five kept);
+- a daily consistent snapshot taken with `VACUUM INTO`, newest seven kept;
+- with `LITESTREAM_REPLICA_URL` set, continuous replication of every change to
+  object storage, restored automatically onto an empty volume. **Set this in
+  production** — the first two live on the same disk as the database, and
+  only this one survives losing it.
+
+**Health.** `GET /api/health` answers 200 only when the database answers too.
+`railway.json` points Railway's health check at it.
+
+**Logs.** One JSON object per line, each request tagged with an
+`X-Request-Id`. Set `DIVVY_ALERT_WEBHOOK` to be told about errors.
+
+The container starts as root only to hand `/data` to the `node` user, then
+runs the app as `node`.
 
 ### Without Docker
 
@@ -229,9 +262,17 @@ structured payloads are JSON text — so it moves across unchanged.
 
 ### Recurring expenses
 
-They fire whenever anybody opens the app, so no scheduler is required. If you
-would rather the rent posted at 08:00 than whenever someone first checks, point
-a cron at `POST /api/recurrences/run`.
+The server posts them itself: a scheduler started with the server
+(`src/server/jobs.ts`) runs every minute, holding a lease in the database so
+two processes never run it at once. Each occurrence is dated when it was due,
+in the creator's own time zone. A recurrence pauses itself — and says why in
+the group — if somebody in it leaves or its currency no longer matches the
+group's; a momentary error is simply retried. An external cron can also call
+`POST /api/recurrences/run` with `Authorization: Bearer $DIVVY_CRON_SECRET`.
+
+The same scheduler refreshes exchange rates every six hours, clears expired
+sign-in codes and abandoned sessions hourly, and writes a daily database
+snapshot.
 
 ---
 
@@ -336,18 +377,22 @@ curtain rather than a lock.
 ### Verification
 
 - `src/lib/__tests__/`, `src/lib/client/__tests__/` and `src/server/__tests__/` —
-  179 unit tests, including
+  265 unit tests, including
   randomised property checks that no split or apportionment ever loses a minor
   unit, that debt simplification always reproduces the same net position in at
   most n−1 transfers, and that folding one event at a time into a balance sheet
   gives the same answer as recomputing the history (which is what lets the
   client show a new expense's effect before the server confirms it).
-- `scripts/smoke.mjs` — 137 assertions driving the real HTTP API: three people,
+- `scripts/smoke.mjs` — 217 assertions driving the real HTTP API: three people,
   every split mode, a placeholder claimed mid-trip, multi-currency conversion,
   replayed mutations, settling to zero, access control, paging a ledger whose
   rows all share one timestamp, and a backup export that reconciles and stays
-  scoped to its owner.
-- `scripts/pwa-check.mjs` — 32 assertions in a real browser against a
+  scoped to its owner. A final section turns every finding of the production
+  audit (`PRODUCTION-AUDIT.md`) into an assertion: cross-customer search and
+  id-reuse leaks, the invite-link bypass, forged proxy headers, recurring
+  expenses in the wrong currency or back-dated, oversized bodies, fake
+  payments, account deletion, health and security headers.
+- `scripts/pwa-check.mjs` — 36 assertions in a real browser against a
   production build, for the things that cannot be read off the source: that the
   worker actually intercepts an OS share and the composer picks the photo up,
   that a share arriving before onboarding is *not* consumed, that a new build
@@ -360,10 +405,16 @@ curtain rather than a lock.
   noticed: types are fine, lint is fine, and the API tests actively hid it —
   the settlement delete route passed every server assertion while the row that
   should have called it was a plain `div`.
-- `scripts/ui-check.mjs` — 9 assertions asking whether the control on screen is
+- `scripts/ui-check.mjs` — 81 assertions asking whether the control on screen is
   actually wired to the thing it claims to do. Both regressions it pins looked
   healthy from the outside: the settlement row rendered and the scope picker
-  returned 200, and both were inert.
+  returned 200, and both were inert. It also checks that splitting by item keeps
+  the receipt lines and that signing out clears every cached response.
+
+CI runs all of these on every push, plus `npm audit` (high and critical fail
+the build), and boots the Docker image against an empty volume. To run the
+browser checks against an installed Chrome or Edge instead of Playwright's own,
+set `CHROMIUM_PATH`.
 - `scripts/shots.mjs` — captures every screen in both themes at a phone
   viewport, and reports any console or page error.
 

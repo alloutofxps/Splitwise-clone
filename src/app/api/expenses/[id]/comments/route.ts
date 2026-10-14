@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 import { commentDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
+import { COMMENT, limitByAccount } from "@/server/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -51,6 +52,7 @@ const schema = z.object({
 export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
   const session = await requireSession();
+  limitByAccount(session.person.id, "comment", COMMENT);
   const expense = await assertCanSee(id, session.person.id);
   const input = await readBody(request, schema);
 

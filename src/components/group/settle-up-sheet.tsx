@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/client/api";
 import { paymentLink, PAYMENT_KINDS } from "@/lib/payments";
 import type { GroupDetailDto, PaymentMethodDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { celebrate } from "../ui/motion";
 
 /**
  * Settling up.
@@ -144,7 +145,9 @@ export function SettleUpSheet({
         method,
       });
       haptic([8, 30, 8]);
-      toast({ tone: "success", title: "Payment recorded" });
+      // Settling up is the best moment in a money app; it gets a little party.
+      celebrate();
+      toast({ tone: "success", title: "Payment recorded", description: "Squaring up feels good." });
       onClose();
     } catch (error) {
       toast({
@@ -348,7 +351,7 @@ function SuggestionList({
                 <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
                   <button
                     onClick={() => onPick(edge)}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
+                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
                   >
                     <Avatar person={iAmPaying ? to : from} size="md" />
                     <span className="min-w-0 flex-1">
@@ -387,7 +390,7 @@ function SuggestionList({
               <li key={person.id}>
                 <button
                   onClick={() => onPick({ fromPersonId: meId, toPersonId: person.id, amount: "0" })}
-                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985]"
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5 text-left transition active:scale-[0.985]"
                 >
                   <Avatar person={person} size="sm" />
                   <span className="flex-1 truncate text-body-lg font-semibold text-text">
@@ -454,7 +457,7 @@ function PayThem({
   };
 
   return (
-    <div className="mt-4 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
+    <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
       <p className="mb-2.5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
         Pay {person.displayName.split(" ")[0]}
       </p>

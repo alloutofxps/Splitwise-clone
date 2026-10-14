@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db";
 import { CATEGORY_BY_ID } from "@/lib/categories";
 import { convertedBreakdown } from "@/server/read";
 import type { BudgetDto } from "@/lib/types";
+import { ValidationError } from "@/lib/errors";
+import { requireGroupAccess } from "@/server/access";
+
+const MAX_BUDGETS = 50;
+import { fromWallClock, isValidTimeZone, wallClock } from "@/lib/zoned";
 
 const schema = z.object({
   groupId: z.string().nullable().optional(),
@@ -21,15 +26,18 @@ const schema = z.object({
  * a statement about your own money, and fronting the group's 400 hotel bill
  * should not blow up your accommodation budget when you are only in for 100.
  */
-export const GET = route(async () => {
+export const GET = route(async (request: Request) => {
   const session = await requireSession();
   const personId = session.person.id;
+  // The viewer's zone, so "this month" is their month. Falls back to UTC.
+  const requested = new URL(request.url).searchParams.get("tz") ?? "";
+  const timeZone = isValidTimeZone(requested) ? requested : "UTC";
 
   const budgets = await prisma.budget.findMany({ where: { personId } });
   if (budgets.length === 0) return json({ budgets: [] });
 
   const earliest = budgets
-    .map((b) => periodStart(b.period, new Date()))
+    .map((b) => periodStart(b.period, new Date(), timeZone))
     .reduce((a, b) => (a < b ? a : b));
 
   const expenses = await prisma.expense.findMany({
@@ -51,7 +59,7 @@ export const GET = route(async () => {
   });
 
   const result: BudgetDto[] = budgets.map((budget) => {
-    const start = periodStart(budget.period, new Date());
+    const start = periodStart(budget.period, new Date(), timeZone);
     let spent = 0n;
 
     for (const expense of expenses) {
@@ -105,6 +113,21 @@ export const PUT = route(async (request: Request) => {
     return json({ ok: true, removed: true });
   }
 
+  // A budget scoped to a group you are not in tracks nothing and names a group
+  // id you should not be able to reference.
+  if (scope.groupId) await requireGroupAccess(scope.groupId, session.person.id);
+
+  // Replacing a budget does not add one, so the one being replaced is not counted.
+  const existing = await prisma.budget.count({
+    where: {
+      personId: session.person.id,
+      NOT: { groupId: scope.groupId, categoryId: scope.categoryId, period: scope.period },
+    },
+  });
+  if (existing >= MAX_BUDGETS) {
+    throw new ValidationError(`You can keep up to ${MAX_BUDGETS} budgets. Remove one first.`);
+  }
+
   // Not an upsert: the scope columns are nullable, and SQL treats NULL as
   // distinct from NULL, so a unique constraint over them would not actually
   // prevent a duplicate "all groups, all categories" budget. Replacing inside
@@ -119,19 +142,29 @@ export const PUT = route(async (request: Request) => {
   return json({ ok: true });
 });
 
-/** Start of the current budget period, in local time. */
-function periodStart(period: string, now: Date): Date {
-  const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+/**
+ * Start of the current budget period, on the viewer's own calendar.
+ *
+ * This used the server's local time, which in a container is UTC - so for
+ * somebody in India "this month" began at 05:30 on the 1st, and for somebody in
+ * California the previous evening. Expenses near midnight landed in the wrong
+ * month's budget.
+ */
+function periodStart(period: string, now: Date, timeZone: string): Date {
+  const today = wallClock(now, timeZone);
+  const midnight = (year: number, month: number, day: number) =>
+    fromWallClock({ year, month, day, hour: 0, minute: 0, second: 0 }, timeZone);
+
   switch (period) {
     case "WEEKLY": {
       // Weeks start on Monday, which is what a shared household treats as one.
-      const weekday = (date.getDay() + 6) % 7;
-      date.setDate(date.getDate() - weekday);
-      return date;
+      const weekday = (new Date(Date.UTC(today.year, today.month - 1, today.day)).getUTCDay() + 6) % 7;
+      const monday = new Date(Date.UTC(today.year, today.month - 1, today.day - weekday));
+      return midnight(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate());
     }
     case "YEARLY":
-      return new Date(now.getFullYear(), 0, 1);
+      return midnight(today.year, 1, 1);
     default:
-      return new Date(now.getFullYear(), now.getMonth(), 1);
+      return midnight(today.year, today.month, 1);
   }
 }

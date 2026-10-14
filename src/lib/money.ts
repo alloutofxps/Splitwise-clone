@@ -122,6 +122,29 @@ export function currency(code: string | null | undefined): CurrencyInfo {
   };
 }
 
+let isoCodes: Set<string> | null = null;
+
+/**
+ * Whether `code` is a real ISO 4217 currency.
+ *
+ * `currency()` above deliberately tolerates unknown codes so old data still
+ * renders, which meant the API's "is this a valid currency" check - comparing
+ * the code with `currency(code).code` - could never fail: "ZZZ" went straight
+ * into a group or an expense. This is the check that can.
+ */
+export function isKnownCurrency(code: string): boolean {
+  const upper = code.toUpperCase();
+  if (BY_CODE.has(upper)) return true;
+  if (!isoCodes) {
+    try {
+      isoCodes = new Set(Intl.supportedValuesOf("currency"));
+    } catch {
+      isoCodes = new Set();
+    }
+  }
+  return isoCodes.has(upper);
+}
+
 export function decimalsFor(code: string): number {
   return currency(code).decimals;
 }

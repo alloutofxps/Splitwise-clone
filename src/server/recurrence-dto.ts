@@ -62,5 +62,7 @@ export function recurrenceDto(row: Recurrence): RecurrenceDto {
     endsAt: row.endsAt?.toISOString() ?? null,
     active: row.active,
     createdByPersonId: row.createdByPersonId,
+    timeZone: row.timeZone,
+    lastError: row.lastError,
   };
 }

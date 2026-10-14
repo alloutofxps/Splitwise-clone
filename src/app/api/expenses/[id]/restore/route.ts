@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 import { EXPENSE_INCLUDE, expenseDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
+import { bumpLedgerQuery } from "@/server/ledger";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -63,13 +64,35 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       select: { id: true },
     });
     if (!group) throw new ValidationError("The group this belonged to is gone.");
+
+    // Restoring an expense hands everyone on it their share again. Somebody
+    // who has since left the group settled up to leave it; bringing a debt
+    // back behind their back would reopen a balance nobody can see to settle.
+    const involved = [
+      ...new Set([
+        ...expense.payers.map((p) => p.personId),
+        ...expense.splits.filter((s) => s.amount !== 0n).map((s) => s.personId),
+      ]),
+    ];
+    const members = await prisma.membership.findMany({
+      where: { groupId: expense.groupId, personId: { in: involved }, leftAt: null },
+      select: { personId: true },
+    });
+    if (members.length !== involved.length) {
+      throw new ValidationError(
+        "Somebody on this expense has left the group. Add them back before restoring it.",
+      );
+    }
   }
 
-  const restored = await prisma.expense.update({
-    where: { id },
-    data: { deletedAt: null },
-    include: EXPENSE_INCLUDE,
-  });
+  const [restored] = await prisma.$transaction([
+    prisma.expense.update({
+      where: { id },
+      data: { deletedAt: null },
+      include: EXPENSE_INCLUDE,
+    }),
+    bumpLedgerQuery([expense.groupId]),
+  ]);
 
   await recordActivity({
     type: "expense.restored",

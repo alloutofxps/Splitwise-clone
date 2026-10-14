@@ -35,8 +35,9 @@
  */
 
 import { prisma } from "@/lib/db";
-import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/identity";
-import { sharesAGroup, areFriends } from "@/server/access";
+import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { sharesAGroup } from "@/server/access";
+import { bumpLedger } from "@/server/ledger";
 import type { Prisma } from "@prisma/client";
 
 /** One entry of a recurrence's stored payer or split template. */
@@ -80,9 +81,33 @@ async function assertMayMerge(actorId: string, ghostId: string, intoId: string):
   if (!(await sharesAGroup(actorId, ghostId))) {
     throw new ForbiddenError("You are not in a group with that placeholder.");
   }
+  // Saying "that placeholder is me" is always yours to say.
   if (intoId === actorId) return;
-  if ((await sharesAGroup(actorId, intoId)) || (await areFriends(actorId, intoId))) return;
-  throw new ForbiddenError("You can only merge a placeholder into somebody you already know.");
+
+  /*
+   * Saying it about somebody else is narrower than it used to be.
+   *
+   * Knowing the person used to be enough, and the merge moves the
+   * placeholder's memberships along with its debts - so any member could put
+   * a friend into a group they had never joined, owing money they had never
+   * seen. Now the real person has to already be an active member of *every*
+   * group the placeholder is in. The merge then only re-labels shares inside
+   * ledgers they already belong to, which any member could do by editing the
+   * expenses one by one; it can no longer reach outside them.
+   */
+  const ghostGroups = await prisma.membership.findMany({
+    where: { personId: ghostId },
+    select: { groupId: true },
+  });
+  const groupIds = [...new Set(ghostGroups.map((row) => row.groupId))];
+  const present = await prisma.membership.count({
+    where: { personId: intoId, groupId: { in: groupIds }, leftAt: null },
+  });
+  if (present !== groupIds.length) {
+    throw new ForbiddenError(
+      "They are not in every group this placeholder is in. Ask them to join with the invite link and pick the name themselves.",
+    );
+  }
 }
 
 /**
@@ -223,11 +248,18 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
         "That is a real account, not a placeholder. It cannot be merged away.",
       );
     }
-    if (into.isGhost) {
+    if (into.isGhost || into.deletedAt) {
       throw new ForbiddenError("A placeholder can only be merged into a real account.");
     }
 
     await assertNoSelfPayment(tx, ghostId, intoPersonId);
+
+    // Every ledger the placeholder appears in changes hands, so every one of
+    // them needs its cached balances recomputed. Read before the memberships
+    // move, while they still name the placeholder.
+    const ghostGroupIds = (
+      await tx.membership.findMany({ where: { personId: ghostId }, select: { groupId: true } })
+    ).map((row) => row.groupId);
 
     const moved = {
       memberships: 0,
@@ -288,7 +320,7 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
       where: { createdByPersonId: ghostId },
       data: { createdByPersonId: intoPersonId },
     });
-    moved.recurrences = await moveRecurrenceTemplates(tx, ghostId, intoPersonId);
+    moved.recurrences = await moveRecurrenceTemplates(tx, ghostId, intoPersonId, ghostGroupIds);
 
     // A placeholder has no budgets or payment methods of its own — it has never
     // signed in — but the rows are person-owned and cheap to carry across,
@@ -300,6 +332,8 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
     });
 
     await moveFriendships(tx, ghostId, intoPersonId);
+
+    await bumpLedger(tx, ghostGroupIds);
 
     await tx.person.delete({ where: { id: ghostId } });
 
@@ -478,9 +512,24 @@ async function moveFriendships(tx: Tx, ghostId: string, intoId: string): Promise
   }
 }
 
-/** Rewrites every recurrence template that names the placeholder. */
-async function moveRecurrenceTemplates(tx: Tx, ghostId: string, intoId: string): Promise<number> {
+/**
+ * Rewrites every recurrence template that names the placeholder.
+ *
+ * Only the placeholder's own groups are scanned. A placeholder can only appear
+ * in a template for a group it belongs to - templates are checked against
+ * group membership when created, and placeholders have no friends to share a
+ * direct one with - and this used to read every recurrence of every customer,
+ * inside a write transaction, on every claim.
+ */
+async function moveRecurrenceTemplates(
+  tx: Tx,
+  ghostId: string,
+  intoId: string,
+  groupIds: string[],
+): Promise<number> {
+  if (groupIds.length === 0) return 0;
   const rows = await tx.recurrence.findMany({
+    where: { groupId: { in: groupIds } },
     select: { id: true, payersJson: true, splitsJson: true },
   });
   let touched = 0;

@@ -113,7 +113,7 @@ export function RecurringSheet({
                 <li
                   key={recurrence.id}
                   className={cn(
-                    "rounded-[var(--radius-lg)] border border-line bg-surface p-3.5",
+                    "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5",
                     !recurrence.active && "opacity-60",
                   )}
                 >
@@ -139,6 +139,13 @@ export function RecurringSheet({
                           ? `Next on ${new Date(recurrence.nextRunAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
                           : "Paused"}
                       </p>
+                      {!recurrence.active && recurrence.lastError ? (
+                        // Why it stopped - somebody left, the currency changed -
+                        // so the fix is obvious instead of the rent just vanishing.
+                        <p className="mt-1 text-tiny font-semibold text-negative-text">
+                          {recurrence.lastError}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex shrink-0 gap-1">
@@ -234,6 +241,8 @@ function NewRecurrenceSheet({
         frequency,
         interval: 1,
         startDate: startDate.toISOString(),
+        // So "the 1st" is worked out on this person's calendar, not the server's.
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
       haptic([8, 30, 8]);
       toast({ tone: "success", title: "Set to repeat" });

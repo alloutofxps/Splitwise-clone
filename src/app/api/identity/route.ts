@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { json, readBody, route, currencyCode, text } from "@/lib/api";
 import {
-  claimGhost,
   createIdentity,
   describeDevice,
   endCurrentSession,
@@ -12,6 +11,7 @@ import {
 import { formatRecoveryKey } from "@/lib/codes";
 import { prisma } from "@/lib/db";
 import { meDto } from "@/server/me";
+import { limitByAddress, SIGN_UP } from "@/server/rate-limit";
 
 const AVATAR_COLORS = [
   "iris", "violet", "sky", "cyan", "teal", "lime", "amber", "orange", "rose", "fuchsia",
@@ -22,8 +22,6 @@ const profileSchema = z.object({
   avatarColor: z.enum(AVATAR_COLORS).optional(),
   avatarEmoji: z.string().trim().max(8).nullable().optional(),
   defaultCurrency: currencyCode.optional(),
-  /** Set when the new arrival is claiming a placeholder somebody made for them. */
-  claimGhostId: z.string().optional(),
 });
 
 /** Who am I? Returns 401 when the device has no identity yet. */
@@ -33,8 +31,12 @@ export const GET = route(async () => {
 });
 
 /**
- * Creates the identity. This is the whole of "sign up": a name, and optionally
- * an existing placeholder to absorb.
+ * Creates the identity. This is the whole of "sign up": a name.
+ *
+ * Claiming a placeholder used to happen here too, given only the
+ * placeholder's id - which anyone who had ever opened the invite preview had
+ * seen, and which kept working after the group's link was switched off. It now
+ * happens only by redeeming a live invite code (`/api/invite/[code]/join`).
  *
  * The recovery key comes back exactly once, here. It is never retrievable
  * afterwards without rotating it, because the server only stores its hash.
@@ -48,10 +50,10 @@ export const POST = route(async (request: Request) => {
     return json({ me: await meDto(existing.person), alreadySetUp: true });
   }
 
-  const { person, secret } = input.claimGhostId
-    ? await claimGhost(input.claimGhostId, input)
-    : await createIdentity(input);
+  // Counted only when an account is actually about to be made.
+  limitByAddress(request, "sign-up", SIGN_UP);
 
+  const { person, secret } = await createIdentity(input);
   await startSession(person.id, describeDevice(request.headers.get("user-agent")));
 
   return json(
@@ -87,7 +89,7 @@ export const PATCH = route(async (request: Request) => {
  *
  * Deletes the session row as well as the cookie, so a cookie copied off the
  * device before signing out is dead rather than merely forgotten. The Person
- * row and all its history stay put — signing back in restores everything.
+ * row and all its history stay put - signing back in restores everything.
  */
 export const DELETE = route(async () => {
   await endCurrentSession();

@@ -66,10 +66,12 @@ type ButtonVariant =
 type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANTS: Record<ButtonVariant, string> = {
+  // The sunset gradient, lit along its top edge and glowing faintly in its own
+  // colour - the one thing on a screen that is meant to be pressed.
   primary:
-    "bg-brand text-white shadow-card hover:bg-brand-hover active:bg-brand-hover disabled:bg-brand/50",
+    "bg-gradient-brand text-white [box-shadow:inset_0_1px_0_oklch(1_0_0/0.3),0_10px_22px_-10px_var(--sunset-2),0_2px_6px_-2px_var(--sunset-1)] hover:brightness-110 active:brightness-95 disabled:saturate-50",
   secondary:
-    "bg-surface-2 text-text border border-line hover:bg-surface-3 active:bg-surface-3",
+    "surface-card text-text hover:bg-surface-2 active:bg-surface-3",
   outline: "border border-line-strong text-text hover:bg-surface-2 active:bg-surface-2",
   ghost: "text-muted hover:bg-surface-2 hover:text-text active:bg-surface-3",
   danger: "bg-negative text-white hover:opacity-90 active:opacity-90",
@@ -78,8 +80,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 const SIZES: Record<ButtonSize, string> = {
   sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)]",
-  md: "h-11 px-4 text-subhead gap-2 rounded-[var(--radius-md)]",
-  lg: "h-13 px-5 text-input gap-2 rounded-[var(--radius-lg)]",
+  md: "h-11 px-4 text-subhead gap-2 rounded-full",
+  lg: "h-14 px-6 text-input gap-2 rounded-full",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -116,7 +118,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         className={cn(
           "relative inline-flex select-none items-center justify-center font-semibold",
-          "transition-[background-color,color,opacity,transform] duration-150",
+          "transition-[background-color,color,opacity,transform,filter] duration-150",
           // A press that visibly compresses reads as a physical button. Scaled
           // rather than translated so it works at any size.
           "active:scale-[0.975] disabled:pointer-events-none disabled:opacity-55",
@@ -190,7 +192,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border border-line bg-surface shadow-card",
+        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)]",
         className,
       )}
       {...props}
@@ -264,14 +266,14 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       className={cn(
-        "relative grid gap-1 rounded-[var(--radius-md)] bg-surface-2 p-1",
+        "glass-strong relative grid gap-1 rounded-full p-1",
         className,
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-1 rounded-[var(--radius-sm)] bg-surface shadow-card transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="pointer-events-none absolute inset-y-1 rounded-full bg-surface transition-transform duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] [box-shadow:var(--highlight),var(--shadow-md)]"
         style={{
           width: `calc((100% - 0.5rem - ${(options.length - 1) * 0.25}rem) / ${options.length})`,
           transform: `translateX(calc(${index} * (100% + 0.25rem)))`,
@@ -371,11 +373,16 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-subtle">
-          {icon}
+        // The icon floats on a soft glow of the brand colours, gently bobbing,
+        // so an empty screen feels like an invitation rather than an absence.
+        <div className="float relative mb-5 flex size-16 items-center justify-center">
+          <span className="bg-gradient-brand absolute inset-0 rounded-[22px] opacity-25 blur-xl" />
+          <span className="surface-card relative flex size-16 items-center justify-center rounded-[22px] text-brand">
+            {icon}
+          </span>
         </div>
       ) : null}
-      <p className="text-input font-semibold text-text">{title}</p>
+      <p className="font-display text-title-lg font-bold tracking-[-0.02em] text-text">{title}</p>
       {description ? (
         <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
           {description}
@@ -430,8 +437,10 @@ export function SectionHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center justify-between px-1 pb-2", className)}>
-      <h2 className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+    // A headline, not a form label: the display face, sentence case, with the
+    // weight to anchor the list beneath it.
+    <div className={cn("flex items-end justify-between px-1 pb-3", className)}>
+      <h2 className="font-display text-title-lg font-bold tracking-[-0.02em] text-text">
         {title}
       </h2>
       {action}

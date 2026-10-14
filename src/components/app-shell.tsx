@@ -8,6 +8,7 @@ import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "luci
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
+import { Ambient } from "./ambient";
 
 /**
  * The frame every screen sits in.
@@ -43,19 +44,29 @@ export function AppShell({
   ];
 
   return (
-    <div className="flex min-h-[100dvh] flex-col lg:flex-row">
+    <div className="grain relative flex min-h-[100dvh] flex-col lg:flex-row">
+      <Ambient />
       <Sidebar destinations={destinations} pathname={pathname} onAddExpense={onAddExpense} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* The part that steps back when a sheet opens. The tab bar is outside
+          it on purpose: a transformed ancestor would drag a fixed bar along. */}
+      <div className="app-frame flex min-w-0 flex-1 flex-col">
         <OfflineBanner />
         <main
           className={cn(
             "mx-auto w-full max-w-[560px] flex-1 px-4 lg:max-w-[720px] lg:px-8 xl:max-w-[880px]",
-            // Clears the tab bar plus the home indicator on mobile.
-            "pb-[calc(env(safe-area-inset-bottom)+5.25rem)] lg:pb-12",
+            // Clears the floating tab bar plus the home indicator on mobile.
+            "pb-[calc(env(safe-area-inset-bottom)+6.5rem)] lg:pb-12",
           )}
         >
-          {children}
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
 
@@ -86,26 +97,48 @@ function TabBar({
   const right = destinations.slice(2);
 
   return (
+    // A floating capsule of glass rather than a web footer: inset from the
+    // edges, content visible through it, the active tab marked by a pill that
+    // slides between destinations.
     <nav
-      className="no-print glass fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="no-print pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] lg:hidden"
       aria-label="Main"
     >
-      <div className="mx-auto flex h-[3.75rem] max-w-[560px] items-stretch justify-around px-2">
+      {/* The list fades out before it reaches the bar, so a row passing
+          underneath never reads as a second set of labels. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-bg via-bg/80 to-transparent"
+      />
+      <div
+        className="glass-strong pointer-events-auto mx-auto flex h-[4rem] max-w-[440px] items-stretch justify-around rounded-[28px] px-1.5"
+        style={{ boxShadow: "var(--highlight), var(--shadow-xl)" }}
+      >
         {left.map((destination) => (
           <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} />
         ))}
 
-        <div className="flex w-16 shrink-0 items-center justify-center">
-          <button
+        <div className="flex w-[4.5rem] shrink-0 items-center justify-center">
+          <motion.button
             onClick={() => {
               haptic(12);
               onAddExpense();
             }}
             aria-label="Add an expense"
-            className="flex size-[3.25rem] -translate-y-3 items-center justify-center rounded-full bg-brand text-white shadow-float transition active:scale-90"
+            whileTap={{ scale: 0.86, rotate: 90 }}
+            whileHover={{ scale: 1.06 }}
+            transition={{ type: "spring", stiffness: 520, damping: 22 }}
+            className="bg-gradient-brand relative flex size-[3.4rem] -translate-y-4 items-center justify-center rounded-full text-white"
+            style={{
+              boxShadow:
+                "inset 0 1px 0 oklch(1 0 0 / 0.35), 0 10px 24px -6px color-mix(in oklch, var(--sunset-2) 70%, transparent), 0 4px 10px -2px color-mix(in oklch, var(--sunset-1) 60%, transparent)",
+            }}
           >
-            <Plus className="size-6" strokeWidth={2.6} />
-          </button>
+            {/* A slow halo, so the one action that matters most is the one
+                thing on the bar that breathes. */}
+            <span className="bg-gradient-brand absolute inset-0 -z-10 animate-ping rounded-full opacity-20 [animation-duration:3s]" />
+            <Plus className="size-6" strokeWidth={2.8} />
+          </motion.button>
         </div>
 
         {right.map((destination) => (
@@ -124,22 +157,35 @@ function TabLink({ destination, active }: { destination: Destination; active: bo
       href={destination.href}
       onClick={() => haptic()}
       aria-current={active ? "page" : undefined}
-      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 transition"
+      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 transition active:scale-90"
     >
-      <span className="relative">
-        <Icon
-          className={cn(
-            "size-[22px] transition-colors duration-200",
-            active ? "text-brand" : "text-subtle",
-          )}
-          strokeWidth={active ? 2.4 : 2}
+      {active ? (
+        <motion.span
+          layoutId="tab-pill"
+          className="absolute inset-x-1 inset-y-1.5 rounded-[20px] bg-brand-soft"
+          transition={{ type: "spring", stiffness: 480, damping: 36 }}
         />
+      ) : null}
+      <span className="relative">
+        <motion.span
+          className="flex"
+          animate={active ? { y: -1, scale: 1.08 } : { y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 22 }}
+        >
+          <Icon
+            className={cn(
+              "size-[22px] transition-colors duration-200",
+              active ? "text-brand-soft-text" : "text-subtle",
+            )}
+            strokeWidth={active ? 2.4 : 2}
+          />
+        </motion.span>
         {destination.badge ? <Dot count={destination.badge} /> : null}
       </span>
       <span
         className={cn(
-          "text-micro font-semibold transition-colors duration-200",
-          active ? "text-brand" : "text-subtle",
+          "relative text-micro font-semibold transition-colors duration-200",
+          active ? "text-brand-soft-text" : "text-subtle",
         )}
       >
         {destination.label}
@@ -239,10 +285,10 @@ function Sidebar({
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2", className)}>
-      <span className="flex size-8 items-center justify-center rounded-[10px] bg-brand text-subhead font-black text-white">
+      <span className="bg-gradient-brand flex size-8 items-center justify-center rounded-[10px] font-display text-subhead font-extrabold text-white shadow-raised">
         D
       </span>
-      <span className="text-title-lg font-black tracking-[-0.03em] text-text">Divvy</span>
+      <span className="font-display text-title-lg font-extrabold tracking-[-0.03em] text-text">Divvy</span>
     </span>
   );
 }

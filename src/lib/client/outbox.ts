@@ -247,15 +247,34 @@ export async function flush(): Promise<FlushResult> {
         const attempts = mutation.attempts + 1;
         const database = await db();
         if (attempts >= MAX_ATTEMPTS) {
-          await database.put(STORE, {
+          /*
+           * A change the server has failed on six times running is set aside
+           * with the others it refused, where the banner offers Retry.
+           *
+           * It used to stay at the head of the queue, marked failed - and since
+           * the queue is strictly ordered, everything typed after it waited
+           * behind it forever. One request the server could not handle froze
+           * every later change on the device, and signing out was blocked too.
+           */
+          await database.put(REJECTED_STORE, {
             ...mutation,
             attempts,
-            lastError: error instanceof Error ? error.message : "Unknown error",
-          });
+            reason:
+              error instanceof Error && error.message
+                ? `${error.message} (tried ${attempts} times)`
+                : `The server could not save this after ${attempts} tries.`,
+            status: error instanceof ApiError ? error.status : 0,
+            rejectedAt: Date.now(),
+          } satisfies RejectedMutation);
+          await database.delete(STORE, mutation.id);
           failed++;
-          break;
+          continue;
         }
-        await database.put(STORE, { ...mutation, attempts });
+        await database.put(STORE, {
+          ...mutation,
+          attempts,
+          lastError: error instanceof Error ? error.message : "Unknown error",
+        });
         break;
       }
     }

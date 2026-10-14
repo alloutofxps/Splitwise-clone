@@ -211,6 +211,10 @@ export interface RecurrenceDto {
   endsAt: string | null;
   active: boolean;
   createdByPersonId: string;
+  /** IANA zone the schedule is kept in. */
+  timeZone: string;
+  /** Why it was paused, when the app paused it rather than a person. */
+  lastError: string | null;
 }
 
 export const RECURRENCE_FREQUENCIES = [

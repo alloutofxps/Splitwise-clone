@@ -111,7 +111,31 @@ export default function GroupPage() {
       </header>
 
       {/* Balance summary -------------------------------------------------- */}
-      <div className="mt-2 rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
+      {/* The group's own colour as the light in its banner, with its emoji
+          floating in the corner - every group gets a look of its own. */}
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 220, damping: 24 }}
+        className="relative mt-2 overflow-hidden rounded-[28px] border border-[var(--card-border)] bg-surface p-5"
+        style={{
+          boxShadow: `var(--highlight), 0 24px 44px -22px color-mix(in oklch, var(--avatar-${group.color}, var(--avatar-iris)) 65%, transparent), var(--shadow-sm)`,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `radial-gradient(85% 90% at 100% 0%, color-mix(in oklch, var(--avatar-${group.color}, var(--avatar-iris)) 34%, transparent) 0%, transparent 62%)`,
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="float pointer-events-none absolute -right-2 -top-3 select-none text-[5.5rem] leading-none opacity-90 [--tilt:8deg]"
+        >
+          {group.emoji}
+        </span>
+        <div className="relative">
         <BalanceHeadline
           net={net}
           currency={group.currency}
@@ -148,10 +172,11 @@ export default function GroupPage() {
             </Button>
           </div>
         </div>
-      </div>
+        </div>
+      </motion.div>
 
       {/* Tabs -------------------------------------------------------------- */}
-      <div className="sticky top-0 z-20 -mx-4 mt-5 bg-bg/90 px-4 py-2 backdrop-blur lg:-mx-8 lg:px-8">
+      <div className="sticky top-0 z-20 -mx-4 mt-5 px-4 py-2 lg:-mx-8 lg:px-8">
         <Segmented
           value={tab}
           onChange={setTab}
@@ -168,7 +193,7 @@ export default function GroupPage() {
           key={tab}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
+          exit={{ opacity: 0, y: -6, pointerEvents: "none" }}
           transition={{ duration: 0.18 }}
           className="mt-4"
         >

@@ -42,7 +42,9 @@ const DELIBERATELY_UNCALLED: Record<string, string> = {
   "GET /api/attachments/[id]":
     "Reached by the browser, not by the app. `read.ts` hands the client an `/api/attachments/<id>` URL and it lands in an `<img src>` or a download, so there is no fetch to find - the bytes are requested by the element.",
   "POST /api/recurrences/run":
-    "Cron entry point. Recurrences also catch up whenever anyone opens the app, so the client has no reason to call it; the README documents pointing a scheduler here instead.",
+    "Cron entry point. The server's own scheduler posts recurring expenses every minute, so the client has no reason to call it; an external scheduler can, holding DIVVY_CRON_SECRET.",
+  "GET /api/health":
+    "For the hosting platform's health check and uptime monitors, not for the app.",
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -166,7 +168,9 @@ function clientCallSites(): CallSite[] {
   return sites;
 }
 
-const routeFiles = walk(join(ROOT, "src/app/api")).filter((f) => /\/route\.tsx?$/.test(f));
+// Either separator: on Windows the walk returns backslashed paths, and a
+// forward-slash-only pattern matched nothing, failing the suite there.
+const routeFiles = walk(join(ROOT, "src/app/api")).filter((f) => /[\\/]route\.tsx?$/.test(f));
 const callSites = clientCallSites();
 
 const handlers = routeFiles.flatMap((file) => {

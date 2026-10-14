@@ -60,8 +60,28 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     DATABASE_URL=file:/data/divvy.db
+# gosu: steps down from root to the `node` user after fixing the volume's
+# ownership (see the entrypoint). Litestream: streams every database change to
+# object storage when LITESTREAM_REPLICA_URL is set - the off-site backup a
+# single SQLite file on one disk otherwise lacks. Pinned to a release and
+# checked against GitHub's published digest, so a tampered download fails the
+# build instead of shipping.
+ARG LITESTREAM_VERSION=0.5.17
+ARG LITESTREAM_SHA256_AMD64=a191a0928884d1820fab1f866ede1d0d5811c323d0587bf863a43481a82a7668
+ARG LITESTREAM_SHA256_ARM64=7d34ed3356844fe3dd127462b9f4ea7e79ef14679eadf2fed6c737dcb797358e
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && apt-get install -y --no-install-recommends openssl ca-certificates gosu curl \
+ && arch="$(dpkg --print-architecture)" \
+ && case "$arch" in \
+      amd64) file="litestream-${LITESTREAM_VERSION}-linux-x86_64.deb"; sum="$LITESTREAM_SHA256_AMD64" ;; \
+      arm64) file="litestream-${LITESTREAM_VERSION}-linux-arm64.deb"; sum="$LITESTREAM_SHA256_ARM64" ;; \
+      *) echo "no litestream build for $arch" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL -o /tmp/litestream.deb "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${file}" \
+ && echo "${sum}  /tmp/litestream.deb" | sha256sum -c - \
+ && dpkg -i /tmp/litestream.deb \
+ && rm /tmp/litestream.deb \
+ && apt-get purge -y curl && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
@@ -85,19 +105,16 @@ RUN chmod +x docker-entrypoint.sh
 # load-bearing anyway: it only controls whether Docker invents an anonymous
 # volume when you forget `-v`, and every host worth deploying to attaches a
 # named one. `docker run -v divvy-data:/data` behaves identically without it.
-RUN mkdir -p /data
+RUN mkdir -p /data && chown node:node /data
 
-# Runs as root, which is a concession and worth naming as one.
-#
-# A managed volume is mounted root-owned, so a container that drops to an
-# unprivileged user cannot create the SQLite file inside it and dies on first
-# boot with a permission error that looks like a database problem. Doing this
-# properly means chowning the mount at runtime and stepping down with gosu —
-# more moving parts in the one place that must not fail. On a host where you
-# control the mount's ownership, add `USER node` back and chown `/data` to it.
+# The container starts as root only long enough for the entrypoint to give
+# `/data` to the `node` user - a managed volume is mounted root-owned, so an
+# unprivileged process could not create the database in it - and then runs the
+# app as `node` via gosu. It used to run as root throughout, so any code
+# execution bug would have had the whole container.
 EXPOSE 3000
 
-# No HEALTHCHECK either. Railway's builder reports only the first instruction
-# it dislikes, so with VOLUME removed this would be the next candidate, and a
-# platform that does its own health checking gains nothing from it.
+# No Dockerfile HEALTHCHECK: Railway's builder has refused unfamiliar
+# instructions before. The app serves `/api/health` (which also checks the
+# database), and `railway.json` points Railway's own health check at it.
 ENTRYPOINT ["./docker-entrypoint.sh"]

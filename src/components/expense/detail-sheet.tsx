@@ -119,7 +119,12 @@ export function ExpenseDetailSheet({
 
   return (
     <>
-      <Sheet open={Boolean(expenseId) && !editing} onClose={onClose} tall>
+      <Sheet
+        open={Boolean(expenseId) && !editing}
+        onClose={onClose}
+        tall
+        ariaLabel={expense ? `Expense: ${expense.description}` : "Expense"}
+      >
         {isLoading || !expense ? (
           <div className="space-y-3 px-5 py-4">
             <Skeleton className="h-8 w-40" />
@@ -323,7 +328,7 @@ export function ExpenseDetailSheet({
                           haptic();
                           setConfirmRemoveReceipt(attachment.id);
                         }}
-                        className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full border border-line bg-surface shadow-card text-muted transition active:scale-90 disabled:opacity-40"
+                        className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] text-muted transition active:scale-90 disabled:opacity-40"
                       >
                         <X className="size-3.5" />
                       </button>

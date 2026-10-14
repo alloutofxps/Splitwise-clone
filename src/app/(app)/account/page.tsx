@@ -19,6 +19,7 @@ import {
   Plus,
   Sun,
   Target,
+  Trash2,
   TriangleAlert,
   Wallet,
   X,
@@ -36,7 +37,8 @@ import { clearRecoveryPending, recoveryPending } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
-import { clear as clearOutbox, pending } from "@/lib/client/outbox";
+import { pending } from "@/lib/client/outbox";
+import { wipeLocalData } from "@/lib/client/wipe";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
@@ -61,6 +63,9 @@ export default function AccountPage() {
   const [budgetsOpen, setBudgets] = React.useState(false);
   const [devicesOpen, setDevices] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
+  const [discardCount, setDiscardCount] = React.useState(0);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const [keyUnsaved, setKeyUnsaved] = React.useState(false);
   const [emojiOpen, setEmojiOpen] = React.useState(false);
 
@@ -82,22 +87,58 @@ export default function AccountPage() {
 
   const me = data.me;
 
-  const signOut = async () => {
+  /**
+   * Signs this device out and removes everything it holds.
+   *
+   * Unsynced changes used to block signing out outright - which, with a change
+   * the server kept refusing, meant a device that could never sync and never
+   * be signed out. Now the person is told how many would be lost and decides.
+   */
+  const signOut = async (discardUnsynced = false) => {
     const queued = await pending();
-    if (queued.length > 0) {
-      toast({
-        tone: "error",
-        title: "Not yet — there are unsynced changes",
-        description: `${queued.length} change${queued.length === 1 ? "" : "s"} still need to reach the server. Reconnect first.`,
-      });
+    if (queued.length > 0 && !discardUnsynced) {
       setConfirmSignOut(false);
+      setDiscardCount(queued.length);
       return;
     }
 
-    await api.del("/api/identity");
-    await clearOutbox();
-    client.clear();
+    try {
+      await api.del("/api/identity");
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not sign out",
+        description:
+          error instanceof ApiError && error.isOffline
+            ? "Connect to the internet first, so this device is signed out on the server too."
+            : error instanceof ApiError
+              ? error.message
+              : undefined,
+      });
+      return;
+    }
+    setDiscardCount(0);
+    await wipeLocalData(client);
     router.refresh();
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api.del("/api/identity/account");
+      await wipeLocalData(client);
+      setConfirmDelete(false);
+      toast({ tone: "success", title: "Your account has been deleted" });
+      router.refresh();
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "Could not delete your account",
+        description: error instanceof ApiError ? error.message : undefined,
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -105,7 +146,7 @@ export default function AccountPage() {
       <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Account</h1>
 
       {/* Profile ----------------------------------------------------------- */}
-      <section className="rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
+      <section className="rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-5">
         <div className="flex items-center gap-4">
           {/*
             The avatar is the obvious thing to tap to change how you look, so
@@ -158,7 +199,7 @@ export default function AccountPage() {
             haptic();
             setEmojiOpen(true);
           }}
-          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-2.5 text-left transition active:scale-[0.985]"
+          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-2.5 text-left transition active:scale-[0.985]"
         >
           <span
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-body-lg font-bold text-white"
@@ -180,7 +221,7 @@ export default function AccountPage() {
           initials={initials(me.displayName)}
         />
 
-        <div className="mt-4 flex flex-wrap gap-1.5">
+        <div className="mt-4 grid grid-cols-10 gap-1.5">
           {AVATAR_COLORS.map((color) => (
             <button
               key={color}
@@ -190,8 +231,8 @@ export default function AccountPage() {
               }}
               aria-label={`Use the ${color} avatar colour`}
               className={cn(
-                "size-7 rounded-full transition active:scale-90",
-                me.avatarColor === color && "ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]",
+                "aspect-square w-full max-w-9 rounded-full [box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),var(--shadow-sm)] transition active:scale-90",
+                me.avatarColor === color && "outline-2 outline-offset-2 outline-brand outline-solid",
               )}
               style={{ background: `var(--avatar-${color})` }}
             />
@@ -240,7 +281,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
           <span className="shrink-0 text-muted">
             <EyeOff className="size-[18px]" />
           </span>
@@ -259,7 +300,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <div className="mt-3 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
+        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Appearance</p>
           <Segmented
             value={theme}
@@ -326,6 +367,12 @@ export default function AccountPage() {
             tone="danger"
             onClick={() => setConfirmSignOut(true)}
           />
+          <Row
+            icon={<Trash2 className="size-[18px]" />}
+            label="Delete my account"
+            tone="danger"
+            onClick={() => setConfirmDelete(true)}
+          />
         </div>
 
         <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">
@@ -344,6 +391,11 @@ export default function AccountPage() {
         </p>
         <p className="mt-1 text-tiny text-subtle">
           No accounts, no ads, no tracking, no paywall.
+        </p>
+        <p className="mt-2 text-tiny">
+          <a href="/privacy" className="font-semibold text-subtle underline underline-offset-2">
+            What Divvy stores about you
+          </a>
         </p>
         {/*
           Which build this actually is.
@@ -396,8 +448,27 @@ export default function AccountPage() {
         onClose={() => setConfirmSignOut(false)}
         onConfirm={() => void signOut()}
         title="Sign out on this device?"
-        description="Your data stays on the server. You will need your recovery key to get back in — make sure you have it saved."
+        description="Your data stays on the server and is removed from this device. You will need a passkey or your recovery key to get back in — make sure you have one."
         confirmLabel="Sign out"
+      />
+
+      <ConfirmSheet
+        open={discardCount > 0}
+        onClose={() => setDiscardCount(0)}
+        onConfirm={() => void signOut(true)}
+        title={`${discardCount} change${discardCount === 1 ? " hasn't" : "s haven't"} synced`}
+        description="Signing out now throws them away - they exist only on this device. Reconnect and wait for them to sync if you want to keep them."
+        confirmLabel="Sign out and discard"
+      />
+
+      <ConfirmSheet
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => void deleteAccount()}
+        loading={deleting}
+        title="Delete your account?"
+        description="Your name, payment details, budgets, passkeys and comments are erased, and you leave every group. Expenses you shared stay on the other people's books, shown as “Deleted user”. You have to be settled up everywhere first. This cannot be undone."
+        confirmLabel="Delete my account"
       />
     </div>
   );
@@ -431,7 +502,7 @@ function StorageRow() {
   if (!status?.supported) return null;
 
   return (
-    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
       <span className="shrink-0 pt-0.5 text-muted">
         <Database className="size-[18px]" />
       </span>
@@ -477,7 +548,7 @@ function Row({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
     >
       <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
         {icon}
@@ -682,7 +753,7 @@ function PaymentMethodsSheet({
               return (
                 <li
                   key={method.id}
-                  className="flex items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5"
                 >
                   <span className="text-title">{entry?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
@@ -706,13 +777,14 @@ function PaymentMethodsSheet({
           </ul>
         ) : null}
 
-        <div className="mt-5 rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
+        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Add a method</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
             {PAYMENT_KINDS.map((entry) => (
               <button
                 key={entry.value}
+                aria-pressed={kind === entry.value}
                 onClick={() => {
                   haptic();
                   setKind(entry.value);

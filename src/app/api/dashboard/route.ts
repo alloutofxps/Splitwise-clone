@@ -1,21 +1,18 @@
 import { json, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { dashboardDto, visiblePeople } from "@/server/me";
-import { runDueRecurrences } from "@/server/recurrence";
 
 /**
  * The home screen in one request.
  *
- * Also the app's heartbeat: opening it fires any recurring expenses that have
- * come due. Self-hosted deployments have no scheduler, and "the rent posted
- * when somebody opened the app" is a far better failure mode than "the rent
- * never posted". `runDueRecurrences` is idempotent, so several people opening
- * the app at once cannot double-post.
+ * This used to be the app's heartbeat too, posting every customer's due
+ * recurring expenses before answering - so whoever opened the app first paid
+ * for everybody's schedule, and any user could trigger the whole system's
+ * work. Recurring expenses are now posted by the server's scheduler
+ * (`server/jobs.ts`), and this request only reads.
  */
 export const GET = route(async () => {
   const session = await requireSession();
-
-  await runDueRecurrences();
 
   const [dashboard, people] = await Promise.all([
     dashboardDto(session.person),

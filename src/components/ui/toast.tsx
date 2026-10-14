@@ -121,10 +121,19 @@ function ToastViewport({
             layout
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            // Taps pass through as soon as it starts leaving, not when it is gone.
+            exit={{ opacity: 0, y: 8, scale: 0.96, pointerEvents: "none" }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            // A toast sits above everything, sheets included, so for the few
+            // seconds it is up it covers whatever is beneath it. Tapping it
+            // dismisses it, rather than the tap simply being swallowed - and the
+            // finger that wanted the button underneath gets it on the next tap.
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("button")) return;
+              onDismiss(toast.id);
+            }}
             className={cn(
-              "pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-[var(--radius-lg)]",
+              "pointer-events-auto flex w-full max-w-[420px] cursor-pointer items-start gap-3 rounded-[var(--radius-lg)]",
               "border border-line bg-elevated px-4 py-3 shadow-float",
             )}
           >

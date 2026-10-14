@@ -9,7 +9,7 @@ import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
-import { SplitEditor } from "./split-editor";
+import { SplitEditor, type ReceiptItem } from "./split-editor";
 import { CategoryPicker } from "./category-picker";
 import { PayerPicker } from "./payer-picker";
 import { CurrencyPicker } from "./currency-picker";
@@ -69,6 +69,8 @@ interface Draft {
   splitMode: SplitMode;
   payers: { personId: string; amount: bigint }[];
   participants: SplitParticipant[];
+  /** Receipt lines, for an itemised split. */
+  items: ReceiptItem[];
   attachments: PendingAttachment[];
   exchangeRate: string;
 }
@@ -154,6 +156,11 @@ export function ExpenseComposer({
     total: amount,
     participants: draft.participants,
     payerIds: draft.payers.map((p) => p.personId),
+    items: draft.items.map((item) => ({
+      id: item.id,
+      amount: item.amount ?? 0n,
+      participantIds: item.participantIds,
+    })),
   });
 
   const payersTotal = draft.payers.reduce((total, p) => total + p.amount, 0n);
@@ -225,6 +232,18 @@ export function ExpenseComposer({
         percent: s.percent ?? null,
         adjustment: s.adjustment?.toString() ?? null,
       })),
+      // The receipt lines themselves, so an itemised expense can be reopened
+      // and shown line by line. Only meaningful in that mode.
+      items:
+        draft.splitMode === "ITEMIZED"
+          ? draft.items
+              .filter((item) => (item.amount ?? 0n) > 0n)
+              .map((item) => ({
+                name: item.name.trim() || "Item",
+                amount: (item.amount ?? 0n).toString(),
+                participantIds: item.participantIds,
+              }))
+          : [],
       attachments: draft.attachments.map((attachment) => ({
         filename: attachment.filename,
         mimeType: attachment.mimeType,
@@ -387,7 +406,7 @@ export function ExpenseComposer({
           </div>
 
           {/* Description ---------------------------------------------------- */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}
@@ -432,22 +451,34 @@ export function ExpenseComposer({
 
           {/* Extras ---------------------------------------------------------- */}
           <div className="mt-5 flex flex-wrap gap-2">
-            <Chip
-              icon={<CalendarDays className="size-3.5" />}
-              active={!isToday(draft.date)}
-              onClick={() => {
-                const input = document.createElement("input");
-                input.type = "date";
-                input.value = toDateInput(draft.date);
-                input.onchange = () => {
-                  if (input.value) patch({ date: fromDateInput(input.value) });
-                };
-                input.showPicker?.();
-                input.click();
-              }}
-            >
-              {formatDateChip(draft.date)}
-            </Chip>
+            {/*
+              A real date field laid invisibly over the chip. The chip used to
+              build a date input in memory and ask the browser to open it, which
+              browsers refuse for an element that is not on the page - so the
+              date could not be changed at all. A tap on this field opens the
+              native picker on phones; showPicker() covers desktop browsers.
+            */}
+            <span className="relative inline-flex">
+              <Chip icon={<CalendarDays className="size-3.5" />} active={!isToday(draft.date)} onClick={() => {}}>
+                {formatDateChip(draft.date)}
+              </Chip>
+              <input
+                type="date"
+                aria-label="Date"
+                value={toDateInput(draft.date)}
+                onChange={(event) => {
+                  if (event.target.value) patch({ date: fromDateInput(event.target.value) });
+                }}
+                onClick={(event) => {
+                  try {
+                    event.currentTarget.showPicker?.();
+                  } catch {
+                    // Not supported: the native tap behaviour still applies.
+                  }
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer text-input opacity-0"
+              />
+            </span>
 
             <Chip
               icon={<Camera className="size-3.5" />}
@@ -480,8 +511,9 @@ export function ExpenseComposer({
         total={amount}
         mode={draft.splitMode}
         participants={draft.participants}
+        items={draft.items}
         payerIds={draft.payers.map((p) => p.personId)}
-        onChange={(mode, participants) => patch({ splitMode: mode, participants })}
+        onChange={(mode, participants, items) => patch({ splitMode: mode, participants, items })}
       />
 
       <PayerPicker
@@ -577,6 +609,7 @@ function freshDraft(
       personId,
       included: true,
     })),
+    items: [],
     attachments: [],
     exchangeRate: "1",
   };
@@ -601,6 +634,12 @@ function draftFromExpense(expense: ExpenseDto): Draft {
       weight: s.weight ?? undefined,
       percent: s.percent ?? undefined,
       adjustment: s.adjustment ? BigInt(s.adjustment) : undefined,
+    })),
+    items: expense.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      amount: BigInt(item.amount),
+      participantIds: item.participantIds,
     })),
     attachments: [],
     exchangeRate: expense.exchangeRate,

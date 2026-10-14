@@ -41,7 +41,11 @@ export function Avatar({
   single?: boolean;
 }) {
   const label = initials(person.displayName);
-  const background = `var(--avatar-${person.avatarColor}, var(--avatar-iris))`;
+  const colour = `var(--avatar-${person.avatarColor}, var(--avatar-iris))`;
+  // Lit from the top left, like a bead rather than a flat disc.
+  const background = person.isGhost
+    ? `color-mix(in oklch, ${colour} 38%, var(--surface-3))`
+    : `radial-gradient(120% 120% at 25% 15%, color-mix(in oklch, ${colour} 70%, white) 0%, ${colour} 55%, color-mix(in oklch, ${colour} 82%, black) 100%)`;
 
   return (
     <span
@@ -49,12 +53,11 @@ export function Avatar({
         "relative inline-flex shrink-0 select-none items-center justify-center rounded-full font-bold text-white",
         SIZES[size],
         ring && "ring-2 ring-surface",
-        // A placeholder is drawn dimmer and dashed so it is obvious at a glance
-        // which people in a group have not actually joined yet.
-        person.isGhost && "opacity-90",
         className,
       )}
-      style={{ background }}
+      // A placeholder's softened disc needs the page's text colour to keep its
+      // initials legible in both themes.
+      style={{ background, ...(person.isGhost ? { color: "var(--text-muted)" } : {}) }}
       aria-hidden
     >
       {person.avatarEmoji ? (
@@ -65,7 +68,12 @@ export function Avatar({
         </span>
       )}
       {person.isGhost ? (
-        <span className="absolute inset-0 rounded-full border-2 border-dashed border-surface/70" />
+        // Not joined yet: softened colour and a fine dotted outline, which
+        // reads as "pending" where the old thick dashed ring read as a glitch.
+        <span
+          className="absolute inset-0 rounded-full border border-dotted"
+          style={{ borderColor: `color-mix(in oklch, ${colour} 80%, transparent)` }}
+        />
       ) : null}
     </span>
   );

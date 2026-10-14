@@ -122,7 +122,7 @@ export default function ActivityPage() {
         <div className="space-y-5">
           {days.map(({ label, entries }) => (
             <section key={label}>
-              <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+              <h2 className="mb-2 mt-1 px-1 font-serif text-title italic text-muted">
                 {label}
               </h2>
               <ul className="space-y-1">
@@ -553,6 +553,18 @@ function describe(
           <>
             {strong(String(data.description ?? "A repeating expense"))} posted automatically
             {amount ? <> · <span className="tabular">{amount}</span></> : null}
+          </>
+        ),
+      };
+
+    case "recurrence.paused":
+      return {
+        icon: <Repeat className="size-[16px]" />,
+        tone: "warning",
+        sentence: (
+          <>
+            {strong(String(data.description ?? "A repeating expense"))} was paused
+            {typeof data.reason === "string" && data.reason ? <> · {data.reason}</> : null}
           </>
         ),
       };

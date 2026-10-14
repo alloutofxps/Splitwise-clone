@@ -11,6 +11,7 @@ import { useSettleWithPerson } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/lib/client/api";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { celebrate } from "../ui/motion";
 import type { PersonDto, SharedLedgerDto } from "@/lib/types";
 
 /**
@@ -83,6 +84,7 @@ export function SettleAcrossSheet({
         })),
       });
       haptic([8, 30, 8]);
+      if (result !== null) celebrate();
       toast(
         result === null
           ? {
