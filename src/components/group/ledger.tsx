@@ -38,6 +38,18 @@ import type { PersonDto } from "@/lib/types";
  * entered in, because a trip can hold a euro dinner and a rupee taxi, and
  * relabelling either with the group's settlement currency would be a lie.
  */
+/**
+ * Rows rise into place, and slide rather than jump when a new expense is
+ * inserted above them - which is what makes a just-added dinner read as
+ * "arrived" rather than as the list redrawing.
+ */
+const ROW_MOTION = {
+  layout: "position" as const,
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  transition: { type: "spring" as const, stiffness: 320, damping: 28 },
+};
+
 export function GroupLedger({
   groupId,
   meId,
@@ -262,13 +274,13 @@ export function GroupLedger({
         <div className="space-y-5">
           {groups.map(({ label, precise, entries }) => (
             <section key={label}>
-              <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+              <h3 className="mb-2 mt-1 px-1 font-serif text-title italic text-muted">
                 {label}
               </h3>
               <ul className="space-y-1.5">
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
-                    <li key={entry.expense.id}>
+                    <motion.li key={entry.expense.id} {...ROW_MOTION}>
                       <ExpenseRow
                         expense={entry.expense}
                         meId={meId}
@@ -277,9 +289,9 @@ export function GroupLedger({
                         showDate={!precise}
                         onOpen={() => setOpenExpenseId(entry.expense!.id)}
                       />
-                    </li>
+                    </motion.li>
                   ) : entry.settlement ? (
-                    <li key={entry.settlement.id}>
+                    <motion.li key={entry.settlement.id} {...ROW_MOTION}>
                       <SettlementRow
                         settlement={entry.settlement}
                         meId={meId}
@@ -288,7 +300,7 @@ export function GroupLedger({
                         groupId={groupId}
                         showDate={!precise}
                       />
-                    </li>
+                    </motion.li>
                   ) : null,
                 )}
               </ul>
@@ -353,7 +365,7 @@ export function ExpenseRow({
         onOpen();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
+        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
         // Faded rather than spinner-topped: the row is real and its numbers are
         // already correct, so the only thing being signalled is that the server
         // has not acknowledged it. A spinner would suggest it might not be

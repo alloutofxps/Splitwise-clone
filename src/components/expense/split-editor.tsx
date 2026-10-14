@@ -445,7 +445,7 @@ function MiniButton({ children, onClick }: { children: React.ReactNode; onClick:
         haptic();
         onClick();
       }}
-      className="rounded-full border border-line bg-surface px-3 py-1.5 text-caption font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+      className="rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-1.5 text-caption font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
     >
       {children}
     </button>
@@ -577,7 +577,7 @@ function ItemEditor({
     <div className="mt-4">
       <ul className="space-y-2.5">
         {items.map((item, index) => (
-          <li key={item.id} className="rounded-[var(--radius-md)] border border-line bg-surface p-3">
+          <li key={item.id} className="rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3">
             <div className="flex items-center gap-2">
               <input
                 value={item.name}

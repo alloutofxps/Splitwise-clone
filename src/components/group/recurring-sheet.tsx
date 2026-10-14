@@ -113,7 +113,7 @@ export function RecurringSheet({
                 <li
                   key={recurrence.id}
                   className={cn(
-                    "rounded-[var(--radius-lg)] border border-line bg-surface p-3.5",
+                    "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5",
                     !recurrence.active && "opacity-60",
                   )}
                 >

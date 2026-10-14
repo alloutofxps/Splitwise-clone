@@ -58,7 +58,7 @@ export default function SearchPage() {
       <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Search</h1>
 
       <div className="sticky top-0 z-20 -mx-4 bg-bg/90 px-4 pb-3 backdrop-blur lg:-mx-8 lg:px-8">
-        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-ring)]">
+        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus-within)]:[box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-ring)]">
           <Search className="size-[18px] shrink-0 text-subtle" />
           <input
             value={query}
@@ -100,7 +100,7 @@ export default function SearchPage() {
                   haptic();
                   setQuery(`category:${category.id}`);
                 }}
-                className="rounded-full border border-line bg-surface px-3 py-1.5 text-body font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+                className="rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-1.5 text-body font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
               >
                 {category.name}
               </button>

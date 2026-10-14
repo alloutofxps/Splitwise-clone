@@ -406,7 +406,7 @@ export function ExpenseComposer({
           </div>
 
           {/* Description ---------------------------------------------------- */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}

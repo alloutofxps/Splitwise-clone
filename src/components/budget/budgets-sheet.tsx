@@ -138,7 +138,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
   };
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-3.5">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
       <div className="flex items-start gap-3">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"

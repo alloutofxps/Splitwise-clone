@@ -88,7 +88,7 @@ export function MergePersonSheet({
                       haptic();
                       setChosen(person);
                     }}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2"
+                    className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2"
                   >
                     <Avatar person={person} size="sm" />
                     <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">

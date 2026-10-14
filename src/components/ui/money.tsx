@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "./primitives";
+import { AnimatedAmount } from "./motion";
 import { currencySymbol, decimalsFor, formatMoney, parseAmount, toDecimalString } from "@/lib/money";
 
 /**
@@ -43,6 +44,9 @@ export function Amount({
     <span
       className={cn(
         "display-number whitespace-nowrap font-semibold",
+        // The display face for anything big enough to be looked at rather
+        // than read past; small inline figures stay in the text face.
+        size !== "xs" && size !== "sm" && "font-display tracking-[-0.02em]",
         size === "xs" && "text-caption",
         size === "sm" && "text-body",
         size === "md" && "text-subhead",
@@ -328,7 +332,7 @@ export function BalanceHeadline({
   if (net === 0n) {
     return (
       <div>
-        <p className="text-subhead font-semibold text-muted">{settledLabel}</p>
+        <p className="font-serif text-display italic leading-none text-text">{settledLabel}</p>
       </div>
     );
   }
@@ -336,15 +340,18 @@ export function BalanceHeadline({
   const owed = net > 0n;
   return (
     <div>
-      <p className="text-body font-semibold uppercase tracking-[0.06em] text-subtle">
+      <p className="text-subhead font-semibold text-muted">
         {owed ? "You are owed" : "You owe"}
       </p>
-      <Amount
+      {/* Counts to its value, so a change reads as a change. */}
+      <AnimatedAmount
         value={net}
         currency={currency}
-        size={size}
-        tone={owed ? "positive" : "negative"}
-        className="mt-1 block"
+        className={cn(
+          "mt-1 block font-display font-extrabold leading-none tracking-[-0.04em]",
+          size === "hero" ? "text-display-lg" : size === "xl" ? "text-display" : "text-title-lg",
+          owed ? "text-positive-text" : "text-negative-text",
+        )}
       />
     </div>
   );

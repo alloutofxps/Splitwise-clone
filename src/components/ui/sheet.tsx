@@ -113,6 +113,29 @@ export function Sheet({
 }
 
 /**
+ * How many sheets are open. Nested sheets (a picker inside the composer) keep
+ * the page pushed back until the last one closes.
+ */
+let openSheets = 0;
+
+function pushPage() {
+  openSheets += 1;
+  const root = document.documentElement;
+  if (openSheets === 1) {
+    // Scale about the middle of what is on screen, not the top of a long page.
+    root.style.setProperty("--frame-origin", `${window.scrollY + window.innerHeight / 2}px`);
+  }
+  root.setAttribute("data-sheets", String(openSheets));
+}
+
+function popPage() {
+  openSheets = Math.max(0, openSheets - 1);
+  const root = document.documentElement;
+  if (openSheets === 0) root.removeAttribute("data-sheets");
+  else root.setAttribute("data-sheets", String(openSheets));
+}
+
+/**
  * Whether this element is the reason a keyboard would be on screen.
  *
  * The viewport being short is not on its own evidence of a keyboard, and
@@ -234,6 +257,14 @@ function SheetBody({
    * out now lets every tap through.
    */
   const present = useIsPresent();
+
+  // Push the page back while this sheet is up (see `.app-frame` in
+  // globals.css), and let it come forward the moment the sheet starts leaving.
+  React.useEffect(() => {
+    if (!present) return;
+    pushPage();
+    return popPage;
+  }, [present]);
 
   /*
    * Dismissal is driven from the handle and the title bar only.

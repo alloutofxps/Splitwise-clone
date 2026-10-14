@@ -213,7 +213,7 @@ export default function JoinPage() {
 
         {/* Placeholder claiming ------------------------------------------- */}
         {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
-          <div className="mt-7 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
             <p className="flex items-center gap-1.5 text-body-lg font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
               Which one are you?

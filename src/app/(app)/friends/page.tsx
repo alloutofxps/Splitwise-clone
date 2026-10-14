@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Check, Plus, SlidersHorizontal, UserRoundPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, SectionHeader, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/sheet";
+import { listItem } from "@/components/ui/motion";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { useDashboard } from "@/lib/client/queries";
@@ -199,10 +201,10 @@ export default function FriendsPage() {
             <section className="mb-6">
               <SectionHeader title="Outstanding" />
               <ul className="space-y-2.5">
-                {owing.map((friend) => (
-                  <li key={friend.person.id}>
+                {owing.map((friend, index) => (
+                  <motion.li key={friend.person.id} custom={index} variants={listItem} initial="hidden" animate="shown">
                     <FriendCard friend={friend} />
-                  </li>
+                  </motion.li>
                 ))}
               </ul>
             </section>
@@ -231,10 +233,10 @@ export default function FriendsPage() {
                 <>
                   <SectionHeader title={owing.length > 0 ? "Settled up" : "All settled up"} />
                   <ul className="space-y-2.5">
-                    {settled.map((friend) => (
-                      <li key={friend.person.id}>
+                    {settled.map((friend, index) => (
+                      <motion.li key={friend.person.id} custom={owing.length + index} variants={listItem} initial="hidden" animate="shown">
                         <FriendCard friend={friend} />
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
                 </>
@@ -278,7 +280,7 @@ function FriendCard({ friend }: { friend: FriendDto }) {
   return (
     <Link
       href={`/friends/${friend.person.id}`}
-      className="block rounded-[var(--radius-lg)] border border-line bg-surface p-3.5 shadow-card transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
+      className="block rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5 transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
     >
       <span className="flex items-center gap-3.5">
         <Avatar person={friend.person} size="md" />

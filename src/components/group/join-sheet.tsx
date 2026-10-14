@@ -169,7 +169,7 @@ export function JoinSheet({
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="go"
-          className="h-14 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-center text-title-lg font-bold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-14 w-full rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus)]:[box-shadow:var(--highlight),var(--shadow-sm)] px-4 text-center text-title-lg font-bold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
         />
 
         <p className="mt-2 text-center text-caption text-subtle">
@@ -178,7 +178,7 @@ export function JoinSheet({
 
         <div className="mt-5">
           {checking ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
               <Skeleton className="size-11 rounded-[var(--radius-md)]" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-3.5 w-32" />
@@ -190,7 +190,7 @@ export function JoinSheet({
               No group or person has that code.
             </p>
           ) : preview?.kind === "group" ? (
-            <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
               <div className="flex items-center gap-3">
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-heading">
                   {preview.group.emoji}
@@ -265,7 +265,7 @@ export function JoinSheet({
               ) : null}
             </div>
           ) : preview?.kind === "person" ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
               <Avatar person={preview.person} size="lg" />
               <div className="min-w-0">
                 <p className="truncate text-subhead font-bold text-text">

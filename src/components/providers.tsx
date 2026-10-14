@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "framer-motion";
 import { ApiError } from "@/lib/client/api";
 import { startAutoFlush } from "@/lib/client/outbox";
 import { ToastProvider } from "./ui/toast";
@@ -67,12 +68,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider>
-        <ToastProvider>
-          {children}
-          <PwaProvider />
-        </ToastProvider>
-      </ThemeProvider>
+      {/* Honours the system Reduce Motion setting everywhere at once: movement
+          is dropped and only fades remain. */}
+      <MotionConfig reducedMotion="user">
+        <ThemeProvider>
+          <ToastProvider>
+            {children}
+            <PwaProvider />
+          </ToastProvider>
+        </ThemeProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

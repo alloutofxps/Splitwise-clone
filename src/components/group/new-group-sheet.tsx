@@ -178,6 +178,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             {KINDS.map((entry) => (
               <button
                 key={entry.value}
+                aria-pressed={kind === entry.value}
                 onClick={() => {
                   haptic();
                   setKind(entry.value);
@@ -198,7 +199,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
 
           <button
             onClick={() => setCurrencyOpen(true)}
-            className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985]"
+            className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985]"
           >
             <span className="text-body-lg font-semibold text-muted">Settles in</span>
             <span className="text-body-lg font-bold text-text">{currency}</span>
@@ -207,7 +208,7 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
             Expenses can be in any currency; balances are totted up in this one.
           </p>
 
-          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 py-3">
+          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
                 Simplify debts

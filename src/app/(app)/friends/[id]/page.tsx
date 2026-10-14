@@ -114,7 +114,7 @@ export default function FriendPage() {
       </header>
 
       {/* Balance ---------------------------------------------------------- */}
-      <div className="mt-2 rounded-[var(--radius-xl)] border border-line bg-surface p-5 shadow-card">
+      <div className="mt-2 rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-5">
         <div className="flex items-center gap-4">
           <Avatar person={data.person} size="lg" />
           <div className="min-w-0 flex-1">
@@ -207,12 +207,12 @@ export default function FriendPage() {
                     {ledger.groupId ? (
                       <Link
                         href={`/groups/${ledger.groupId}`}
-                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 transition active:scale-[0.985]"
+                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 transition active:scale-[0.985]"
                       >
                         {body}
                       </Link>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3">
+                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
                         {body}
                       </div>
                     )}
@@ -232,7 +232,7 @@ export default function FriendPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-3 py-2 text-body font-semibold text-text transition active:scale-95"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2 text-body font-semibold text-text transition active:scale-95"
               >
                 <span>{group.emoji}</span>
                 <span className="max-w-[140px] truncate">{group.name}</span>
@@ -258,7 +258,7 @@ export default function FriendPage() {
           <div className="space-y-5">
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
-                <h3 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+                <h3 className="mb-2 mt-1 px-1 font-serif text-title italic text-muted">
                   {label}
                 </h3>
                 <ul className="space-y-1.5">
@@ -329,7 +329,7 @@ export default function FriendPage() {
                     <Link
                       href={`/groups/${group.id}`}
                       onClick={() => setSettings(false)}
-                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 transition active:scale-[0.985]"
+                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 transition active:scale-[0.985]"
                     >
                       <span className="text-input">{group.emoji}</span>
                       <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
@@ -358,7 +358,7 @@ export default function FriendPage() {
               setRemoving(true);
             }}
             disabled={anythingOutstanding}
-            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-3.5 py-3 text-left transition active:scale-[0.985] disabled:opacity-50 disabled:active:scale-100"
+            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] disabled:opacity-50 disabled:active:scale-100"
           >
             <UserMinus className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
             <span className="min-w-0 flex-1">
