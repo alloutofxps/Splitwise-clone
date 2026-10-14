@@ -10,7 +10,7 @@
  * guard an identity - so those are full-entropy random strings.
  */
 
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, randomInt, createHash } from "node:crypto";
 
 // Re-exported so server code has one import site for anything code-related.
 export { normalizeInviteCode, formatRecoveryKey } from "./invite-code";
@@ -49,26 +49,51 @@ function pick<T>(items: T[]): T {
 }
 
 /**
- * A group invite code: "mango-tiger-42".
- *
- * Roughly 48 x 62 x 90 = 268k combinations. That is deliberately small enough
- * to stay memorable and is not a secret on its own - codes are shared over
- * chat, and joining a group only lets you see that group.
- *
- * Entropy is therefore not what protects them: `server/rate-limit.ts` is,
- * applied to every endpoint that resolves a code (preview, join, friend-add,
- * add-by-code). At 20 attempts per ten minutes a full sweep of the space takes
- * years per source address. Read the caveats there before scaling the app to
- * more than one process - the counters are per-process.
+ * Lower-case letters and digits with the look-alikes (0/o, 1/l/i) removed, so a
+ * suffix read off a screen is unambiguous. Same alphabet as `lib/ids.ts`.
  */
-export function generateInviteCode(): string {
-  const number = 10 + (randomBytes(2).readUInt16BE(0) % 90);
-  return `${pick(ADJECTIVES)}-${pick(NOUNS)}-${number}`;
+const SUFFIX_ALPHABET = "23456789abcdefghijkmnpqrstuvwxyz";
+
+function suffix(length: number): string {
+  let out = "";
+  for (let i = 0; i < length; i++) out += pick([...SUFFIX_ALPHABET]);
+  return out;
 }
 
-/** Personal codes carry a marker so a mistyped group code fails fast. */
+/**
+ * A group invite code: "mango-tiger-42-k7fq".
+ *
+ * The words keep it readable across a dinner table; the four-character tail
+ * is what makes it unguessable. Words and a number alone were about 268k
+ * combinations, which a script with a few thousand addresses walks in a day
+ * no matter how the per-address limiter is tuned. With the tail it is about
+ * 2.8 x 10^11, and the limiter in `server/rate-limit.ts` is a second line of
+ * defence rather than the only one.
+ */
+export function generateInviteCode(): string {
+  const number = randomInt(10, 100);
+  return `${pick(ADJECTIVES)}-${pick(NOUNS)}-${number}-${suffix(4)}`;
+}
+
+/**
+ * Personal codes: "me-calm-otter-x7k2pq".
+ *
+ * The `me-` marker makes a mistyped group code fail fast. The six-character
+ * tail matters more: adjective-noun alone was 2,976 values in total, so every
+ * account on the server could be found - and added as a friend, which exposes
+ * their payment handles - by trying them all.
+ */
 export function generatePersonalCode(): string {
-  return `me-${pick(ADJECTIVES)}-${pick(NOUNS)}`;
+  return `me-${pick(ADJECTIVES)}-${pick(NOUNS)}-${suffix(6)}`;
+}
+
+/**
+ * An internal handle for a placeholder. Never shown or redeemable - placeholder
+ * codes are refused everywhere a code is typed - but it is unique and random,
+ * so it cannot collide or be predicted.
+ */
+export function generateGhostCode(): string {
+  return `ghost-${randomBytes(9).toString("base64url").toLowerCase()}`;
 }
 
 // ---------------------------------------------------------------------------

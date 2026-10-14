@@ -3,7 +3,8 @@ import {
   verifyAuthenticationResponse,
   type AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
-import { json, route } from "@/lib/api";
+import { z } from "zod";
+import { json, readBody, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import {
   UnauthorizedError,
@@ -15,6 +16,13 @@ import { expectedOrigin, rpId } from "@/lib/webauthn";
 import { stashChallenge, takeChallenge } from "@/lib/webauthn-challenge";
 import { limitByAddress } from "@/server/rate-limit";
 import { meDto } from "@/server/me";
+
+const responseSchema = z.object({
+  response: z.custom<AuthenticationResponseJSON>(
+    (value) => typeof value === "object" && value !== null && typeof (value as { id?: unknown }).id === "string",
+    "Expected an authentication response.",
+  ),
+});
 
 /**
  * Starts signing in with a passkey.
@@ -47,7 +55,9 @@ export const GET = route(async (request: Request) => {
 export const POST = route(async (request: Request) => {
   limitByAddress(request, "passkey-auth", { limit: 20, windowSeconds: 60 * 5 });
 
-  const body = (await request.json()) as { response?: AuthenticationResponseJSON };
+  // Through `readBody`, so malformed JSON is a 422 and an oversized body is
+  // refused before it is read - `request.json()` threw a 500 on both.
+  const body = await readBody(request, responseSchema);
   if (!body?.response) throw new ValidationError("Expected an authentication response.");
 
   const challenge = await takeChallenge();
@@ -57,7 +67,7 @@ export const POST = route(async (request: Request) => {
     where: { externalId: body.response.id },
     include: { person: true },
   });
-  if (!stored || stored.kind !== "passkey" || !stored.publicKey) {
+  if (!stored || stored.kind !== "passkey" || !stored.publicKey || stored.person.deletedAt) {
     throw new UnauthorizedError("That passkey is not registered here.");
   }
 

@@ -64,7 +64,7 @@ export const GET = route(async (request: Request, { params }: Params) => {
   const person = await prisma.person.findUnique({
     where: { inviteCode: normalized },
   });
-  if (person && !person.isGhost) {
+  if (person && !person.isGhost && !person.deletedAt) {
     return json({ kind: "person" as const, person: personDto(person) });
   }
 

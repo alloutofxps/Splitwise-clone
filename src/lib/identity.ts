@@ -37,11 +37,36 @@ import {
   generateSecret,
   hashSecret,
 } from "./codes";
+import { NotFoundError, UnauthorizedError } from "./errors";
 
 export const IDENTITY_COOKIE = "divvy_id";
 
-/** Ten years: this cookie is the account, so losing it means losing access. */
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 10;
+/**
+ * 400 days, re-issued as the device is used.
+ *
+ * This was ten years and never refreshed, which looked generous and was not:
+ * Chrome caps every cookie at 400 days, so an active user was silently signed
+ * out a little over a year after they first opened the app. Rolling the cookie
+ * forward on use (see `getSession`) keeps an active device signed in for good.
+ */
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
+
+/**
+ * A signed-in device that has not been used for this long stops working.
+ *
+ * Long enough that nobody who opens the app occasionally is ever affected;
+ * short enough that a lost, sold or forgotten phone does not keep access to
+ * someone's finances indefinitely. Signing back in takes a passkey or the
+ * recovery key, both of which survive this.
+ */
+export const SESSION_IDLE_DAYS = 180;
+
+/**
+ * How stale `lastSeenAt` may get before a request bothers to update it, and
+ * before the cookie is re-issued. Writing on every request put a database
+ * write in front of every read in the app.
+ */
+const TOUCH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 function secretKey(): string {
   const value = process.env.DIVVY_SECRET;
@@ -115,6 +140,7 @@ export async function getSession(): Promise<Session | null> {
   if (!decoded) return null;
 
   const hash = hashSecret(decoded.secret);
+  const now = Date.now();
 
   // The ordinary path: the cookie names a live session.
   const session = await prisma.session.findUnique({
@@ -122,30 +148,54 @@ export async function getSession(): Promise<Session | null> {
     include: { person: true },
   });
   if (session && session.personId === decoded.personId) {
-    // Cheap enough to be worth it, and it is what makes the device list say
-    // something true about which of them is still in use. Not awaited: a
-    // request should not get slower to record its own timestamp.
-    void prisma.session
-      .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
-      .catch(() => {});
+    if (session.person.deletedAt) return null;
+
+    // An abandoned device. Removed rather than merely refused, so it also
+    // disappears from the owner's device list.
+    if (now - session.lastSeenAt.getTime() > SESSION_IDLE_DAYS * 86_400_000) {
+      await prisma.session.deleteMany({ where: { id: session.id } }).catch(() => {});
+      await clearIdentityCookie().catch(() => {});
+      return null;
+    }
+
+    if (now - session.lastSeenAt.getTime() > TOUCH_INTERVAL_MS) {
+      // What makes the device list say something true about which devices are
+      // still in use, and what keeps the idle clock above from running out on
+      // somebody who uses the app. Throttled, not per request.
+      await prisma.session
+        .update({ where: { id: session.id }, data: { lastSeenAt: new Date(now) } })
+        .catch(() => {});
+      await setIdentityCookie(session.personId, decoded.secret).catch(() => {});
+    }
     return { person: session.person, sessionId: session.id };
   }
 
   /*
    * Cookies minted before sessions existed carried the recovery secret itself.
    *
-   * Honouring them means nobody is signed out by the upgrade. It concedes
-   * nothing: whoever holds the recovery secret can sign in from anywhere
-   * anyway, so accepting it here grants no access they did not already have.
-   * Rotating the recovery key retires these along with the key, which is the
-   * documented way to cut off a device you no longer trust.
+   * Still honoured, so nobody is signed out by the upgrade - but only once. The
+   * device is moved onto a session of its own and handed a new cookie, so the
+   * master recovery key stops travelling with every request and stops sitting
+   * in the browser's cookie jar.
    */
   const legacy = await prisma.credential.findUnique({
     where: { secretHash: hash },
     include: { person: true },
   });
-  if (legacy && legacy.kind === "recovery" && legacy.personId === decoded.personId) {
-    return { person: legacy.person };
+  if (
+    legacy &&
+    legacy.kind === "recovery" &&
+    legacy.personId === decoded.personId &&
+    !legacy.person.deletedAt
+  ) {
+    try {
+      const sessionId = await startSession(legacy.personId, "This device");
+      return { person: legacy.person, sessionId };
+    } catch {
+      // Cookies cannot be written from here (a render rather than a route).
+      // The request still succeeds; the upgrade happens on the next one.
+      return { person: legacy.person };
+    }
   }
 
   return null;
@@ -158,65 +208,17 @@ export async function requireSession(): Promise<Session> {
   return session;
 }
 
-export class UnauthorizedError extends Error {
-  constructor(message = "Open the app and set up your profile first.") {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
-}
-
-export class ForbiddenError extends Error {
-  constructor(message = "You do not have access to that.") {
-    super(message);
-    this.name = "ForbiddenError";
-  }
-}
-
-export class NotFoundError extends Error {
-  constructor(message = "Not found.") {
-    super(message);
-    this.name = "NotFoundError";
-  }
-}
-
-/**
- * Somebody else changed the row first.
- *
- * Distinct from a 403: the caller is entitled to the edit, they are just
- * working from a version that has since moved. The only safe answer is to
- * refuse and let them see the newer one, because the alternative - writing
- * anyway - silently discards whatever the other person did, and on a shared
- * ledger that is a balance nobody agreed to.
- */
-export class ConflictError extends Error {
-  constructor(message = "Somebody else changed this first.") {
-    super(message);
-    this.name = "ConflictError";
-  }
-}
-
-/**
- * Thrown when a caller has used up an endpoint's allowance. Carries the number
- * of seconds until the next attempt so the route wrapper can set Retry-After.
- */
-export class RateLimitError extends Error {
-  retryAfterSeconds: number;
-  constructor(retryAfterSeconds: number, message = "Too many attempts. Wait a moment and try again.") {
-    super(message);
-    this.name = "RateLimitError";
-    this.retryAfterSeconds = retryAfterSeconds;
-  }
-}
-
-export class ValidationError extends Error {
-  details: string[];
-  constructor(details: string[] | string) {
-    const list = Array.isArray(details) ? details : [details];
-    super(list[0] ?? "That does not look right.");
-    this.name = "ValidationError";
-    this.details = list;
-  }
-}
+// The error classes moved to `errors.ts`; re-exported so every existing import
+// from here keeps working.
+export {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  PayloadTooLargeError,
+  RateLimitError,
+  UnauthorizedError,
+  ValidationError,
+} from "./errors";
 
 // ---------------------------------------------------------------------------
 
@@ -245,42 +247,15 @@ export async function createIdentity(input: NewIdentity): Promise<{ person: Pers
   return { person, secret };
 }
 
-/**
- * Turns a placeholder into a real identity.
- *
- * Someone added "Sam" to a group before Sam had the app. When Sam joins and
- * says "that's me", the ghost row is upgraded in place rather than creating a
- * second Sam - which keeps every expense already filed against the ghost.
+/*
+ * There was a `claimGhost` here that turned a placeholder into a real identity
+ * at sign-up, given nothing but the placeholder's id. Ids are not secrets - the
+ * invite preview lists them without an account - so it let anybody walk into
+ * every group a placeholder belonged to, including groups whose invite link had
+ * been switched off. Claiming now happens only through
+ * `POST /api/invite/[code]/join`, which requires a live code and merges the
+ * placeholder into the person who just signed up (`server/merge.ts`).
  */
-export async function claimGhost(
-  ghostId: string,
-  input: NewIdentity,
-): Promise<{ person: Person; secret: string }> {
-  const ghost = await prisma.person.findUnique({
-    where: { id: ghostId },
-    include: { credentials: { select: { id: true }, take: 1 } },
-  });
-  if (!ghost) throw new NotFoundError("That placeholder no longer exists.");
-  if (!ghost.isGhost || ghost.credentials.length > 0) {
-    throw new ForbiddenError("Someone has already claimed that name.");
-  }
-
-  const secret = generateSecret();
-  const person = await prisma.person.update({
-    where: { id: ghostId },
-    data: {
-      displayName: input.displayName.trim().slice(0, 60) || ghost.displayName,
-      avatarColor: input.avatarColor ?? ghost.avatarColor,
-      avatarEmoji: input.avatarEmoji ?? ghost.avatarEmoji,
-      defaultCurrency: input.defaultCurrency ?? ghost.defaultCurrency,
-      isGhost: false,
-      credentials: {
-        create: { kind: "recovery", secretHash: hashSecret(secret), label: "Recovery key" },
-      },
-    },
-  });
-  return { person, secret };
-}
 
 /**
  * Normalises a recovery key as typed or pasted by a user.
@@ -303,7 +278,7 @@ export async function restoreIdentity(
     where: { secretHash: hashSecret(secret) },
     include: { person: true },
   });
-  if (!credential || credential.kind !== "recovery") {
+  if (!credential || credential.kind !== "recovery" || credential.person.deletedAt) {
     throw new NotFoundError("That recovery key does not match any profile.");
   }
 
@@ -348,15 +323,17 @@ export async function rotateSecret(personId: string): Promise<string> {
 export async function startSession(
   personId: string,
   label = "This device",
-): Promise<void> {
+): Promise<string> {
   const secret = generateSecret();
-  await prisma.session.create({
+  // The cookie first: if it cannot be written (a render rather than a route)
+  // nothing is left behind in the session table.
+  await setIdentityCookie(personId, secret);
+  const session = await prisma.session.create({
     data: { personId, secretHash: hashSecret(secret), label: label.slice(0, 80) },
   });
-  // Returns nothing on purpose. The secret's only destination is the httpOnly
-  // cookie set here; handing it back would put a live session credential in
-  // reach of a response body, and no caller has ever wanted it.
-  await setIdentityCookie(personId, secret);
+  // The secret's only destination is the httpOnly cookie set above; only the
+  // row id comes back, so a live credential never reaches a response body.
+  return session.id;
 }
 
 /** Ends the session the current cookie names, if it names one. */
@@ -428,7 +405,7 @@ export async function uniqueGroupCode(): Promise<string> {
     if (!taken) return code;
   }
   // Fall back to a longer code rather than failing the request.
-  return `${generateInviteCode()}-${Date.now().toString(36).slice(-4)}`;
+  return `${generateInviteCode()}-${generateInviteCode().split("-").pop()}`;
 }
 
 export async function uniquePersonalCode(): Promise<string> {
@@ -437,5 +414,5 @@ export async function uniquePersonalCode(): Promise<string> {
     const taken = await prisma.person.findUnique({ where: { inviteCode: code } });
     if (!taken) return code;
   }
-  return `${generatePersonalCode()}-${Date.now().toString(36).slice(-4)}`;
+  return `${generatePersonalCode()}-${generatePersonalCode().split("-").pop()}`;
 }

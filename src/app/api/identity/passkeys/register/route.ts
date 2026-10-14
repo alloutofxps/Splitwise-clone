@@ -3,11 +3,23 @@ import {
   verifyRegistrationResponse,
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
-import { json, route } from "@/lib/api";
+import { z } from "zod";
+import { json, readBody, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { ValidationError, describeDevice, requireSession } from "@/lib/identity";
 import { RP_NAME, expectedOrigin, rpId } from "@/lib/webauthn";
 import { stashChallenge, takeChallenge } from "@/lib/webauthn-challenge";
+
+const registrationSchema = z.object({
+  response: z.custom<RegistrationResponseJSON>(
+    (value) => typeof value === "object" && value !== null && typeof (value as { id?: unknown }).id === "string",
+    "Expected a registration response.",
+  ),
+  label: z.string().max(200).optional(),
+});
+
+/** One person, a handful of devices; this stops a script minting thousands. */
+const MAX_PASSKEYS = 20;
 
 /**
  * Starts registering a passkey for the signed-in person.
@@ -59,7 +71,7 @@ export const GET = route(async () => {
  */
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  const body = (await request.json()) as { response?: RegistrationResponseJSON; label?: string };
+  const body = await readBody(request, registrationSchema);
   if (!body?.response) throw new ValidationError("Expected a registration response.");
 
   const challenge = await takeChallenge();
@@ -75,6 +87,13 @@ export const POST = route(async (request: Request) => {
 
   if (!verification?.verified || !verification.registrationInfo) {
     throw new ValidationError("That passkey could not be verified.");
+  }
+
+  const owned = await prisma.credential.count({
+    where: { personId: session.person.id, kind: "passkey" },
+  });
+  if (owned >= MAX_PASSKEYS) {
+    throw new ValidationError("You have too many passkeys. Remove one you no longer use first.");
   }
 
   const { credential } = verification.registrationInfo;

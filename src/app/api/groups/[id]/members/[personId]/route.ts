@@ -67,6 +67,18 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     }
   }
 
+  // The owner leaving used to leave a group nobody could delete or manage.
+  // Ownership passes to whoever has been in it longest.
+  if (removingSelf && isOwner) {
+    const successor = await prisma.membership.findFirst({
+      where: { groupId: id, leftAt: null, personId: { not: personId }, person: { isGhost: false } },
+      orderBy: { joinedAt: "asc" },
+    });
+    if (successor) {
+      await prisma.membership.update({ where: { id: successor.id }, data: { role: "owner" } });
+    }
+  }
+
   await recordActivity({
     type: removingSelf ? "member.left" : "member.removed",
     actorPersonId: session.person.id,

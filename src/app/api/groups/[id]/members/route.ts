@@ -8,7 +8,14 @@ import { requireGroupAccess } from "@/server/access";
 import { personDto } from "@/server/read";
 import { visiblePeople } from "@/server/me";
 import { recordActivity } from "@/server/write";
-import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
+import {
+  CODE_LOOKUP,
+  CODE_LOOKUP_ACCOUNT,
+  limitByAccount,
+  limitByAddress,
+  WRITE,
+} from "@/server/rate-limit";
+import { generateGhostCode } from "@/lib/codes";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -40,6 +47,7 @@ const schema = z.object({
 export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
   const session = await requireSession();
+  limitByAccount(session.person.id, "member-add", WRITE);
   const { group } = await requireGroupAccess(id, session.person.id);
   const input = await readBody(request, schema);
 
@@ -50,7 +58,15 @@ export const POST = route(async (request: Request, { params }: Params) => {
     if (!allowed) throw new ValidationError("You do not share a group with that person.");
 
     const person = await prisma.person.findUnique({ where: { id: input.personId } });
-    if (!person) throw new ValidationError("That person no longer exists.");
+    if (!person || person.deletedAt) throw new ValidationError("That person no longer exists.");
+    // A placeholder belongs to the group it was typed into. Pulling it into a
+    // second one silently tied two sets of balances to one made-up name -
+    // the same thing the invite-code path below already refused.
+    if (person.isGhost) {
+      throw new ValidationError(
+        `${person.displayName} is a placeholder in another group. Add them by name here, and they can claim both when they join.`,
+      );
+    }
 
     const existing = await prisma.membership.findUnique({
       where: { groupId_personId: { groupId: id, personId: person.id } },
@@ -65,11 +81,20 @@ export const POST = route(async (request: Request, { params }: Params) => {
       update: { leftAt: null },
     });
 
-    return json({ person: personDto(person) });
+    // Recorded like every other way in, so the group can see who added whom.
+    await recordActivity({
+      type: "member.added",
+      actorPersonId: session.person.id,
+      groupId: id,
+      data: { otherPersonId: person.id, groupName: group.name },
+    });
+
+    return json({ member: personDto(person), person: personDto(person) }, { status: 201 });
   }
 
   if (input.inviteCode) {
     limitByAddress(request, "member-add-by-code", CODE_LOOKUP);
+    limitByAccount(session.person.id, "member-add-by-code", CODE_LOOKUP_ACCOUNT);
 
     const person = await prisma.person.findUnique({
       // Same normalisation as everywhere else a code is typed, so "MANGO TIGER
@@ -79,7 +104,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     // A placeholder's code is an internal handle, not something to be redeemed:
     // it belongs to whichever group created it, and pulling it into a second
     // group would silently entangle two sets of balances.
-    if (!person || person.isGhost) {
+    if (!person || person.isGhost || person.deletedAt) {
       throw new ValidationError("No one has that personal code.");
     }
 
@@ -129,7 +154,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
       createdByPersonId: session.person.id,
       defaultCurrency: group.currency,
       avatarColor: colorForName(name),
-      inviteCode: `ghost-${id.slice(-6)}-${Math.random().toString(36).slice(2, 8)}`,
+      inviteCode: generateGhostCode(),
       memberships: { create: { groupId: id } },
     },
   });

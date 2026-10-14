@@ -65,11 +65,20 @@ export const GET = route(async (_request: Request, { params }: Params) => {
 
   await assertCanAccess(attachment.expense, session.person.id);
 
+  // Images open in a tab, which is how people look at a receipt. PDFs are
+  // downloaded instead: a PDF rendered inline on the app's own origin is a
+  // document the app did not write, running in the app's address bar.
+  const disposition = attachment.mimeType.startsWith("image/") ? "inline" : "attachment";
+  const filename = attachment.filename.replace(/[^\w.\- ]/g, "_");
+
   return new Response(new Uint8Array(attachment.data), {
     headers: {
       "Content-Type": attachment.mimeType,
-      "Content-Length": String(attachment.size),
-      "Content-Disposition": `inline; filename="${attachment.filename.replace(/"/g, "")}"`,
+      "Content-Length": String(attachment.data.byteLength),
+      "Content-Disposition": `${disposition}; filename="${filename}"`,
+      "X-Content-Type-Options": "nosniff",
+      // Opened directly, a receipt is inert: no scripts, no requests out.
+      "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
       // Immutable: bytes never change, and the id is unguessable.
       "Cache-Control": "private, max-age=31536000, immutable",
     },

@@ -25,7 +25,9 @@ export const POST = route(async (request: Request, { params }: Params) => {
     where: { codeHash: hashSecret(code) },
     include: { person: true },
   });
-  if (!link) throw new NotFoundError("That link is not valid. Ask for a fresh code.");
+  if (!link || link.person.deletedAt) {
+    throw new NotFoundError("That link is not valid. Ask for a fresh code.");
+  }
   if (link.usedAt) throw new ValidationError("That code has already been used. Ask for a fresh one.");
   if (link.expiresAt.getTime() < Date.now()) {
     throw new ValidationError("That code has expired. Ask for a fresh one.");

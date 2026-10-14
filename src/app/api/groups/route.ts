@@ -6,6 +6,9 @@ import { groupSummaries } from "@/server/read";
 import { visiblePeople } from "@/server/me";
 import { colorForName } from "@/lib/avatar";
 import { recordActivity } from "@/server/write";
+import { generateGhostCode } from "@/lib/codes";
+import { AVATAR_COLORS as GROUP_COLORS } from "@/lib/avatar";
+import { limitByAccount, WRITE } from "@/server/rate-limit";
 
 const GROUP_KINDS = ["trip", "home", "couple", "event", "project", "other"] as const;
 
@@ -13,7 +16,7 @@ const createSchema = z.object({
   name: text(60, "The group name").refine((v) => v.length > 0, "Give the group a name."),
   kind: z.enum(GROUP_KINDS).default("other"),
   emoji: z.string().trim().max(8).default("🧾"),
-  color: z.string().trim().max(20).default("iris"),
+  color: z.enum(GROUP_COLORS).default("iris"),
   currency: currencyCode,
   simplifyDebts: z.boolean().default(true),
   /** Names to seed as placeholder members, for people not on the app yet. */
@@ -39,6 +42,7 @@ const createSchema = z.object({
  */
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
+  limitByAccount(session.person.id, "group-create", WRITE);
   const input = await readBody(request, createSchema);
 
   /*
@@ -50,10 +54,19 @@ export const POST = route(async (request: Request) => {
    */
   const memberIds = [...new Set(input.memberIds)].filter((id) => id !== session.person.id);
   if (memberIds.length > 0) {
-    const allowed = new Set((await visiblePeople(session.person.id)).map((person) => person.id));
+    const visible = await visiblePeople(session.person.id);
+    const allowed = new Set(visible.map((person) => person.id));
     const stranger = memberIds.find((id) => !allowed.has(id));
     if (stranger) {
       throw new ValidationError("You can only add people you already share a group with.");
+    }
+    // A placeholder from another group would tie two groups' balances to one
+    // made-up name. Type the name instead; the person can claim both.
+    const ghosts = visible.filter((person) => person.isGhost && memberIds.includes(person.id));
+    if (ghosts.length > 0) {
+      throw new ValidationError(
+        `${ghosts[0].displayName} has not joined Divvy yet. Add them by name instead.`,
+      );
     }
   }
 
@@ -90,7 +103,7 @@ export const POST = route(async (request: Request) => {
           createdByPersonId: session.person.id,
           defaultCurrency: input.currency,
           avatarColor: colorForName(name),
-          inviteCode: `ghost-${created.id.slice(-6)}-${Math.random().toString(36).slice(2, 8)}`,
+          inviteCode: generateGhostCode(),
         },
       });
       await tx.membership.create({

@@ -16,13 +16,11 @@ import { NextResponse } from "next/server";
  * what happened, which takes one tap to recover from.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  // The body is read and discarded. Leaving it unread makes some runtimes hold
-  // the connection open until the client gives up.
-  try {
-    await request.formData();
-  } catch {
-    // A malformed or oversized multipart body. Nothing here depends on it.
-  }
+  // The files are unrecoverable here, so the body is never parsed - only
+  // released. It used to be read in full with `formData()`, by an endpoint
+  // that needs no account, which let anyone make the server buffer an
+  // arbitrarily large upload. Cancelling the stream closes it without reading.
+  await request.body?.cancel().catch(() => {});
 
   return NextResponse.redirect(new URL("/?share=unavailable", request.url), 303);
 }

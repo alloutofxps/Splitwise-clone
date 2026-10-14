@@ -6,6 +6,7 @@ import { balanceSheetDto, groupBalanceSheet, personDto } from "@/server/read";
 import { requireGroupAccess, requireGroupOwner } from "@/server/access";
 import { recordActivity } from "@/server/write";
 import type { GroupDetailDto } from "@/lib/types";
+import { AVATAR_COLORS } from "@/lib/avatar";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -60,9 +61,9 @@ export const GET = route(async (_request: Request, { params }: Params) => {
 
 const updateSchema = z.object({
   name: text(60, "The group name").optional(),
-  kind: z.string().trim().max(20).optional(),
+  kind: z.enum(["trip", "home", "couple", "event", "project", "other"]).optional(),
   emoji: z.string().trim().max(8).optional(),
-  color: z.string().trim().max(20).optional(),
+  color: z.enum(AVATAR_COLORS).optional(),
   currency: currencyCode.optional(),
   simplifyDebts: z.boolean().optional(),
   archived: z.boolean().optional(),
@@ -78,10 +79,15 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
   // `convertedAmount` in the group, so it is only allowed while the group is
   // still empty. After that the honest answer is "make a new group".
   if (input.currency && input.currency !== group.currency) {
-    const expenseCount = await prisma.expense.count({
-      where: { groupId: id, deletedAt: null },
-    });
-    if (expenseCount > 0) {
+    // Every row that carries an amount in the old currency counts - deleted
+    // ones too, because restoring one would bring back a converted amount in
+    // the wrong currency, and recurrences, which would keep posting in it.
+    const [expenseCount, settlementCount, recurrenceCount] = await Promise.all([
+      prisma.expense.count({ where: { groupId: id } }),
+      prisma.settlement.count({ where: { groupId: id } }),
+      prisma.recurrence.count({ where: { groupId: id } }),
+    ]);
+    if (expenseCount + settlementCount + recurrenceCount > 0) {
       throw new ValidationError(
         "The group currency can only change while the group has no expenses.",
       );

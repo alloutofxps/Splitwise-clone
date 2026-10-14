@@ -149,8 +149,10 @@ export function paymentLink(
     }
 
     case "custom":
-      // A URL is linkable; anything else is just text to copy.
-      return /^https?:\/\//i.test(value) ? value : null;
+      // An https URL is linkable; anything else is just text to copy. Plain
+      // http is not offered as a tap target: a payment link is exactly where a
+      // downgraded, tamperable page does the most harm.
+      return /^https:\/\/[^\s]+$/i.test(value) ? value : null;
 
     // IBANs and raw bank details have no universal scheme. Copy is the honest
     // affordance rather than a link that fails silently on most phones.

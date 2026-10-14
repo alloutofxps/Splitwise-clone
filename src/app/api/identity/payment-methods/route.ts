@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { json, readBody, route, text } from "@/lib/api";
-import { requireSession } from "@/lib/identity";
+import { requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
+
+/** Nobody needs more; without a cap the list was an unbounded write. */
+const MAX_METHODS = 20;
 
 const KINDS = ["upi", "paypal", "venmo", "cashapp", "revolut", "monzo", "iban", "bank", "custom"] as const;
 
@@ -24,6 +27,9 @@ export const POST = route(async (request: Request) => {
   const input = await readBody(request, schema);
 
   const count = await prisma.paymentMethod.count({ where: { personId: session.person.id } });
+  if (count >= MAX_METHODS) {
+    throw new ValidationError(`You can save up to ${MAX_METHODS} ways to be paid.`);
+  }
 
   const method = await prisma.paymentMethod.create({
     data: {

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { ForbiddenError, NotFoundError } from "@/lib/identity";
+import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import type { Group, Membership } from "@prisma/client";
 
 /**
@@ -70,20 +70,26 @@ export async function assertCanInvolve(
   personIds: string[],
   actorId: string,
   groupId: string | null,
+  /**
+   * People already on the expense being edited. They stay allowed after they
+   * leave the group, or no old expense involving them could ever be corrected.
+   */
+  alreadyInvolved: string[] = [],
 ): Promise<void> {
   const unique = [...new Set(personIds)];
   if (unique.length === 0) throw new ForbiddenError("Nobody was included.");
+  const grandfathered = new Set(alreadyInvolved);
 
   if (groupId) {
     const members = new Set(await groupMemberIds(groupId));
-    const outsiders = unique.filter((id) => !members.has(id));
+    const outsiders = unique.filter((id) => !members.has(id) && !grandfathered.has(id));
     if (outsiders.length > 0) {
       throw new ForbiddenError("Somebody in that split is not in the group.");
     }
     return;
   }
 
-  const others = unique.filter((id) => id !== actorId);
+  const others = unique.filter((id) => id !== actorId && !grandfathered.has(id));
   if (others.length === 0) return;
 
   const friendships = await prisma.friendship.findMany({

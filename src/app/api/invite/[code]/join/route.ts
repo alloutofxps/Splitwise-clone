@@ -7,7 +7,7 @@ import { friendshipPair } from "@/server/access";
 import { absorbGhost } from "@/server/merge";
 import { personDto } from "@/server/read";
 import { recordActivity } from "@/server/write";
-import { CODE_LOOKUP, limitByAddress } from "@/server/rate-limit";
+import { CODE_LOOKUP, CODE_LOOKUP_ACCOUNT, limitByAccount, limitByAddress } from "@/server/rate-limit";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -37,6 +37,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const { code } = await params;
   const session = await requireSession();
   const me = session.person;
+  limitByAccount(me.id, "invite-join", CODE_LOOKUP_ACCOUNT);
   const normalized = normalizeInviteCode(code);
   const input = await readBody(request, schema.optional().default({}));
 
@@ -89,7 +90,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
   }
 
   const person = await prisma.person.findUnique({ where: { inviteCode: normalized } });
-  if (!person || person.isGhost) {
+  if (!person || person.isGhost || person.deletedAt) {
     throw new NotFoundError("That code does not match a group or a person.");
   }
   if (person.id === me.id) {

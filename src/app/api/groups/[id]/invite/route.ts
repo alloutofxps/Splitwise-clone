@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { json, readBody, route } from "@/lib/api";
-import { requireSession, uniqueGroupCode } from "@/lib/identity";
+import { ForbiddenError, requireSession, uniqueGroupCode } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 
@@ -21,12 +21,27 @@ const schema = z.object({
 export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
   const session = await requireSession();
-  await requireGroupAccess(id, session.person.id);
+  const { group: current, isOwner } = await requireGroupAccess(id, session.person.id);
   const { action } = await readBody(request, schema);
+
+  /*
+   * Anyone can close the door: disabling or rotating is what you do the moment
+   * a link turns up in the wrong chat, and it should not wait for the owner.
+   * Opening it is the owner's call - otherwise one member could undo the
+   * owner's "nobody else joins" by switching the link straight back on.
+   */
+  if (action === "enable" && !isOwner) {
+    throw new ForbiddenError("Only whoever created the group can turn the invite link back on.");
+  }
 
   const data =
     action === "rotate"
-      ? { inviteCode: await uniqueGroupCode(), inviteCodeActive: true }
+      ? {
+          inviteCode: await uniqueGroupCode(),
+          // A member rotating a switched-off link gets a fresh code that stays
+          // off; only the owner's rotate also re-opens it.
+          inviteCodeActive: isOwner ? true : current.inviteCodeActive,
+        }
       : { inviteCodeActive: action === "enable" };
 
   const group = await prisma.group.update({ where: { id }, data });

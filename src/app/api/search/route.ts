@@ -17,7 +17,7 @@ import { EXPENSE_INCLUDE, expenseDto } from "@/server/read";
 export const GET = route(async (request: Request) => {
   const session = await requireSession();
   const url = new URL(request.url);
-  const raw = (url.searchParams.get("q") ?? "").trim();
+  const raw = (url.searchParams.get("q") ?? "").trim().slice(0, 200);
 
   if (raw.length < 2) return json({ items: [], query: raw });
 
@@ -39,26 +39,45 @@ export const GET = route(async (request: Request) => {
   });
   const groupIds = memberships.map((m) => m.groupId);
 
+  const scopedGroupIds = filters.groupId
+    ? [filters.groupId].filter((id) => groupIds.includes(id))
+    : groupIds;
+
   const expenses = await prisma.expense.findMany({
     where: {
       deletedAt: null,
-      // Scope to what this person is entitled to see, always.
-      OR: [
-        { groupId: { in: filters.groupId ? [filters.groupId].filter((id) => groupIds.includes(id)) : groupIds } },
+      /*
+       * Every condition is its own element of AND.
+       *
+       * This used to be one object literal with two `OR` keys - the access
+       * scope and the text match - and the second silently replaced the first.
+       * Any search with a word in it therefore ran across every customer's
+       * expenses. The scope is now an AND term that no filter can displace.
+       */
+      AND: [
         {
-          groupId: null,
           OR: [
-            { payers: { some: { personId: session.person.id } } },
-            { splits: { some: { personId: session.person.id } } },
+            { groupId: { in: scopedGroupIds } },
+            // A `group:` filter narrows to that group, so direct expenses
+            // only appear in an unfiltered search.
+            ...(filters.groupId
+              ? []
+              : [
+                  {
+                    groupId: null,
+                    OR: [
+                      { payers: { some: { personId: session.person.id } } },
+                      { splits: { some: { personId: session.person.id } } },
+                    ],
+                  },
+                ]),
           ],
         },
+        ...(filters.categoryId ? [{ categoryId: filters.categoryId }] : []),
+        ...(query
+          ? [{ OR: [{ description: { contains: query } }, { notes: { contains: query } }] }]
+          : []),
       ],
-      ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(query
-        ? {
-            OR: [{ description: { contains: query } }, { notes: { contains: query } }],
-          }
-        : {}),
     },
     include: EXPENSE_INCLUDE,
     orderBy: [{ date: "desc" }],
