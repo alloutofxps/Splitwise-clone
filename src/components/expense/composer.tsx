@@ -17,8 +17,10 @@ import { ReceiptPicker } from "./receipt-picker";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
 import { keys, useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
-import { convert, toDecimalString } from "@/lib/money";
+import { formatMoney, toDecimalString } from "@/lib/money";
+import { ConversionNote } from "../ui/conversion-note";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
+import { startingSplit, type DefaultSplit } from "@/lib/default-split";
 import { suggestCategory, DEFAULT_CATEGORY_ID, categoryById } from "@/lib/categories";
 import { ApiError } from "@/lib/client/api";
 import { newId } from "@/lib/ids";
@@ -105,6 +107,8 @@ export function ExpenseComposer({
   );
 
   const [draft, setDraft] = React.useState<Draft | null>(null);
+  // Item lines read off a receipt photo, offered as a split by item.
+  const [foundItems, setFoundItems] = React.useState<{ name: string; amount: bigint }[] | null>(null);
 
   // Rebuild the draft when the sheet opens, so a cancelled entry never leaks
   // into the next one.
@@ -120,6 +124,7 @@ export function ExpenseComposer({
   // is built once, when it should be.
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
+    setFoundItems(null);
     if (expense) {
       setDraft(draftFromExpense(expense));
       setPanel(null);
@@ -418,6 +423,42 @@ export function ExpenseComposer({
               warning={split.errors.length > 0}
             />
           </div>
+          {foundItems && draft.splitMode !== "ITEMIZED" ? (
+            <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-md)] bg-brand-soft px-3.5 py-3">
+              <p className="min-w-0 flex-1 text-body leading-snug text-brand-soft-text">
+                The receipt has {foundItems.length} items. Split it by who had what?
+              </p>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  haptic();
+                  const included = members.map((m) => m.id);
+                  patch({
+                    splitMode: "ITEMIZED",
+                    participants: included.map((personId) => ({ personId, included: true })),
+                    // Everyone on every line to start with; untick in the editor.
+                    items: foundItems.map((item, index) => ({
+                      id: `receipt-${index}`,
+                      name: item.name,
+                      amount: item.amount,
+                      participantIds: [...included],
+                    })),
+                  });
+                  setFoundItems(null);
+                  setPanel("split");
+                }}
+              >
+                Split by item
+              </Button>
+            </div>
+          ) : null}
+          {!expense && group?.defaultSplit ? (
+            <UsualSplitNote
+              usual={startingSplit(group.defaultSplit, group.members.map((m) => m.id))}
+              current={draft.splitMode}
+            />
+          ) : null}
 
           {/* Description ---------------------------------------------------- */}
           <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
@@ -569,6 +610,37 @@ export function ExpenseComposer({
         onClose={() => setPanel(null)}
         attachments={draft.attachments}
         onChange={(attachments) => patch({ attachments })}
+        currency={draft.currency}
+        onRead={(reading) => {
+          // Fill in only what's still empty: never overwrite what was typed.
+          const changes: Partial<Draft> = {};
+          const filled: string[] = [];
+          if (reading.total !== null && !draft.amount) {
+            changes.amount = reading.total;
+            filled.push(`the total (${formatMoney(reading.total, draft.currency)})`);
+          }
+          if (reading.merchant && !draft.description.trim()) {
+            changes.description = reading.merchant;
+            filled.push("the description");
+            if (draft.categoryId === DEFAULT_CATEGORY_ID) {
+              const guess = suggestCategory(reading.merchant);
+              if (guess) changes.categoryId = guess.id;
+            }
+          }
+          if (Object.keys(changes).length > 0) patch(changes);
+          setFoundItems(reading.items.length >= 2 ? reading.items : null);
+          haptic(10);
+          toast({
+            tone: "success",
+            title: "Read the receipt",
+            description:
+              filled.length > 0
+                ? `Filled in ${filled.join(" and ")}. Check it matches the receipt.`
+                : reading.total !== null
+                  ? `It says ${formatMoney(reading.total, draft.currency)} in total.`
+                  : "Found the items, but no total.",
+          });
+        }}
       />
 
       <Sheet open={panel === "notes"} onClose={() => setPanel(null)} title="Note">
@@ -603,10 +675,12 @@ function freshDraft(
   meId: string,
   groupId: string | null,
   currency: string,
-  data: { groups: { id: string; currency: string; members: PersonDto[] }[] },
+  data: { groups: { id: string; currency: string; members: PersonDto[]; defaultSplit?: DefaultSplit | null }[] },
 ): Draft {
   const group = groupId ? data.groups.find((g) => g.id === groupId) : undefined;
   const members = group?.members ?? [];
+  // The group's usual split, if it has one, applied to who is in it now.
+  const usual = group ? startingSplit(group.defaultSplit ?? null, members.map((m) => m.id)) : null;
 
   return {
     description: "",
@@ -620,13 +694,15 @@ function freshDraft(
     categoryId: DEFAULT_CATEGORY_ID,
     date: new Date(),
     notes: "",
-    splitMode: "EQUAL",
+    splitMode: usual?.mode ?? "EQUAL",
     // Whoever is adding the expense almost always paid for it.
     payers: [{ personId: meId, amount: 0n }],
-    participants: (members.length > 0 ? members.map((m) => m.id) : [meId]).map((personId) => ({
-      personId,
-      included: true,
-    })),
+    participants:
+      usual?.participants ??
+      (members.length > 0 ? members.map((m) => m.id) : [meId]).map((personId) => ({
+        personId,
+        included: true,
+      })),
     items: [],
     attachments: [],
     exchangeRate: "1",
@@ -676,7 +752,7 @@ function ScopePicker({
   locked,
 }: {
   draft: Draft;
-  data: { groups: { id: string; name: string; emoji: string; currency: string; members: PersonDto[] }[]; friends: { person: PersonDto; isFriend?: boolean }[]; me: PersonDto };
+  data: { groups: { id: string; name: string; emoji: string; currency: string; members: PersonDto[]; defaultSplit?: DefaultSplit | null }[]; friends: { person: PersonDto; isFriend?: boolean }[]; me: PersonDto };
   onChange: (changes: Partial<Draft>) => void;
   /** Editing: the scope is fixed and shown as a label rather than a control. */
   locked?: boolean;
@@ -685,14 +761,21 @@ function ScopePicker({
     ...data.groups.map((group) => ({
       key: `group:${group.id}`,
       label: `${group.emoji} ${group.name}`,
-      apply: (): Partial<Draft> => ({
-        groupId: group.id,
-        friendId: null,
-        extraFriendIds: [],
-        currency: group.currency,
-        exchangeRate: "1",
-        participants: group.members.map((m) => ({ personId: m.id, included: true })),
-      }),
+      apply: (): Partial<Draft> => {
+        const usual = startingSplit(group.defaultSplit ?? null, group.members.map((m) => m.id));
+        return {
+          groupId: group.id,
+          friendId: null,
+          extraFriendIds: [],
+          currency: group.currency,
+          exchangeRate: "1",
+          splitMode: usual?.mode ?? "EQUAL",
+          participants: usual?.participants ?? group.members.map((m) => ({ personId: m.id, included: true })),
+          // Payers from another group or friend are meaningless here.
+          payers: [{ personId: data.me.id, amount: draft.amount ?? 0n }],
+          items: [],
+        };
+      },
     })),
     // Only people added as friends: someone you only share a group with can
     // be split with inside that group, and the server refuses it out here.
@@ -994,81 +1077,6 @@ function SplitPreview({
   );
 }
 
-/** Manual rate entry, shown when the expense currency differs from the group's. */
-function ConversionNote({
-  amount,
-  from,
-  to,
-  rate,
-  onRateChange,
-}: {
-  amount: bigint;
-  from: string;
-  to: string;
-  rate: string;
-  onRateChange: (rate: string) => void;
-}) {
-  const [fetching, setFetching] = React.useState(false);
-
-  // Fetch a live rate on first appearance, falling back to manual entry.
-  React.useEffect(() => {
-    let cancelled = false;
-    setFetching(true);
-    fetch(`/api/rates?base=${from}&quote=${to}`)
-      .then((response) => response.json())
-      .then((payload: { rate?: { rate: string } | null }) => {
-        if (!cancelled && payload.rate?.rate) onRateChange(payload.rate.rate);
-      })
-      .catch(() => {
-        // Offline: the manual field below is the fallback.
-      })
-      .finally(() => !cancelled && setFetching(false));
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to]);
-
-  const converted =
-    amount > 0n && rate ? convertPreview(amount, from, to, rate) : null;
-
-  return (
-    <div className="mt-3 w-full rounded-[var(--radius-md)] bg-surface px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2 text-caption">
-        <span className="font-semibold text-muted">
-          Group uses {to}
-        </span>
-        {fetching ? (
-          <span className="text-subtle">getting the rate…</span>
-        ) : (
-          <span className="tabular text-subtle">
-            1 {from} ={" "}
-            <input
-              value={rate}
-              onChange={(event) => onRateChange(event.target.value.replace(/[^\d.]/g, ""))}
-              inputMode="decimal"
-              className="w-[72px] bg-transparent text-right text-input font-semibold text-text outline-none"
-              aria-label={`Exchange rate from ${from} to ${to}`}
-            />{" "}
-            {to}
-          </span>
-        )}
-      </div>
-      {converted ? (
-        <p className="tabular mt-1 text-body font-bold text-text">≈ {converted} {to}</p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Reuses the same integer conversion the server will apply, so the preview is
- * the number that actually gets stored rather than an approximation of it.
- */
-function convertPreview(amount: bigint, from: string, to: string, rate: string): string | null {
-  if (!/^\d+(\.\d+)?$/.test(rate)) return null;
-  return toDecimalString(convert(amount, from, to, rate), to);
-}
 
 // ---------------------------------------------------------------------------
 // Labels
@@ -1140,4 +1148,29 @@ function fromDateInput(value: string): Date {
   // not land on the previous day.
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+/** Says why a new expense isn't splitting equally, or why it is despite a usual split. */
+function UsualSplitNote({
+  usual,
+  current,
+}: {
+  usual: ReturnType<typeof startingSplit>;
+  current: SplitMode;
+}) {
+  if (!usual) return null;
+  if (usual.stale) {
+    return (
+      <p className="mt-2 px-1 text-caption leading-relaxed text-warning-soft-text">
+        This group&rsquo;s usual split no longer adds up, because someone in it left. Splitting
+        equally instead. You can update the usual split in group settings.
+      </p>
+    );
+  }
+  if (current !== usual.mode) return null;
+  return (
+    <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">
+      Using this group&rsquo;s usual split. Tap Split to change it for this expense.
+    </p>
+  );
 }

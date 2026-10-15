@@ -30,6 +30,8 @@ export default tseslint.config(
       ".next/**",
       "node_modules/**",
       "public/sw.js",
+      // Receipt reader engine, copied from node_modules at build time.
+      "public/ocr/**",
       "src/generated/**",
       "next-env.d.ts",
     ],

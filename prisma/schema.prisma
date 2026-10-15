@@ -248,6 +248,10 @@ model Group {
   /// settles in the fewest possible transfers.
   simplifyDebts Boolean @default(true)
 
+  /// The group's usual split as JSON ({ mode, entries }), or null for equal.
+  /// See src/lib/default-split.ts.
+  defaultSplit String?
+
   /// Human-friendly join code, e.g. "MANGO-TIGER-42".
   inviteCode       String  @unique
   /// Set to rotate/disable the code without deleting the group.

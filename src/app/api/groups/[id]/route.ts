@@ -7,6 +7,7 @@ import { requireGroupAccess, requireGroupOwner } from "@/server/access";
 import { recordActivity } from "@/server/write";
 import type { GroupDetailDto } from "@/lib/types";
 import { AVATAR_COLORS } from "@/lib/avatar";
+import { defaultSplitProblem, parseDefaultSplit } from "@/lib/default-split";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -44,6 +45,7 @@ export const GET = route(async (_request: Request, { params }: Params) => {
     color: group.color,
     currency: group.currency,
     simplifyDebts: group.simplifyDebts,
+    defaultSplit: parseDefaultSplit(group.defaultSplit),
     inviteCode: group.inviteCodeActive ? group.inviteCode : "",
     archivedAt: group.archivedAt?.toISOString() ?? null,
     createdAt: group.createdAt.toISOString(),
@@ -67,6 +69,17 @@ const updateSchema = z.object({
   currency: currencyCode.optional(),
   simplifyDebts: z.boolean().optional(),
   archived: z.boolean().optional(),
+  /** The usual split, or null to go back to splitting equally. */
+  defaultSplit: z
+    .object({
+      mode: z.enum(["PERCENT", "SHARES"]),
+      entries: z
+        .array(z.object({ personId: z.string().max(80), value: z.number().finite().min(0).max(1_000_000) }))
+        .min(1)
+        .max(100),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const PATCH = route(async (request: Request, { params }: Params) => {
@@ -94,6 +107,15 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     }
   }
 
+  if (input.defaultSplit) {
+    const members = await prisma.membership.findMany({
+      where: { groupId: id, leftAt: null },
+      select: { personId: true },
+    });
+    const problem = defaultSplitProblem(input.defaultSplit, members.map((m) => m.personId));
+    if (problem) throw new ValidationError(problem);
+  }
+
   const updated = await prisma.group.update({
     where: { id },
     data: {
@@ -103,6 +125,17 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
       ...(input.color ? { color: input.color } : {}),
       ...(input.currency ? { currency: input.currency } : {}),
       ...(input.simplifyDebts !== undefined ? { simplifyDebts: input.simplifyDebts } : {}),
+      ...(input.defaultSplit !== undefined
+        ? {
+            defaultSplit: input.defaultSplit
+              ? JSON.stringify({
+                  mode: input.defaultSplit.mode,
+                  // Nobody at zero: they are simply not part of the usual split.
+                  entries: input.defaultSplit.entries.filter((e) => e.value > 0),
+                })
+              : null,
+          }
+        : {}),
       ...(input.archived !== undefined
         ? { archivedAt: input.archived ? new Date() : null }
         : {}),
@@ -128,6 +161,9 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
   }
   if (input.simplifyDebts !== undefined && input.simplifyDebts !== group.simplifyDebts) {
     changes.push(input.simplifyDebts ? "turned on Simplify debts" : "turned off Simplify debts");
+  }
+  if (input.defaultSplit !== undefined && JSON.stringify(input.defaultSplit) !== (group.defaultSplit ?? "null")) {
+    changes.push(input.defaultSplit ? "changed the usual split" : "went back to splitting equally");
   }
   if (input.archived !== undefined && input.archived !== Boolean(group.archivedAt)) {
     changes.push(input.archived ? "archived it" : "unarchived it");

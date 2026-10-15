@@ -7,6 +7,8 @@
  */
 
 import type { SplitMode } from "./split";
+import type { DefaultSplit } from "./default-split";
+export type { DefaultSplit } from "./default-split";
 
 export type { SplitMode };
 
@@ -42,6 +44,8 @@ export interface GroupSummaryDto {
   color: string;
   currency: string;
   simplifyDebts: boolean;
+  /** How new expenses split unless changed; null means equally. */
+  defaultSplit: DefaultSplit | null;
   inviteCode: string;
   archivedAt: string | null;
   memberCount: number;

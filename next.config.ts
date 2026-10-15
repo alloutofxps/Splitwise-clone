@@ -72,6 +72,12 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The receipt reader's engine and language data: several megabytes
+        // that only change with the package version, so a phone keeps them.
+        source: "/ocr/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000" }],
+      },
+      {
         source: "/:path*",
         // The Content-Security-Policy and HSTS are set per request in
         // `middleware.ts`, because the CSP carries a fresh nonce each time.

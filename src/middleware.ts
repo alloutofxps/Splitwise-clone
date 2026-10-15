@@ -80,6 +80,6 @@ export const config = {
   matcher: [
     // Everything except immutable build assets and static files, which carry
     // their own headers from next.config.ts and never render a page.
-    "/((?!_next/static|_next/image|icons/|favicon.ico|manifest.webmanifest|sw.js).*)",
+    "/((?!_next/static|_next/image|icons/|ocr/|favicon.ico|manifest.webmanifest|sw.js).*)",
   ],
 };

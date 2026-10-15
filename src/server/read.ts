@@ -16,6 +16,7 @@ import { computeBalances, type BalanceEvent, type BalanceSheet } from "@/lib/bal
 import { convertedBreakdown } from "@/lib/split";
 import { groupSheets } from "./ledger";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
+import { parseDefaultSplit } from "@/lib/default-split";
 import type {
   ActivityDto,
   AttachmentDto,
@@ -561,6 +562,7 @@ export async function groupSummaries(
       color: group.color,
       currency: group.currency,
       simplifyDebts: group.simplifyDebts,
+      defaultSplit: parseDefaultSplit(group.defaultSplit),
       inviteCode: group.inviteCodeActive ? group.inviteCode : "",
       archivedAt: group.archivedAt?.toISOString() ?? null,
       memberCount: group.memberships.length,

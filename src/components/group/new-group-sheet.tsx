@@ -33,7 +33,16 @@ const KINDS = [
   { value: "other", label: "Other", emoji: "🧾" },
 ] as const;
 
-export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewGroupSheet({
+  open,
+  onClose,
+  onImport,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Offered at the bottom: bring a group over from Splitwise instead. */
+  onImport?: () => void;
+}) {
   const router = useRouter();
   const toast = useToast();
   const { data } = useDashboard();
@@ -298,6 +307,19 @@ export function NewGroupSheet({ open, onClose }: { open: boolean; onClose: () =>
               </ul>
             ) : null}
           </div>
+
+          {onImport ? (
+            <button
+              type="button"
+              onClick={() => {
+                haptic();
+                onImport();
+              }}
+              className="mx-auto mt-8 block text-body font-semibold text-brand"
+            >
+              Have this group in Splitwise? Move it over
+            </button>
+          ) : null}
         </div>
       </Sheet>
 
