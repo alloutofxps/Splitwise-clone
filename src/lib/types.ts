@@ -55,6 +55,8 @@ export interface GroupSummaryDto {
   /** Total spent by the whole group, all time. */
   totalSpend: string;
   lastActivityAt: string | null;
+  /** The newest group-wide entry, for a caption like "Ravi added Taxi · 2h". */
+  lastActivity?: { actorPersonId: string; type: string; description: string | null } | null;
   unreadCount: number;
 }
 

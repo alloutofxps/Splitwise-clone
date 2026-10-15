@@ -1,7 +1,7 @@
 import { json, route } from "@/lib/api";
 import { ForbiddenError, NotFoundError, requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
-import { areFriends, sharesAGroup } from "@/server/access";
+import { areFriends, friendshipPair, sharesAGroup } from "@/server/access";
 import { compareDesc } from "@/server/cursor";
 import {
   EXPENSE_INCLUDE,
@@ -61,10 +61,24 @@ export const GET = route(async (_request: Request, { params }: Params) => {
       );
     });
 
-  const [expenses, settlements, sharedGroups] = await Promise.all([
+  const sharedGroups = await prisma.group.findMany({
+    where: {
+      AND: [
+        { memberships: { some: { personId: me, leftAt: null } } },
+        { memberships: { some: { personId: id, leftAt: null } } },
+      ],
+    },
+    select: { id: true, name: true, emoji: true, currency: true, color: true },
+  });
+  // All shared history, not only what's outside groups (DESIGN-PLAN 3.7): the
+  // direct ledger plus every expense and payment in a shared group that
+  // involves both of you. The page filters by group.
+  const where = [{ groupId: null }, { groupId: { in: sharedGroups.map((group) => group.id) } }];
+
+  const [expenses, settlements] = await Promise.all([
     prisma.expense.findMany({
       where: {
-        groupId: null,
+        OR: where,
         deletedAt: null,
         AND: [
           { OR: [{ payers: { some: { personId: me } } }, { splits: { some: { personId: me } } }] },
@@ -73,28 +87,23 @@ export const GET = route(async (_request: Request, { params }: Params) => {
       },
       include: EXPENSE_INCLUDE,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: 60,
+      take: 100,
     }),
     prisma.settlement.findMany({
       where: {
-        groupId: null,
         deletedAt: null,
-        OR: [
-          { fromPersonId: me, toPersonId: id },
-          { fromPersonId: id, toPersonId: me },
+        AND: [
+          { OR: where },
+          {
+            OR: [
+              { fromPersonId: me, toPersonId: id },
+              { fromPersonId: id, toPersonId: me },
+            ],
+          },
         ],
       },
       orderBy: [{ date: "desc" }],
       take: 60,
-    }),
-    prisma.group.findMany({
-      where: {
-        AND: [
-          { memberships: { some: { personId: me, leftAt: null } } },
-          { memberships: { some: { personId: id, leftAt: null } } },
-        ],
-      },
-      select: { id: true, name: true, emoji: true, currency: true, color: true },
     }),
   ]);
 
@@ -170,5 +179,34 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     },
   });
 
+  return json({ ok: true });
+});
+
+/**
+ * Adds someone you already share a group with as a friend, so you can split
+ * things with just them as well.
+ *
+ * Only people you share a group with: anyone else needs their code, which is
+ * how they agree to it. Not someone who isn't on Divvy yet (there is nobody to
+ * be friends with), and not yourself.
+ */
+export const POST = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  const session = await requireSession();
+  const me = session.person.id;
+  if (id === me) throw new ForbiddenError("That's you.");
+
+  const person = await prisma.person.findUnique({ where: { id } });
+  if (!person || person.deletedAt) throw new NotFoundError("We couldn't find them.");
+  if (person.isGhost) throw new ForbiddenError("They aren't on Divvy yet, so they can't be added as a friend.");
+  if (!(await sharesAGroup(me, id))) {
+    throw new ForbiddenError("You can only add people you share a group with. Ask for their code instead.");
+  }
+
+  await prisma.friendship.upsert({
+    where: { personAId_personBId: friendshipPair(me, id) },
+    create: friendshipPair(me, id),
+    update: {},
+  });
   return json({ ok: true });
 });

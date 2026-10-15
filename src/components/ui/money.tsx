@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "./primitives";
 import { AnimatedAmount } from "./motion";
 import { currencySymbol, decimalsFor, formatMoney, parseAmount, toDecimalString } from "@/lib/money";
@@ -64,9 +65,13 @@ export function Amount({
       )}
     >
       {arrow && amount !== 0n ? (
-        <span aria-hidden className="mr-[0.15em] inline-block font-normal">
-          {amount > 0n ? "↙" : "↗"}
-        </span>
+        // An icon rather than the arrow character, which some fonts draw so
+        // that it reads like a tick at small sizes.
+        amount > 0n ? (
+          <ArrowDownLeft aria-hidden className="mr-[0.1em] inline size-[0.7em] -translate-y-[0.05em]" strokeWidth={2} />
+        ) : (
+          <ArrowUpRight aria-hidden className="mr-[0.1em] inline size-[0.7em] -translate-y-[0.05em]" strokeWidth={2} />
+        )
       ) : null}
       {formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
     </span>
@@ -151,7 +156,7 @@ export function AmountInput({
           "display-number shrink-0 font-semibold text-subtle",
           size === "md" && "text-title",
           size === "lg" && "text-heading",
-          size === "hero" && "text-display",
+          size === "hero" && "text-title-lg",
         )}
       >
         {symbol}
@@ -208,7 +213,7 @@ export function AmountInput({
           "placeholder:text-subtle/60",
           size === "md" && "text-title-lg",
           size === "lg" && "text-display",
-          size === "hero" && "text-hero leading-none",
+          size === "hero" && "text-display leading-none tracking-[-0.03em]",
           size === "hero" && "text-center",
         )}
         aria-label="Amount"

@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeftRight, Paperclip, MessageSquare, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
+import { Paperclip, MessageSquare, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 import { Amount } from "../ui/money";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
 import { LoadMore } from "../ui/load-more";
 import { Button } from "../ui/primitives";
-import { Avatar } from "../ui/avatar";
+import { Avatar, usePersonHue } from "../ui/avatar";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { ExpenseDetailSheet } from "../expense/detail-sheet";
 import { ConfirmSheet } from "../ui/sheet";
@@ -101,9 +101,15 @@ export function GroupLedger({
 
   if (isLoading) {
     return (
-      <div className="space-y-2.5">
+      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
         {[0, 1, 2, 3, 4].map((index) => (
-          <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
+          <div key={index} className="flex items-center gap-3 px-4 py-3">
+            <Skeleton className="size-10 shrink-0 rounded-[var(--radius-md)]" />
+            <span className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </span>
+          </div>
         ))}
       </div>
     );
@@ -143,11 +149,7 @@ export function GroupLedger({
           </motion.div>
         ) : (
           <>
-            <p className="flex-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
-              {items.length > 0
-                ? `${items.length}${hasNextPage ? "+" : ""} entries`
-                : "Nothing yet"}
-            </p>
+            <span className="flex-1" />
             <button
               onClick={() => {
                 haptic();
@@ -156,15 +158,16 @@ export function GroupLedger({
               aria-label="Filter this group"
               aria-expanded={showFilters}
               className={cn(
-                "relative flex size-8 items-center justify-center rounded-full transition active:opacity-70 hover:bg-surface-2",
-                activeFilters > 0 ? "text-brand" : "text-subtle",
+                "relative flex h-8 items-center gap-1.5 rounded-full px-2 text-body font-medium transition-colors hover:bg-surface-2",
+                activeFilters > 0 ? "text-text" : "text-muted",
               )}
             >
-              <SlidersHorizontal className="size-[17px]" />
+              <SlidersHorizontal className="size-[17px]" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Filter</span>
               {/* A dot rather than a count: with two filters the number carries
                   no information the chips below do not already show. */}
               {activeFilters > 0 ? (
-                <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-brand" />
+                <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-text" />
               ) : null}
             </button>
             <button
@@ -173,9 +176,10 @@ export function GroupLedger({
                 setSearching(true);
               }}
               aria-label="Search this group"
-              className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2"
+              className="flex h-8 items-center gap-1.5 rounded-full px-2 text-body font-medium text-muted transition-colors hover:bg-surface-2"
             >
-              <Search className="size-[17px]" />
+              <Search className="size-[17px]" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </>
         )}
@@ -272,10 +276,8 @@ export function GroupLedger({
         <div className="space-y-5">
           {groups.map(({ label, precise, entries }) => (
             <section key={label}>
-              <h3 className="mb-2 mt-1 px-1 text-caption font-semibold text-subtle">
-                {label}
-              </h3>
-              <ul className="space-y-1.5">
+              <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
                     <motion.li key={entry.expense.id} {...ROW_MOTION}>
@@ -363,7 +365,7 @@ export function ExpenseRow({
         onOpen();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3 py-2.5 text-left transition active:opacity-70 active:bg-surface-2 hover:border-line-strong",
+        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2",
         // Faded rather than spinner-topped: the row is real and its numbers are
         // already correct, so the only thing being signalled is that the server
         // has not acknowledged it. A spinner would suggest it might not be
@@ -381,7 +383,7 @@ export function ExpenseRow({
 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-body-lg font-semibold text-text">
+          <span className="truncate text-body-lg font-medium text-text">
             {expense.description}
           </span>
           {expense.attachments.length > 0 ? (
@@ -394,15 +396,16 @@ export function ExpenseRow({
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 block truncate text-caption text-subtle">
-          {showGroup ? `${showGroup} · ` : ""}
-          {paidLabel}
+        <span className="mt-0.5 flex items-center gap-1.5 truncate text-caption text-subtle">
+          {showGroup ? <span className="truncate">{showGroup} ·</span> : null}
+          {payer && expense.payers.length === 1 ? <PersonDot person={payer} /> : null}
+          <span className="truncate">{paidLabel}</span>
         </span>
       </span>
 
       <span className="shrink-0 text-right">
         {net === 0n ? (
-          <span className="text-caption font-semibold text-subtle">not involved</span>
+          <span className="text-caption text-subtle">not involved</span>
         ) : (
           <>
             <Amount value={net} currency={expense.currency} size="sm" />
@@ -414,7 +417,7 @@ export function ExpenseRow({
               it. The converted figure is what reconciles.
             */}
             {foreign ? (
-              <span className="mt-0.5 block text-micro font-semibold text-subtle">
+              <span className="mt-0.5 block text-caption text-subtle">
                 ≈{" "}
                 {formatMoney(
                   abs(BigInt(expense.yourNetConverted)),
@@ -422,8 +425,8 @@ export function ExpenseRow({
                 )}
               </span>
             ) : null}
-            <span className="mt-0.5 block text-micro font-semibold text-subtle">
-              {net > 0n ? "you lent" : "you borrowed"}
+            <span className="mt-0.5 block text-caption text-subtle">
+              {net > 0n ? "you lent" : "you owe"}
             </span>
           </>
         )}
@@ -500,17 +503,15 @@ export function SettlementRow({
         }}
         aria-label={`${fromLabel} paid ${toLabel}. Remove this payment.`}
         className={cn(
-          "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-left transition",
-          pending ? "opacity-60" : "active:opacity-70 hover:bg-surface-2",
+          "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
+          pending ? "opacity-60" : "hover:bg-surface-2 active:bg-surface-2",
         )}
       >
       {showDate ? <DateStamp date={settlement.date} /> : null}
 
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-positive-soft text-positive-text">
-        <ArrowLeftRight className="size-[18px]" />
-      </span>
+      <PairGlyph from={from} to={to} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body-lg font-semibold text-text">
+        <span className="block truncate text-body-lg font-medium text-text">
           {from?.id === meId ? "You" : (from?.displayName ?? "Someone")} paid{" "}
           {to?.id === meId ? "you" : (to?.displayName ?? "someone")}
         </span>
@@ -569,7 +570,7 @@ function formatBare(amount: string, currency: string): string {
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1.5 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
+      <p className="mb-1.5 text-caption font-medium text-subtle">
         {label}
       </p>
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -601,8 +602,8 @@ function FilterChip({
       className={cn(
         "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-inverse"
-          : "border-line bg-surface text-muted hover:text-text",
+          ? "border-text bg-text text-inverse"
+          : "border-line bg-surface text-text hover:bg-surface-2",
       )}
     >
       {children}
@@ -624,7 +625,7 @@ function DateStamp({ date }: { date: string }) {
       className="flex w-8 shrink-0 flex-col items-center leading-none text-subtle"
       aria-hidden="true"
     >
-      <span className="text-micro font-semibold uppercase tracking-[0.06em]">
+      <span className="text-caption font-medium">
         {value.toLocaleDateString(undefined, { month: "short" })}
       </span>
       <span className="tabular mt-0.5 text-body font-semibold">
@@ -634,3 +635,26 @@ function DateStamp({ date }: { date: string }) {
   );
 }
 
+/** A person's colour as a small dot, beside their name in a caption. */
+function PersonDot({ person }: { person: PersonDto }) {
+  const hue = usePersonHue(person);
+  return <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: hue }} />;
+}
+
+/**
+ * A payment's mark: two dots, payer and payee in their own colours, joined by
+ * the line the money travelled along. The same picture as the flow map, small.
+ */
+function PairGlyph({ from, to }: { from?: PersonDto; to?: PersonDto }) {
+  const fromHue = usePersonHue(from ?? { avatarColor: "sand" });
+  const toHue = usePersonHue(to ?? { avatarColor: "sand" });
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2">
+      <svg viewBox="0 0 28 16" className="h-4 w-7" aria-hidden="true">
+        <path d="M 5 11 Q 14 1 23 5" fill="none" stroke="var(--text-subtle)" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="5" cy="11" r="4" fill={fromHue} />
+        <circle cx="23" cy="5" r="4" fill={toHue} />
+      </svg>
+    </span>
+  );
+}

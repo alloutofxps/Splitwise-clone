@@ -164,7 +164,7 @@ console.log("\nSettling up");
     check("tapping it opens the sheet on that exact amount", prefilled === "30.00", prefilled);
 
     // …and the counterparty is never locked while the group holds anyone else.
-    const change = page.getByRole("button", { name: "Change" });
+    const change = page.getByRole("button", { name: /^(Someone else|Change)$/ });
     check("the counterparty can still be changed", (await change.count()) > 0);
 
     if ((await change.count()) > 0) {
@@ -282,9 +282,13 @@ console.log("\nFigures that account for themselves");
   // Both directions only appear when both exist, so the rule is the invariant:
   // the header names a direction in words, and if any row says you owe, the
   // header says so too rather than burying it inside a net figure.
-  const headerNamesDirection = /you owe|you are owed|settled up with everyone/i.test(list);
-  const anyRowSaysYouOwe = /\byou owe\b/i.test(list.split("OUTSTANDING")[1] ?? "");
-  const headerSaysYouOwe = /Overall,[^\n]*you owe/i.test(list);
+  // The summary is the first line naming a direction; the rows come after it.
+  const lines = list.split("\n");
+  const header =
+    lines.find((line) => /you owe|you['’]re owed|you are owed|settled up with everyone/i.test(line)) ?? "";
+  const headerNamesDirection = header !== "";
+  const anyRowSaysYouOwe = /\byou owe\b/i.test(lines.slice(lines.indexOf(header) + 1).join("\n"));
+  const headerSaysYouOwe = /you owe/i.test(header);
   check(
     "the list states the direction in words, not just a net figure",
     headerNamesDirection && (!anyRowSaysYouOwe || headerSaysYouOwe),
@@ -589,7 +593,7 @@ console.log("\nSign-up shows the recovery key");
     const after = await signup.locator("body").innerText();
     check(
       "acknowledging it enters the app",
-      /Start your first group|All settled up/.test(after),
+      /Nothing owed yet|All settled up|Start a group/.test(after),
       after.slice(0, 120).replace(/\n/g, " | "),
     );
   }
@@ -890,20 +894,11 @@ console.log("\nThings that only show up on a phone");
   await p2.getByRole("button", { name: /Get started|Set up/i }).first().click();
   await p2.waitForTimeout(900);
 
-  // -- The emoji strip clipped its own selection ring ----------------------
-  // `overflow-x-auto` computes `overflow-y` to `auto` as well, so the chip's
-  // ring was being sliced off top and bottom.
-  const strip = p2.locator("div.no-scrollbar").first();
-  const more = p2.getByRole("button", { name: "More emoji" });
-  const stripBox = await strip.boundingBox();
-  const chipBox = await more.boundingBox();
-  check(
-    "an emoji chip is not clipped by its own scroller",
-    stripBox && chipBox && chipBox.y > stripBox.y && chipBox.y + chipBox.height < stripBox.y + stripBox.height,
-    `chip ${JSON.stringify(chipBox)} in strip ${JSON.stringify(stripBox)}`,
-  );
-
   // -- Twelve emoji was a lottery, not a choice ----------------------------
+  // The name step offers one "Change colour or emoji" link, which opens the
+  // whole set (and the colours) rather than a shortlist.
+  const more = p2.getByRole("button", { name: /Change colour or emoji/ });
+  check("the name step offers to change colour or emoji", (await more.count()) > 0);
   await more.click();
   await p2.waitForTimeout(700);
   const offered = await p2.locator('[role="dialog"] button[aria-label]').count();
@@ -959,7 +954,7 @@ console.log("\nThings that only show up on a phone");
   // reports it: visual viewport shrinks, `window.innerHeight` does not.
   await p2.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await p2.waitForTimeout(2000);
-  await p2.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p2.getByRole("button", { name: /New group|Create a group|Add a group|Start a group/i }).first().click();
   await p2.waitForTimeout(900);
 
   const dialog = p2.locator('[role="dialog"]').last();
@@ -1018,7 +1013,7 @@ console.log("\nA sheet you can scroll without losing it");
   });
   await p3.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await p3.waitForTimeout(2000);
-  await p3.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p3.getByRole("button", { name: /New group|Create a group|Add a group|Start a group/i }).first().click();
   await p3.waitForTimeout(900);
 
   const sheet = p3.locator('[role="dialog"]').last();
@@ -1053,7 +1048,7 @@ console.log("\nA sheet you can scroll without losing it");
    *
    * So this simulates both, and the offset is what makes it a real test.
    */
-  await p3.getByRole("button", { name: /New group|Create a group|Add a group/i }).first().click();
+  await p3.getByRole("button", { name: /New group|Create a group|Add a group|Start a group/i }).first().click();
   await p3.waitForTimeout(900);
   const field = p3.locator('[role="dialog"] input').first();
   await field.click();

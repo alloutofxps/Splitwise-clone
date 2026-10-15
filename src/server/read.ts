@@ -609,7 +609,9 @@ export async function groupSummaries(
   const [latestActivity, unread] = await Promise.all([
     prisma.activity.groupBy({
       by: ["groupId"],
-      where: { groupId: { in: groupIds } },
+      // Group-wide entries only: a reminder between two other people is not
+      // this person's news.
+      where: { groupId: { in: groupIds }, targetPersonId: null },
       _max: { createdAt: true },
     }),
     // Every group has its own read cursor, so this cannot be a single `count`
@@ -641,6 +643,23 @@ export async function groupSummaries(
   const lastActivityByGroup = new Map(
     latestActivity.map((row) => [row.groupId, row._max.createdAt]),
   );
+  // The rows behind those timestamps, in one query, for the caption.
+  const latestRows = latestActivity.length
+    ? await prisma.activity.findMany({
+        where: {
+          targetPersonId: null,
+          OR: latestActivity
+            .filter((row) => row.groupId && row._max.createdAt)
+            .map((row) => ({ groupId: row.groupId, createdAt: row._max.createdAt! })),
+        },
+        select: { groupId: true, actorPersonId: true, type: true, data: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const lastRowByGroup = new Map<string, (typeof latestRows)[number]>();
+  for (const row of latestRows) {
+    if (row.groupId && !lastRowByGroup.has(row.groupId)) lastRowByGroup.set(row.groupId, row);
+  }
   // A group with nothing unread produces no row at all, hence the ?? 0 below.
   const unreadByGroup = new Map(unread.map((row) => [row.groupId, row._count._all]));
 
@@ -666,7 +685,22 @@ export async function groupSummaries(
       yourNet: (sheet.net.get(personId) ?? 0n).toString(),
       totalSpend: sheet.totalSpend.toString(),
       lastActivityAt: lastActivityByGroup.get(group.id)?.toISOString() ?? null,
+      lastActivity: lastActivitySummary(lastRowByGroup.get(group.id)),
       unreadCount: unreadByGroup.get(group.id) ?? 0,
     };
   });
+}
+
+function lastActivitySummary(
+  row: { actorPersonId: string; type: string; data: string } | undefined,
+): GroupSummaryDto["lastActivity"] {
+  if (!row) return null;
+  let description: string | null = null;
+  try {
+    const data = JSON.parse(row.data) as { description?: unknown };
+    if (typeof data.description === "string") description = data.description;
+  } catch {
+    // A malformed blob only costs the caption its description.
+  }
+  return { actorPersonId: row.actorPersonId, type: row.type, description };
 }

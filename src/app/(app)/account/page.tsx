@@ -11,6 +11,7 @@ import {
   Download,
   EyeOff,
   Bell,
+  Coins,
   Heart,
   KeyRound,
   LogOut,
@@ -45,7 +46,7 @@ import { useClientValue, useMirror, useResetOnClose } from "@/components/ui/stat
 import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
-import { AVATAR_COLORS, hueVar, initials } from "@/lib/avatar";
+import { initials } from "@/lib/avatar";
 import type { PaymentMethodDto } from "@/lib/types";
 
 export default function AccountPage() {
@@ -146,274 +147,216 @@ export default function AccountPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Account</h1>
+      <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">You</h1>
 
       {/* Profile ----------------------------------------------------------- */}
-      <section className="rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface p-5">
-        <div className="flex items-center gap-4">
-          {/*
-            The avatar is the obvious thing to tap to change how you look, so
-            it opens the picker as well as the row below. A control nobody
-            finds is not a control.
-          */}
-          <button
-            onClick={() => {
-              haptic();
-              setEmojiOpen(true);
-            }}
-            aria-label="Change your emoji"
-            className="shrink-0 rounded-full transition active:opacity-70"
-          >
-            <Avatar person={me} size="lg" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value.slice(0, 60))}
-              onBlur={() => {
-                const trimmed = name.trim();
-                if (trimmed && trimmed !== me.displayName) {
-                  updateProfile.mutate({ displayName: trimmed });
-                } else if (!trimmed) {
-                  setName(me.displayName);
-                }
-              }}
-              onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-              aria-label="Your name"
-              className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
-            />
-            <p className="mt-0.5 text-body text-subtle">
-              Member since{" "}
-              {new Date(me.createdAt).toLocaleDateString(undefined, {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-        </div>
-
-        {/*
-          The colour was editable here and the emoji was not, which made the
-          emoji a one-shot decision taken during onboarding — the moment
-          somebody is least sure what they want to look like for the next year.
-        */}
+      <section className="flex items-center gap-4">
+        {/* Tap your avatar to change how you look: colour, then emoji. */}
         <button
           onClick={() => {
             haptic();
             setEmojiOpen(true);
           }}
-          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-2.5 text-left transition active:opacity-70"
+          aria-label={me.avatarEmoji ? "Change your emoji" : "Pick an emoji"}
+          className="shrink-0 rounded-full transition-opacity active:opacity-70"
         >
-          <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-body-lg font-semibold text-[var(--on-person)]"
-            style={{ background: hueVar(me.avatarColor) }}
-          >
-            {me.avatarEmoji ?? initials(me.displayName)}
-          </span>
-          <span className="flex-1 text-body-lg font-semibold text-text">
-            {me.avatarEmoji ? "Change your emoji" : "Pick an emoji"}
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-subtle" />
+          <Avatar person={me} size="lg" />
         </button>
-
-        <EmojiPicker
-          open={emojiOpen}
-          onClose={() => setEmojiOpen(false)}
-          value={me.avatarEmoji}
-          onSelect={(avatarEmoji) => updateProfile.mutate({ avatarEmoji })}
-          initials={initials(me.displayName)}
-        />
-
-        <div className="mt-4 grid grid-cols-10 gap-1.5">
-          {AVATAR_COLORS.map((color) => (
+        <div className="min-w-0 flex-1">
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value.slice(0, 60))}
+            onBlur={() => {
+              const trimmed = name.trim();
+              if (trimmed && trimmed !== me.displayName) {
+                updateProfile.mutate({ displayName: trimmed });
+              } else if (!trimmed) {
+                setName(me.displayName);
+              }
+            }}
+            onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+            aria-label="Your name"
+            className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+          />
+          <p className="mt-0.5 text-caption text-subtle">
+            Member since{" "}
+            {new Date(me.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            {" · "}
             <button
-              key={color}
               onClick={() => {
                 haptic();
-                updateProfile.mutate({ avatarColor: color });
+                setEmojiOpen(true);
               }}
-              aria-label={`Use the ${color} avatar colour`}
-              className={cn(
-                "aspect-square w-full max-w-9 rounded-full [box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),var(--shadow-sm)] transition active:opacity-70",
-                me.avatarColor === color && "outline-2 outline-offset-2 outline-brand outline-solid",
-              )}
-              style={{ background: hueVar(color) }}
-            />
-          ))}
+              className="text-text underline-offset-2 hover:underline"
+            >
+              Change how you look
+            </button>
+          </p>
         </div>
       </section>
 
+      <EmojiPicker
+        open={emojiOpen}
+        onClose={() => setEmojiOpen(false)}
+        value={me.avatarEmoji}
+        onSelect={(avatarEmoji) => updateProfile.mutate({ avatarEmoji })}
+        initials={initials(me.displayName)}
+        color={me.avatarColor}
+        onColor={(avatarColor) => updateProfile.mutate({ avatarColor })}
+      />
+
+      {/* Getting paid ------------------------------------------------------- */}
+      <Group title="Getting paid">
+        <Row
+          icon={<Wallet className="size-[18px]" strokeWidth={1.75} />}
+          label="How people can pay you"
+          value={me.paymentMethods.length > 0 ? `${me.paymentMethods.length} saved` : "Not set up"}
+          onClick={() => setPayments(true)}
+        />
+        <Row
+          icon={<KeyRound className="size-[18px]" strokeWidth={1.75} />}
+          label="Your invite code"
+          value={me.inviteCode}
+          onClick={() => setMyCode(true)}
+        />
+      </Group>
+
       {/* Preferences -------------------------------------------------------- */}
-      <section className="mt-5">
-        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
-          Preferences
-        </h2>
-
-        <div className="space-y-1.5">
-          <Row
-            icon={<Wallet className="size-[18px]" />}
-            label="Default currency"
-            value={me.defaultCurrency}
-            onClick={() => setCurrencyOpen(true)}
-          />
-          <Row
-            icon={<KeyRound className="size-[18px]" />}
-            label="Your invite code"
-            value={me.inviteCode}
-            onClick={() => setMyCode(true)}
-          />
-          <Row
-            icon={<Wallet className="size-[18px]" />}
-            label="How people can pay you"
-            value={
-              me.paymentMethods.length > 0
-                ? `${me.paymentMethods.length} saved`
-                : "Not set up"
-            }
-            onClick={() => setPayments(true)}
-          />
-          <Row
-            icon={<Target className="size-[18px]" />}
-            label="Budgets"
-            value={
-              budgets && budgets.length > 0
-                ? `${budgets.length} set`
-                : "None yet"
-            }
-            onClick={() => setBudgets(true)}
-          />
-        </div>
-
-        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
-          <span className="shrink-0 text-muted">
-            <EyeOff className="size-[18px]" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-body-lg font-semibold text-text">Privacy screen</span>
-            <span className="mt-0.5 block text-caption leading-snug text-subtle">
-              Hides your balances when you switch apps. It doesn&rsquo;t lock the
-              app, so anyone with your unlocked phone can still open it.
-            </span>
-          </span>
-          <Switch
-            checked={privacyScreen}
-            onChange={setPrivacyScreen}
-            label="Hide balances when you switch apps"
-          />
-        </div>
-
-        <NotificationsRow />
-
-        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
-          <p className="mb-2.5 text-body font-semibold text-text">Appearance</p>
+      <Group title="Preferences">
+        <Row
+          icon={<Coins className="size-[18px]" strokeWidth={1.75} />}
+          label="Default currency"
+          value={me.defaultCurrency}
+          onClick={() => setCurrencyOpen(true)}
+        />
+        <Row
+          icon={<Target className="size-[18px]" strokeWidth={1.75} />}
+          label="Budgets"
+          value={budgets && budgets.length > 0 ? `${budgets.length} set` : "None yet"}
+          onClick={() => setBudgets(true)}
+        />
+        <div className="px-4 py-3">
+          <p className="mb-1 flex items-center gap-3 text-body-lg font-medium text-text">
+            <Moon className="size-[18px] text-muted" strokeWidth={1.75} />
+            Appearance
+          </p>
           <Segmented
             value={theme}
             onChange={setTheme}
             options={[
               { value: "light", label: <span className="flex items-center justify-center gap-1.5"><Sun className="size-3.5" />Light</span> },
-              { value: "dark", label: <span className="flex items-center justify-center gap-1.5"><Moon className="size-3.5" />Dark</span> },
+              { value: "dark", label: <span className="flex items-center justify-center gap-1.5"><Moon className="size-3.5" />Night</span> },
               { value: "system", label: <span className="flex items-center justify-center gap-1.5"><Monitor className="size-3.5" />Auto</span> },
             ]}
           />
         </div>
-      </section>
-
-      {/* Data --------------------------------------------------------------- */}
-      <section className="mt-5">
-        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
-          Your data
-        </h2>
-        <div className="space-y-1.5">
-          {keyUnsaved ? (
-            <button
-              onClick={() => {
-                haptic();
-                setRecovery(true);
-              }}
-              className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] bg-negative-soft p-3.5 text-left"
-            >
-              <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
-              <span className="text-body leading-relaxed text-negative-text">
-                <b className="font-semibold">You haven&rsquo;t saved a recovery key.</b> If you
-                lose this phone, you won&rsquo;t be able to get your account back. Tap here
-                to make a new key and save it.
-              </span>
-            </button>
-          ) : null}
-          <Row
-            icon={<MonitorSmartphone className="size-[18px]" />}
-            label="Your devices"
-            value="Manage"
-            onClick={() => setDevices(true)}
-          />
-          <Row
-            icon={<KeyRound className="size-[18px]" />}
-            label="Recovery key"
-            value={keyUnsaved ? "Not saved" : "Manage"}
-            onClick={() => setRecovery(true)}
-          />
-          <Row
-            icon={<Download className="size-[18px]" />}
-            label="Download a backup"
-            value="JSON"
-            onClick={() => {
-              // Absolute, and a full navigation rather than a router push:
-              // this is a file download, not a page. The response carries
-              // Content-Disposition, so the browser hands it to the OS
-              // download handler rather than trying to render it.
-              window.location.assign(new URL("/api/export", window.location.origin));
-            }}
-          />
-          <Row
-            icon={<LogOut className="size-[18px]" />}
-            label="Sign out on this device"
-            tone="danger"
-            onClick={() => setConfirmSignOut(true)}
-          />
-          <Row
-            icon={<Trash2 className="size-[18px]" />}
-            label="Delete my account"
-            tone="danger"
-            onClick={() => setConfirmDelete(true)}
-          />
+        <NotificationsRow />
+        <div className="flex items-center gap-3 px-4 py-3">
+          <EyeOff className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body-lg font-medium text-text">Privacy screen</span>
+            <span className="mt-0.5 block text-caption leading-snug text-subtle">
+              Hides your balances when you switch apps.
+            </span>
+          </span>
+          <Switch checked={privacyScreen} onChange={setPrivacyScreen} label="Hide balances when you switch apps" />
         </div>
+      </Group>
 
-        <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">
-          The backup is a file with all your groups, expenses and payments.
-          Receipt photos aren&rsquo;t included.
-        </p>
+      {/* Security and backup ------------------------------------------------ */}
+      <Group title="Security and backup">
+        {keyUnsaved ? (
+          <button
+            onClick={() => {
+              haptic();
+              setRecovery(true);
+            }}
+            className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+          >
+            <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" strokeWidth={1.75} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-body-lg font-medium text-text">Back up your account</span>
+              <span className="mt-0.5 block text-caption leading-snug text-muted">
+                You haven&rsquo;t saved a recovery key. Without it you can&rsquo;t get back in on a new phone.
+              </span>
+            </span>
+          </button>
+        ) : null}
+        <Row
+          icon={<MonitorSmartphone className="size-[18px]" strokeWidth={1.75} />}
+          label="Your devices"
+          value="Manage"
+          onClick={() => setDevices(true)}
+        />
+        <Row
+          icon={<KeyRound className="size-[18px]" strokeWidth={1.75} />}
+          label="Recovery key"
+          value={keyUnsaved ? "Not saved" : "Manage"}
+          onClick={() => setRecovery(true)}
+        />
+      </Group>
 
-        <StorageRow />
-      </section>
+      {/* Your data ---------------------------------------------------------- */}
+      <Group
+        title="Your data"
+        caption="A file with all your groups, expenses and payments. Receipt photos aren’t included."
+      >
+        <Row
+          icon={<Download className="size-[18px]" strokeWidth={1.75} />}
+          label="Download a backup"
+          value="JSON"
+          onClick={() => {
+            // Absolute, and a full navigation rather than a router push:
+            // this is a file download, not a page. The response carries
+            // Content-Disposition, so the browser hands it to the OS
+            // download handler rather than trying to render it.
+            window.location.assign(new URL("/api/export", window.location.origin));
+          }}
+        />
+      </Group>
+      <StorageRow />
 
-      <footer className="mt-8 pb-4 text-center">
-        <p className="flex items-center justify-center gap-1.5 text-caption text-subtle">
-          Divvy is free to use
-          <Heart className="size-3" />
-        </p>
-        <p className="mt-1 text-tiny text-subtle">
-          No ads. No tracking.
-        </p>
-        <p className="mt-2 text-tiny">
-          <a href="/privacy" className="font-semibold text-subtle underline underline-offset-2">
-            What Divvy stores about you
-          </a>
-        </p>
+      {/* About -------------------------------------------------------------- */}
+      <Group title="About">
+        <a href="/privacy" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+          <Heart className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body-lg font-medium text-text">What Divvy stores about you</span>
+            <span className="mt-0.5 block text-caption text-subtle">Free to use. No ads, no tracking.</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-subtle" />
+        </a>
         {/*
           Which build this actually is.
-          
+
           Added because there was no way to answer the question. A fix can be
           merged, deployed and still absent from somebody's phone — a stalled
           deploy and a stale cache look identical from the outside, and both
-          look like the fix never worked. One line settles it in two seconds
-          instead of a round of guessing.
-
-          Hidden behind a tap: a raw build code is noise to everyone except the
-          person asking "is the fix on your phone yet?". Selectable once shown,
-          because it exists to be read out and pasted.
+          look like the fix never worked. Hidden behind a tap: a raw build code
+          is noise to everyone except the person asking "is the fix on your
+          phone yet?". Selectable once shown, because it exists to be read out.
         */}
-        <VersionLine />
-      </footer>
+        <div className="px-4 py-3">
+          <VersionLine />
+        </div>
+      </Group>
+
+      {/* Danger zone, apart and at the very end. ---------------------------- */}
+      <Group title="Danger zone">
+        <Row
+          icon={<LogOut className="size-[18px]" strokeWidth={1.75} />}
+          label="Sign out on this device"
+          tone="danger"
+          onClick={() => setConfirmSignOut(true)}
+        />
+        <Row
+          icon={<Trash2 className="size-[18px]" strokeWidth={1.75} />}
+          label="Delete my account"
+          tone="danger"
+          onClick={() => setConfirmDelete(true)}
+        />
+      </Group>
+      <div className="h-6" />
 
       {/* Sheets ------------------------------------------------------------- */}
       <CurrencyPicker
@@ -501,21 +444,19 @@ function StorageRow() {
     };
   }, []);
 
-  if (!status?.supported) return null;
+  // Only worth saying when it's actually a risk.
+  if (!status?.supported || status.persisted) return null;
 
   return (
-    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
+    <div className="mt-3 flex items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-3">
       <span className="shrink-0 pt-0.5 text-muted">
         <Database className="size-[18px]" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-body-lg font-semibold text-text">
-          {status.persisted ? "Saved on this phone" : "May be cleared by your phone"}
-        </p>
+        <p className="text-body-lg font-medium text-text">May be cleared by your phone</p>
         <p className="mt-0.5 text-caption leading-snug text-subtle">
-          {status.persisted
-            ? "Your browser won't delete Divvy's offline copy to free up space."
-            : "If your phone runs low on space, your browser may delete Divvy's offline copy. Adding Divvy to your home screen usually stops this."}
+          If your phone runs low on space, your browser may delete Divvy&rsquo;s offline copy. Add Divvy
+          to your home screen (Share, then Add to Home Screen) to stop this.
           {status.usage !== null ? ` Using ${formatBytes(status.usage)}.` : ""}
         </p>
       </div>
@@ -530,6 +471,19 @@ function formatBytes(bytes: number): string {
 }
 
 // ---------------------------------------------------------------------------
+
+/** A titled, grouped list: one card, rows separated by hairlines. */
+function Group({ title, caption, children }: { title: string; caption?: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-8">
+      <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
+      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+        {children}
+      </div>
+      {caption ? <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">{caption}</p> : null}
+    </section>
+  );
+}
 
 function Row({
   icon,
@@ -550,21 +504,21 @@ function Row({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:bg-surface-2"
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
     >
-      <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
+      <span className={cn("shrink-0", tone === "danger" ? "text-danger" : "text-muted")}>
         {icon}
       </span>
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-body-lg font-semibold",
-          tone === "danger" ? "text-negative-text" : "text-text",
+          "min-w-0 flex-1 truncate text-body-lg font-medium",
+          tone === "danger" ? "text-danger" : "text-text",
         )}
       >
         {label}
       </span>
       {value ? (
-        <span className="shrink-0 truncate text-body font-semibold text-subtle">{value}</span>
+        <span className="max-w-[45%] shrink-0 truncate text-body text-subtle">{value}</span>
       ) : null}
     </button>
   );
@@ -789,13 +743,12 @@ function PaymentMethodsSheet({
                   setKind(entry.value);
                 }}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
                   kind === entry.value
-                    ? "border-brand bg-brand text-inverse"
-                    : "border-line bg-surface-2 text-muted",
+                    ? "border-text bg-text text-inverse"
+                    : "border-line bg-surface text-text hover:bg-surface-2",
                 )}
               >
-                <span>{entry.emoji}</span>
                 {entry.label}
               </button>
             ))}
@@ -883,12 +836,12 @@ function NotificationsRow() {
   };
 
   return (
-    <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
+    <div className="flex items-center gap-3 px-4 py-3">
       <span className="shrink-0 text-muted">
-        <Bell className="size-[18px]" />
+        <Bell className="size-[18px]" strokeWidth={1.75} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-body-lg font-semibold text-text">Notifications</span>
+        <span className="block text-body-lg font-medium text-text">Notifications</span>
         <span className="mt-0.5 block text-caption leading-snug text-subtle">
           {support === "install"
             ? "To get notifications on iPhone, add Divvy to your home screen first."
@@ -914,11 +867,11 @@ function VersionLine() {
   const [shown, setShown] = React.useState(false);
   const build = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
   return shown ? (
-    <p className="mt-3 select-text text-tiny text-subtle">
+    <p className="select-text text-body text-subtle">
       Version 1.0 ({build.slice(0, 7)})
     </p>
   ) : (
-    <button onClick={() => setShown(true)} className="mt-3 text-tiny text-subtle underline-offset-2 hover:underline">
+    <button onClick={() => setShown(true)} className="text-body text-subtle underline-offset-2 hover:underline">
       Version
     </button>
   );

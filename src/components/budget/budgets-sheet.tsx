@@ -355,7 +355,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 text-caption font-medium text-subtle">
       {children}
     </p>
   );
@@ -396,8 +396,8 @@ function Chip({
       className={cn(
         "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-inverse"
-          : "border-line bg-surface text-muted hover:text-text",
+          ? "border-text bg-text text-inverse"
+          : "border-line bg-surface text-text hover:bg-surface-2",
       )}
     >
       {children}

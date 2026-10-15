@@ -165,7 +165,7 @@ export default function JoinPage() {
       <Wordmark className="mb-8" />
 
       <div className="flex flex-1 flex-col">
-        <p className="text-body font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="text-body font-medium text-subtle">
           You&rsquo;ve been invited to
         </p>
 

@@ -41,6 +41,9 @@ export function AmountPad({
   currency,
   onSubmit,
   className,
+  open: openProp,
+  onOpenChange,
+  leading,
 }: {
   /** Minor units. */
   value: bigint | null;
@@ -49,6 +52,14 @@ export function AmountPad({
   /** Fired by a hardware Enter, when there is something to submit. */
   onSubmit?: () => void;
   className?: string;
+  /**
+   * Whether the keypad is showing, when the screen around it decides: typing
+   * a description hides it, tapping the amount brings it back.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Shown to the left of the figure, such as the currency chip. */
+  leading?: React.ReactNode;
 }) {
   const decimals = decimalsFor(currency);
   const symbol = currencySymbol(currency);
@@ -56,7 +67,12 @@ export function AmountPad({
   const [text, setText] = useAmountText(value, currency);
   // Editing an existing expense opens with the amount already right, so the pad
   // starts out of the way; a new one opens with it ready.
-  const [open, setOpen] = React.useState(() => value === null);
+  const [ownOpen, setOwnOpen] = React.useState(() => value === null);
+  const open = openProp ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onOpenChange?.(next);
+  };
 
   const commit = (next: string) => {
     const masked = maskAmount(next, decimals);
@@ -78,8 +94,10 @@ export function AmountPad({
 
   return (
     <div className={cn("select-none", className)}>
-      <div className="flex items-baseline justify-center gap-1.5 px-2 py-1">
-        <span className="display-number shrink-0 font-display text-display font-semibold text-subtle">
+      <div className="flex items-center justify-center gap-2 px-2 py-1">
+        {leading}
+        <span className="flex items-baseline gap-1">
+        <span className="display-number shrink-0 text-title-lg font-semibold text-subtle">
           {symbol}
         </span>
         <input
@@ -101,9 +119,10 @@ export function AmountPad({
             if (event.key === "Enter") onSubmit?.();
           }}
           style={{ width: `${Math.max(1, (text || "0").length)}ch` }}
-          className="display-number min-w-0 bg-transparent text-center font-display text-hero font-semibold leading-none tracking-[-0.04em] text-text outline-none placeholder:text-subtle/60"
+          className="display-number min-w-0 bg-transparent text-center text-display font-semibold leading-none tracking-[-0.03em] text-text outline-none placeholder:text-subtle/60"
           aria-label="Amount"
         />
+        </span>
       </div>
 
       {open ? (

@@ -120,7 +120,7 @@ const csv = [
 ].join("\n");
 await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForTimeout(1200);
-await page.getByRole("button", { name: /^New$/ }).first().click();
+await page.getByRole("button", { name: /^(New group|New|Start a group)$/ }).first().click();
 await page.waitForTimeout(800);
 await page.getByRole("button", { name: /Have this group in Splitwise/ }).click();
 await page.waitForTimeout(800);

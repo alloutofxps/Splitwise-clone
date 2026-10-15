@@ -2,18 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ArrowLeftRight,
-  MessageSquare,
-  Pencil,
-  BellRing,
-  Repeat,
-  Trash2,
-  Undo2,
-  UserPlus,
-  Users,
-  Receipt,
-} from "lucide-react";
 import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
@@ -27,7 +15,8 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/client/api";
 import { groupByDay } from "@/lib/day-groups";
-import { formatMoney } from "@/lib/money";
+import { Avatar } from "@/components/ui/avatar";
+import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
 import type { ActivityDto, PersonDto } from "@/lib/types";
 
 /**
@@ -64,10 +53,13 @@ export default function ActivityPage() {
   if (isLoading || !dashboard) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Activity</h1>
-        <div className="space-y-3">
+        <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
           {[0, 1, 2, 3, 4].map((index) => (
-            <Skeleton key={index} className="h-14 w-full rounded-[var(--radius-lg)]" />
+            <div key={index} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
+              <Skeleton className="size-9 shrink-0 rounded-full" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
           ))}
         </div>
       </div>
@@ -90,7 +82,7 @@ export default function ActivityPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Activity</h1>
+      <h1 className="mb-4 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
 
       {groupsInFeed.length > 1 ? (
         <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -112,7 +104,6 @@ export default function ActivityPage() {
 
       {items.length === 0 ? (
         <EmptyState
-          icon={<Receipt className="size-6" />}
           title={groupFilter ? "Nothing in this group yet" : "Nothing here yet"}
           description={
             groupFilter
@@ -131,12 +122,10 @@ export default function ActivityPage() {
         <div className="space-y-5">
           {days.map(({ label, entries }) => (
             <section key={label}>
-              <h2 className="mb-2 mt-1 px-1 text-caption font-semibold text-subtle">
-                {label}
-              </h2>
-              <ul className="space-y-1">
+              <h2 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h2>
+              <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
                 {entries.map((item) => (
-                  <li key={item.id}>
+                  <li key={item.id} className="border-b border-line last:border-b-0">
                     <ActivityRow
                       activity={item}
                       meId={dashboard.me.id}
@@ -190,8 +179,8 @@ function GroupChip({
       className={cn(
         "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-inverse"
-          : "border-line bg-surface text-muted hover:text-text",
+          ? "border-text bg-text text-inverse"
+          : "border-line bg-surface text-text hover:bg-surface-2",
       )}
     >
       {children}
@@ -213,9 +202,11 @@ function ActivityRow({
   onOpenExpense: (id: string) => void;
 }) {
   const actor = people.get(activity.actorPersonId);
-  const actorName = activity.actorPersonId === meId ? "You" : (actor?.displayName ?? "Someone");
+  const isMe = activity.actorPersonId === meId;
+  const actorName = isMe ? "You" : (actor?.displayName ?? "Someone");
 
-  const { icon, tone, sentence } = describe(activity, actorName, meId, people);
+  const { sentence } = describeActivity(activity, actorName, meId, people);
+  const effect = activityEffect(activity);
 
   /**
    * A deletion is the one entry that carries a reference it must not follow.
@@ -232,33 +223,25 @@ function ActivityRow({
   const body = (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-[var(--radius-lg)] px-3 py-3 transition",
-        clickable && "hover:bg-surface-2 active:opacity-70 active:bg-surface-2",
-        activity.isUnread && "bg-brand-soft/30",
+        "flex items-start gap-3 px-4 py-3 transition-colors",
+        clickable && "hover:bg-surface-2 active:bg-surface-2",
       )}
     >
-      <span
-        className={cn(
-          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full",
-          tone === "positive" && "bg-positive-soft text-positive-text",
-          tone === "negative" && "bg-negative-soft text-negative-text",
-          tone === "neutral" && "bg-surface-2 text-muted",
-          tone === "brand" && "bg-brand-soft text-brand-soft-text",
-          tone === "warning" && "bg-warning-soft text-text",
-        )}
-      >
-        {icon}
-      </span>
+      {actor ? (
+        <Avatar person={actor} size="sm" className="mt-0.5" />
+      ) : (
+        <span className="mt-0.5 size-8 shrink-0 rounded-full bg-surface-2" />
+      )}
 
       <span className="min-w-0 flex-1">
-        <span className="block text-body-lg leading-snug text-text">{sentence}</span>
-        <span className="mt-1 flex items-center gap-1.5 text-tiny text-subtle">
+        <span className="block text-body leading-snug text-muted">{sentence}</span>
+        <span className="mt-0.5 flex items-center gap-1.5 text-caption text-subtle">
           {activity.groupName ? (
             <>
               <span className="truncate">
                 {activity.groupEmoji} {activity.groupName}
               </span>
-              <span>·</span>
+              <span aria-hidden>·</span>
             </>
           ) : null}
           <span className="shrink-0">{timeAgo(activity.createdAt)}</span>
@@ -267,9 +250,23 @@ function ActivityRow({
 
       {deleted && activity.undoable ? (
         <UndoButton activity={activity} />
-      ) : activity.isUnread ? (
-        <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" aria-label="Unread" />
-      ) : null}
+      ) : (
+        <span className="flex shrink-0 items-center gap-2 pt-0.5">
+          {effect ? (
+            <span
+              className={cn(
+                "tabular text-caption font-medium",
+                effect.owed ? "text-positive-text" : "text-negative-text",
+              )}
+            >
+              {effect.text}
+            </span>
+          ) : null}
+          {activity.isUnread ? (
+            <span className="size-2 rounded-full bg-text" aria-label="Unread" />
+          ) : null}
+        </span>
+      )}
     </div>
   );
 
@@ -337,307 +334,9 @@ function UndoButton({ activity }: { activity: ActivityDto }) {
       }}
       disabled={busy}
       aria-label={`Undo, bring this ${label} back`}
-      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-brand transition active:opacity-70 hover:bg-surface-2 disabled:opacity-50"
+      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition active:opacity-70 hover:bg-surface-2 disabled:opacity-50"
     >
       {busy ? "…" : "Undo"}
     </button>
   );
-}
-
-/**
- * Turns an event into a sentence.
- *
- * Amounts come from the stored snapshot rather than the live record, which is
- * the whole reason a deleted expense still says how much it was for.
- */
-function describe(
-  activity: ActivityDto,
-  actorName: string,
-  meId: string,
-  people: Map<string, PersonDto>,
-): {
-  icon: React.ReactNode;
-  tone: "positive" | "negative" | "neutral" | "brand" | "warning";
-  sentence: React.ReactNode;
-} {
-  const data = activity.data;
-  const amount =
-    data.amount && data.currency
-      ? formatMoney(BigInt(data.amount), data.currency)
-      : null;
-
-  const strong = (text: string) => <strong className="font-semibold">{text}</strong>;
-
-  switch (activity.type) {
-    case "expense.created":
-      return {
-        icon: <Receipt className="size-[17px]" />,
-        tone: "brand",
-        sentence: (
-          <>
-            {strong(actorName)} added {strong(String(data.description ?? "an expense"))}
-            {amount ? <> · <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-
-    case "expense.updated": {
-      const changes = Array.isArray(data.changes) ? (data.changes) : [];
-      return {
-        icon: <Pencil className="size-[16px]" />,
-        tone: "neutral",
-        sentence: (
-          <>
-            {strong(actorName)}{" "}
-            {changes.length > 0 ? changes.join(" and ") : "edited"} on{" "}
-            {strong(String(data.description ?? "an expense"))}
-          </>
-        ),
-      };
-    }
-
-    case "expense.deleted":
-      return {
-        icon: <Trash2 className="size-[16px]" />,
-        tone: "negative",
-        sentence: (
-          <>
-            {strong(actorName)} deleted {strong(String(data.description ?? "an expense"))}
-            {amount ? <> · <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-
-    case "expense.restored":
-      return {
-        icon: <Undo2 className="size-[16px]" />,
-        tone: "brand",
-        sentence: (
-          <>
-            {strong(actorName)} restored {strong(String(data.description ?? "an expense"))}
-            {amount ? <> · <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-
-    case "settlement.restored":
-      return {
-        icon: <Undo2 className="size-[16px]" />,
-        tone: "brand",
-        sentence: (
-          <>
-            {strong(actorName)} restored a payment
-            {amount ? <> · <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-
-    case "group.updated": {
-      // The route stores what changed; without this the entry fell through to
-      // "made a change", which is true of every entry in the feed.
-      const changes = Array.isArray(data.changes) ? data.changes : [];
-      return {
-        icon: <Pencil className="size-[16px]" />,
-        tone: "neutral",
-        sentence: (
-          <>
-            {strong(actorName)}{" "}
-            {changes.length > 0 ? changes.join(" and ") : "changed the settings"} in{" "}
-            {strong(String(data.groupName ?? "the group"))}
-          </>
-        ),
-      };
-    }
-
-    case "settlement.created": {
-      const from = data.fromPersonId as string | undefined;
-      const to = data.toPersonId as string | undefined;
-      const fromName = from === meId ? "You" : (people.get(from ?? "")?.displayName ?? "Someone");
-      const toName = to === meId ? "you" : (people.get(to ?? "")?.displayName ?? "someone");
-      return {
-        icon: <ArrowLeftRight className="size-[16px]" />,
-        tone: "positive",
-        sentence: (
-          <>
-            {strong(fromName)} paid {strong(toName)}
-            {amount ? <> <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-    }
-
-    case "settlement.deleted":
-      return {
-        icon: <ArrowLeftRight className="size-[16px]" />,
-        tone: "negative",
-        sentence: <>{strong(actorName)} removed a payment{amount ? <> of <span className="tabular">{amount}</span></> : null}</>,
-      };
-
-    case "comment.created":
-      return {
-        icon: <MessageSquare className="size-[16px]" />,
-        tone: "neutral",
-        sentence: (
-          <>
-            {strong(actorName)} commented on {strong(String(data.description ?? "an expense"))}
-            {/*
-              `ActivityData` is an open bag of `unknown`, so this is checked
-              rather than coerced: a payload shape that changed under us should
-              drop the quote line, not render "[object Object]" inside quotes.
-            */}
-            {typeof data.preview === "string" && data.preview ? (
-              <span className="mt-0.5 block truncate text-body text-muted">
-                &ldquo;{data.preview}&rdquo;
-              </span>
-            ) : null}
-          </>
-        ),
-      };
-
-    case "member.joined":
-      return {
-        icon: <UserPlus className="size-[16px]" />,
-        tone: "brand",
-        sentence: <>{strong(actorName)} joined {strong(String(data.groupName ?? "the group"))}</>,
-      };
-
-    case "member.added": {
-      const other = people.get((data.otherPersonId as string) ?? "");
-      return {
-        icon: <UserPlus className="size-[16px]" />,
-        tone: "neutral",
-        sentence: (
-          <>
-            {strong(actorName)} added {strong(other?.displayName ?? "someone")}
-          </>
-        ),
-      };
-    }
-
-    case "member.merged": {
-      const target = people.get(typeof data.personId === "string" ? data.personId : "");
-      const was = typeof data.ghostName === "string" ? data.ghostName : null;
-      // The name is stored on the entry as well as looked up, because the
-      // placeholder half of it no longer exists to be looked up at all.
-      const now =
-        target?.displayName ?? (typeof data.name === "string" ? data.name : "someone");
-      return {
-        icon: <UserPlus className="size-[16px]" />,
-        tone: "neutral",
-        // Both names, when they differ, because a merge between two spellings
-        // of one person is exactly the case somebody scrolls back to check.
-        sentence:
-          was && was !== now ? (
-            <>
-              {strong(actorName)} moved {strong(was)}&rsquo;s expenses to {strong(now)}
-            </>
-          ) : (
-            <>
-              {strong(actorName)} moved an added name&rsquo;s expenses to {strong(now)}
-            </>
-          ),
-      };
-    }
-
-    case "member.left":
-    case "member.removed": {
-      const other = people.get((data.otherPersonId as string) ?? "");
-      return {
-        icon: <Users className="size-[16px]" />,
-        tone: "neutral",
-        sentence:
-          activity.type === "member.left" ? (
-            <>{strong(actorName)} left the group</>
-          ) : (
-            <>{strong(actorName)} removed {strong(other?.displayName ?? "someone")}</>
-          ),
-      };
-    }
-
-    case "recurrence.fired":
-      return {
-        icon: <Repeat className="size-[16px]" />,
-        tone: "brand",
-        sentence: (
-          <>
-            {strong(String(data.description ?? "A repeating expense"))} posted automatically
-            {amount ? <> · <span className="tabular">{amount}</span></> : null}
-          </>
-        ),
-      };
-
-    case "recurrence.paused":
-      return {
-        icon: <Repeat className="size-[16px]" />,
-        tone: "warning",
-        sentence: (
-          <>
-            {strong(String(data.description ?? "A repeating expense"))} was paused
-            {typeof data.reason === "string" && data.reason ? <> · {data.reason}</> : null}
-          </>
-        ),
-      };
-
-    case "nudge.sent": {
-      const target = people.get(activity.targetPersonId ?? "");
-      // Reads differently depending on which end you are: "you reminded Ravi"
-      // is a record, "Ravi reminded you" is a prompt.
-      return {
-        icon: <BellRing className="size-[16px]" />,
-        tone: "warning",
-        sentence:
-          activity.targetPersonId === meId ? (
-            <>
-              {strong(actorName)} reminded you about
-              {amount ? <> <span className="tabular">{amount}</span></> : <> a balance</>}
-            </>
-          ) : (
-            <>
-              You reminded {strong(target?.displayName ?? "someone")}
-              {amount ? <> about <span className="tabular">{amount}</span></> : null}
-            </>
-          ),
-      };
-    }
-
-    case "group.created":
-      return {
-        icon: <Users className="size-[16px]" />,
-        tone: "brand",
-        sentence: <>{strong(actorName)} created {strong(String(data.groupName ?? "a group"))}</>,
-      };
-
-    default:
-      return {
-        icon: <Receipt className="size-[16px]" />,
-        tone: "neutral",
-        sentence: <>{strong(actorName)} made a change</>,
-      };
-  }
-}
-
-/**
- * Relative time.
- *
- * Stops at a week: "23 days ago" is harder to place than a date, and by then
- * the exact day matters more than the elapsed span.
- */
-function timeAgo(iso: string): string {
-  const then = new Date(iso);
-  const seconds = Math.floor((Date.now() - then.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-
-  return then.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    ...(then.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }),
-  });
 }

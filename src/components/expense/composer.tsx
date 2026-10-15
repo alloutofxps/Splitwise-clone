@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Camera, Check, ChevronDown, NotebookPen, Plus, Users } from "lucide-react";
+import { CalendarDays, Camera, Check, ChevronDown, NotebookPen, Plus } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
@@ -107,6 +107,9 @@ export function ExpenseComposer({
   );
 
   const [draft, setDraft] = React.useState<Draft | null>(null);
+  // Whether the number pad is showing. Typing the description hides it;
+  // tapping the amount brings it back.
+  const [keypad, setKeypad] = React.useState(true);
   // Item lines read off a receipt photo, offered as a split by item.
   const [foundItems, setFoundItems] = React.useState<{ name: string; amount: bigint }[] | null>(null);
 
@@ -125,6 +128,7 @@ export function ExpenseComposer({
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
     setFoundItems(null);
+    setKeypad(!expense);
     if (expense) {
       setDraft(draftFromExpense(expense));
       setPanel(null);
@@ -363,21 +367,55 @@ export function ExpenseComposer({
             locked={Boolean(expense)}
           />
 
-          {/* Amount --------------------------------------------------------- */}
-          <div className="mt-4 flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
+          {/* Description: what it was for comes first, the way people say it. */}
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
             <button
-              onClick={() => setPanel("currency")}
-              className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-caption font-semibold text-muted transition active:opacity-70"
+              onClick={() => setPanel("category")}
+              aria-label={`Category: ${category.name}`}
+              className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface text-text transition-opacity active:opacity-70"
             >
-              {draft.currency}
-              <ChevronDown className="size-3" />
+              <CategoryGlyph name={category.icon} />
             </button>
 
+            <input
+              value={draft.description}
+              onChange={(event) => {
+                const description = event.target.value.slice(0, 140);
+                // Only auto-assign while the user has not chosen a category
+                // themselves - overriding a deliberate choice is infuriating.
+                const suggestion =
+                  draft.categoryId === DEFAULT_CATEGORY_ID ? suggestCategory(description) : null;
+                patch({
+                  description,
+                  ...(suggestion ? { categoryId: suggestion.id } : {}),
+                });
+              }}
+              onFocus={() => setKeypad(false)}
+              placeholder="What was it for?"
+              enterKeyHint="done"
+              className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle/70"
+            />
+          </div>
+
+          {/* Amount --------------------------------------------------------- */}
+          <div className="mt-4">
             <AmountPad
               value={draft.amount}
               onChange={(value) => patch({ amount: value })}
               currency={draft.currency}
               onSubmit={() => void save()}
+              open={keypad}
+              onOpenChange={setKeypad}
+              leading={
+                <button
+                  onClick={() => setPanel("currency")}
+                  aria-label={`Currency: ${draft.currency}`}
+                  className="flex shrink-0 items-center gap-0.5 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition-colors hover:bg-surface-2"
+                >
+                  {draft.currency}
+                  <ChevronDown className="size-3" />
+                </button>
+              }
               className="w-full"
             />
 
@@ -393,39 +431,30 @@ export function ExpenseComposer({
           </div>
 
           {/*
-            Who paid, and how it divides.
-
-            Directly under the amount, and two-up rather than stacked, because
-            the keypad opens with the sheet: at full height it pushed both of
-            these below the fold, so the first thing anyone saw of a new expense
-            was a number pad and no indication of who it involved. One row of
-            two costs 48px here instead of 116, which is the difference between
-            visible and not.
+            Who paid and how it divides, as one sentence: "Paid by you · split
+            equally between 4". Each half opens its own panel. Directly under
+            the amount, so the people involved are never below the fold.
           */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <SummaryTile
-              label="Paid by"
-              value={payerLabel(draft.payers, peopleById, me.id)}
-              onClick={() => setPanel("payer")}
-              warning={payerMismatch}
-              icon={
-                draft.payers.length === 1 && peopleById.get(draft.payers[0].personId) ? (
-                  <Avatar person={peopleById.get(draft.payers[0].personId)!} size="xs" />
-                ) : (
-                  <Users className="size-4 text-subtle" />
-                )
-              }
-            />
-            <SummaryTile
-              label="Split"
-              value={splitLabel(draft.splitMode, split.splits.filter((s) => s.included).length)}
+          <p className="mt-4 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-body text-muted">
+            <SentenceButton onClick={() => setPanel("payer")} warning={payerMismatch}>
+              {draft.payers.length === 1 && peopleById.get(draft.payers[0].personId) ? (
+                <Avatar person={peopleById.get(draft.payers[0].personId)!} size="xs" />
+              ) : null}
+              Paid by {payerLabel(draft.payers, peopleById, me.id).replace(/^You$/, "you")}
+            </SentenceButton>
+            <span aria-hidden>·</span>
+            <SentenceButton
               onClick={() => setPanel("split")}
               warning={split.errors.length > 0}
-            />
-          </div>
+              ariaLabel={`Split ${splitLabel(draft.splitMode, split.splits.filter((s) => s.included).length).toLowerCase()}`}
+            >
+              split {splitSentence(draft.splitMode, split.splits.filter((s) => s.included).length)}
+              {!expense && group?.defaultSplit && draft.splitMode !== "EQUAL" ? " · usual split" : ""}
+            </SentenceButton>
+          </p>
           {foundItems && draft.splitMode !== "ITEMIZED" ? (
-            <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-md)] bg-brand-soft px-3.5 py-3">
-              <p className="min-w-0 flex-1 text-body leading-snug text-brand-soft-text">
+            <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-md)] border border-line px-3.5 py-3">
+              <p className="min-w-0 flex-1 text-body leading-snug text-text">
                 The receipt has {foundItems.length} items. Split it by who had what?
               </p>
               <Button
@@ -459,35 +488,6 @@ export function ExpenseComposer({
               current={draft.splitMode}
             />
           ) : null}
-
-          {/* Description ---------------------------------------------------- */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
-            <button
-              onClick={() => setPanel("category")}
-              aria-label={`Category: ${category.name}`}
-              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition active:opacity-70 bg-surface-2 text-text"
-            >
-              <CategoryGlyph name={category.icon} />
-            </button>
-
-            <input
-              value={draft.description}
-              onChange={(event) => {
-                const description = event.target.value.slice(0, 140);
-                // Only auto-assign while the user has not chosen a category
-                // themselves - overriding a deliberate choice is infuriating.
-                const suggestion =
-                  draft.categoryId === DEFAULT_CATEGORY_ID ? suggestCategory(description) : null;
-                patch({
-                  description,
-                  ...(suggestion ? { categoryId: suggestion.id } : {}),
-                });
-              }}
-              placeholder="What was it for?"
-              enterKeyHint="done"
-              className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle/70"
-            />
-          </div>
 
           {/* Live preview ---------------------------------------------------- */}
           {amount > 0n && split.errors.length === 0 ? (
@@ -753,10 +753,13 @@ function ScopePicker({
   /** Editing: the scope is fixed and shown as a label rather than a control. */
   locked?: boolean;
 }) {
+  const [picking, setPicking] = React.useState(false);
   const options = [
     ...data.groups.map((group) => ({
       key: `group:${group.id}`,
       label: `${group.emoji} ${group.name}`,
+      leading: <span className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] bg-surface-2 text-title">{group.emoji}</span>,
+      name: group.name,
       apply: (): Partial<Draft> => {
         const usual = startingSplit(group.defaultSplit ?? null, group.members.map((m) => m.id));
         return {
@@ -778,6 +781,8 @@ function ScopePicker({
     ...data.friends.filter((friend) => friend.isFriend !== false).map((friend) => ({
       key: `friend:${friend.person.id}`,
       label: friend.person.displayName,
+      leading: <Avatar person={friend.person} size="md" />,
+      name: friend.person.displayName,
       apply: (): Partial<Draft> => ({
         groupId: null,
         friendId: friend.person.id,
@@ -847,41 +852,55 @@ function ScopePicker({
 
   return (
     <div className="space-y-2">
-    <label className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
-      <span className="shrink-0 text-body font-semibold text-muted">With</span>
-      <select
-        value={current}
-        onChange={(event) => {
-          const option = options.find((o) => o.key === event.target.value);
-          if (option) onChange(option.apply());
-        }}
-        className="min-w-0 flex-1 bg-transparent text-input font-semibold text-text outline-none"
-      >
-        {current === "" ? <option value="">Pick a group or a friend…</option> : null}
-        {data.groups.length > 0 ? (
-          <optgroup label="Groups">
-            {options
-              .filter((o) => o.key.startsWith("group:"))
-              .map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-          </optgroup>
-        ) : null}
-        {options.some((o) => o.key.startsWith("friend:")) ? (
-          <optgroup label="Friends">
-            {options
-              .filter((o) => o.key.startsWith("friend:"))
-              .map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-          </optgroup>
-        ) : null}
-      </select>
-    </label>
+    {/* A chip that opens a proper list, rather than the browser's own
+        drop-down, which can't show a group's emoji or a friend's face. */}
+    <button
+      type="button"
+      onClick={() => {
+        haptic();
+        setPicking(true);
+      }}
+      className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-line px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+    >
+      <span className="shrink-0 text-body text-muted">With</span>
+      <span className="min-w-0 flex-1 truncate text-body-lg font-medium text-text">
+        {options.find((o) => o.key === current)?.label ?? "Pick a group or a friend"}
+      </span>
+      <ChevronDown className="size-4 shrink-0 text-subtle" />
+    </button>
+    <Sheet open={picking} onClose={() => setPicking(false)} title="Add it to">
+      <div className="space-y-5 px-5 pb-6">
+        {[
+          { title: "Groups", list: options.filter((o) => o.key.startsWith("group:")) },
+          { title: "Friends", list: options.filter((o) => o.key.startsWith("friend:")) },
+        ]
+          .filter((section) => section.list.length > 0)
+          .map((section) => (
+            <section key={section.title}>
+              <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{section.title}</h3>
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+                {section.list.map((option) => (
+                  <li key={option.key}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic();
+                        onChange(option.apply());
+                        setPicking(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                    >
+                      {option.leading}
+                      <span className="min-w-0 flex-1 truncate text-body-lg font-medium text-text">{option.name}</span>
+                      {option.key === current ? <Check className="size-5 shrink-0 text-text" /> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+      </div>
+    </Sheet>
     {others.length > 0 ? (
       <div className="flex flex-wrap items-center gap-1.5 px-1" role="group" aria-label="Also split with">
         <span className="mr-0.5 text-caption font-semibold text-subtle">Also with</span>
@@ -896,8 +915,8 @@ function ScopePicker({
               className={cn(
                 "flex h-8 items-center gap-1 rounded-full border px-3 text-body font-semibold transition active:opacity-70",
                 on
-                  ? "border-transparent bg-brand-soft text-brand-soft-text"
-                  : "border-[var(--card-border)] bg-surface text-muted",
+                  ? "border-text bg-text text-inverse"
+                  : "border-line bg-surface text-text",
               )}
             >
               {on ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -912,51 +931,35 @@ function ScopePicker({
 }
 
 /**
- * One of the two facts that decide what an expense means.
- *
- * Stacked label over value rather than the side-by-side row this replaces,
- * because two of these have to fit in the width one row used to take. The
- * chevron is dropped for the same reason - the tile is obviously a control from
- * its fill, and at this size the affordance is not worth 16px of the value.
+ * One half of "Paid by you · split equally between 4": a word you can tap.
+ * Underlined so it reads as a control inside a sentence; red when what it
+ * describes doesn't add up yet.
  */
-function SummaryTile({
-  label,
-  value,
+function SentenceButton({
+  children,
   onClick,
-  icon,
   warning,
+  ariaLabel,
 }: {
-  label: string;
-  value: string;
+  children: React.ReactNode;
   onClick: () => void;
-  icon?: React.ReactNode;
   warning?: boolean;
+  ariaLabel?: string;
 }) {
   return (
     <button
+      type="button"
       onClick={() => {
         haptic();
         onClick();
       }}
+      aria-label={ariaLabel}
       className={cn(
-        "flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-md)] border bg-surface px-3 py-2 text-left transition active:opacity-70",
-        warning ? "border-negative/50 bg-negative-soft/40" : "border-line",
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1 py-0.5 font-medium underline decoration-1 underline-offset-4 transition-colors hover:bg-surface-2",
+        warning ? "text-negative-text decoration-negative" : "text-text decoration-line-strong",
       )}
     >
-      <span className="text-tiny font-semibold uppercase tracking-[0.05em] text-subtle">
-        {label}
-      </span>
-      <span className="flex min-w-0 items-center gap-1.5">
-        {icon}
-        <span
-          className={cn(
-            "truncate text-body-lg font-semibold",
-            warning ? "text-negative-text" : "text-text",
-          )}
-        >
-          {value}
-        </span>
-      </span>
+      {children}
     </button>
   );
 }
@@ -988,10 +991,10 @@ function Chip({
             },
           })}
       className={cn(
-        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
         active
-          ? "border-brand/40 bg-brand-soft text-brand-soft-text"
-          : "border-line bg-surface text-muted hover:bg-surface-2",
+          ? "border-text bg-text text-inverse"
+          : "border-line bg-surface text-text hover:bg-surface-2",
       )}
     >
       {icon}
@@ -1031,7 +1034,7 @@ function SplitPreview({
       className="mt-4 overflow-hidden"
     >
       <div className="rounded-[var(--radius-lg)] bg-surface-2 p-3.5">
-        <p className="mb-2.5 text-tiny font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2.5 text-caption font-medium text-subtle">
           Who owes what
         </p>
         <ul className="space-y-2">
@@ -1087,6 +1090,25 @@ function payerLabel(
   const person = peopleById.get(payers[0].personId);
   if (!person) return "Someone";
   return payers[0].personId === meId ? "You" : person.displayName;
+}
+
+function splitSentence(mode: SplitMode, count: number): string {
+  switch (mode) {
+    case "EQUAL":
+      return count === 1 ? "to one person" : `equally between ${count}`;
+    case "EXACT":
+      return "by exact amounts";
+    case "PERCENT":
+      return "by percent";
+    case "SHARES":
+      return "by shares";
+    case "ADJUSTMENT":
+      return "with extras";
+    case "ITEMIZED":
+      return "by item";
+    default:
+      return "equally";
+  }
 }
 
 function splitLabel(mode: SplitMode, count: number): string {

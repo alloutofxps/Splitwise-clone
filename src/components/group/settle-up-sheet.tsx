@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, ChevronDown, Copy, ExternalLink } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, ExternalLink, Wallet } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountInput } from "../ui/money";
-import { Avatar } from "../ui/avatar";
+import { Avatar, usePersonHue } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
-import { useCreateSettlement } from "@/lib/client/queries";
+import { useCreateSettlement, useDashboard } from "@/lib/client/queries";
 import { convert, exactRate, formatMoney, inverseRate } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { CurrencyPicker } from "../expense/currency-picker";
@@ -42,6 +42,7 @@ export function SettleUpSheet({
   directCurrency,
   /** A specific transfer to open on, from tapping one in the balances list. */
   initialEdge,
+  onSaved,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,9 +52,16 @@ export function SettleUpSheet({
   fixedPersonId?: string;
   directCurrency?: string;
   initialEdge?: { fromPersonId: string; toPersonId: string; amount: string };
+  /** Told who paid whom once it is saved, so the screen can show it moving. */
+  onSaved?: (payment: { fromPersonId: string; toPersonId: string }) => void;
 }) {
   const toast = useToast();
   const settle = useCreateSettlement(meId);
+  const { data: dashboard } = useDashboard();
+  // The payee's own ways of being paid: fetched for someone else, already in
+  // hand for yourself.
+  const [payeeMethods, setPayeeMethods] = React.useState<PaymentMethodDto[]>([]);
+  const [settlingAll, setSettlingAll] = React.useState(false);
 
   const currency = group?.currency ?? directCurrency ?? "USD";
 
@@ -184,7 +192,8 @@ export function SettleUpSheet({
         method,
       });
       haptic([8, 30, 8]);
-      toast({ tone: "success", title: "Payment saved", description: "Nice one." });
+      toast({ tone: "success", title: "Payment saved" });
+      onSaved?.({ fromPersonId: selected.fromPersonId, toPersonId: selected.toPersonId });
       onClose();
     } catch (error) {
       toast({
@@ -225,6 +234,39 @@ export function SettleUpSheet({
             meId={meId}
             people={people}
             currency={currency}
+            settlingAll={settlingAll}
+            onSettleAll={
+              group
+                ? async (edges) => {
+                    setSettlingAll(true);
+                    try {
+                      for (const edge of edges) {
+                        await settle.mutateAsync({
+                          groupId: group.id,
+                          fromPersonId: edge.fromPersonId,
+                          toPersonId: edge.toPersonId,
+                          amount: edge.amount,
+                          currency,
+                          note: null,
+                          method: null,
+                        });
+                      }
+                      haptic([8, 30, 8]);
+                      toast({ tone: "success", title: `Saved ${edges.length} payments` });
+                      onSaved?.({ fromPersonId: edges[0].fromPersonId, toPersonId: edges[0].toPersonId });
+                      onClose();
+                    } catch (error) {
+                      toast({
+                        tone: "error",
+                        title: "Couldn\u2019t save all of them",
+                        description: error instanceof ApiError ? error.message : undefined,
+                      });
+                    } finally {
+                      setSettlingAll(false);
+                    }
+                  }
+                : undefined
+            }
             onPick={(edge) => {
               haptic();
               setSelected({
@@ -237,59 +279,34 @@ export function SettleUpSheet({
           />
         ) : (
           <>
-            {/* Direction ---------------------------------------------------- */}
-            <div className="flex items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
-              <div className="flex flex-col items-center gap-1.5">
-                <Avatar
-                  person={iAmPaying ? people.get(meId)! : other!}
-                  size="md"
-                />
-                <span className="text-caption font-semibold text-text">
-                  {iAmPaying ? "You" : (other?.displayName.split(" ")[0] ?? "")}
-                </span>
-              </div>
-
-              <ArrowRight className="size-5 shrink-0 text-subtle" />
-
-              <div className="flex flex-col items-center gap-1.5">
-                <Avatar person={iAmPaying ? other! : people.get(meId)!} size="md" />
-                <span className="text-caption font-semibold text-text">
-                  {iAmPaying ? (other?.displayName.split(" ")[0] ?? "") : "You"}
-                </span>
-              </div>
-
-              {/*
-                Offered whenever the group holds anyone else, not just when the
-                plan happens to name more than one person.
-
-                With debt simplification on, the plan collapses the viewer's
-                whole position into a single transfer — so `suggestions` was
-                length one, this button was hidden, and the sheet became a
-                locked instruction to pay one specific person. Anyone else in
-                the group who owed you money could not be settled with at all.
-              */}
-              {!fixedPersonId && others.length > 0 ? (
-                <button
-                  onClick={() => {
-                    haptic();
-                    setSelected(null);
-                  }}
-                  className="ml-2 text-caption font-semibold text-brand"
-                >
-                  Change
-                </button>
-              ) : null}
-            </div>
+            {/* Payer and payee, joined by the line the money travels along. */}
+            <PairLine
+              from={people.get(selected.fromPersonId)}
+              to={people.get(selected.toPersonId)}
+              meId={meId}
+              label={amount && amount > 0n ? formatMoney(amount, payCurrency) : null}
+            />
+            {!fixedPersonId && others.length > 0 ? (
+              <button
+                onClick={() => {
+                  haptic();
+                  setSelected(null);
+                }}
+                className="mx-auto mt-1 block rounded-[var(--radius-sm)] px-2 py-1 text-caption font-medium text-muted underline-offset-2 hover:text-text hover:underline"
+              >
+                Someone else
+              </button>
+            ) : null}
 
             {/* Amount ------------------------------------------------------- */}
-            <div className="mt-4 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
+            <div className="mt-4 px-4 py-2">
               {group ? (
                 <button
                   onClick={() => {
                     haptic();
                     setPickingCurrency(true);
                   }}
-                  className="mx-auto mb-2 flex items-center gap-1 rounded-full bg-surface px-3 py-1 text-caption font-semibold text-muted"
+                  className="mx-auto mb-2 flex items-center gap-1 rounded-full border border-line px-3 py-1 text-caption font-medium text-text"
                   aria-label={`Currency: ${payCurrency}`}
                 >
                   Paying in {payCurrency}
@@ -318,7 +335,7 @@ export function SettleUpSheet({
                     haptic();
                     setAmount(fullAmount);
                   }}
-                  className="mx-auto mt-2 block text-caption font-semibold text-brand"
+                  className="mx-auto mt-2 block text-caption font-medium text-text underline underline-offset-2"
                 >
                   Pay the full {formatMoney(fullAmount, payCurrency)}
                 </button>
@@ -327,16 +344,16 @@ export function SettleUpSheet({
 
             {/* Pay them ----------------------------------------------------- */}
             {iAmPaying && other ? (
-              <PayThem person={other} amount={amount} currency={payCurrency} />
+              <PayThem person={other} amount={amount} currency={payCurrency} onMethods={setPayeeMethods} />
             ) : null}
 
             {/* How ---------------------------------------------------------- */}
             <div className="mt-4">
-              <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+              <p className="mb-2 px-1 text-caption font-medium text-subtle">
                 How was it paid?
               </p>
               <div className="flex flex-wrap gap-2">
-                {["Cash", "Bank transfer", "UPI", "PayPal", "Venmo", "Other"].map((option) => (
+                {methodChoices(iAmPaying ? payeeMethods : (dashboard?.me.paymentMethods ?? [])).map((option) => (
                   <button
                     key={option}
                     onClick={() => {
@@ -344,10 +361,10 @@ export function SettleUpSheet({
                       setMethod(method === option ? null : option);
                     }}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+                      "rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
                       method === option
-                        ? "border-brand bg-brand text-inverse"
-                        : "border-line bg-surface text-muted",
+                        ? "border-text bg-text text-inverse"
+                        : "border-line bg-surface text-text hover:bg-surface-2",
                     )}
                   >
                     {option}
@@ -391,7 +408,12 @@ function SuggestionList({
   people,
   currency,
   onPick,
+  onSettleAll,
+  settlingAll,
 }: {
+  /** Records every payment you owe in the group at once. */
+  onSettleAll?: (edges: { fromPersonId: string; toPersonId: string; amount: string }[]) => void | Promise<void>;
+  settlingAll?: boolean;
   suggestions: { fromPersonId: string; toPersonId: string; amount: string }[];
   /** Every other member of the group, whether or not the plan mentions them. */
   others: PersonDto[];
@@ -405,15 +427,22 @@ function SuggestionList({
     suggestions.map((edge) => (edge.fromPersonId === meId ? edge.toPersonId : edge.fromPersonId)),
   );
   const rest = others.filter((person) => !suggested.has(person.id));
+  const mine = suggestions.filter((edge) => edge.fromPersonId === meId);
+  const mineTotal = mine.reduce((total, edge) => total + BigInt(edge.amount), 0n);
 
   return (
     <div className="space-y-5">
+      {onSettleAll && mine.length > 1 ? (
+        <Button variant="primary" fullWidth loading={settlingAll} onClick={() => void onSettleAll(mine)}>
+          Settle all in this group · {formatMoney(mineTotal, currency)} to {mine.length} people
+        </Button>
+      ) : null}
       {suggestions.length > 0 ? (
         <div>
-          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length === 1 ? "Suggested" : "Suggested payments"}
           </p>
-          <ul className="space-y-2">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {suggestions.map((edge, index) => {
               const from = people.get(edge.fromPersonId);
               const to = people.get(edge.toPersonId);
@@ -424,7 +453,7 @@ function SuggestionList({
                 <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
                   <button
                     onClick={() => onPick(edge)}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:border-line-strong"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                   >
                     <Avatar person={iAmPaying ? to : from} size="md" />
                     <span className="min-w-0 flex-1">
@@ -455,15 +484,15 @@ function SuggestionList({
 
       {rest.length > 0 ? (
         <div>
-          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length > 0 ? "Someone else" : "Add a payment anyway"}
           </p>
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {rest.map((person) => (
               <li key={person.id}>
                 <button
                   onClick={() => onPick({ fromPersonId: meId, toPersonId: person.id, amount: "0" })}
-                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2.5 text-left transition active:opacity-70"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                 >
                   <Avatar person={person} size="sm" />
                   <span className="flex-1 truncate text-body-lg font-semibold text-text">
@@ -494,10 +523,13 @@ function PayThem({
   person,
   amount,
   currency,
+  onMethods,
 }: {
   person: PersonDto;
   amount: bigint | null;
   currency: string;
+  /** Told what the payee accepts, so the "how" choices can lead with it. */
+  onMethods?: (methods: PaymentMethodDto[]) => void;
 }) {
   const toast = useToast();
   const [methods, setMethods] = React.useState<PaymentMethodDto[] | null>(null);
@@ -508,12 +540,16 @@ function PayThem({
     fetch(`/api/people/${person.id}/payment-methods`)
       .then((response) => (response.ok ? response.json() : { paymentMethods: [] }))
       .then((payload: { paymentMethods?: PaymentMethodDto[] }) => {
-        if (!cancelled) setMethods(payload.paymentMethods ?? []);
+        if (!cancelled) {
+          setMethods(payload.paymentMethods ?? []);
+          onMethods?.(payload.paymentMethods ?? []);
+        }
       })
       .catch(() => !cancelled && setMethods([]));
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [person.id]);
 
   if (!methods || methods.length === 0) return null;
@@ -530,11 +566,11 @@ function PayThem({
   };
 
   return (
-    <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
-      <p className="mb-2.5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
-        Pay {person.displayName.split(" ")[0]}
+    <div className="mt-5">
+      <p className="mb-2 px-1 text-caption font-medium text-subtle">
+        How {person.displayName.split(" ")[0]} would like to be paid
       </p>
-      <ul className="space-y-1.5">
+      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
         {methods.map((entry) => {
           const kind = PAYMENT_KINDS.find((k) => k.value === entry.kind);
           const link = paymentLink(entry, amount, currency, person.displayName);
@@ -547,9 +583,9 @@ function PayThem({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => haptic()}
-                  className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 transition active:opacity-70"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                 >
-                  <span className="text-input">{kind?.emoji ?? "💸"}</span>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text"><Wallet className="size-4" strokeWidth={1.75} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-body font-semibold text-text">
                       {entry.label || kind?.label || entry.kind}
@@ -558,14 +594,14 @@ function PayThem({
                       {entry.value}
                     </span>
                   </span>
-                  <ExternalLink className="size-4 shrink-0 text-brand" />
+                  <ExternalLink className="size-4 shrink-0 text-text" />
                 </a>
               ) : (
                 <button
                   onClick={() => void copy(entry.value)}
-                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-left transition active:opacity-70"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                 >
-                  <span className="text-input">{kind?.emoji ?? "💸"}</span>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text"><Wallet className="size-4" strokeWidth={1.75} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-body font-semibold text-text">
                       {entry.label || kind?.label || entry.kind}
@@ -600,4 +636,56 @@ function PayThem({
 function isPositiveDecimal(value: string): boolean {
   if (!/^[0-9]+(\.[0-9]+)?$/.test(value)) return false;
   return Number(value) > 0;
+}
+
+/**
+ * The ways a payment can be recorded as made: the payee's own methods first,
+ * then cash, a bank transfer, or something else.
+ */
+function methodChoices(methods: PaymentMethodDto[]): string[] {
+  const theirs = methods.map((entry) => PAYMENT_KINDS.find((kind) => kind.value === entry.kind)?.label ?? entry.label ?? "");
+  return [...new Set([...theirs.filter(Boolean), "Cash", "Bank transfer", "Other"])];
+}
+
+/**
+ * The payer and payee as two avatars joined by their line, with the amount
+ * riding on it: the same picture as the flow map, for one payment.
+ */
+function PairLine({
+  from,
+  to,
+  meId,
+  label,
+}: {
+  from?: PersonDto;
+  to?: PersonDto;
+  meId: string;
+  label: string | null;
+}) {
+  const hue = usePersonHue(from ?? { avatarColor: "sand" });
+  if (!from || !to) return null;
+  const name = (person: PersonDto) => (person.id === meId ? "You" : person.displayName.split(" ")[0]);
+  return (
+    <div className="flex items-center gap-2 px-2 pt-2">
+      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+        <Avatar person={from} size="md" />
+        <span className="max-w-full truncate text-caption text-text">{name(from)}</span>
+      </span>
+      <span className="relative min-w-0 flex-1 self-start pt-3">
+        <svg viewBox="0 0 100 16" preserveAspectRatio="none" className="h-4 w-full" aria-hidden="true">
+          <path d="M 0 10 Q 50 0 96 10" fill="none" stroke={hue} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+        </svg>
+        <ArrowRight className="absolute -right-1 top-[13px] size-3.5" style={{ color: hue }} strokeWidth={2.5} />
+        {label ? (
+          <span className="tabular absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-line bg-surface px-2 py-0.5 text-caption font-medium text-text">
+            {label}
+          </span>
+        ) : null}
+      </span>
+      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+        <Avatar person={to} size="md" />
+        <span className="max-w-full truncate text-caption text-text">{name(to)}</span>
+      </span>
+    </div>
+  );
 }

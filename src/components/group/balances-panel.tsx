@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, BellRing, Check, Info } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BellRing, Check, ChevronRight } from "lucide-react";
 import { Amount } from "../ui/money";
 import { useMirror } from "../ui/state-hooks";
 import { Avatar } from "../ui/avatar";
-import { Button, Switch, cn, haptic } from "../ui/primitives";
+import { Button, FlowDoodle, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
@@ -32,12 +32,15 @@ export function BalancesPanel({
   meId,
   people,
   onSettle,
+  travel,
 }: {
   group: GroupDetailDto;
   meId: string;
   people: Map<string, PersonDto>;
   /** Opens the settle sheet, on a specific transfer when one is named. */
   onSettle: (edge?: { fromPersonId: string; toPersonId: string; amount: string }) => void;
+  /** A payment just saved, to show travelling along its line. */
+  travel?: { fromPersonId: string; toPersonId: string; nonce: number } | null;
 }) {
   const updateGroup = useUpdateGroup(group.id);
   // Flips at once when tapped, and follows the group when it changes elsewhere.
@@ -66,176 +69,174 @@ export function BalancesPanel({
     [edges],
   );
 
+  const [showEveryone, setShowEveryone] = React.useState(false);
+  const firstName = (person: PersonDto) =>
+    person.id === meId ? "You" : person.displayName.split(" ")[0];
+
   return (
     <div>
-      {/* Who owes whom, drawn. Switching Simplify untangles it. ------------ */}
-      {mapEdges.length > 0 && mapPeople.length > 1 ? (
-        <section className="mb-4 rounded-[var(--radius-lg)] border border-line bg-surface px-2 py-4">
-          <FlowMap people={mapPeople} edges={mapEdges} currency={group.currency} meId={meId} />
-        </section>
-      ) : null}
-
-      {/* Per-person net ---------------------------------------------------- */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
-        <h3 className="mb-3 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
-          Where everyone stands
-        </h3>
-        <ul className="space-y-2.5">
-          {members.map((member) => {
-            const net = BigInt(netById[member.id] ?? "0");
-            return (
-              <li key={member.id} className="flex items-center gap-3">
-                <Avatar person={member} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
-                  {member.id === meId ? "You" : member.displayName}
-                </span>
-                {net === 0n ? (
-                  <span className="text-caption font-semibold text-subtle">settled</span>
-                ) : (
-                  <span className="text-right">
-                    <Amount value={net} currency={group.currency} size="sm" />
-                    <span className="block text-micro font-semibold text-subtle">
-                      {net > 0n ? "is owed" : "owes"}
-                    </span>
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* Settlement plan ---------------------------------------------------- */}
-      <section className="mt-4">
-        <div className="mb-2.5 flex items-center justify-between gap-3 px-1">
-          <h3 className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
-            {simplified ? "Fewest payments" : "Who owes who"}
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-caption font-semibold text-muted">Simplify</span>
-            <Switch
-              checked={simplified}
-              label="Simplify debts"
-              onChange={(next) => {
-                setSimplified(next);
-                updateGroup.mutate({ simplifyDebts: next });
-              }}
+      {/* The map, with the one Simplify switch under it. ------------------- */}
+      <section className="rounded-[var(--radius-lg)] border border-line bg-surface">
+        {mapEdges.length > 0 && mapPeople.length > 1 ? (
+          <div className="px-2 pt-4">
+            <FlowMap
+              people={mapPeople}
+              edges={mapEdges}
+              currency={group.currency}
+              meId={meId}
+              travel={travel}
             />
           </div>
-        </div>
-
-        {simplified && edges.length > 0 ? (
-          <p className="mb-2.5 px-1 text-caption leading-relaxed text-muted">
-            Debts are passed along so everyone makes fewer payments. Who pays who here can
-            differ from what two people owe each other.
-          </p>
-        ) : null}
-
-        {edges.length === 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
-            <Check className="mx-auto size-6 text-positive-text" strokeWidth={2.4} />
-            <p className="mt-2 text-subhead font-semibold text-text">Everyone is settled up</p>
-            <p className="mt-1 text-body text-muted">
-              Nobody in this group owes anything.
-            </p>
-          </div>
         ) : (
-          <ul className="space-y-1.5">
+          <div className="flex flex-col items-center px-6 py-8 text-center">
+            <FlowDoodle className="mb-3" />
+            <p className="text-title font-semibold text-text">Everyone is settled up</p>
+            <p className="mt-1 text-body text-muted">Nobody in this group owes anything.</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 border-t border-line px-4 py-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-body font-medium text-text">Simplify</span>
+            <span className="mt-0.5 block text-caption text-muted">
+              {simplified
+                ? group.balances.pairwise.length > group.balances.simplified.length
+                  ? `${group.balances.pairwise.length} payments become ${group.balances.simplified.length}. Everyone still ends up even.`
+                  : "Debts are passed along so everyone makes as few payments as possible."
+                : "Showing who owes who directly, expense by expense."}
+            </span>
+          </span>
+          <Switch
+            checked={simplified}
+            label="Simplify debts"
+            onChange={(next) => {
+              setSimplified(next);
+              updateGroup.mutate({ simplifyDebts: next });
+            }}
+          />
+        </div>
+      </section>
+
+      {/* Suggested payments ------------------------------------------------ */}
+      {edges.length > 0 ? (
+        <section className="mt-6">
+          <h3 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">
+            {simplified ? "Suggested payments" : "Who owes who"}
+          </h3>
+          {simplified ? (
+            <p className="mb-2 px-1 text-caption text-muted">
+              Who pays who here can differ from what two people owe each other.
+            </p>
+          ) : null}
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
             {edges.map((edge, index) => {
               const from = people.get(edge.fromPersonId);
               const to = people.get(edge.toPersonId);
               if (!from || !to) return null;
-              const involvesMe = edge.fromPersonId === meId || edge.toPersonId === meId;
+              const mine = edge.fromPersonId === meId;
+              const toMe = edge.toPersonId === meId;
+              const money = formatMoney(BigInt(edge.amount), group.currency);
+              const settle = () => {
+                haptic();
+                onSettle({ fromPersonId: edge.fromPersonId, toPersonId: edge.toPersonId, amount: edge.amount });
+              };
 
               return (
-                <li
-                  key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-[var(--radius-lg)] border px-3 py-3",
-                    involvesMe
-                      ? "border-brand/30 bg-brand-soft/40"
-                      : "border-line bg-surface",
-                  )}
-                >
-                  {/*
-                    The row is the control when the transfer is yours to record.
-                    Working out the exact payment and then making somebody
-                    re-enter it by hand was the whole cost of computing it.
-
-                    A transfer between two other people stays inert: recording
-                    it is allowed by the API, but volunteering that somebody
-                    else has paid up is not a thing to make one tap away.
-                  */}
-                  <RowBody
-                    as={involvesMe ? "button" : "div"}
-                    onClick={
-                      involvesMe
-                        ? () => {
-                            haptic();
-                            onSettle({
-                              fromPersonId: edge.fromPersonId,
-                              toPersonId: edge.toPersonId,
-                              amount: edge.amount,
-                            });
-                          }
-                        : undefined
-                    }
-                    label={
-                      involvesMe
-                        ? edge.fromPersonId === meId
-                          ? `Pay ${to.displayName} ${formatMoney(BigInt(edge.amount), group.currency)}`
-                          : `Add ${from.displayName} paying you ${formatMoney(BigInt(edge.amount), group.currency)}`
-                        : undefined
-                    }
-                  >
-                    <Avatar person={from} size="sm" />
-                    <span className="min-w-0 truncate text-body font-semibold text-text">
-                      {edge.fromPersonId === meId ? "You" : from.displayName.split(" ")[0]}
+                <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar person={mine ? to : from} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body font-medium text-text">
+                      {mine
+                        ? `You pay ${firstName(to)}`
+                        : toMe
+                          ? `${firstName(from)} pays you`
+                          : `${firstName(from)} pays ${firstName(to)}`}
                     </span>
-
-                    <ArrowRight className="size-4 shrink-0 text-subtle" />
-
-                    <Avatar person={to} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
-                      {edge.toPersonId === meId ? "you" : to.displayName.split(" ")[0]}
+                    <span
+                      className={cn(
+                        "tabular block text-caption",
+                        mine ? "text-negative-text" : toMe ? "text-positive-text" : "text-muted",
+                      )}
+                    >
+                      {/* Icons, not arrow characters: at caption size the
+                          font's \u2199 reads like a tick. */}
+                      {mine ? (
+                        <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                      ) : toMe ? (
+                        <ArrowDownLeft aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                      ) : null}
+                      {money}
+                      {toMe && from.isGhost ? <span className="text-subtle"> · not on Divvy yet</span> : null}
                     </span>
+                  </span>
 
-                    <Amount
-                      value={edge.amount}
-                      currency={group.currency}
-                      size="sm"
-                      tone="plain"
-                      className="shrink-0"
-                    />
-                  </RowBody>
-
+                  {/* Only your own transfers are one tap away: volunteering that
+                      somebody else has paid up isn't. */}
+                  {mine || toMe ? (
+                    <button
+                      type="button"
+                      onClick={settle}
+                      aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                      className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+                    >
+                      Settle
+                    </button>
+                  ) : null}
                   {/* Only on debts owed *to* the viewer: reminding somebody on
                       behalf of a third party is how a shared ledger turns into
-                      an argument. */}
-                  {edge.toPersonId === meId && !from.isGhost ? (
-                    <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
+                      an argument. Someone not on Divvy can't receive one. */}
+                  {toMe ? (
+                    from.isGhost ? (
+                      <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
+                        Remind
+                      </span>
+                    ) : (
+                      <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
+                    )
                   ) : null}
                 </li>
               );
             })}
           </ul>
-        )}
 
-        {simplified && group.balances.pairwise.length > group.balances.simplified.length ? (
-          <p className="mt-3 flex gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-caption leading-relaxed text-muted">
-            <Info className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              This cuts {group.balances.pairwise.length} payments down to{" "}
-              {group.balances.simplified.length}. Everyone still ends up even. Turn it
-              off to see who owes who directly.
-            </span>
-          </p>
-        ) : null}
-
-        {edges.length > 0 ? (
-          <Button variant="primary" size="lg" fullWidth className="mt-4" onClick={() => onSettle()}>
+          <Button variant="secondary" fullWidth className="mt-3" onClick={() => onSettle()}>
             Add a payment
           </Button>
+        </section>
+      ) : null}
+
+      {/* Everyone's balance, for those who want the numbers. --------------- */}
+      <section className="mt-6">
+        <button
+          onClick={() => setShowEveryone(!showEveryone)}
+          aria-expanded={showEveryone}
+          className="flex w-full items-center gap-1 px-1 text-body text-muted hover:text-text"
+        >
+          Everyone&rsquo;s balance
+          <ChevronRight className={cn("size-4 transition-transform", showEveryone && "rotate-90")} />
+        </button>
+        {showEveryone ? (
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+            {members.map((member) => {
+              const net = BigInt(netById[member.id] ?? "0");
+              return (
+                <li key={member.id} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar person={member} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-body font-medium text-text">
+                    {member.id === meId ? "You" : member.displayName}
+                  </span>
+                  {net === 0n ? (
+                    <span className="text-caption text-subtle">settled</span>
+                  ) : (
+                    <span className="text-right">
+                      <Amount value={net} currency={group.currency} size="sm" />
+                      <span className="block text-caption text-subtle">{net > 0n ? "is owed" : "owes"}</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         ) : null}
       </section>
     </div>
@@ -258,39 +259,6 @@ export function BalancesPanel({
  * owed can send it, and that it is once a day. A reminder that can be sent
  * forty times is not a reminder.
  */
-/**
- * The tappable part of a settlement row.
- *
- * A plain `div` when the transfer is not the viewer's to record, a `button`
- * when it is — kept as one component so the two render identically. It is a
- * sibling of the nudge button rather than its parent, because a button inside a
- * button is invalid and browsers resolve it in their own ways.
- */
-function RowBody({
-  as,
-  onClick,
-  label,
-  children,
-}: {
-  as: "button" | "div";
-  onClick?: () => void;
-  label?: string;
-  children: React.ReactNode;
-}) {
-  const className = "flex min-w-0 flex-1 items-center gap-2.5 text-left";
-  if (as === "div") return <div className={className}>{children}</div>;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={cn(className, "rounded-[var(--radius-md)] transition active:opacity-70")}
-    >
-      {children}
-    </button>
-  );
-}
-
 function NudgeButton({
   personId,
   groupId,
@@ -332,13 +300,12 @@ function NudgeButton({
       disabled={nudge.isPending || sent}
       aria-label={`Remind ${name}`}
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full transition active:opacity-70",
-        sent
-          ? "text-positive-text"
-          : "text-subtle hover:bg-surface-2 hover:text-text disabled:opacity-40",
+        "flex shrink-0 items-center gap-1 rounded-full px-2 py-1.5 text-body font-medium transition-colors",
+        sent ? "text-positive-text" : "text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40",
       )}
     >
-      {sent ? <Check className="size-4" /> : <BellRing className="size-4" />}
+      {sent ? <Check className="size-4" /> : <BellRing className="size-4" strokeWidth={1.75} />}
+      <span className="hidden xs:inline">{sent ? "Sent" : "Remind"}</span>
     </button>
   );
 }

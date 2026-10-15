@@ -4,11 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
-  Receipt,
   Settings2,
   UserMinus,
 } from "lucide-react";
@@ -48,12 +46,10 @@ export default function FriendPage() {
   const { data: dashboard } = useDashboard();
 
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = React.useState<string>("all");
   const [settleUp, setSettleUp] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
   const [settings, setSettings] = React.useState(false);
-  // Null until the person toggles it: then it follows whether there is
-  // something on it that needs explaining.
-  const [breakdownChoice, setShowBreakdown] = React.useState<boolean | null>(null);
   const toast = useToast();
   const removeFriend = useRemoveFriend();
 
@@ -76,15 +72,19 @@ export default function FriendPage() {
   }
 
   const meId = dashboard.me.id;
-  const grouped = groupByDay(data.items, (item) => item.date);
+  // All shared history, narrowed to one group (or the direct ledger) on request.
+  const filtered = data.items.filter((item) => {
+    if (historyFilter === "all") return true;
+    const groupId = item.expense?.groupId ?? item.settlement?.groupId ?? null;
+    return historyFilter === "direct" ? groupId === null : groupId === historyFilter;
+  });
+  const grouped = groupByDay(filtered, (item) => item.date);
+  const groupName = new Map(data.sharedGroups.map((group) => [group.id, `${group.emoji} ${group.name}`]));
 
   // Where the two of you stand in total, and what it is made of.
   const combined = Object.entries(data.combined ?? {});
   const ledgers = data.ledgers ?? [];
   const anythingOutstanding = combined.length > 0 || ledgers.length > 0;
-  // Open by itself when a group plan differs from the total, because that is
-  // the moment the two screens seem to disagree.
-  const showBreakdown = breakdownChoice ?? ledgers.some((ledger) => ledger.planned !== null);
 
   // Settling is per currency: a euro balance and a rupee balance are two
   // different transfers, and one sheet cannot honestly represent both.
@@ -119,162 +119,141 @@ export default function FriendPage() {
         </button>
       </header>
 
-      {/* Balance ---------------------------------------------------------- */}
-      <div className="mt-2 rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface p-5">
+      {/* Who, and where you stand ---------------------------------------- */}
+      <section className="mt-3">
         <div className="flex items-center gap-4">
           <Avatar person={data.person} size="lg" />
           <div className="min-w-0 flex-1">
             {!anythingOutstanding ? (
               <>
-                <p className="text-subhead font-semibold text-muted">
-                  You&rsquo;re all settled up
-                </p>
-                <p className="mt-0.5 text-body text-subtle">
-                  Nobody owes anything, in any group.
-                </p>
+                <p className="text-title-lg font-semibold tracking-[-0.02em] text-text">You&rsquo;re all settled up</p>
+                <p className="mt-0.5 text-body text-muted">Nobody owes anything, in any group.</p>
               </>
             ) : (
-              <>
-                <p className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
-                  Overall
-                </p>
-                <div className="mt-1 space-y-0.5">
-                  {combined.map(([code, value]) => {
-                    const net = BigInt(value);
-                    return (
-                      <p key={code}>
-                        <Amount value={net} currency={code} size="lg" />
-                        <span className="ml-1.5 text-caption font-semibold text-subtle">
-                          {net > 0n ? "owed to you" : "you owe"}
-                        </span>
-                      </p>
-                    );
-                  })}
-                </div>
-              </>
+              combined.map(([code, value]) => {
+                const net = BigInt(value);
+                return (
+                  <p key={code} className="flex flex-col">
+                    <span className="text-body text-muted">
+                      {net > 0n ? `${data.person.displayName.split(" ")[0]} owes you` : `You owe ${data.person.displayName.split(" ")[0]}`}
+                    </span>
+                    <Amount
+                      value={net}
+                      currency={code}
+                      arrow
+                      className="text-display font-semibold leading-tight tracking-[-0.03em]"
+                    />
+                  </p>
+                );
+              })
             )}
+            {data.person.isGhost ? <p className="mt-1 text-caption text-subtle">Not on Divvy yet</p> : null}
           </div>
         </div>
 
         <div className="mt-4 flex gap-2">
           {anythingOutstanding ? (
-            <Button size="sm" variant="secondary" onClick={() => setSettleUp(true)}>
+            <Button variant="primary" onClick={() => setSettleUp(true)}>
               Settle up
             </Button>
           ) : null}
           <Button
-            size="sm"
-            variant="primary"
+            variant="secondary"
             onClick={() => composer.open()}
-            icon={<Plus className="size-4" strokeWidth={2.8} />}
+            icon={<Plus className="size-4" strokeWidth={2.4} />}
           >
             Add an expense
           </Button>
         </div>
-      </div>
+      </section>
 
-      {/* Where that total comes from --------------------------------------- */}
-      {ledgers.length > 0 ? (
-        <section className="mt-5">
-          <button
-            onClick={() => {
-              haptic();
-              setShowBreakdown(!showBreakdown);
-            }}
-            aria-expanded={showBreakdown}
-            className="flex w-full items-center gap-1.5 px-1 py-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle"
-          >
-            Made up of {ledgers.length} {ledgers.length === 1 ? "balance" : "balances"}
-            <ChevronDown
-              className={cn("size-4 transition-transform", showBreakdown && "rotate-180")}
-            />
-          </button>
-
-          {showBreakdown ? (
-            <ul className="mt-2 space-y-1.5">
-              {ledgers.map((ledger) => {
-                const net = BigInt(ledger.net);
-                const body = (
-                  <>
-                    <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+      {/* Where that total lives -------------------------------------------- */}
+      {ledgers.length > 1 || ledgers.some((ledger) => ledger.planned !== null) ? (
+        <section className="mt-8">
+          <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Where it comes from</h2>
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+            {ledgers.map((ledger) => {
+              const net = BigInt(ledger.net);
+              const note =
+                ledger.planned !== null
+                  ? planNote(net, BigInt(ledger.planned), data.person.displayName.split(" ")[0], ledger.currency)
+                  : null;
+              const body = (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body-lg font-medium text-text">
                       {ledger.emoji ? `${ledger.emoji} ` : ""}
                       {ledger.name ?? "Just between you"}
                     </span>
-                    <span className="shrink-0 text-right">
-                      <Amount value={net} currency={ledger.currency} size="sm" />
-                      <span className="block text-tiny text-subtle">
-                        {net > 0n ? "owed to you" : "you owe"}
-                      </span>
-                    </span>
-                  </>
-                );
-                const note =
-                  ledger.planned !== null
-                    ? planNote(net, BigInt(ledger.planned), data.person.displayName.split(" ")[0], ledger.currency)
-                    : null;
-                return (
-                  <li key={ledger.groupId ?? "direct"}>
-                    {note ? (
-                      <p className="mb-1 px-1 text-caption leading-relaxed text-muted">{note}</p>
-                    ) : null}
-                    {ledger.groupId ? (
-                      <Link
-                        href={`/groups/${ledger.groupId}`}
-                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 transition active:opacity-70"
-                      >
-                        {body}
-                      </Link>
-                    ) : (
-                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
-                        {body}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-        </section>
-      ) : data.sharedGroups.length > 0 ? (
-        <section className="mt-6">
-          <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
-            Also in
-          </h2>
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
-            {data.sharedGroups.map((group) => (
-              <Link
-                key={group.id}
-                href={`/groups/${group.id}`}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--card-border)] bg-surface px-3 py-2 text-body font-semibold text-text transition active:opacity-70"
-              >
-                <span>{group.emoji}</span>
-                <span className="max-w-[140px] truncate">{group.name}</span>
-              </Link>
-            ))}
-          </div>
+                    {note ? <span className="mt-0.5 block text-caption leading-relaxed text-muted">{note}</span> : null}
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <Amount value={net} currency={ledger.currency} size="sm" />
+                    <span className="block text-caption text-subtle">{net > 0n ? "owed to you" : "you owe"}</span>
+                  </span>
+                </>
+              );
+              return (
+                <li key={ledger.groupId ?? "direct"}>
+                  {ledger.groupId ? (
+                    <Link href={`/groups/${ledger.groupId}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="flex items-start gap-3 px-4 py-3">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       ) : null}
 
-      {/* Direct ledger ----------------------------------------------------- */}
-      <section className="mt-6">
-        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
-          Just between you
-        </h2>
+      {/* Everything you share ---------------------------------------------- */}
+      <section className="mt-8">
+        <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Shared history</h2>
 
-        {data.items.length === 0 ? (
+        {data.sharedGroups.length > 0 ? (
+          <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
+            {[
+              { id: "all", label: "Everything" },
+              { id: "direct", label: "Just between you" },
+              ...data.sharedGroups.map((group) => ({ id: group.id, label: `${group.emoji} ${group.name}` })),
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                aria-pressed={historyFilter === chip.id}
+                onClick={() => {
+                  haptic();
+                  setHistoryFilter(chip.id);
+                }}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
+                  historyFilter === chip.id ? "border-text bg-text text-inverse" : "border-line bg-surface text-text hover:bg-surface-2",
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {filtered.length === 0 ? (
           <EmptyState
-            icon={<Receipt className="size-6" />}
-            title="No shared expenses yet"
-            description="Expenses you split with just this person show up here."
+            title={data.items.length === 0 ? "No shared expenses yet" : "Nothing here"}
+            description={
+              data.items.length === 0
+                ? "Expenses you split with this person, in a group or just the two of you, show up here."
+                : "Nothing shared in this one yet."
+            }
           />
         ) : (
           <div className="space-y-5">
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
-                <h3 className="mb-2 mt-1 px-1 text-caption font-semibold text-subtle">
-                  {label}
-                </h3>
-                <ul className="space-y-1.5">
+                <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
+                <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
                   {entries.map((entry) =>
                     entry.kind === "expense" && entry.expense ? (
                       <li key={entry.expense.id}>
@@ -283,22 +262,20 @@ export default function FriendPage() {
                           meId={meId}
                           people={people}
                           showDate={!precise}
+                          showGroup={historyFilter === "all" && entry.expense.groupId ? groupName.get(entry.expense.groupId) : undefined}
                           onOpen={() => setOpenExpenseId(entry.expense!.id)}
                         />
                       </li>
                     ) : entry.settlement ? (
-                      // The same row the group ledger uses, rather than a
-                      // second copy of it: the copy that used to live here was
-                      // inert, so a payment recorded against a friend by
-                      // mistake could not be undone from the one screen that
-                      // shows it. `groupId` is left unset because a direct
-                      // payment belongs to no group.
+                      // The same row the group ledger uses, so a payment
+                      // recorded by mistake can be undone from here too.
                       <li key={entry.settlement.id}>
                         <SettlementRow
                           settlement={entry.settlement}
                           meId={meId}
                           people={people}
                           pending={entry.pending}
+                          groupId={entry.settlement.groupId ?? undefined}
                           showDate={!precise}
                         />
                       </li>
@@ -333,16 +310,16 @@ export default function FriendPage() {
         <div className="px-5 pb-6">
           {data.sharedGroups.length > 0 ? (
             <>
-              <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+              <p className="mb-2 px-1 text-caption font-medium text-subtle">
                 Shared groups
               </p>
-              <ul className="space-y-1.5">
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
                 {data.sharedGroups.map((group) => (
                   <li key={group.id}>
                     <Link
                       href={`/groups/${group.id}`}
                       onClick={() => setSettings(false)}
-                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 transition active:opacity-70"
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                     >
                       <span className="text-input">{group.emoji}</span>
                       <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
@@ -361,7 +338,7 @@ export default function FriendPage() {
             </p>
           )}
 
-          <p className="mb-2 mt-6 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 mt-6 px-1 text-caption font-medium text-subtle">
             Manage
           </p>
           <button
