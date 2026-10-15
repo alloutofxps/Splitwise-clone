@@ -103,43 +103,9 @@
   --shadow-lg: 0 4px 8px oklch(0.3 0.02 285 / 0.06), 0 12px 32px oklch(0.3 0.02 285 / 0.1);
   --shadow-xl: 0 8px 16px oklch(0.3 0.02 285 / 0.08), 0 24px 56px oklch(0.3 0.02 285 / 0.14);
 
-  /* --------------------------------------------------------------------------
-     Golden hour (see DESIGN-AUDIT.md)
-     -------------------------------------------------------------------------- */
-
-  /* The brand mark: one deep indigo, darkening slightly across the shape so
-     a button has some depth without turning into a rainbow. Used sparingly -
-     the Add button, the wordmark, primary buttons - so it still means
-     something when it appears. */
-  --accent-1: oklch(0.53 0.2 281);
-  --accent-2: oklch(0.48 0.19 274);
-  --accent-3: oklch(0.43 0.17 267);
-  --grad-brand: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 55%, var(--accent-3) 100%);
-
-  /* Mood: the colour of where you stand. Set on <html data-mood>. */
-  --mood: var(--brand);
-  --mood-2: var(--accent-2);
-  --glow-strength: 0.55;
-
   /* A lit top edge, so a card reads as a surface catching light. */
   --highlight: inset 0 1px 0 oklch(1 0 0 / 0.9);
   --card-border: oklch(0.3 0.02 285 / 0.07);
-  --glass-bg: oklch(1 0 0 / 0.78);
-  --glass-border: oklch(1 0 0 / 0.7);
-  --grain-opacity: 0.05;
-}
-
-html[data-mood="owed"] {
-  --mood: oklch(0.72 0.15 168);
-  --mood-2: oklch(0.8 0.13 120);
-}
-html[data-mood="owe"] {
-  --mood: oklch(0.7 0.17 25);
-  --mood-2: oklch(0.78 0.14 60);
-}
-html[data-mood="square"] {
-  --mood: oklch(0.66 0.17 283);
-  --mood-2: oklch(0.74 0.14 230);
 }
 
 .dark {
@@ -219,15 +185,8 @@ html[data-mood="square"] {
   --shadow-lg: 0 4px 8px oklch(0 0 0 / 0.34), 0 12px 32px oklch(0 0 0 / 0.4);
   --shadow-xl: 0 8px 16px oklch(0 0 0 / 0.38), 0 24px 56px oklch(0 0 0 / 0.5);
 
-  --accent-1: oklch(0.6 0.18 281);
-  --accent-2: oklch(0.55 0.18 274);
-  --accent-3: oklch(0.5 0.17 267);
-  --glow-strength: 0.42;
   --highlight: inset 0 1px 0 oklch(1 0 0 / 0.07);
   --card-border: oklch(1 0 0 / 0.07);
-  --glass-bg: oklch(0.22 0.015 285 / 0.8);
-  --glass-border: oklch(1 0 0 / 0.08);
-  --grain-opacity: 0.07;
 }
 
 /* --------------------------------------------------------------------------
@@ -323,9 +282,6 @@ html[data-mood="square"] {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-bricolage), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
-
-  --color-mood: var(--mood);
 
   /* Tuned for the app's own breakpoints rather than generic device widths. */
   --breakpoint-xs: 26rem;
@@ -480,22 +436,6 @@ html[data-mood="square"] {
   height: env(safe-area-inset-bottom);
 }
 
-.glass {
-  background: color-mix(in oklch, var(--surface) 78%, transparent);
-  backdrop-filter: saturate(180%) blur(20px);
-}
-
-/* Fades a scrolling list out at its edges instead of cutting it off. */
-.fade-edges-x {
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    black 12px,
-    black calc(100% - 12px),
-    transparent 100%
-  );
-}
-
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -503,23 +443,12 @@ html[data-mood="square"] {
 }
 
 /* --------------------------------------------------------------------------
-   Golden hour: surfaces, light and texture
+   Surfaces
    -------------------------------------------------------------------------- */
 
 /* In the components layer, so a utility on one element can still override a
    piece of these (a rounded-full button that is also a surface-card). */
 @layer components {
-.bg-gradient-brand {
-  background-image: var(--grad-brand);
-}
-
-.text-gradient-brand {
-  background-image: var(--grad-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 /* A card that catches light: lit top edge, a hairline that is barely there,
    and a soft two-layer shadow. */
 .surface-card {
@@ -527,84 +456,6 @@ html[data-mood="square"] {
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--highlight), var(--shadow-sm);
-}
-
-/* Glass for things that float over content: the tab bar, sticky headers. */
-.glass-strong {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: saturate(180%) blur(24px);
-}
-
-/* Film grain over the whole app: the difference between a flat screen and a
-   printed page. An SVG noise tile, so it is resolution-free and tiny. */
-.grain::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  mix-blend-mode: multiply;
-}
-.dark .grain::after {
-  mix-blend-mode: screen;
-}
-
-/* The living background: soft blobs of the mood colour drifting very slowly
-   behind everything (see components/ambient.tsx). */
-@keyframes divvy-drift {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  33% { transform: translate3d(6%, 4%, 0) scale(1.08); }
-  66% { transform: translate3d(-5%, 6%, 0) scale(0.95); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
-}
-.aurora-blob {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(60px);
-  opacity: var(--glow-strength);
-  animation: divvy-drift 26s ease-in-out infinite;
-  transition: background-color 1.2s ease;
-  will-change: transform;
-}
-
-/* Gentle bob, for the floating receipts on the welcome screen. */
-@keyframes divvy-float {
-  0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
-  50% { transform: translateY(-10px) rotate(calc(var(--tilt, 0deg) * -1)); }
-}
-.float {
-  animation: divvy-float 6s ease-in-out infinite;
-}
-
-/*
- * The page steps back while a sheet is open - scaled, rounded and dimmed - so
- * the sheet reads as a layer above it, the way native sheets do. Phones only:
- * on a desktop the sheet is a centred dialog and the effect is noise.
- */
-.app-frame {
-  transition:
-    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
-    border-radius 420ms cubic-bezier(0.32, 0.72, 0, 1),
-    filter 420ms ease;
-  transform-origin: 50% var(--frame-origin, 0px);
-}
-@media (max-width: 639px) {
-  html[data-sheets] .app-frame {
-    transform: scale(0.94);
-    border-radius: 22px;
-    overflow: hidden;
-    filter: brightness(0.92) saturate(0.9);
-  }
-}
-
-/* The theme change is a circular wipe from the toggle (View Transitions). */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
 }
 }
 
@@ -630,24 +481,6 @@ html[data-mood="square"] {
   );
   background-size: 200% 100%;
   animation: divvy-shimmer 1.6s ease-in-out infinite;
-}
-
-@keyframes divvy-pop {
-  0% {
-    transform: scale(0.86);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.04);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.pop-in {
-  animation: divvy-pop 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /*

@@ -66,10 +66,10 @@ type ButtonVariant =
 type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // The brand gradient, lit along its top edge and glowing faintly in its own
-  // colour - the one thing on a screen that is meant to be pressed.
+  // One solid colour, no gradient and no glow: it is the one thing on a
+  // screen meant to be pressed, and it doesn't need to shout about it.
   primary:
-    "bg-gradient-brand text-white [box-shadow:inset_0_1px_0_oklch(1_0_0/0.3),0_10px_22px_-10px_var(--accent-2),0_2px_6px_-2px_var(--accent-1)] hover:brightness-110 active:brightness-95 disabled:saturate-50",
+    "bg-brand text-white hover:bg-brand-hover active:bg-brand-hover disabled:opacity-50",
   secondary:
     "surface-card text-text hover:bg-surface-2 active:bg-surface-3",
   outline: "border border-line-strong text-text hover:bg-surface-2 active:bg-surface-2",
@@ -266,7 +266,7 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       className={cn(
-        "glass-strong relative grid gap-1 rounded-full p-1",
+        "relative grid gap-1 rounded-full bg-surface-2 p-1",
         className,
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
@@ -373,14 +373,9 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        // The icon floats on a soft glow of the brand colours, gently bobbing,
-        // so an empty screen feels like an invitation rather than an absence.
-        <div className="float relative mb-5 flex size-16 items-center justify-center">
-          <span className="bg-gradient-brand absolute inset-0 rounded-[22px] opacity-25 blur-xl" />
-          <span className="surface-card relative flex size-16 items-center justify-center rounded-[22px] text-brand">
-            {icon}
-          </span>
-        </div>
+        <span className="mb-5 flex size-14 items-center justify-center rounded-[16px] bg-surface-2 text-muted">
+          {icon}
+        </span>
       ) : null}
       <p className="font-display text-title-lg font-bold tracking-[-0.02em] text-text">{title}</p>
       {description ? (

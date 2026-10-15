@@ -1119,8 +1119,11 @@ console.log("\nThe app can say which build it is");
   await p4.goto(`${BASE}/account`, { waitUntil: "networkidle" });
   await p4.waitForTimeout(2000);
 
+  // Out of the way until asked for: a tap on "Version" shows the build.
+  await p4.getByRole("button", { name: "Version" }).click();
+  await p4.waitForTimeout(300);
   const text = await p4.locator("body").innerText();
-  const shown = /Version\s+(\S+)/.exec(text);
+  const shown = /Version\s+[\d.]+\s+\((\S+)\)/.exec(text);
   check("the account screen states a version", Boolean(shown), text.slice(-140).replace(/\n/g, " | "));
   check(
     "and it is a real build id, not the placeholder",

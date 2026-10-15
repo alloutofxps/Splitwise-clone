@@ -3,10 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, LogOut, Merge, PieChart, Repeat, Trash2, UserPlus, X } from "lucide-react";
+import { Archive, ChevronRight, Download, LogOut, Merge, PieChart, Repeat, Trash2, UserPlus, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
-import { Switch, cn, haptic } from "../ui/primitives";
+import { cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { RecurringSheet } from "./recurring-sheet";
 import { MergePersonSheet } from "./merge-person-sheet";
@@ -30,11 +30,14 @@ export function GroupSettingsSheet({
   onClose,
   group,
   meId,
+  onOpenBalances,
 }: {
   open: boolean;
   onClose: () => void;
   group: GroupDetailDto;
   meId: string;
+  /** Simplify lives on the Balances tab, where you can see what it changes. */
+  onOpenBalances: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -183,21 +186,24 @@ export function GroupSettingsSheet({
             />
           </label>
 
-          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+          {/* One Simplify switch, on Balances, where you can see what it does. */}
+          <button
+            onClick={() => {
+              haptic();
+              onOpenBalances();
+            }}
+            className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.99]"
+          >
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
                 Simplify debts
               </span>
               <span className="mt-0.5 block text-caption leading-relaxed text-muted">
-                Settle up with as few payments as possible.
+                {group.simplifyDebts ? "On" : "Off"}. Change it on the Balances tab.
               </span>
             </span>
-            <Switch
-              checked={group.simplifyDebts}
-              label="Simplify debts"
-              onChange={(next) => updateGroup.mutate({ simplifyDebts: next })}
-            />
-          </div>
+            <ChevronRight className="size-[18px] shrink-0 text-subtle" />
+          </button>
 
           {/* Members ------------------------------------------------------- */}
           <div className="mt-6">

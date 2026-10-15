@@ -408,11 +408,11 @@ export default function AccountPage() {
           look like the fix never worked. One line settles it in two seconds
           instead of a round of guessing.
 
-          Selectable on purpose: it exists to be read out and pasted.
+          Hidden behind a tap: a raw build code is noise to everyone except the
+          person asking "is the fix on your phone yet?". Selectable once shown,
+          because it exists to be read out and pasted.
         */}
-        <p className="mt-3 select-text text-tiny text-subtle/70">
-          Version {process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
-        </p>
+        <VersionLine />
       </footer>
 
       {/* Sheets ------------------------------------------------------------- */}
@@ -907,5 +907,19 @@ function NotificationsRow() {
         />
       ) : null}
     </div>
+  );
+}
+
+function VersionLine() {
+  const [shown, setShown] = React.useState(false);
+  const build = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
+  return shown ? (
+    <p className="mt-3 select-text text-tiny text-subtle">
+      Version 1.0 ({build.slice(0, 7)})
+    </p>
+  ) : (
+    <button onClick={() => setShown(true)} className="mt-3 text-tiny text-subtle underline-offset-2 hover:underline">
+      Version
+    </button>
   );
 }

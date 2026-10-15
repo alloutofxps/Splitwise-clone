@@ -271,7 +271,7 @@ export default function FriendPage() {
           <div className="space-y-5">
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
-                <h3 className="mb-2 mt-1 px-1 font-serif text-title italic text-muted">
+                <h3 className="mb-2 mt-1 px-1 text-caption font-semibold text-subtle">
                   {label}
                 </h3>
                 <ul className="space-y-1.5">

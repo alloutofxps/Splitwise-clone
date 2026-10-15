@@ -363,7 +363,7 @@ export function BalanceHeadline({
   if (net === 0n) {
     return (
       <div>
-        <p className="font-serif text-display italic leading-none text-text">{settledLabel}</p>
+        <p className="font-display text-display font-bold leading-none tracking-[-0.03em] text-text">{settledLabel}</p>
       </div>
     );
   }

@@ -48,20 +48,17 @@ export function AnimatedAmount({
   value,
   currency,
   className,
-  /** Count up from zero the first time it appears - for the headline figure. */
-  fromZero = false,
   signed = false,
 }: {
   value: bigint | string;
   currency: string;
   className?: string;
-  fromZero?: boolean;
   signed?: boolean;
 }) {
   const target = Number(typeof value === "bigint" ? value : BigInt(value || "0"));
   const reduce = useReducedMotion();
-  const motionValue = useMotionValue(fromZero && !reduce ? 0 : target);
-  const [shown, setShown] = React.useState(fromZero && !reduce ? 0 : target);
+  const motionValue = useMotionValue(target);
+  const [shown, setShown] = React.useState(target);
 
   useMotionValueEvent(motionValue, "change", (latest) => setShown(Math.round(latest)));
 
@@ -89,121 +86,4 @@ export function AnimatedAmount({
       <span aria-hidden="true">{formatMoney(display, currency, { signed })}</span>
     </span>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Celebration
-// ---------------------------------------------------------------------------
-
-const CONFETTI_COLOURS = ["#4f46e5", "#818cf8", "#22c55e", "#0ea5e9", "#facc15", "#e0e7ff"];
-
-/**
- * A burst of confetti from a point on screen, for the moments worth marking:
- * settling up to zero, finishing sign-up.
- *
- * Drawn on a throwaway canvas that removes itself, so there is no library and
- * nothing left mounted. Does nothing under Reduce Motion.
- */
-export function celebrate(origin?: { x: number; y: number }): void {
-  if (typeof window === "undefined") return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  const canvas = document.createElement("canvas");
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = window.innerWidth * ratio;
-  canvas.height = window.innerHeight * ratio;
-  Object.assign(canvas.style, {
-    position: "fixed",
-    inset: "0",
-    width: "100vw",
-    height: "100vh",
-    pointerEvents: "none",
-    zIndex: "100",
-  });
-  canvas.setAttribute("aria-hidden", "true");
-  document.body.appendChild(canvas);
-  const context = canvas.getContext("2d");
-  if (!context) {
-    canvas.remove();
-    return;
-  }
-  context.scale(ratio, ratio);
-
-  const startX = origin?.x ?? window.innerWidth / 2;
-  const startY = origin?.y ?? window.innerHeight * 0.38;
-  const pieces = Array.from({ length: 110 }, () => {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 6 + Math.random() * 9;
-    return {
-      x: startX,
-      y: startY,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 7,
-      size: 5 + Math.random() * 6,
-      spin: (Math.random() - 0.5) * 0.4,
-      angle: Math.random() * Math.PI,
-      colour: CONFETTI_COLOURS[Math.floor(Math.random() * CONFETTI_COLOURS.length)],
-      round: Math.random() < 0.3,
-    };
-  });
-
-  const started = performance.now();
-  const frame = (now: number) => {
-    const elapsed = now - started;
-    context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-    const fade = Math.max(0, 1 - elapsed / 1900);
-    for (const piece of pieces) {
-      piece.vy += 0.32;
-      piece.vx *= 0.985;
-      piece.vy *= 0.985;
-      piece.x += piece.vx;
-      piece.y += piece.vy;
-      piece.angle += piece.spin;
-      context.save();
-      context.globalAlpha = fade;
-      context.translate(piece.x, piece.y);
-      context.rotate(piece.angle);
-      context.fillStyle = piece.colour;
-      if (piece.round) {
-        context.beginPath();
-        context.arc(0, 0, piece.size / 2, 0, Math.PI * 2);
-        context.fill();
-      } else {
-        context.fillRect(-piece.size / 2, -piece.size / 4, piece.size, piece.size / 2);
-      }
-      context.restore();
-    }
-    if (elapsed < 1900) requestAnimationFrame(frame);
-    else canvas.remove();
-  };
-  requestAnimationFrame(frame);
-}
-
-// ---------------------------------------------------------------------------
-// Theme wipe
-// ---------------------------------------------------------------------------
-
-/**
- * Runs `change` inside a View Transition that wipes the new theme in as a
- * circle growing from the point that was tapped. Browsers without View
- * Transitions, and Reduce Motion, simply switch.
- */
-export function withThemeWipe(change: () => void, from?: { x: number; y: number }): void {
-  const doc = document as Document & {
-    startViewTransition?: (callback: () => void) => { ready: Promise<void> };
-  };
-  if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    change();
-    return;
-  }
-  const x = from?.x ?? window.innerWidth / 2;
-  const y = from?.y ?? 0;
-  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-  const transition = doc.startViewTransition(change);
-  void transition.ready.then(() => {
-    document.documentElement.animate(
-      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 520, easing: "cubic-bezier(0.32, 0.72, 0, 1)", pseudoElement: "::view-transition-new(root)" },
-    );
-  });
 }

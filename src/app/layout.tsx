@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Bricolage_Grotesque, Instrument_Serif, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -28,18 +28,6 @@ const display = Bricolage_Grotesque({
   display: "swap",
   variable: "--font-bricolage",
   axes: ["opsz", "wdth"],
-});
-
-/**
- * The serif, in italic, for the words that carry feeling: names, "all square",
- * the greeting. Used sparingly - a word or two a screen - so it lands.
- */
-const serif = Instrument_Serif({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-instrument",
-  weight: "400",
-  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -99,7 +87,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${serif.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${display.variable}`} suppressHydrationWarning>
       <head>
         {/*
           Applied before first paint, inline and synchronous. A theme resolved

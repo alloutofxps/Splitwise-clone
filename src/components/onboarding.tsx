@@ -16,7 +16,6 @@ import {
 import { Button, cn, haptic } from "./ui/primitives";
 import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
-import { Ambient } from "./ambient";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
 import {
@@ -37,7 +36,6 @@ import {
 import { CURRENCIES } from "@/lib/money";
 import { guessCurrency } from "@/lib/guess-currency";
 import type { MeDto } from "@/lib/types";
-import { celebrate } from "./ui/motion";
 
 /**
  * Setup.
@@ -72,8 +70,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
-    <div className="grain relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
-      <Ambient />
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
       <AnimatePresence mode="wait">
         {step === "welcome" ? (
           <StepShell key="welcome">
@@ -174,16 +171,10 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
       <div className="flex flex-1 flex-col justify-center py-6">
         <Wordmark className="mb-6" />
 
-        {/* A little scene instead of a feature list: the evening the app is
-            for, in three receipts, drifting. */}
-        <Receipts />
-
-        <h1 className="mt-8 font-display text-display-lg font-extrabold leading-[1.02] tracking-[-0.045em] text-text">
+        <h1 className="mt-4 font-display text-display-lg font-extrabold leading-[1.02] tracking-[-0.045em] text-text">
           Split bills with friends.
           <br />
-          <span className="text-gradient-brand font-serif font-normal italic tracking-[-0.02em]">
-            See who owes what.
-          </span>
+          <span className="text-muted">See who owes what.</span>
         </h1>
 
         <p className="mt-4 text-input leading-relaxed text-muted">
@@ -224,64 +215,10 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
 
 function Feature({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <li className="glass-strong flex items-center gap-1.5 rounded-full px-3 py-1.5 text-body font-semibold text-text">
+    <li className="flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-body font-semibold text-text">
       <span className="text-brand">{icon}</span>
       {children}
     </li>
-  );
-}
-
-const RECEIPTS = [
-  { emoji: "🍕", title: "Pizza night", amount: "€48.00", meta: "split 4 ways", tilt: -7, x: 0, delay: 0.1 },
-  { emoji: "🏝️", title: "Lisbon Airbnb", amount: "€1,240", meta: "Priya paid", tilt: 5, x: 1, delay: 0.22 },
-  { emoji: "🍻", title: "Round three", amount: "€36.50", meta: "you owe €9.13", tilt: -3, x: 0.35, delay: 0.34 },
-];
-
-/** Three receipts dropping into place, then bobbing gently, out of step. */
-function Receipts() {
-  return (
-    <div aria-hidden="true" className="relative h-[13.5rem]">
-      {RECEIPTS.map((receipt, index) => (
-        <motion.div
-          key={receipt.title}
-          initial={{ opacity: 0, y: -40, rotate: receipt.tilt * 3, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, rotate: receipt.tilt, scale: 1 }}
-          transition={{ delay: receipt.delay, type: "spring", stiffness: 180, damping: 14 }}
-          className="absolute"
-          // Spread across whatever width is left over once a card fits, so the
-          // stack never pushes a card off a narrow screen.
-          style={{ left: `calc((100% - 16.5rem) * ${receipt.x})`, top: `${index * 4.1}rem` }}
-        >
-          <div
-            className="float surface-card flex w-[16.5rem] items-center gap-3 rounded-[20px] px-3.5 py-3"
-            style={{
-              ["--tilt" as string]: `${receipt.tilt * 0.3}deg`,
-              animationDelay: `${index * -1.7}s`,
-              boxShadow: "var(--highlight), var(--shadow-lg)",
-            }}
-          >
-            <span className="flex size-10 items-center justify-center rounded-[14px] bg-surface-2 text-title-lg">
-              {receipt.emoji}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-body-lg font-semibold text-text">{receipt.title}</span>
-              <span className="block whitespace-nowrap text-caption text-subtle">{receipt.meta}</span>
-            </span>
-            <span className="shrink-0 font-display text-subhead font-bold tracking-[-0.02em] text-text">
-              {receipt.amount}
-            </span>
-          </div>
-        </motion.div>
-      ))}
-      <motion.span
-        initial={{ opacity: 0, scale: 0.6 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.6, type: "spring", stiffness: 260, damping: 12 }}
-        className="bg-gradient-brand absolute bottom-1 right-0 rounded-full px-3.5 py-1.5 font-serif text-subhead italic text-white shadow-float"
-      >
-        all paid up ✓
-      </motion.span>
-    </div>
   );
 }
 
@@ -580,8 +517,6 @@ function RecoveryStep({
             // step - so this is usually just a refresh, but asking for it keeps
             // the first painted screen current rather than however stale.
             void client.invalidateQueries({ queryKey: keys.dashboard });
-            // You are in. Mark it.
-            celebrate();
             onFinished();
           }}
         >

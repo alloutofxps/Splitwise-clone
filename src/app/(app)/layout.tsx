@@ -14,7 +14,6 @@ import { useToast } from "@/components/ui/toast";
 import { setBadge } from "@/lib/client/badge";
 import { stashedRecoveryKey } from "@/lib/client/recovery";
 import type { PendingAttachment } from "@/lib/client/attachments";
-import { moodFromTotals, useMood } from "@/components/ambient";
 
 /**
  * The gate between "no identity yet" and the app proper.
@@ -53,9 +52,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (data) setBadge(data.unreadActivityCount);
   }, [data]);
-
-  // The ambient light behind every screen takes the colour of where you stand.
-  useMood(data ? moodFromTotals(data.totals) : null);
 
   /**
    * A launch that meant "add an expense" — the app shortcut, or a receipt
