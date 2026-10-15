@@ -86,9 +86,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [setupOpen, setSetupOpen] = React.useState(false);
   const mounted = useMounted();
 
-  React.useEffect(() => {
-    if (unauthorized) setSetupOpen(true);
-  }, [unauthorized]);
+  // Latched during render, so onboarding is up on the first frame.
+  if (unauthorized && !setupOpen) setSetupOpen(true);
 
   React.useEffect(() => {
     if (!intent.compose || !data || intentHandled.current) return;

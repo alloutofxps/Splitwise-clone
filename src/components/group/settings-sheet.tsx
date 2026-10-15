@@ -3,13 +3,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, LogOut, Merge, Repeat, Trash2, UserPlus, X } from "lucide-react";
+import { Archive, Download, LogOut, Merge, PieChart, Repeat, Trash2, UserPlus, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { RecurringSheet } from "./recurring-sheet";
 import { MergePersonSheet } from "./merge-person-sheet";
+import { DefaultSplitSheet } from "./default-split-sheet";
+import { describeDefaultSplit } from "@/lib/default-split";
 import { useAddMember, useDashboard, useRemoveMember, useUpdateGroup } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
@@ -47,6 +49,7 @@ export function GroupSettingsSheet({
   const [confirmLeave, setConfirmLeave] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [recurring, setRecurring] = React.useState(false);
+  const [usualSplit, setUsualSplit] = React.useState(false);
   const [merging, setMerging] = React.useState<PersonDto | null>(null);
 
   useResetOnOpen(open, () => {
@@ -318,6 +321,14 @@ export function GroupSettingsSheet({
           {/* Tools --------------------------------------------------------- */}
           <div className="mt-6 space-y-1.5">
             <ActionRow
+              icon={<PieChart className="size-[18px]" />}
+              label="Usual split"
+              description={describeDefaultSplit(group.defaultSplit, (id) =>
+                id === meId ? "You" : (group.members.find((m) => m.id === id)?.displayName ?? "Someone"),
+              )}
+              onClick={() => setUsualSplit(true)}
+            />
+            <ActionRow
               icon={<Repeat className="size-[18px]" />}
               label="Repeating expenses"
               description="Rent, bills, subscriptions"
@@ -377,6 +388,12 @@ export function GroupSettingsSheet({
       <RecurringSheet
         open={recurring}
         onClose={() => setRecurring(false)}
+        group={group}
+        meId={meId}
+      />
+      <DefaultSplitSheet
+        open={usualSplit}
+        onClose={() => setUsualSplit(false)}
         group={group}
         meId={meId}
       />

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Paperclip, Pencil, Send, Trash2, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
+import { useResetOnClose } from "../ui/state-hooks";
 import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
 import { Button, Skeleton, cn, haptic } from "../ui/primitives";
@@ -55,14 +56,12 @@ export function ExpenseDetailSheet({
   // Cleared when the sheet closes, not when it opens: the detail sheet renders
   // from a query rather than from a draft, so there is nothing stale to flash,
   // and doing it on close keeps a half-written comment from reappearing.
-  React.useEffect(() => {
-    if (!expenseId) {
-      setEditing(false);
-      setConfirmDelete(false);
-      setConfirmRemoveReceipt(null);
-      setDraft("");
-    }
-  }, [expenseId]);
+  useResetOnClose(Boolean(expenseId), () => {
+    setEditing(false);
+    setConfirmDelete(false);
+    setConfirmRemoveReceipt(null);
+    setDraft("");
+  });
 
   const remove = async () => {
     if (!expense) return;

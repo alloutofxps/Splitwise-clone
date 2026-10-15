@@ -412,3 +412,27 @@ export const sum = (values: Iterable<bigint>): bigint => {
   return total;
 };
 
+// ---------------------------------------------------------------------------
+// Rates for paying in another currency
+// ---------------------------------------------------------------------------
+
+/** 1 / rate as a decimal string, for converting the debt into the paying currency. */
+export function inverseRate(rate: string): string {
+  return (1 / Number(rate)).toFixed(12);
+}
+
+/**
+ * The rate that turns `paid` (in `paidCurrency`) into exactly `owed` (in
+ * `owedCurrency`), to 12 decimal places. Used when someone pays the whole debt
+ * in another currency, so the server's conversion lands on the debt to the
+ * cent instead of leaving a one-cent remainder from rounding.
+ */
+export function exactRate(owed: bigint, owedCurrency: string, paid: bigint, paidCurrency: string): string {
+  const scale = 10n ** 12n;
+  const numerator = owed * minorUnitScale(paidCurrency) * scale;
+  const denominator = paid * minorUnitScale(owedCurrency);
+  const scaled = (numerator + denominator / 2n) / denominator;
+  const whole = scaled / scale;
+  const fraction = (scaled % scale).toString().padStart(12, "0").replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}

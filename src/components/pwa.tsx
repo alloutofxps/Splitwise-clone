@@ -209,6 +209,10 @@ function InstallPrompt() {
     const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
 
     if (iosLike && isSafari) {
+      // Decided once per page load, together with counting the visit above -
+      // a side effect on storage, so it belongs in this effect rather than in
+      // render. There is no earlier frame in which the answer was known.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowIos(true);
       setVisible(true);
     }

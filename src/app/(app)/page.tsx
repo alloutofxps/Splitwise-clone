@@ -11,6 +11,7 @@ import { Button, EmptyState, SectionHeader, cn } from "@/components/ui/primitive
 import { AnimatedAmount, listItem } from "@/components/ui/motion";
 import { NewGroupSheet } from "@/components/group/new-group-sheet";
 import { JoinSheet } from "@/components/group/join-sheet";
+import { ImportSheet } from "@/components/group/import-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/app-shell";
 import { moodFromTotals } from "@/components/ambient";
@@ -21,6 +22,7 @@ export default function HomePage() {
   const { data } = useDashboard();
   const [newGroup, setNewGroup] = React.useState(false);
   const [joining, setJoining] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
 
   if (!data) return null;
 
@@ -46,7 +48,11 @@ export default function HomePage() {
       <Hero data={data} />
 
       {active.length === 0 && data.friends.length === 0 ? (
-        <FirstRun onCreate={() => setNewGroup(true)} onJoin={() => setJoining(true)} />
+        <FirstRun
+          onCreate={() => setNewGroup(true)}
+          onJoin={() => setJoining(true)}
+          onImport={() => setImporting(true)}
+        />
       ) : (
         <>
           {/*
@@ -147,8 +153,16 @@ export default function HomePage() {
         </>
       )}
 
-      <NewGroupSheet open={newGroup} onClose={() => setNewGroup(false)} />
+      <NewGroupSheet
+        open={newGroup}
+        onClose={() => setNewGroup(false)}
+        onImport={() => {
+          setNewGroup(false);
+          setImporting(true);
+        }}
+      />
       <JoinSheet open={joining} onClose={() => setJoining(false)} />
+      <ImportSheet open={importing} onClose={() => setImporting(false)} />
     </div>
   );
 }
@@ -422,7 +436,15 @@ function FriendRow({ friend }: { friend: DashboardPayload["friends"][number] }) 
 
 // ---------------------------------------------------------------------------
 
-function FirstRun({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => void }) {
+function FirstRun({
+  onCreate,
+  onJoin,
+  onImport,
+}: {
+  onCreate: () => void;
+  onJoin: () => void;
+  onImport: () => void;
+}) {
   return (
     <div className="surface-card mt-8 rounded-[28px] p-6">
       <div className="flex -space-x-2 text-display-sm">
@@ -454,6 +476,9 @@ function FirstRun({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => vo
         </Button>
         <Button variant="secondary" size="md" fullWidth onClick={onJoin}>
           Join with an invite code
+        </Button>
+        <Button variant="ghost" size="md" fullWidth onClick={onImport}>
+          Move a group from Splitwise
         </Button>
       </div>
     </div>

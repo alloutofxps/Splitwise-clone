@@ -9,7 +9,8 @@ import { Button, EmptyState, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useRecurrences, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
-import { apportion } from "@/lib/split";
+import { apportion, resolveSplit } from "@/lib/split";
+import { startingSplit } from "@/lib/default-split";
 import { formatMoney } from "@/lib/money";
 import { suggestCategory, DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import { RECURRENCE_FREQUENCIES, type GroupDetailDto, type RecurrenceFrequency } from "@/lib/types";
@@ -219,6 +220,13 @@ function NewRecurrenceSheet({
   });
 
   const memberIds = group.members.map((member) => member.id);
+  // The group's usual split if it has one, otherwise equal between everyone.
+  const usual = startingSplit(group.defaultSplit, memberIds);
+  const useUsual = Boolean(usual && !usual.stale);
+  const usualSplit =
+    useUsual && usual && amount
+      ? resolveSplit({ mode: usual.mode, total: amount, participants: usual.participants, payerIds: [payerId] })
+      : null;
   const shares = amount ? apportion(amount, memberIds.map(() => 1), memberIds.map((id) => (id === payerId ? 0 : 1))) : [];
 
   const submit = async () => {
@@ -231,13 +239,22 @@ function NewRecurrenceSheet({
         amount: amount.toString(),
         currency: group.currency,
         categoryId: suggestCategory(description)?.id ?? DEFAULT_CATEGORY_ID,
-        splitMode: "EQUAL",
+        splitMode: usualSplit && usual ? usual.mode : "EQUAL",
         payers: [{ personId: payerId, amount: amount.toString() }],
-        splits: memberIds.map((personId, index) => ({
-          personId,
-          amount: shares[index].toString(),
-          included: true,
-        })),
+        splits:
+          usualSplit && usualSplit.errors.length === 0
+            ? usualSplit.splits.map((s) => ({
+                personId: s.personId,
+                amount: s.amount.toString(),
+                included: s.included,
+                weight: s.weight ?? null,
+                percent: s.percent ?? null,
+              }))
+            : memberIds.map((personId, index) => ({
+                personId,
+                amount: shares[index].toString(),
+                included: true,
+              })),
         frequency,
         interval: 1,
         startDate: startDate.toISOString(),
@@ -360,9 +377,11 @@ function NewRecurrenceSheet({
         </div>
 
         <p className="mt-5 rounded-[var(--radius-md)] bg-surface-2 px-3.5 py-3 text-caption leading-relaxed text-muted">
-          Split equally between all {group.members.length} people, even if people
-          join or leave later. You can change or stop it any time. Expenses it
-          already added won&rsquo;t change.
+          {useUsual
+            ? "Split the group's usual way, as set in group settings."
+            : `Split equally between all ${group.members.length} people.`}{" "}
+          The split stays the same even if people join or leave later. You can
+          change or stop it any time. Expenses it already added won&rsquo;t change.
         </p>
       </div>
     </Sheet>

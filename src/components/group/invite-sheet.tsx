@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, Copy, MessageCircle, RefreshCw, Share2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { useMirror } from "../ui/state-hooks";
 import { Button, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { api } from "@/lib/client/api";
@@ -33,9 +34,7 @@ export function InviteSheet({
   const client = useQueryClient();
   const [copied, setCopied] = React.useState(false);
   const [rotating, setRotating] = React.useState(false);
-  const [code, setCode] = React.useState(group.inviteCode);
-
-  React.useEffect(() => setCode(group.inviteCode), [group.inviteCode]);
+  const [code, setCode] = useMirror(group.inviteCode);
 
   const url =
     typeof window !== "undefined" ? `${window.location.origin}/join/${code}` : "";

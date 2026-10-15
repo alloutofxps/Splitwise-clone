@@ -1,14 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, Copy, ExternalLink } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, ExternalLink } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountInput } from "../ui/money";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useCreateSettlement } from "@/lib/client/queries";
-import { toDecimalString } from "@/lib/money";
+import { convert, exactRate, inverseRate, toDecimalString } from "@/lib/money";
+import { ConversionNote } from "../ui/conversion-note";
+import { CurrencyPicker } from "../expense/currency-picker";
 import { ApiError } from "@/lib/client/api";
 import { paymentLink, PAYMENT_KINDS } from "@/lib/payments";
 import type { GroupDetailDto, PaymentMethodDto, PersonDto } from "@/lib/types";
@@ -87,10 +89,18 @@ export function SettleUpSheet({
   const [amount, setAmount] = React.useState<bigint | null>(null);
   const [method, setMethod] = React.useState<string | null>(null);
   const [note, setNote] = React.useState("");
+  // Paying in another currency than the group counts in: a euro debt paid in
+  // dollars. Only offered in a group - a direct balance lives in the currency
+  // it was made in, so a payment in another one would open a second balance.
+  const [payCurrency, setPayCurrency] = React.useState(currency);
+  const [rate, setRate] = React.useState("1");
+  const [pickingCurrency, setPickingCurrency] = React.useState(false);
 
   useResetOnOpen(open, () => {
     setNote("");
     setMethod(null);
+    setPayCurrency(currency);
+    setRate("1");
 
     // Arrived by tapping a specific transfer: open straight on it, whatever
     // the plan would otherwise have suggested.
@@ -132,6 +142,25 @@ export function SettleUpSheet({
 
   const iAmPaying = selected?.fromPersonId === meId;
 
+  const foreign = payCurrency !== currency;
+  const rateOk = isPositiveDecimal(rate);
+  // The whole debt, in the currency being paid in.
+  const fullAmount =
+    selected && selected.amount > 0n
+      ? foreign
+        ? rateOk
+          ? convert(selected.amount, currency, payCurrency, inverseRate(rate))
+          : null
+        : selected.amount
+      : null;
+
+  // When the rate arrives or changes, keep a full payment full.
+  const [lastFull, setLastFull] = React.useState<bigint | null>(null);
+  if (fullAmount !== lastFull) {
+    setLastFull(fullAmount);
+    if (fullAmount !== null && (amount === null || amount === lastFull)) setAmount(fullAmount);
+  }
+
   const submit = async () => {
     if (!selected || !amount || amount <= 0n) return;
     try {
@@ -140,7 +169,18 @@ export function SettleUpSheet({
         fromPersonId: selected.fromPersonId,
         toPersonId: selected.toPersonId,
         amount: amount.toString(),
-        currency,
+        currency: payCurrency,
+        ...(foreign
+          ? {
+              // Paying the whole debt sends the rate that turns this amount
+              // into exactly what was owed, so nothing is left over from
+              // rounding; any other amount uses the rate as shown.
+              exchangeRate:
+                selected.amount > 0n && amount === fullAmount
+                  ? exactRate(selected.amount, currency, amount, payCurrency)
+                  : rate,
+            }
+          : {}),
         note: note.trim() || null,
         method,
       });
@@ -159,6 +199,7 @@ export function SettleUpSheet({
   };
 
   return (
+    <>
     <Sheet
       open={open}
       onClose={onClose}
@@ -170,7 +211,7 @@ export function SettleUpSheet({
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!amount || amount <= 0n}
+            disabled={!amount || amount <= 0n || (foreign && !rateOk)}
             loading={settle.isPending}
             onClick={() => void submit()}
           >
@@ -245,29 +286,51 @@ export function SettleUpSheet({
 
             {/* Amount ------------------------------------------------------- */}
             <div className="mt-4 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
-              <AmountInput
-                value={amount}
-                onChange={setAmount}
-                currency={currency}
-                size="hero"
-                autoFocus
-              />
-              {selected.amount > 0n && amount !== selected.amount ? (
+              {group ? (
                 <button
                   onClick={() => {
                     haptic();
-                    setAmount(selected.amount);
+                    setPickingCurrency(true);
+                  }}
+                  className="mx-auto mb-2 flex items-center gap-1 rounded-full bg-surface px-3 py-1 text-caption font-semibold text-muted"
+                  aria-label={`Currency: ${payCurrency}`}
+                >
+                  Paying in {payCurrency}
+                  <ChevronDown className="size-3.5" />
+                </button>
+              ) : null}
+              <AmountInput
+                value={amount}
+                onChange={setAmount}
+                currency={payCurrency}
+                size="hero"
+                autoFocus
+              />
+              {foreign ? (
+                <ConversionNote
+                  amount={amount ?? 0n}
+                  from={payCurrency}
+                  to={currency}
+                  rate={rate}
+                  onRateChange={setRate}
+                />
+              ) : null}
+              {fullAmount !== null && amount !== fullAmount ? (
+                <button
+                  onClick={() => {
+                    haptic();
+                    setAmount(fullAmount);
                   }}
                   className="mx-auto mt-2 block text-caption font-semibold text-brand"
                 >
-                  Pay the full {toDecimalString(selected.amount, currency)}
+                  Pay the full {toDecimalString(fullAmount, payCurrency)}
                 </button>
               ) : null}
             </div>
 
             {/* Pay them ----------------------------------------------------- */}
             {iAmPaying && other ? (
-              <PayThem person={other} amount={amount} currency={currency} />
+              <PayThem person={other} amount={amount} currency={payCurrency} />
             ) : null}
 
             {/* How ---------------------------------------------------------- */}
@@ -306,6 +369,19 @@ export function SettleUpSheet({
         )}
       </div>
     </Sheet>
+    <CurrencyPicker
+      open={pickingCurrency}
+      onClose={() => setPickingCurrency(false)}
+      value={payCurrency}
+      onChange={(next) => {
+        setPayCurrency(next);
+        setRate("1");
+        // Start from the full debt again in the new currency.
+        setAmount(null);
+        setPickingCurrency(false);
+      }}
+    />
+    </>
   );
 }
 
@@ -518,4 +594,13 @@ function PayThem({
       </p>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Paying in another currency
+// ---------------------------------------------------------------------------
+
+function isPositiveDecimal(value: string): boolean {
+  if (!/^[0-9]+(\.[0-9]+)?$/.test(value)) return false;
+  return Number(value) > 0;
 }

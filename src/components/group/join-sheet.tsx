@@ -57,61 +57,51 @@ export function JoinSheet({
   const client = useQueryClient();
 
   const [code, setCode] = React.useState(initialCode ?? "");
-  const [preview, setPreview] = React.useState<Preview | null>(null);
-  const [checking, setChecking] = React.useState(false);
+  // The last lookup that finished, and which code it was for. Everything the
+  // screen shows is worked out from this and the code as typed, so a slow
+  // answer about an older code can never show against a newer one.
+  const [result, setResult] = React.useState<{ code: string; preview: Preview | null } | null>(null);
   const [joining, setJoining] = React.useState(false);
   const [claimId, setClaimId] = React.useState<string | null>(null);
-  const [notFound, setNotFound] = React.useState(false);
 
   useResetOnOpen(open, () => {
     setCode(initialCode ?? "");
-    setPreview(null);
+    setResult(null);
     setClaimId(null);
-    setNotFound(false);
   });
+
+  const normalized = normalizeInviteCode(code);
+  const lookup = normalized.length >= 5 ? normalized : null;
+  const current = result && result.code === lookup ? result : null;
+  const preview = current?.preview ?? null;
+  const notFound = Boolean(current && !current.preview);
+  const checking = lookup !== null && !current;
 
   // Look the code up as it is typed, debounced. Nobody should have to press a
   // "check" button to find out whether they typed the code correctly.
   React.useEffect(() => {
-    const normalized = normalizeInviteCode(code);
-    if (normalized.length < 5) {
-      setPreview(null);
-      setNotFound(false);
-      return;
-    }
-
+    if (!lookup) return;
     let cancelled = false;
-    setChecking(true);
 
     const look = async () => {
       try {
-        const result = await api.get<Preview>(`/api/invite/${encodeURIComponent(normalized)}`);
-        if (!cancelled) {
-          setPreview(result);
-          setNotFound(false);
-        }
+        const found = await api.get<Preview>(`/api/invite/${encodeURIComponent(lookup)}`);
+        if (!cancelled) setResult({ code: lookup, preview: found });
       } catch {
-        if (!cancelled) {
-          setPreview(null);
-          setNotFound(true);
-        }
-      } finally {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) setResult({ code: lookup, preview: null });
       }
     };
 
-    // `setTimeout` wants a void-returning callback, and handing it an async
-    // function means nothing is holding the promise: every outcome is already
-    // handled inside `look`, so `void` says that rather than leaving it to be
-    // read as an oversight.
+    // `setTimeout` wants a void-returning callback; every outcome is handled
+    // inside `look`, so `void` says that rather than leaving it to be read as
+    // an oversight.
     const timer = setTimeout(() => void look(), 350);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      setChecking(false);
     };
-  }, [code]);
+  }, [lookup]);
 
   const join = async () => {
     if (!preview) return;

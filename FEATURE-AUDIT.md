@@ -71,20 +71,37 @@ and what is still missing.
 | One expense with several friends, no group | ✓ | ✓ (new) |
 | Email or password sign-in | ✓ | No, by design (passkeys and a recovery key) |
 | Email notifications | ✓ | ✗ (the app never asks for an email) |
-| Import your Splitwise history | n/a | ✗ |
-| A default split per group (e.g. 60/40) | Pro only | ✗ |
-| Read a receipt photo automatically | Pro only | ✗ |
-| Convert all balances into one currency to settle | Pro only | Partly: Home shows a rough total |
+| Import your Splitwise history | n/a | ✓ (new) |
+| A default split per group (e.g. 60/40) | Pro only | ✓ free (new) |
+| Read a receipt photo automatically | Pro only | ✓ free, read on the phone (new) |
+| Pay a debt in another currency | Pro only | ✓ free (new), and Home shows a rough total |
 
-## Still worth building, in order
+## Added in the second round
 
-1. **Import from Splitwise.** Splitwise lets you export a spreadsheet per
-   group. Reading that in would let people switch without losing history,
-   which is the biggest reason people stay where they are.
-2. **A default split per group.** Couples and flatmates who split 60/40 every
-   time have to set it on every expense.
-3. **Settle in one currency.** Pay off a yen debt in euros at today's rate.
-   The rate lookup already exists; the payment screen would need a currency
-   choice.
-4. **Read receipt photos.** Fill in the amount and items from a photo. This
-   needs an outside service, which costs money per scan.
+1. **A usual split per group.** In group settings, "Usual split": equally, by
+   percent (say 60/40) or by shares. New expenses and repeating expenses start
+   with it, and the expense screen says so. If someone in a split by percent
+   leaves, new expenses go back to equal and say why, rather than quietly
+   giving their share to someone else.
+2. **Pay in another currency.** On the Settle up screen, tap "Paying in EUR"
+   to pay in dollars, yen or anything else. The amount converts at today's
+   rate, which you can correct, and paying the whole amount clears the debt to
+   the cent.
+3. **Move a group from Splitwise.** Export the group from Splitwise as a
+   spreadsheet, then choose the file in Divvy ("Move a group from Splitwise"
+   on Home, or the link at the bottom of New group). Divvy shows what's in it,
+   asks which name is you, and brings everything across. Everyone's balance
+   comes out exactly as it was in Splitwise. Other people are added by name and
+   can claim their name with the invite code.
+4. **Read a receipt photo.** Add a photo to an expense and tap "Read receipt".
+   Divvy fills in the total and the shop's name (never overwriting what you
+   typed) and offers to split by item with every line filled in. The photo is
+   read on the phone itself: nothing is sent anywhere and there's no cost per
+   scan. The reader downloads once (about 7 MB) the first time it's used.
+
+## Still to consider
+
+- **Email reminders.** Divvy never asks for an email address, by design.
+  Phone notifications cover the same need for people who install it.
+- **Receipts in other languages.** The receipt reader knows English; adding a
+  language is a matter of shipping its data file (2 to 4 MB each).

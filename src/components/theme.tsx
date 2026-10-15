@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { readStored, removeStored, writeStored } from "@/lib/client/storage";
+import { useClientValue } from "./ui/state-hooks";
 
 type Theme = "light" | "dark" | "system";
 
@@ -22,41 +23,62 @@ const STORAGE_KEY = "divvy-theme";
  * the root layout - so this provider's job is only to keep it in sync
  * afterwards, and to follow the OS when the user has not chosen explicitly.
  */
+const EVENT = "divvy:theme";
+
+/** The chosen theme, kept in memory too so a browser that refuses storage still honours it for the visit. */
+let remembered: Theme | null = null;
+
+function readTheme(): Theme {
+  if (remembered) return remembered;
+  const stored = readStored(STORAGE_KEY);
+  return stored === "light" || stored === "dark" ? stored : "system";
+}
+
+function subscribeTheme(onChange: () => void): () => void {
+  window.addEventListener(EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+const DARK_QUERY = "(prefers-color-scheme: dark)";
+const readOsDark = () => window.matchMedia(DARK_QUERY).matches;
+function subscribeOs(onChange: () => void): () => void {
+  const media = window.matchMedia(DARK_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+/**
+ * Theme state.
+ *
+ * The class is already on <html> before React runs - see the inline script in
+ * the root layout - so this provider's job is only to keep it in sync
+ * afterwards, and to follow the OS when the user has not chosen explicitly.
+ * Both the choice and the OS setting are read as outside values, so the
+ * resolved theme is right on the first render after hydration.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>("system");
-  const [resolved, setResolved] = React.useState<"light" | "dark">("light");
+  const theme = useClientValue(readTheme, "system", subscribeTheme);
+  const osDark = useClientValue(readOsDark, false, subscribeOs);
+  const resolved: "light" | "dark" = theme === "dark" || (theme === "system" && osDark) ? "dark" : "light";
 
   React.useEffect(() => {
-    const stored = readStored(STORAGE_KEY) as Theme | null;
-    if (stored === "light" || stored === "dark") setThemeState(stored);
-  }, []);
-
-  React.useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const apply = () => {
-      const dark = theme === "dark" || (theme === "system" && media.matches);
-      document.documentElement.classList.toggle("dark", dark);
-      setResolved(dark ? "dark" : "light");
-
-      // Keep the browser chrome in step with the app on Android, where the
-      // address bar is painted with theme-color.
-      const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", dark ? "#111014" : "#fafafa");
-    };
-
-    apply();
-    // Only track the OS while the user is deferring to it.
-    if (theme === "system") {
-      media.addEventListener("change", apply);
-      return () => media.removeEventListener("change", apply);
-    }
-  }, [theme]);
+    const dark = resolved === "dark";
+    document.documentElement.classList.toggle("dark", dark);
+    // Keep the browser chrome in step with the app on Android, where the
+    // address bar is painted with theme-color.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#111014" : "#fafafa");
+  }, [resolved]);
 
   const setTheme = React.useCallback((next: Theme) => {
-    setThemeState(next);
+    remembered = next;
     if (next === "system") removeStored(STORAGE_KEY);
     else writeStored(STORAGE_KEY, next);
+    window.dispatchEvent(new Event(EVENT));
   }, []);
 
   const value = React.useMemo(

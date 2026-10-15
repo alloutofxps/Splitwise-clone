@@ -229,7 +229,7 @@ whole app. Three layers protect it:
   only this one survives losing it.
 
 **Health.** `GET /api/health` answers 200 only when the database answers too.
-`railway.json` points Railway's health check at it.
+`.railway/railway.ts` points Railway's health check at it.
 
 **Logs.** One JSON object per line, each request tagged with an
 `X-Request-Id`. Set `DIVVY_ALERT_WEBHOOK` to be told about errors.

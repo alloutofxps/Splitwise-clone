@@ -80,7 +80,7 @@ export const POST = route(async (request: Request) => {
       id: stored.externalId as string,
       publicKey: new Uint8Array(stored.publicKey),
       counter: stored.counter,
-      transports: stored.transports?.split(",").filter(Boolean) as never,
+      transports: stored.transports?.split(",").filter(Boolean),
     },
   }).catch(() => null);
 
