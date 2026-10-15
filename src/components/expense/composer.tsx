@@ -17,7 +17,7 @@ import { ReceiptPicker } from "./receipt-picker";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
 import { keys, useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
-import { formatMoney, toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
 import { startingSplit, type DefaultSplit } from "@/lib/default-split";
@@ -1051,20 +1051,19 @@ function SplitPreview({
                   {split.personId === meId ? "You" : person.displayName}
                 </span>
                 <span className="tabular text-body font-semibold text-muted">
-                  {toDecimalString(split.amount, currency)}
+                  {formatMoney(split.amount, currency)}
                 </span>
                 {net !== 0n ? (
                   <span
                     className={cn(
-                      "tabular w-[68px] shrink-0 text-right text-caption font-bold",
+                      "tabular min-w-[68px] shrink-0 text-right text-caption font-bold",
                       net > 0n ? "text-positive-text" : "text-negative-text",
                     )}
                   >
-                    {net > 0n ? "+" : "−"}
-                    {toDecimalString(net > 0n ? net : -net, currency)}
+                    {formatMoney(net, currency, { signed: true })}
                   </span>
                 ) : (
-                  <span className="w-[68px] shrink-0 text-right text-caption font-semibold text-subtle">
+                  <span className="min-w-[68px] shrink-0 text-right text-caption font-semibold text-subtle">
                     even
                   </span>
                 )}

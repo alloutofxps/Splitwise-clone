@@ -101,7 +101,7 @@ await page.waitForTimeout(2500);
 const settleText = await sheet().innerText();
 if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/feature-2-pay-in-dollars.png` });
 check("the amount switches to dollars", /\$|USD/.test(settleText), settleText.slice(0, 220).replace(/\n/g, " | "));
-check("and shows what it comes to in euros", /≈\s*20\.00\s*EUR/.test(settleText), settleText.match(/≈[^|\n]*/)?.[0] ?? "");
+check("and shows what it comes to in euros", /≈\s*€20\.00/.test(settleText), settleText.match(/≈[^|\n]*/)?.[0] ?? "");
 await sheet().getByRole("button", { name: "Save payment" }).click().catch(() => {});
 await page.getByRole("button", { name: "Save payment" }).click().catch(() => {});
 await page.waitForTimeout(2000);
@@ -184,6 +184,44 @@ if ((await page.getByRole("button", { name: "Split by item" }).count()) > 0) {
     .evaluateAll((els) => els.map((el) => el.value).filter((v) => /[a-z]{3}/i.test(v)));
   check("which fills in the item lines", names.some((n) => /pastel|tosta|galao|agua/i.test(n)), JSON.stringify(names));
 }
+
+// --- Panels on top of panels -----------------------------------------------
+console.log("\nEscape and the settle-up amount");
+await page.evaluate(async (s) => {
+  await fetch("/api/expenses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      groupId: s.groupId, description: "Groceries", amount: "6000", currency: "EUR", splitMode: "EQUAL",
+      payers: [{ personId: s.jules, amount: "6000" }],
+      splits: [{ personId: s.meId, amount: "3000" }, { personId: s.jules, amount: "3000" }],
+    }),
+  });
+}, seed);
+await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Settle up" }).first().click();
+await page.waitForTimeout(900);
+const selected = await page.evaluate(() => {
+  const el = document.activeElement;
+  return el instanceof HTMLInputElement ? { value: el.value, length: (el.selectionEnd ?? 0) - (el.selectionStart ?? 0) } : null;
+});
+check("the amount opens ready to type, without a highlight", selected !== null && selected.value !== "" && selected.length === 0, JSON.stringify(selected));
+await page.keyboard.type("7");
+const replaced = await page.evaluate(() => (document.activeElement instanceof HTMLInputElement ? document.activeElement.value : null));
+check("and the first key typed replaces it", replaced === "7", String(replaced));
+await page.getByRole("button", { name: "Currency: EUR" }).click();
+await page.waitForTimeout(700);
+const pickerText = await sheet().innerText();
+check("the currency list has no flag letters", !/[\u{1F1E6}-\u{1F1FF}]/u.test(pickerText) && pickerText.includes("€"), pickerText.slice(0, 120).replace(/\n/g, " | "));
+const openBefore = await page.locator('[role="dialog"]').count();
+await page.keyboard.press("Escape");
+await page.waitForTimeout(600);
+const openAfter = await page.locator('[role="dialog"]').count();
+check("Escape closes only the panel on top", openBefore === 2 && openAfter === 1, `${openBefore} then ${openAfter}`);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(600);
+check("and the next Escape closes the one below", (await page.locator('[role="dialog"]').count()) === 0);
 
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));
 console.log(`\n${passed} passed, ${failed} failed`);

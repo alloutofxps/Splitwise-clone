@@ -29,6 +29,14 @@ import { cn, haptic, IconButton, useMounted } from "./primitives";
 
 const SPRING = { type: "spring" as const, stiffness: 420, damping: 38, mass: 0.9 };
 
+/**
+ * Open sheets, oldest first. Panels open on top of one another - the split
+ * editor over the expense composer - and Escape must close only the top one.
+ * Each used to listen on its own, so one key press closed every panel at once
+ * and threw away the expense being typed underneath.
+ */
+const sheetStack: object[] = [];
+
 export interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -80,14 +88,29 @@ export function Sheet({
     };
   }, [open]);
 
+  // Place in the stack depends only on when this sheet opened, so a parent
+  // re-rendering (say, as someone types) can never jump above its child.
+  const token = React.useRef({});
+  const close = React.useRef({ onClose, dismissible });
+  React.useEffect(() => {
+    close.current = { onClose, dismissible };
+  });
   React.useEffect(() => {
     if (!open) return;
+    const me = token.current;
+    sheetStack.push(me);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && dismissible) onClose();
+      if (event.key !== "Escape" || !close.current.dismissible) return;
+      if (sheetStack[sheetStack.length - 1] !== me) return;
+      close.current.onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, dismissible, onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      const index = sheetStack.lastIndexOf(me);
+      if (index !== -1) sheetStack.splice(index, 1);
+    };
+  }, [open]);
 
   if (!mounted) return null;
 

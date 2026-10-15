@@ -117,7 +117,7 @@ describe("formatMoney", () => {
   });
 
   it("can drop the symbol and trailing zeros", () => {
-    expect(formatMoney(2000n, "USD", { bare: true, trimZeros: true })).toBe("20");
+    expect(formatMoney(2000n, "USD", { bare: true })).toBe("20.00");
   });
 });
 

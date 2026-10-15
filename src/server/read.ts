@@ -332,6 +332,64 @@ export function commentDto(row: {
   };
 }
 
+/**
+ * Whether an entry is new to this person. Their own actions never are. Others'
+ * are new if they happened after both the last time the person opened that
+ * group and the last time they opened Activity; an entry outside any group
+ * only has the second.
+ */
+export function isUnread(
+  row: { actorPersonId: string; createdAt: Date },
+  groupReadAt: Date | null,
+  viewer: { id: string; activitySeenAt: Date | null },
+): boolean {
+  if (row.actorPersonId === viewer.id) return false;
+  const cutoff = latest(groupReadAt, viewer.activitySeenAt);
+  return cutoff ? row.createdAt > cutoff : true;
+}
+
+function latest(a: Date | null, b: Date | null): Date | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+/**
+ * Everything that belongs in a person's Activity feed: group-wide entries in
+ * their groups, entries addressed to them (or sent by them to someone), and
+ * expenses and payments outside groups that they are part of. The feed and
+ * the unread badge both use this, so they can never disagree.
+ */
+export function feedScope(personId: string, groupIds: string[]): Prisma.ActivityWhereInput[] {
+  return [
+    { targetPersonId: personId },
+    { groupId: { in: groupIds }, targetPersonId: null },
+    { actorPersonId: personId, targetPersonId: { not: null } },
+    {
+      groupId: null,
+      expense: {
+        OR: [{ payers: { some: { personId } } }, { splits: { some: { personId } } }],
+      },
+    },
+    {
+      groupId: null,
+      settlement: { OR: [{ fromPersonId: personId }, { toPersonId: personId }] },
+    },
+  ];
+}
+
+/** Unread entries outside any group: direct expenses, payments and reminders. */
+export async function directUnreadCount(personId: string, seenAt: Date | null): Promise<number> {
+  return prisma.activity.count({
+    where: {
+      groupId: null,
+      actorPersonId: { not: personId },
+      ...(seenAt ? { createdAt: { gt: seenAt } } : {}),
+      OR: feedScope(personId, []),
+    },
+  });
+}
+
 export function activityDto(
   row: {
     id: string;
@@ -348,6 +406,7 @@ export function activityDto(
     settlement?: { deletedAt: Date | null } | null;
   },
   lastReadAt: Date | null,
+  viewer: { id: string; activitySeenAt: Date | null },
 ): ActivityDto {
   let data: Record<string, unknown>;
   try {
@@ -369,7 +428,7 @@ export function activityDto(
     targetPersonId: row.targetPersonId ?? null,
     data,
     createdAt: row.createdAt.toISOString(),
-    isUnread: lastReadAt ? row.createdAt > lastReadAt : true,
+    isUnread: isUnread(row, lastReadAt, viewer),
     /**
      * Whether this entry describes a deletion that is still in force.
      *
@@ -441,6 +500,26 @@ export function pairwiseNet(sheet: BalanceSheet, meId: string, otherId: string):
 }
 
 /**
+ * The amount the group's settle plan moves between the two, when it isn't the
+ * same as what they owe each other. See `SharedLedgerDto.planned`.
+ */
+export function plannedNet(
+  sheet: BalanceSheet,
+  meId: string,
+  otherId: string,
+  simplify: boolean,
+  net: bigint,
+): string | null {
+  if (!simplify) return null;
+  let planned = 0n;
+  for (const edge of sheet.simplified) {
+    if (edge.fromPersonId === otherId && edge.toPersonId === meId) planned += edge.amount;
+    if (edge.fromPersonId === meId && edge.toPersonId === otherId) planned -= edge.amount;
+  }
+  return planned === net ? null : planned.toString();
+}
+
+/**
  * Every ledger two people share, with where they stand in each.
  *
  * This is the list a cross-ledger settlement is built from: one row per group
@@ -461,7 +540,7 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
           { memberships: { some: { personId: otherId, leftAt: null } } },
         ],
       },
-      select: { id: true, name: true, emoji: true, currency: true },
+      select: { id: true, name: true, emoji: true, currency: true, simplifyDebts: true },
     }),
   ]);
 
@@ -470,13 +549,14 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
   for (const [currency, sheet] of directSheets) {
     const net = pairwiseNet(sheet, meId, otherId);
     if (net !== 0n) {
-      ledgers.push({ groupId: null, name: null, emoji: null, currency, net: net.toString() });
+      ledgers.push({ groupId: null, name: null, emoji: null, currency, net: net.toString(), planned: null });
     }
   }
 
   const sheets = await groupSheets(groups.map((group) => group.id));
   groups.forEach((group) => {
-    const net = pairwiseNet(sheets.get(group.id) ?? EMPTY_SHEET, meId, otherId);
+    const sheet = sheets.get(group.id) ?? EMPTY_SHEET;
+    const net = pairwiseNet(sheet, meId, otherId);
     if (net !== 0n) {
       ledgers.push({
         groupId: group.id,
@@ -484,6 +564,7 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
         emoji: group.emoji,
         currency: group.currency,
         net: net.toString(),
+        planned: plannedNet(sheet, meId, otherId, group.simplifyDebts, net),
       });
     }
   });
@@ -519,6 +600,12 @@ export async function groupSummaries(
   const groupIds = memberships.map((m) => m.groupId);
   if (groupIds.length === 0) return [];
 
+  const viewer = await prisma.person.findUnique({
+    where: { id: personId },
+    select: { activitySeenAt: true },
+  });
+  const seenAt = viewer?.activitySeenAt ?? null;
+
   const [latestActivity, unread] = await Promise.all([
     prisma.activity.groupBy({
       by: ["groupId"],
@@ -533,10 +620,19 @@ export async function groupSummaries(
       by: ["groupId"],
       where: {
         actorPersonId: { not: personId },
-        OR: memberships.map((membership) => ({
-          groupId: membership.groupId,
-          createdAt: { gt: membership.lastReadActivityAt },
-        })),
+        AND: [
+          {
+            // Read up to whichever is later: opening the group, or opening
+            // Activity.
+            OR: memberships.map((membership) => ({
+              groupId: membership.groupId,
+              createdAt: { gt: latest(membership.lastReadActivityAt, seenAt) ?? membership.lastReadActivityAt },
+            })),
+          },
+          // Not a reminder between two other people, which this person never
+          // sees and so can never read.
+          { OR: [{ targetPersonId: null }, { targetPersonId: personId }] },
+        ],
       },
       _count: { _all: true },
     }),

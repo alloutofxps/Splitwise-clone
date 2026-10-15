@@ -9,10 +9,12 @@ import type {
 import type { Person } from "@prisma/client";
 import {
   directBalanceSheets,
+  directUnreadCount,
   groupSheetsFor,
   groupSummaries,
   pairwiseNet,
   personDto,
+  plannedNet,
 } from "./read";
 import type { BalanceSheet } from "@/lib/balances";
 import { getRate } from "./rates";
@@ -114,7 +116,7 @@ export async function friendDtos(
       select: {
         personId: true,
         groupId: true,
-        group: { select: { currency: true, name: true, emoji: true } },
+        group: { select: { currency: true, name: true, emoji: true, simplifyDebts: true } },
       },
     }),
     groupSheets ? Promise.resolve(groupSheets) : groupSheetsFor(personId),
@@ -122,7 +124,7 @@ export async function friendDtos(
 
   const sharedByFriend = new Map<
     string,
-    { groupId: string; currency: string; name: string; emoji: string }[]
+    { groupId: string; currency: string; name: string; emoji: string; simplify: boolean }[]
   >();
   for (const membership of sharedMemberships) {
     const entry = {
@@ -130,6 +132,7 @@ export async function friendDtos(
       currency: membership.group.currency,
       name: membership.group.name,
       emoji: membership.group.emoji,
+      simplify: membership.group.simplifyDebts,
     };
     const list = sharedByFriend.get(membership.personId);
     if (list) list.push(entry);
@@ -158,16 +161,24 @@ export async function friendDtos(
         emoji: null,
         currency,
         net: value.toString(),
+        planned: null,
       });
     }
 
-    for (const { groupId, currency, name, emoji } of shared) {
+    for (const { groupId, currency, name, emoji, simplify } of shared) {
       const sheet = sheetsByGroup.get(groupId);
       if (!sheet) continue;
       const value = pairwiseNet(sheet, personId, other.id);
       if (value === 0n) continue;
       combined.set(currency, (combined.get(currency) ?? 0n) + value);
-      ledgers.push({ groupId, name, emoji, currency, net: value.toString() });
+      ledgers.push({
+        groupId,
+        name,
+        emoji,
+        currency,
+        net: value.toString(),
+        planned: plannedNet(sheet, personId, other.id, simplify, value),
+      });
     }
 
     const size = (value: string) => {
@@ -236,7 +247,11 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
     for (const [code, value] of Object.entries(friend.directNet)) add(code, BigInt(value));
   }
 
-  const unreadActivityCount = groups.reduce((total, g) => total + g.unreadCount, 0);
+  // Group entries plus those outside any group, on the same rule as the feed's
+  // dots, so the badge and the feed always agree.
+  const unreadActivityCount =
+    groups.reduce((total, g) => total + g.unreadCount, 0) +
+    (await directUnreadCount(person.id, person.activitySeenAt ?? null));
 
   // With balances in more than one currency, a rough single figure in the
   // person's own currency, so they can tell at a glance whether they are up or

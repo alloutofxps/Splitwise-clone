@@ -128,7 +128,7 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
             {tile.label}
           </p>
           <p className="display-number mt-1 truncate text-title font-bold text-text">
-            {formatMoney(BigInt(tile.value), stats.currency, { compact: true, trimZeros: true })}
+            {formatMoney(BigInt(tile.value), stats.currency)}
           </p>
         </div>
       ))}
@@ -206,7 +206,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
                 Peak month
               </span>
               <span className="tabular text-body font-bold text-text">
-                {formatMoney(peak, stats.currency, { compact: true })}
+                {formatMoney(peak, stats.currency)}
               </span>
             </div>
           )}
@@ -324,7 +324,7 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
                   {category.name}
                 </span>
                 <span className="tabular shrink-0 text-caption font-semibold text-muted">
-                  {formatMoney(row.value, stats.currency, { trimZeros: true })}
+                  {formatMoney(row.value, stats.currency)}
                 </span>
                 <span className="tabular w-9 shrink-0 text-right text-tiny text-subtle">
                   {share >= 1 ? `${Math.round(share)}%` : "<1%"}
@@ -349,7 +349,7 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
               {rest.length} more {rest.length === 1 ? "category" : "categories"}
             </span>
             <span className="tabular text-caption font-semibold text-muted">
-              {formatMoney(restTotal, stats.currency, { trimZeros: true })}
+              {formatMoney(restTotal, stats.currency)}
             </span>
           </li>
         ) : null}
@@ -425,7 +425,7 @@ function PersonChart({
                 >
                   {row.net === 0n
                     ? "even"
-                    : `${positive ? "+" : "−"}${formatMoney(magnitude, stats.currency, { bare: true, trimZeros: true })}`}
+                    : `${positive ? "+" : "−"}${formatMoney(magnitude, stats.currency, { bare: true })}`}
                 </span>
               </div>
 

@@ -20,6 +20,7 @@ import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import {
   useActivity,
   useDashboard,
+  useMarkActivitySeen,
   useRestoreExpense,
   useRestoreSettlement,
 } from "@/lib/client/queries";
@@ -44,7 +45,15 @@ import type { ActivityDto, PersonDto } from "@/lib/types";
 export default function ActivityPage() {
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useActivity();
   const { data: dashboard } = useDashboard();
+  const markSeen = useMarkActivitySeen();
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
+
+  // Once per visit, after the feed has loaded: everything here is now seen.
+  const loaded = Boolean(data);
+  const { mutate: markSeenNow } = markSeen;
+  React.useEffect(() => {
+    if (loaded) markSeenNow();
+  }, [loaded, markSeenNow]);
   const [groupFilter, setGroupFilter] = React.useState<string | null>(null);
 
   const people = React.useMemo(

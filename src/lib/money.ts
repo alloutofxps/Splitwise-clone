@@ -17,7 +17,6 @@ export interface CurrencyInfo {
   symbol: string;
   /** Number of decimal places, i.e. log10(minor units per major unit). */
   decimals: number;
-  flag: string;
 }
 
 /**
@@ -33,68 +32,67 @@ const IRREGULAR_DECIMALS: Record<string, number> = {
 /** Curated list — the ones people actually split bills in, plus the majors. */
 export const CURRENCIES: CurrencyInfo[] = (
   [
-    ["USD", "US Dollar", "$", "🇺🇸"],
-    ["EUR", "Euro", "€", "🇪🇺"],
-    ["GBP", "British Pound", "£", "🇬🇧"],
-    ["INR", "Indian Rupee", "₹", "🇮🇳"],
-    ["JPY", "Japanese Yen", "¥", "🇯🇵"],
-    ["AUD", "Australian Dollar", "A$", "🇦🇺"],
-    ["CAD", "Canadian Dollar", "C$", "🇨🇦"],
-    ["CHF", "Swiss Franc", "CHF", "🇨🇭"],
-    ["CNY", "Chinese Yuan", "¥", "🇨🇳"],
-    ["SGD", "Singapore Dollar", "S$", "🇸🇬"],
-    ["HKD", "Hong Kong Dollar", "HK$", "🇭🇰"],
-    ["NZD", "New Zealand Dollar", "NZ$", "🇳🇿"],
-    ["SEK", "Swedish Krona", "kr", "🇸🇪"],
-    ["NOK", "Norwegian Krone", "kr", "🇳🇴"],
-    ["DKK", "Danish Krone", "kr", "🇩🇰"],
-    ["PLN", "Polish Zloty", "zł", "🇵🇱"],
-    ["CZK", "Czech Koruna", "Kč", "🇨🇿"],
-    ["HUF", "Hungarian Forint", "Ft", "🇭🇺"],
-    ["RON", "Romanian Leu", "lei", "🇷🇴"],
-    ["TRY", "Turkish Lira", "₺", "🇹🇷"],
-    ["RUB", "Russian Ruble", "₽", "🇷🇺"],
-    ["UAH", "Ukrainian Hryvnia", "₴", "🇺🇦"],
-    ["AED", "UAE Dirham", "د.إ", "🇦🇪"],
-    ["SAR", "Saudi Riyal", "﷼", "🇸🇦"],
-    ["QAR", "Qatari Riyal", "﷼", "🇶🇦"],
-    ["KWD", "Kuwaiti Dinar", "د.ك", "🇰🇼"],
-    ["BHD", "Bahraini Dinar", ".د.ب", "🇧🇭"],
-    ["OMR", "Omani Rial", "﷼", "🇴🇲"],
-    ["ILS", "Israeli Shekel", "₪", "🇮🇱"],
-    ["EGP", "Egyptian Pound", "E£", "🇪🇬"],
-    ["ZAR", "South African Rand", "R", "🇿🇦"],
-    ["NGN", "Nigerian Naira", "₦", "🇳🇬"],
-    ["KES", "Kenyan Shilling", "KSh", "🇰🇪"],
-    ["GHS", "Ghanaian Cedi", "₵", "🇬🇭"],
-    ["MAD", "Moroccan Dirham", "د.م.", "🇲🇦"],
-    ["BRL", "Brazilian Real", "R$", "🇧🇷"],
-    ["MXN", "Mexican Peso", "Mex$", "🇲🇽"],
-    ["ARS", "Argentine Peso", "$", "🇦🇷"],
-    ["CLP", "Chilean Peso", "$", "🇨🇱"],
-    ["COP", "Colombian Peso", "$", "🇨🇴"],
-    ["PEN", "Peruvian Sol", "S/", "🇵🇪"],
-    ["KRW", "South Korean Won", "₩", "🇰🇷"],
-    ["TWD", "Taiwan Dollar", "NT$", "🇹🇼"],
-    ["THB", "Thai Baht", "฿", "🇹🇭"],
-    ["VND", "Vietnamese Dong", "₫", "🇻🇳"],
-    ["IDR", "Indonesian Rupiah", "Rp", "🇮🇩"],
-    ["MYR", "Malaysian Ringgit", "RM", "🇲🇾"],
-    ["PHP", "Philippine Peso", "₱", "🇵🇭"],
-    ["PKR", "Pakistani Rupee", "₨", "🇵🇰"],
-    ["BDT", "Bangladeshi Taka", "৳", "🇧🇩"],
-    ["LKR", "Sri Lankan Rupee", "Rs", "🇱🇰"],
-    ["NPR", "Nepalese Rupee", "रू", "🇳🇵"],
-    ["ISK", "Icelandic Krona", "kr", "🇮🇸"],
-    ["RSD", "Serbian Dinar", "дин", "🇷🇸"],
-    ["BGN", "Bulgarian Lev", "лв", "🇧🇬"],
-    ["HRK", "Croatian Kuna", "kn", "🇭🇷"],
+    ["USD", "US Dollar", "$"],
+    ["EUR", "Euro", "€"],
+    ["GBP", "British Pound", "£"],
+    ["INR", "Indian Rupee", "₹"],
+    ["JPY", "Japanese Yen", "¥"],
+    ["AUD", "Australian Dollar", "A$"],
+    ["CAD", "Canadian Dollar", "C$"],
+    ["CHF", "Swiss Franc", "CHF"],
+    ["CNY", "Chinese Yuan", "¥"],
+    ["SGD", "Singapore Dollar", "S$"],
+    ["HKD", "Hong Kong Dollar", "HK$"],
+    ["NZD", "New Zealand Dollar", "NZ$"],
+    ["SEK", "Swedish Krona", "kr"],
+    ["NOK", "Norwegian Krone", "kr"],
+    ["DKK", "Danish Krone", "kr"],
+    ["PLN", "Polish Zloty", "zł"],
+    ["CZK", "Czech Koruna", "Kč"],
+    ["HUF", "Hungarian Forint", "Ft"],
+    ["RON", "Romanian Leu", "lei"],
+    ["TRY", "Turkish Lira", "₺"],
+    ["RUB", "Russian Ruble", "₽"],
+    ["UAH", "Ukrainian Hryvnia", "₴"],
+    ["AED", "UAE Dirham", "د.إ"],
+    ["SAR", "Saudi Riyal", "﷼"],
+    ["QAR", "Qatari Riyal", "﷼"],
+    ["KWD", "Kuwaiti Dinar", "د.ك"],
+    ["BHD", "Bahraini Dinar", ".د.ب"],
+    ["OMR", "Omani Rial", "﷼"],
+    ["ILS", "Israeli Shekel", "₪"],
+    ["EGP", "Egyptian Pound", "E£"],
+    ["ZAR", "South African Rand", "R"],
+    ["NGN", "Nigerian Naira", "₦"],
+    ["KES", "Kenyan Shilling", "KSh"],
+    ["GHS", "Ghanaian Cedi", "₵"],
+    ["MAD", "Moroccan Dirham", "د.م."],
+    ["BRL", "Brazilian Real", "R$"],
+    ["MXN", "Mexican Peso", "Mex$"],
+    ["ARS", "Argentine Peso", "$"],
+    ["CLP", "Chilean Peso", "$"],
+    ["COP", "Colombian Peso", "$"],
+    ["PEN", "Peruvian Sol", "S/"],
+    ["KRW", "South Korean Won", "₩"],
+    ["TWD", "Taiwan Dollar", "NT$"],
+    ["THB", "Thai Baht", "฿"],
+    ["VND", "Vietnamese Dong", "₫"],
+    ["IDR", "Indonesian Rupiah", "Rp"],
+    ["MYR", "Malaysian Ringgit", "RM"],
+    ["PHP", "Philippine Peso", "₱"],
+    ["PKR", "Pakistani Rupee", "₨"],
+    ["BDT", "Bangladeshi Taka", "৳"],
+    ["LKR", "Sri Lankan Rupee", "Rs"],
+    ["NPR", "Nepalese Rupee", "रू"],
+    ["ISK", "Icelandic Krona", "kr"],
+    ["RSD", "Serbian Dinar", "дин"],
+    ["BGN", "Bulgarian Lev", "лв"],
+    ["HRK", "Croatian Kuna", "kn"],
   ] as const
-).map(([code, name, symbol, flag]) => ({
+).map(([code, name, symbol]) => ({
   code,
   name,
   symbol,
-  flag,
   decimals: IRREGULAR_DECIMALS[code] ?? 2,
 }));
 
@@ -105,7 +103,6 @@ const FALLBACK: CurrencyInfo = {
   name: "US Dollar",
   symbol: "$",
   decimals: 2,
-  flag: "🏳️",
 };
 
 export function currency(code: string | null | undefined): CurrencyInfo {
@@ -118,7 +115,6 @@ export function currency(code: string | null | undefined): CurrencyInfo {
     name: code.toUpperCase(),
     symbol: code.toUpperCase(),
     decimals: IRREGULAR_DECIMALS[code.toUpperCase()] ?? 2,
-    flag: "🏳️",
   };
 }
 
@@ -272,15 +268,13 @@ export interface FormatOptions {
   bare?: boolean;
   /** Always render a leading + or −. */
   signed?: boolean;
-  /** Render 1234567 as "1.2M". Useful in tight chart labels. */
-  compact?: boolean;
-  /** Hide ".00" when the amount is a whole major unit. */
-  trimZeros?: boolean;
   locale?: string;
 }
 
 /**
- * Formats minor units for display. Uses Intl so grouping separators and symbol
+ * Formats minor units for display, the one way every amount in the app is
+ * written: symbol first, full cents, never shortened to "1.2K". Mixed formats
+ * on one screen made the same sum look like different sums. Uses Intl so grouping separators and symbol
  * placement follow the viewer's locale, with a manual fallback for exotic
  * currency codes that Intl rejects.
  */
@@ -294,8 +288,7 @@ export function formatMoney(
   const locale = options.locale ?? "en-US";
   const asNumber = Number(toDecimalString(value < 0n ? -value : value, info.code));
 
-  const trim = options.trimZeros && value % minorUnitScale(info.code) === 0n;
-  const fractionDigits = trim ? 0 : info.decimals;
+  const fractionDigits = info.decimals;
 
   let body: string;
   try {
@@ -305,13 +298,11 @@ export function formatMoney(
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-      notation: options.compact ? "compact" : "standard",
     }).format(asNumber);
   } catch {
     const digits = new Intl.NumberFormat(locale, {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-      notation: options.compact ? "compact" : "standard",
     }).format(asNumber);
     body = options.bare ? digits : `${info.symbol}${digits}`;
   }

@@ -8,7 +8,7 @@ import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useCreateSettlement } from "@/lib/client/queries";
-import { convert, exactRate, inverseRate, toDecimalString } from "@/lib/money";
+import { convert, exactRate, formatMoney, inverseRate } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { CurrencyPicker } from "../expense/currency-picker";
 import { ApiError } from "@/lib/client/api";
@@ -323,7 +323,7 @@ export function SettleUpSheet({
                   }}
                   className="mx-auto mt-2 block text-caption font-semibold text-brand"
                 >
-                  Pay the full {toDecimalString(fullAmount, payCurrency)}
+                  Pay the full {formatMoney(fullAmount, payCurrency)}
                 </button>
               ) : null}
             </div>
@@ -437,7 +437,7 @@ function SuggestionList({
                           : `${from.displayName.split(" ")[0]} pays you`}
                       </span>
                       <span className="tabular mt-0.5 block text-caption text-subtle">
-                        {toDecimalString(BigInt(edge.amount), currency)} {currency}
+                        {formatMoney(BigInt(edge.amount), currency)}
                       </span>
                     </span>
                     <ArrowRight className="size-4 shrink-0 text-subtle" />

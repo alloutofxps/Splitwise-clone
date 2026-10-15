@@ -27,7 +27,6 @@ async function tour(theme, viewport, tag) {
     await page.waitForTimeout(700);
     await page.screenshot({ path: `${OUT}/${tag}-${name}.png`, fullPage: full });
   };
-  const sheet = () => page.locator('[role="dialog"]').last();
   const esc = async () => { await page.keyboard.press("Escape"); await page.waitForTimeout(500); };
 
   // Onboarding, step by step
