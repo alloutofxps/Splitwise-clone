@@ -35,7 +35,7 @@ import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
-import { clearRecoveryPending, recoveryPending } from "@/lib/client/recovery";
+import { clearRecoveryPending, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
@@ -600,15 +600,24 @@ function RecoverySheet({
                 {key}
               </p>
             </div>
-            <Button
-              variant={copied ? "positive" : "primary"}
-              fullWidth
-              className="mt-3"
-              onClick={() => void copy()}
-              icon={copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />}
-            >
-              {copied ? "Copied" : "Copy key"}
-            </Button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                variant={copied ? "positive" : "primary"}
+                fullWidth
+                onClick={() => void copy()}
+                icon={copied ? <Check className="size-[17px]" /> : <Copy className="size-[17px]" />}
+              >
+                {copied ? "Copied" : "Copy key"}
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => saveRecoveryKeyFile(key)}
+                icon={<Download className="size-[17px]" strokeWidth={1.75} />}
+              >
+                Save as file
+              </Button>
+            </div>
             <p className="mt-4 rounded-[var(--radius-md)] bg-warning-soft p-3.5 text-body leading-relaxed text-text">
               Save this now. You won&rsquo;t be able to see it again, and your old key
               no longer works.

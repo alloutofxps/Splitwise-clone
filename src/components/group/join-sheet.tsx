@@ -12,6 +12,7 @@ import { api, ApiError } from "@/lib/client/api";
 import { normalizeInviteCode } from "@/lib/invite-code";
 import type { PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { ScanCodeButton } from "../ui/qr-scanner";
 
 interface GroupPreview {
   kind: "group";
@@ -159,12 +160,13 @@ export function JoinSheet({
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="go"
-          className="h-14 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-center text-title-lg font-semibold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
+          className="h-14 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-center font-mono text-title-lg font-medium text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
         />
 
         <p className="mt-2 text-center text-caption text-subtle">
           Ask the person who made the group for the code.
         </p>
+        <ScanCodeButton onCode={setCode} />
 
         <div className="mt-5">
           {checking ? (

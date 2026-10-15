@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, TriangleAlert } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { FlowDoodle } from "./ui/primitives";
 import { Button } from "./ui/primitives";
 
 /**
@@ -31,10 +32,8 @@ export function ErrorScreen({
 
   return (
     <div className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-warning-soft text-text">
-        <TriangleAlert size={22} />
-      </div>
-      <p className="text-input font-semibold text-text">{title}</p>
+      <FlowDoodle className="mb-5" />
+      <p className="text-title font-semibold text-text">{title}</p>
       <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
         {description}
       </p>

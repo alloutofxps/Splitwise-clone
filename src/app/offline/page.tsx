@@ -1,4 +1,5 @@
 import { Wordmark } from "@/components/app-shell";
+import { FlowDoodle } from "@/components/ui/primitives";
 
 /**
  * The service worker's last-resort fallback for a navigation it cannot serve.
@@ -11,6 +12,7 @@ export default function OfflinePage() {
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col justify-center px-6 text-center">
       <Wordmark className="mb-8 justify-center" />
+      <FlowDoodle className="mx-auto mb-5" />
       <h1 className="text-heading font-semibold tracking-[-0.02em] text-text">
         You&rsquo;re offline
       </h1>

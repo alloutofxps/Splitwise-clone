@@ -4,6 +4,7 @@ import * as React from "react";
 import { Paperclip, Pencil, Send, Trash2, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "../ui/sheet";
 import { useResetOnClose } from "../ui/state-hooks";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Amount } from "../ui/money";
 import { Avatar } from "../ui/avatar";
 import { Button, Skeleton, cn, haptic } from "../ui/primitives";
@@ -35,11 +36,14 @@ export function ExpenseDetailSheet({
   onClose,
   meId,
   people,
+  startInEdit,
 }: {
   expenseId: string | null;
   onClose: () => void;
   meId: string;
   people: Map<string, PersonDto>;
+  /** Open straight into editing, from a row's Edit action. */
+  startInEdit?: boolean;
 }) {
   const toast = useToast();
   const { data: expense, isLoading } = useExpense(expenseId ?? undefined);
@@ -63,6 +67,7 @@ export function ExpenseDetailSheet({
     setConfirmRemoveReceipt(null);
     setDraft("");
   });
+  useResetOnOpen(Boolean(expenseId), () => setEditing(Boolean(startInEdit)));
 
   const remove = async () => {
     if (!expense) return;

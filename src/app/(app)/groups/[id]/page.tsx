@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
@@ -32,9 +32,11 @@ export default function GroupPage() {
 
   const [tab, setTab] = React.useState<Tab>("expenses");
   const wide = useWide();
+  // ?open=settle or ?open=invite: arriving from a long-press on Home.
+  const requested = useSearchParams().get("open");
   const [settings, setSettings] = React.useState(false);
-  const [invite, setInvite] = React.useState(false);
-  const [settleUp, setSettleUp] = React.useState(false);
+  const [invite, setInvite] = React.useState(requested === "invite");
+  const [settleUp, setSettleUp] = React.useState(requested === "settle");
   // The payment just saved, shown as a dot running along its line on the map.
   const [travel, setTravel] = React.useState<{ fromPersonId: string; toPersonId: string; nonce: number } | null>(null);
   // The transfer the sheet should open on, when it was reached by tapping a

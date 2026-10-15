@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass } from "lucide-react";
+import { FlowDoodle } from "@/components/ui/primitives";
 
 /**
  * A URL that does not resolve.
@@ -18,9 +18,7 @@ import { Compass } from "lucide-react";
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
-      <span className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-muted">
-        <Compass className="size-7" />
-      </span>
+      <FlowDoodle />
 
       <h1 className="mt-6 text-heading font-semibold tracking-[-0.03em] text-text">
         Nothing here

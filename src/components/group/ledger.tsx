@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Paperclip, MessageSquare, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
+import { Copy, Paperclip, MessageSquare, Pencil, Receipt, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { ActionSheet, SwipeRow, useLongPress } from "../ui/swipe-row";
+import { useComposer } from "../expense/composer-context";
 import { Amount } from "../ui/money";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
 import { LoadMore } from "../ui/load-more";
@@ -13,8 +15,10 @@ import { ExpenseDetailSheet } from "../expense/detail-sheet";
 import { ConfirmSheet } from "../ui/sheet";
 import { useToast } from "../ui/toast";
 import {
+  useDeleteExpense,
   useDeleteSettlement,
   useGroupLedger,
+  useRestoreExpense,
   useGroupStats,
   type LedgerEntry,
 } from "@/lib/client/queries";
@@ -71,6 +75,7 @@ export function GroupLedger({
   const [person, setPerson] = React.useState<string | null>(null);
   const [category, setCategory] = React.useState<string | null>(null);
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
+  const [editOnOpen, setEditOnOpen] = React.useState(false);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 250);
@@ -287,7 +292,14 @@ export function GroupLedger({
                         people={people}
                         pending={entry.pending}
                         showDate={!precise}
-                        onOpen={() => setOpenExpenseId(entry.expense!.id)}
+                        onOpen={() => {
+                          setEditOnOpen(false);
+                          setOpenExpenseId(entry.expense!.id);
+                        }}
+                        onEdit={() => {
+                          setEditOnOpen(true);
+                          setOpenExpenseId(entry.expense!.id);
+                        }}
                       />
                     </motion.li>
                   ) : entry.settlement ? (
@@ -320,6 +332,7 @@ export function GroupLedger({
         onClose={() => setOpenExpenseId(null)}
         meId={meId}
         people={people}
+        startInEdit={editOnOpen}
       />
     </div>
   );
@@ -327,24 +340,98 @@ export function GroupLedger({
 
 // ---------------------------------------------------------------------------
 
-export function ExpenseRow({
-  expense,
-  meId,
-  people,
-  onOpen,
-  showGroup,
-  pending,
-  showDate,
-}: {
+type ExpenseRowProps = {
   expense: NonNullable<LedgerEntry["expense"]>;
   meId: string;
   people: Map<string, PersonDto>;
   onOpen: () => void;
+  /** Opens it for editing; defaults to opening it. */
+  onEdit?: () => void;
   showGroup?: string;
   /** Written optimistically; the server has not confirmed it yet. */
   pending?: boolean;
   /** Set when the day heading above only names a month. */
   showDate?: boolean;
+};
+
+/**
+ * An expense in a list. Tap to open it; swipe left to delete it (with Undo);
+ * long-press or right-click for Edit, Duplicate and Delete (DESIGN-PLAN
+ * Part 4). A row the server hasn't confirmed yet takes no gestures.
+ */
+export function ExpenseRow(props: ExpenseRowProps) {
+  const { expense, onOpen, onEdit, pending } = props;
+  const toast = useToast();
+  const composer = useComposer();
+  const remove = useDeleteExpense();
+  const restore = useRestoreExpense();
+  const [menu, setMenu] = React.useState(false);
+  const press = useLongPress(() => setMenu(true));
+
+  const remove_ = () =>
+    remove.mutate(
+      { id: expense.id, groupId: expense.groupId },
+      {
+        onSuccess: () =>
+          toast({
+            tone: "success",
+            title: `Deleted ${expense.description}`,
+            action: {
+              label: "Undo",
+              onClick: () => restore.mutate({ id: expense.id, groupId: expense.groupId }),
+            },
+          }),
+        onError: () => toast({ tone: "error", title: "Couldn\u2019t delete that" }),
+      },
+    );
+
+  if (pending) return <ExpenseRowButton {...props} onPress={onOpen} />;
+
+  return (
+    <>
+      <SwipeRow action={{ label: "Delete", ariaLabel: `Delete ${expense.description}`, onPress: remove_ }}>
+        {({ open, close }) => (
+          <ExpenseRowButton
+            {...props}
+            pressHandlers={press.handlers}
+            onPress={() => {
+              if (press.consumed()) return;
+              if (open) return close();
+              onOpen();
+            }}
+          />
+        )}
+      </SwipeRow>
+      <ActionSheet
+        open={menu}
+        onClose={() => setMenu(false)}
+        title={expense.description}
+        actions={[
+          { label: "Edit", icon: <Pencil className="size-[18px]" strokeWidth={1.75} />, onPress: onEdit ?? onOpen },
+          {
+            label: "Duplicate",
+            icon: <Copy className="size-[18px]" strokeWidth={1.75} />,
+            onPress: () => composer.open(expense.groupId ?? undefined, expense),
+          },
+          { label: "Delete", icon: <Trash2 className="size-[18px]" strokeWidth={1.75} />, tone: "danger", onPress: remove_ },
+        ]}
+      />
+    </>
+  );
+}
+
+function ExpenseRowButton({
+  expense,
+  meId,
+  people,
+  showGroup,
+  pending,
+  showDate,
+  onPress,
+  pressHandlers,
+}: ExpenseRowProps & {
+  onPress: () => void;
+  pressHandlers?: ReturnType<typeof useLongPress>["handlers"];
 }) {
   const category = categoryById(expense.categoryId);
   const net = BigInt(expense.yourNet);
@@ -360,12 +447,13 @@ export function ExpenseRow({
 
   return (
     <button
+      {...pressHandlers}
       onClick={() => {
         haptic();
-        onOpen();
+        onPress();
       }}
       className={cn(
-        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2",
+        "flex w-full select-none items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2",
         // Faded rather than spinner-topped: the row is real and its numbers are
         // already correct, so the only thing being signalled is that the server
         // has not acknowledged it. A spinner would suggest it might not be

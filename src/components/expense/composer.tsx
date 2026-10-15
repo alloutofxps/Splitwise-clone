@@ -16,7 +16,7 @@ import { CurrencyPicker } from "./currency-picker";
 import { ReceiptPicker } from "./receipt-picker";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
-import { keys, useDashboard, useCreateExpense, useUpdateExpense } from "@/lib/client/queries";
+import { keys, useDashboard, useCreateExpense, useDeleteExpense, useUpdateExpense } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
@@ -47,6 +47,8 @@ export interface ComposerProps {
   groupId?: string;
   /** Editing an existing expense rather than creating one. */
   expense?: ExpenseDto;
+  /** A new expense filled in from this one: "Duplicate". Dated today. */
+  template?: ExpenseDto;
   /**
    * Receipts the composer should open with, from the OS share sheet.
    *
@@ -86,6 +88,7 @@ export function ExpenseComposer({
   expense,
   initialAttachments,
   initialDescription,
+  template,
 }: ComposerProps) {
   const { data } = useDashboard();
   const toast = useToast();
@@ -95,6 +98,7 @@ export function ExpenseComposer({
   const client = useQueryClient();
   const create = useCreateExpense(data?.me?.id);
   const update = useUpdateExpense(expense?.id ?? "", expense?.groupId);
+  const remove = useDeleteExpense();
 
   const [panel, setPanel] = React.useState<
     null | "split" | "payer" | "category" | "currency" | "notes" | "receipt"
@@ -131,6 +135,24 @@ export function ExpenseComposer({
     setKeypad(!expense);
     if (expense) {
       setDraft(draftFromExpense(expense));
+      setPanel(null);
+      return;
+    }
+
+    if (template) {
+      // A copy: same people, amounts and split, as a new expense dated
+      // today. Item lines get new ids, since these belong to a new expense.
+      const copy = draftFromExpense(template);
+      const others = template.groupId
+        ? []
+        : [...new Set(copy.participants.map((p) => p.personId).filter((id) => id !== me.id))];
+      setDraft({
+        ...copy,
+        date: new Date(),
+        friendId: others[0] ?? null,
+        extraFriendIds: others.slice(1),
+        items: copy.items.map((item, index) => ({ ...item, id: `copy-${index}` })),
+      });
       setPanel(null);
       return;
     }
@@ -287,7 +309,24 @@ export function ExpenseComposer({
                 title: "Saved on your phone",
                 description: "It'll be sent when you're back online.",
               }
-            : { tone: "success", title: `${draft.description.trim()} added` },
+            : {
+                tone: "success",
+                title: `Added ${draft.description.trim()}`,
+                // Undo is a delete of what was just added; the toast for it
+                // says so, and the expense can still be brought back from
+                // Activity like any other deletion.
+                action: {
+                  label: "Undo",
+                  onClick: () =>
+                    remove.mutate(
+                      { id: payload.id, groupId: payload.groupId },
+                      {
+                        onSuccess: () => toast({ tone: "success", title: `Removed ${payload.description}` }),
+                        onError: () => toast({ tone: "error", title: "Couldn\u2019t undo that" }),
+                      },
+                    ),
+                },
+              },
         );
       }
       haptic([8, 30, 8]);

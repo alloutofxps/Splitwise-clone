@@ -78,3 +78,28 @@ export function clearStashedRecoveryKey(): void {
     // Nothing to do; it will go when the tab does.
   }
 }
+
+/**
+ * Saves the recovery key as a small text file, for people who'd rather keep a
+ * file than paste it into a password manager. Made on the phone; nothing is
+ * sent anywhere.
+ */
+export function saveRecoveryKeyFile(key: string): void {
+  const text = [
+    "Divvy recovery key",
+    "",
+    key,
+    "",
+    "Anyone with this key can open your Divvy account. Keep it private.",
+    "To use it: open Divvy, tap \"I already use Divvy\", then \"Sign in with a recovery key\".",
+    "",
+  ].join("\n");
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "divvy-recovery-key.txt";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
