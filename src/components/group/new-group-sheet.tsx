@@ -197,8 +197,8 @@ export function NewGroupSheet({
                 className={cn(
                   "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   kind === entry.value
-                    ? "border-brand bg-brand text-inverse"
-                    : "border-line bg-surface text-muted",
+                    ? "border-text bg-text text-inverse"
+                    : "border-line bg-surface text-text hover:bg-surface-2",
                 )}
               >
                 <span>{entry.emoji}</span>

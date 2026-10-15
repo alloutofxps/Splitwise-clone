@@ -174,7 +174,7 @@ export function GroupSettingsSheet({
       <Sheet open={open} onClose={onClose} tall title="Group settings">
         <div className="px-5 pb-6">
           <label className="block">
-            <span className="mb-1.5 block text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+            <span className="mb-1.5 block text-caption font-medium text-subtle">
               Name
             </span>
             <input
@@ -207,7 +207,7 @@ export function GroupSettingsSheet({
 
           {/* Members ------------------------------------------------------- */}
           <div className="mt-6">
-            <p className="mb-2 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+            <p className="mb-2 text-caption font-medium text-subtle">
               Members
             </p>
             <ul className="space-y-1.5">

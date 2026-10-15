@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Equal, Hash, Percent, Plus, Receipt, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Check, Equal, Hash, Percent, Plus, Receipt, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Avatar } from "../ui/avatar";
@@ -205,22 +205,33 @@ export function SplitEditor({
     >
       <div className="px-5 pb-6">
         {/* Mode picker ---------------------------------------------------- */}
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
-          {MODES.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => switchMode(option.value)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-body font-semibold transition active:opacity-70",
-                option.value === localMode
-                  ? "border-brand bg-brand text-inverse"
-                  : "border-line bg-surface text-muted hover:bg-surface-2",
-              )}
-            >
-              {option.icon}
-              {option.label}
-            </button>
-          ))}
+        {/* Six ways to split as a row of underlined words that scrolls, with
+            a fade at the right edge so it's clear there are more. */}
+        <div className="relative -mx-5">
+          <div className="no-scrollbar flex gap-5 overflow-x-auto border-b border-line px-5">
+            {MODES.map((option) => {
+              const active = option.value === localMode;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => switchMode(option.value)}
+                  aria-pressed={active}
+                  className={cn(
+                    "relative shrink-0 py-2.5 text-body font-medium transition-colors",
+                    active ? "text-text" : "text-subtle hover:text-muted",
+                  )}
+                >
+                  {option.label}
+                  {active ? <span className="absolute inset-x-0 -bottom-px h-[2px] bg-text" /> : null}
+                </button>
+              );
+            })}
+            <span aria-hidden className="w-6 shrink-0" />
+          </div>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-elevated to-transparent"
+          />
         </div>
 
         <p className="mt-3 text-body leading-relaxed text-muted">{activeMode.blurb}</p>
@@ -252,7 +263,7 @@ export function SplitEditor({
               </div>
             ) : null}
 
-            <ul className="mt-4 space-y-1.5">
+            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
               {members.map((member) => {
                 const entry = local.find((e) => e.personId === member.id);
                 if (!entry) return null;
@@ -302,10 +313,7 @@ function ParticipantRow({
 
   return (
     <li
-      className={cn(
-        "flex items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 transition",
-        included ? "border-line bg-surface" : "border-transparent bg-surface-2/50 opacity-55",
-      )}
+      className={cn("flex items-center gap-3 px-4 py-2.5 transition-colors", !included && "bg-surface-2/60")}
     >
       <button
         onClick={() => {
@@ -315,9 +323,19 @@ function ParticipantRow({
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
         aria-pressed={included}
       >
-        <Avatar person={member} size="sm" />
+        {/* A visible tick, so who's in is never a guess. */}
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors",
+            included ? "border-text bg-text text-inverse" : "border-line-strong",
+          )}
+        >
+          {included ? <Check className="size-3" strokeWidth={3} /> : null}
+        </span>
+        <Avatar person={member} size="sm" className={cn(!included && "opacity-50")} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-body-lg font-semibold text-text">
+          <span className={cn("block truncate text-body-lg font-medium", included ? "text-text" : "text-subtle")}>
             {isMe ? "You" : member.displayName}
           </span>
           {included && mode !== "EXACT" ? (

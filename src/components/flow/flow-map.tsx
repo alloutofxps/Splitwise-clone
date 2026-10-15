@@ -32,7 +32,10 @@ export function FlowMap({
   travel,
   size = 320,
   className,
+  labels = true,
 }: {
+  /** Amount labels on the lines. Off for the welcome screen's demonstration. */
+  labels?: boolean;
   /** Everyone who could appear, in a stable order, so nobody moves on a re-draw. */
   people: PersonDto[];
   edges: FlowEdge[];
@@ -72,7 +75,7 @@ export function FlowMap({
                 from={from}
                 to={to}
                 width={strokeFor(edge.amount, largest)}
-                label={formatMoney(edge.amount, currency)}
+                label={labels ? formatMoney(edge.amount, currency) : null}
                 reduce={Boolean(reduce)}
               />
             );
@@ -126,7 +129,7 @@ function EdgeLine({
   from: Point;
   to: Point;
   width: number;
-  label: string;
+  label: string | null;
   reduce: boolean;
 }) {
   const hue = usePersonHue(payer);
@@ -134,7 +137,7 @@ function EdgeLine({
   const draw = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : { initial: { pathLength: 0, opacity: 0 }, animate: { pathLength: 1, opacity: 1 }, exit: { pathLength: 0, opacity: 0 } };
-  const labelWidth = label.length * 7 + 12;
+  const labelWidth = (label?.length ?? 0) * 7 + 12;
 
   return (
     <motion.g>
@@ -163,6 +166,8 @@ function EdgeLine({
           strokeLinejoin="round"
           transform={`translate(${end.x} ${end.y}) rotate(${angle})`}
         />
+        {label ? (
+        <>
         <rect
           x={mid.x - labelWidth / 2}
           y={mid.y - 10}
@@ -183,6 +188,8 @@ function EdgeLine({
         >
           {label}
         </text>
+        </>
+        ) : null}
       </motion.g>
     </motion.g>
   );

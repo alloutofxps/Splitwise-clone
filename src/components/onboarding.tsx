@@ -2,18 +2,19 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Check,
+  ChevronLeft,
   Copy,
   KeyRound,
   ShieldCheck,
   TriangleAlert,
   WifiOff,
 } from "lucide-react";
-import { Button, cn, haptic } from "./ui/primitives";
+import { Button, haptic } from "./ui/primitives";
 import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
@@ -25,7 +26,6 @@ import {
   stashRecoveryKey,
   stashedRecoveryKey,
 } from "@/lib/client/recovery";
-import { EMOJI_QUICK_PICKS } from "@/lib/emoji";
 import { EmojiPicker } from "./ui/emoji-picker";
 import { colorForName, hueVar, initials } from "@/lib/avatar";
 import {
@@ -33,9 +33,10 @@ import {
   hasPlatformAuthenticator,
   signInWithPasskey,
 } from "./identity/passkey";
-import { CURRENCIES } from "@/lib/money";
+import { CurrencyPicker } from "./expense/currency-picker";
 import { guessCurrency } from "@/lib/guess-currency";
 import type { MeDto } from "@/lib/types";
+import { FlowMap } from "./flow/flow-map";
 
 /**
  * Setup.
@@ -128,6 +129,7 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
   const client = useQueryClient();
   const [passkeyReady, setPasskeyReady] = React.useState(false);
   const [signingIn, setSigningIn] = React.useState(false);
+  const [returning, setReturning] = React.useState(false);
 
   /*
    * The passkey button appears only once the device says it actually holds
@@ -168,55 +170,119 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col justify-center py-6">
-        <Wordmark className="mb-6" />
+      <div className="flex flex-1 flex-col justify-center py-4">
+        <Wordmark className="mb-2" />
 
-        <h1 className="mt-4 font-display text-display-lg font-semibold leading-[1.02] tracking-[-0.045em] text-text">
-          Split bills with friends.
-          <br />
-          <span className="text-muted">See who owes what.</span>
+        {/* The product in three seconds: who owes whom, untangled. */}
+        <WelcomeFlow />
+
+        <h1 className="mt-2 text-display font-semibold leading-[1.1] tracking-[-0.03em] text-text">
+          Split costs with friends.
         </h1>
-
-        <p className="mt-4 text-input leading-relaxed text-muted">
-          Add what you spent on a trip, at home or on a night out. Divvy works
-          out who owes who, and the easiest way to pay each other back.
+        <p className="mt-3 text-body-lg leading-relaxed text-muted">
+          Divvy keeps track of who owes who, and the easiest way to pay back.
         </p>
 
-        <ul className="mt-6 flex flex-wrap gap-2">
+        <ul className="mt-5 flex flex-wrap gap-2">
           <Feature icon={<KeyRound className="size-3.5" />}>No email or password</Feature>
           <Feature icon={<ShieldCheck className="size-3.5" />}>Free, no ads</Feature>
           <Feature icon={<WifiOff className="size-3.5" />}>Works offline</Feature>
         </ul>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <Button variant="primary" size="lg" fullWidth onClick={onStart}>
           Get started
           <ArrowRight className="size-[18px]" />
         </Button>
-        {passkeyReady ? (
-          <Button
-            variant="secondary"
-            size="lg"
-            fullWidth
-            loading={signingIn}
-            onClick={() => void withPasskey()}
-          >
-            Sign in with fingerprint or face
+        {returning ? (
+          <>
+            {passkeyReady ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                fullWidth
+                loading={signingIn}
+                onClick={() => void withPasskey()}
+              >
+                Sign in with fingerprint or face
+              </Button>
+            ) : null}
+            <Button variant="secondary" size="lg" fullWidth onClick={onRestore}>
+              Sign in with a recovery key
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" size="md" fullWidth onClick={() => setReturning(true)}>
+            I already use Divvy
           </Button>
-        ) : null}
-        <Button variant="ghost" size="md" fullWidth onClick={onRestore}>
-          Sign in with a recovery key
-        </Button>
+        )}
       </div>
     </div>
   );
 }
 
+/**
+ * Four people and six tangled lines, which untangle into two: what Divvy
+ * does, shown rather than described. Plays once. With Reduce Motion it simply
+ * shows the two lines.
+ */
+const DEMO_PEOPLE = [
+  { id: "demo-you", displayName: "You", avatarColor: "cobalt", avatarEmoji: null, isGhost: false },
+  { id: "demo-ana", displayName: "Ana", avatarColor: "coral", avatarEmoji: null, isGhost: false },
+  { id: "demo-sam", displayName: "Sam", avatarColor: "teal", avatarEmoji: null, isGhost: false },
+  { id: "demo-leo", displayName: "Leo", avatarColor: "amber", avatarEmoji: null, isGhost: false },
+] as const;
+const TANGLE = [
+  ["demo-ana", "demo-you", 30n],
+  ["demo-sam", "demo-you", 20n],
+  ["demo-leo", "demo-ana", 15n],
+  ["demo-sam", "demo-leo", 10n],
+  ["demo-you", "demo-leo", 5n],
+  ["demo-ana", "demo-sam", 8n],
+] as const;
+const UNTANGLED = [
+  ["demo-sam", "demo-you", 22n],
+  ["demo-ana", "demo-you", 23n],
+] as const;
+
+function WelcomeFlow() {
+  const reduce = useReducedMotion();
+  const [stage, setStage] = React.useState<0 | 1 | 2>(reduce ? 2 : 0);
+
+  React.useEffect(() => {
+    if (reduce) return;
+    const draw = window.setTimeout(() => setStage(1), 250);
+    const untangle = window.setTimeout(() => setStage(2), 2100);
+    return () => {
+      window.clearTimeout(draw);
+      window.clearTimeout(untangle);
+    };
+  }, [reduce]);
+
+  const edges = (stage === 0 ? [] : stage === 1 ? TANGLE : UNTANGLED).map(([fromPersonId, toPersonId, amount]) => ({
+    fromPersonId,
+    toPersonId,
+    amount,
+  }));
+
+  return (
+    <FlowMap
+      people={DEMO_PEOPLE.map((person) => ({ ...person }))}
+      edges={edges}
+      currency="EUR"
+      meId="demo-you"
+      labels={false}
+      size={260}
+      className="pointer-events-none -my-2"
+    />
+  );
+}
+
 function Feature({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <li className="flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-body font-semibold text-text">
-      <span className="text-brand">{icon}</span>
+    <li className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-caption font-medium text-text">
+      <span className="text-muted">{icon}</span>
       {children}
     </li>
   );
@@ -237,9 +303,12 @@ function ProfileStep({
   const [emoji, setEmoji] = React.useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [currency, setCurrency] = React.useState(() => guessCurrency());
+  const [currencyOpen, setCurrencyOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  // A colour is picked for you from your name until you choose one yourself.
+  const [chosenColor, setChosenColor] = React.useState<string | null>(null);
 
-  const color = colorForName(name || "divvy");
+  const color = chosenColor ?? colorForName(name || "divvy");
   const canSubmit = name.trim().length > 0 && !saving;
 
   const submit = async () => {
@@ -273,94 +342,85 @@ function ProfileStep({
     <div className="flex flex-1 flex-col">
       <button
         onClick={onBack}
-        className="-ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
+        className="-ml-1 mb-8 flex items-center gap-1 self-start py-2 text-body-lg font-medium text-text"
       >
+        <ChevronLeft className="size-5" strokeWidth={1.75} />
         Back
       </button>
 
-      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
+      <h1 className="text-heading font-semibold tracking-[-0.02em] text-text">
         What&rsquo;s your name?
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
         Your friends will see this next to your expenses.
       </p>
 
-      <div className="mt-8 flex flex-col items-center">
+      {/* One field, with you beside it in your colour, updating as you type. */}
+      <div className="mt-8 flex items-center gap-3">
         <span
-          className="flex size-20 items-center justify-center rounded-full text-display-sm font-semibold text-[var(--on-person)] transition-colors duration-300"
+          className="flex size-14 shrink-0 items-center justify-center rounded-full text-title-lg font-semibold text-[var(--on-person)] transition-colors duration-300"
           style={{ background: hueVar(color) }}
+          aria-hidden
         >
           {emoji ?? (name.trim() ? initials(name) : "?")}
         </span>
-
-        {/*
-          `overflow-x-auto` clips the *other* axis too — the CSS spec computes
-          `overflow-y` to `auto` as soon as one axis is not `visible` — so the
-          selected chip's ring was being sliced off top and bottom. The padding
-          gives the ring somewhere to live and the negative margin takes the
-          space back, keeping the strip's spacing as designed.
-        */}
-        <div className="no-scrollbar -my-1.5 mt-4 flex w-full gap-2 overflow-x-auto px-0.5 py-1.5">
-          <EmojiChip active={emoji === null} onClick={() => setEmoji(null)}>
-            {name.trim() ? initials(name) : "Aa"}
-          </EmojiChip>
-          {EMOJI_QUICK_PICKS.map((choice) => (
-            <EmojiChip key={choice} active={emoji === choice} onClick={() => setEmoji(choice)}>
-              {choice}
-            </EmojiChip>
-          ))}
-          {/* A strip of twelve is a shortlist, not the choice. */}
-          <EmojiChip
-            active={emoji !== null && !EMOJI_QUICK_PICKS.includes(emoji)}
-            onClick={() => setPickerOpen(true)}
-            label="More emoji"
-          >
-            {emoji !== null && !EMOJI_QUICK_PICKS.includes(emoji) ? emoji : "···"}
-          </EmojiChip>
-        </div>
-
-        <EmojiPicker
-          open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
-          value={emoji}
-          onSelect={setEmoji}
-          initials={name.trim() ? initials(name) : "Aa"}
-        />
-      </div>
-
-      <label className="mt-7 block">
-        <span className="mb-1.5 block text-body font-semibold text-muted">Your name</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value.slice(0, 60))}
           onKeyDown={(event) => void (event.key === "Enter" && submit())}
           placeholder="Priya"
+          aria-label="Your name"
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
-          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
+          className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
         />
-      </label>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          haptic();
+          setPickerOpen(true);
+        }}
+        className="mt-2 self-start rounded-[var(--radius-sm)] px-1 py-1 text-body text-muted underline-offset-2 hover:text-text hover:underline"
+      >
+        Change colour or emoji
+      </button>
 
-      <label className="mt-4 block">
-        <span className="mb-1.5 block text-body font-semibold text-muted">
-          Default currency
-        </span>
-        <select
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value)}
-          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition focus:ring-[1.5px] focus:ring-text"
+      <EmojiPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        value={emoji}
+        onSelect={setEmoji}
+        initials={name.trim() ? initials(name) : "Aa"}
+        color={color}
+        onColor={setChosenColor}
+      />
+
+      {/* Worked out from where the phone is; one tap to change. */}
+      <p className="mt-6 text-body text-muted">
+        Your currency: <span className="font-medium text-text">{currency}</span>
+        {" · "}
+        <button
+          type="button"
+          onClick={() => {
+            haptic();
+            setCurrencyOpen(true);
+          }}
+          className="text-text underline underline-offset-2"
         >
-          {CURRENCIES.map((entry) => (
-            <option key={entry.code} value={entry.code}>
-              {entry.code} · {entry.name} ({entry.symbol})
-            </option>
-          ))}
-        </select>
-        <span className="mt-1.5 block text-caption text-subtle">
-          We&rsquo;ll pick this one first. You can change it on any expense.
-        </span>
-      </label>
+          Change
+        </button>
+      </p>
+      <CurrencyPicker
+        open={currencyOpen}
+        onClose={() => setCurrencyOpen(false)}
+        value={currency}
+        onChange={(code) => {
+          setCurrency(code);
+          setCurrencyOpen(false);
+        }}
+      />
 
       <div className="mt-auto pt-8">
         <Button
@@ -378,38 +438,6 @@ function ProfileStep({
   );
 }
 
-function EmojiChip({
-  active,
-  onClick,
-  children,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  /** For the chips whose content is not readable aloud, like the "more" dots. */
-  label?: string;
-}) {
-  return (
-    <button
-      aria-label={label}
-      aria-pressed={active}
-      onClick={() => {
-        haptic();
-        onClick();
-      }}
-      className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full text-title-lg transition",
-        "active:opacity-70",
-        active
-          ? "bg-brand-soft ring-2 ring-brand"
-          : "bg-surface-2 hover:bg-surface-3",
-      )}
-    >
-      <span className={active ? "" : "opacity-80"}>{children}</span>
-    </button>
-  );
-}
 
 // ---------------------------------------------------------------------------
 

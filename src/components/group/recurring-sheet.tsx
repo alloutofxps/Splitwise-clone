@@ -313,7 +313,7 @@ function NewRecurrenceSheet({
           />
         </div>
 
-        <p className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-medium text-subtle">
           How often
         </p>
         <div className="flex flex-wrap gap-2">
@@ -327,8 +327,8 @@ function NewRecurrenceSheet({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                 frequency === option
-                  ? "border-brand bg-brand text-inverse"
-                  : "border-line bg-surface text-muted",
+                  ? "border-text bg-text text-inverse"
+                  : "border-line bg-surface text-text hover:bg-surface-2",
               )}
             >
               {FREQUENCY_LABELS[option]}
@@ -337,7 +337,7 @@ function NewRecurrenceSheet({
         </div>
 
         <label className="mt-5 block">
-          <span className="mb-1.5 block text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <span className="mb-1.5 block text-caption font-medium text-subtle">
             Starting
           </span>
           <input
@@ -353,7 +353,7 @@ function NewRecurrenceSheet({
           />
         </label>
 
-        <p className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-medium text-subtle">
           Paid by
         </p>
         <div className="flex flex-wrap gap-2">
@@ -367,8 +367,8 @@ function NewRecurrenceSheet({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                 payerId === member.id
-                  ? "border-brand bg-brand text-inverse"
-                  : "border-line bg-surface text-muted",
+                  ? "border-text bg-text text-inverse"
+                  : "border-line bg-surface text-text hover:bg-surface-2",
               )}
             >
               {member.id === meId ? "You" : member.displayName.split(" ")[0]}

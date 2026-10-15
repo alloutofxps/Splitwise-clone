@@ -1,8 +1,9 @@
 /**
  * Bucketing a reverse-chronological list into day headings.
  *
- * "Today", "Yesterday", then the weekday for the rest of the week, then the
- * month. The point is that a list of timestamps is unreadable at a glance while
+ * "Today", "Yesterday", then "Mon 13 Oct": one heading per day, in one format
+ * everywhere (DESIGN-PLAN 3.3). Headings used to fall back to the month after a
+ * week, which made every row under them carry its own date. The point is that a list of timestamps is unreadable at a glance while
  * a list under "Yesterday" is not, and every chronological list in the app owes
  * the reader the same treatment.
  *
@@ -38,9 +39,9 @@ export function groupByDay<T>(
   return [...buckets].map(([label, bucket]) => ({ label, ...bucket }));
 }
 
-/** Whether `dayLabel` would return a heading that identifies this exact day. */
-function namesOneDay(date: Date): boolean {
-  return daysAgo(date) < 7;
+/** Whether `dayLabel` would return a heading that identifies this exact day. Always, now. */
+function namesOneDay(_date: Date): boolean {
+  return true;
 }
 
 function daysAgo(date: Date): number {
@@ -55,11 +56,18 @@ export function dayLabel(date: Date): string {
 
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
-  if (days < 7) return date.toLocaleDateString(undefined, { weekday: "long" });
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString(undefined, { month: "long" });
-  }
-  return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return shortDate(date, date.getFullYear() !== now.getFullYear());
+}
+
+/**
+ * "Mon 13 Oct", or "Mon 13 Oct 2025" for another year. Built from parts so the
+ * order is the same whatever the browser's locale would do with commas.
+ */
+export function shortDate(date: Date, withYear = false): string {
+  const part = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(undefined, options).format(date);
+  const text = `${part({ weekday: "short" })} ${date.getDate()} ${part({ month: "short" })}`;
+  return withYear ? `${text} ${date.getFullYear()}` : text;
 }
 
 function startOfDay(date: Date): Date {

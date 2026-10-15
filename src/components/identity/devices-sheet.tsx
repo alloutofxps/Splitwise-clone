@@ -148,7 +148,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {data && data.passkeys.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-micro font-semibold uppercase tracking-wider text-subtle">
+              <h3 className="mb-2 text-caption font-medium tracking-wider text-subtle">
                 Passkeys
               </h3>
               <ul className="space-y-2">
@@ -175,7 +175,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {data && data.sessions.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-micro font-semibold uppercase tracking-wider text-subtle">
+              <h3 className="mb-2 text-caption font-medium tracking-wider text-subtle">
                 Signed in
               </h3>
               <ul className="space-y-2">

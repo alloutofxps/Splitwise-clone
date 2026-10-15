@@ -98,17 +98,17 @@ async function tour(theme, viewport, tag) {
   await shot("11b-group-full", true);
   await page.getByRole("tab", { name: "Balances" }).click(); await shot("12-balances");
   await page.getByRole("tab", { name: "Insights" }).click(); await shot("13-insights"); await shot("13b-insights-full", true);
-  await page.getByRole("tab", { name: "Expenses" }).click(); await page.waitForTimeout(500);
+  await page.getByRole("tab", { name: "Expenses" }).click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(500);
   await page.getByRole("button", { name: /Dinner at Cervejaria/ }).first().click(); await shot("14-expense-detail"); await shot("14b-expense-detail-full", true); await esc();
   await page.getByRole("button", { name: "Settle up" }).first().click(); await shot("15-settle-up");
   await page.locator('[role="dialog"] button').filter({ hasText: /pays you|Pay / }).first().click().catch(() => {}); await shot("15b-settle-amount"); await esc();
-  await page.getByRole("button", { name: "Invite people" }).click(); await shot("16-invite"); await esc();
+  await page.getByRole("button", { name: /^(Invite|Invite people)$/ }).click(); await shot("16-invite"); await esc();
   await page.getByRole("button", { name: "Group settings" }).click(); await shot("17-settings"); await shot("17b-settings-full", true); await esc();
 
   // Composer journey, reopening for each panel
   const openComposer = async () => {
     await go(`/groups/${seed.trip}`);
-    await page.getByRole("button", { name: "Add an expense" }).first().click();
+    await page.getByRole("button", { name: /Add an expense|Add expense/ }).first().click();
     await page.waitForTimeout(900);
   };
   const tryStep = async (name, fn) => {
@@ -128,7 +128,7 @@ async function tour(theme, viewport, tag) {
       await page.getByRole("tab", { name: mode }).click({ timeout: 3000 }).catch(() => {}); await shot(`23-split-${mode.replace(" ", "")}`);
     }
   });
-  await tryStep("paid-by", async () => { await openComposer(); await page.locator('[role="dialog"] button').filter({ hasText: /^Paid by/i }).first().click({ timeout: 5000 }); await shot("24-paid-by"); });
+  await tryStep("paid-by", async () => { await openComposer(); await page.locator('[role="dialog"] button').filter({ hasText: /Paid by/i }).first().click({ timeout: 5000 }); await shot("24-paid-by"); });
   await tryStep("category", async () => { await openComposer(); await page.getByRole("button", { name: /^Category/ }).first().click({ timeout: 5000 }); await shot("25-category"); });
   await tryStep("receipt", async () => { await openComposer(); await page.getByRole("button", { name: /^Receipt/ }).first().click({ timeout: 5000 }); await shot("26-receipt"); });
   await tryStep("date", async () => { await openComposer(); await page.getByRole("button", { name: /^Note/ }).first().click({ timeout: 5000 }); await shot("27-note"); });
@@ -143,7 +143,7 @@ async function tour(theme, viewport, tag) {
   await page.getByRole("button", { name: /Budgets/ }).click(); await shot("52-budgets"); await esc();
   await page.getByRole("button", { name: /Your devices/ }).click(); await shot("53-devices"); await esc();
   await page.getByRole("button", { name: /Default currency/ }).click(); await shot("54-currency"); await esc();
-  await go("/"); await page.getByRole("button", { name: /^New$/ }).first().click(); await shot("60-new-group"); await esc();
+  await go("/"); await page.getByRole("button", { name: /^(New group|New|Start a group)$/ }).first().click(); await shot("60-new-group"); await esc();
   await page.getByRole("button", { name: /^Join$/ }).first().click(); await shot("61-join"); await esc();
   await go("/does-not-exist"); await shot("70-not-found");
   await ctx.setOffline(true); await go("/").catch(() => {}); await page.waitForTimeout(1500); await shot("71-offline"); await ctx.setOffline(false);

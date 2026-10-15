@@ -85,7 +85,7 @@ export default function SearchPage() {
 
       {debounced.trim().length < 2 ? (
         <div className="mt-2">
-          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-medium text-subtle">
             Try a category
           </p>
           <div className="flex flex-wrap gap-2">
@@ -126,7 +126,7 @@ export default function SearchPage() {
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1">
-            <p className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+            <p className="text-caption font-medium text-subtle">
               {items.length} {items.length === 1 ? "match" : "matches"}
             </p>
             {[...totals].map(([currency, total]) => (
@@ -136,7 +136,7 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
             {items.map((expense) => (
               <li key={expense.id}>
                 <ExpenseRow

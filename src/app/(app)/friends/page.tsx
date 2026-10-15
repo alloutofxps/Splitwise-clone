@@ -2,16 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Check, Plus, SlidersHorizontal, UserRoundPlus } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, Plus, SlidersHorizontal } from "lucide-react";
 import { Amount } from "@/components/ui/money";
-import { Avatar } from "@/components/ui/avatar";
-import { Button, EmptyState, SectionHeader, Skeleton, cn, haptic } from "@/components/ui/primitives";
+import { Avatar, usePersonHue } from "@/components/ui/avatar";
+import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { Sheet } from "@/components/ui/sheet";
-import { listItem } from "@/components/ui/motion";
+import { useToast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/client/api";
+import { formatMoney } from "@/lib/money";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
-import { useDashboard } from "@/lib/client/queries";
+import { useAddFriend, useDashboard } from "@/lib/client/queries";
 import type { FriendDto } from "@/lib/types";
 
 /**
@@ -65,10 +66,13 @@ export default function FriendsPage() {
   if (isLoading || !data) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Friends</h1>
-        <div className="space-y-2.5">
+        <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
+        <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
           {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-[68px] w-full rounded-[var(--radius-lg)]" />
+            <div key={index} className="flex items-center gap-3 px-4 py-3">
+              <Skeleton className="size-10 shrink-0 rounded-full" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
           ))}
         </div>
       </div>
@@ -76,8 +80,8 @@ export default function FriendsPage() {
   }
 
   const visible = data.friends.filter((friend) => matches(friend, filter));
-  const owing = visible.filter((friend) => Object.keys(friend.net).length > 0);
-  const settled = visible.filter((friend) => Object.keys(friend.net).length === 0);
+  const added = visible.filter((friend) => friend.isFriend);
+  const inGroups = visible.filter((friend) => !friend.isFriend);
 
   /**
    * What you owe and what you are owed, kept apart and kept per currency.
@@ -95,11 +99,22 @@ export default function FriendsPage() {
       bucket.set(currency, (bucket.get(currency) ?? 0n) + (amount > 0n ? amount : -amount));
     }
   }
+  const list = (map: Map<string, bigint>) => [...map].map(([currency, value]) => formatMoney(value, currency)).join(", ");
+
+  // The bar beside each name is that person's share of the biggest balance on
+  // the screen, so the eye finds the large debts first.
+  const largest = data.friends.reduce((max, friend) => {
+    for (const value of Object.values(friend.net)) {
+      const amount = BigInt(value) < 0n ? -BigInt(value) : BigInt(value);
+      if (amount > max) max = amount;
+    }
+    return max;
+  }, 0n);
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">Friends</h1>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <h1 className="text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" variant="secondary" onClick={() => setMyCode(true)}>
             My code
@@ -108,7 +123,7 @@ export default function FriendsPage() {
             size="sm"
             variant="primary"
             onClick={() => setAdding(true)}
-            icon={<Plus className="size-4" strokeWidth={2.8} />}
+            icon={<Plus className="size-4" strokeWidth={2.4} />}
           >
             Add
           </Button>
@@ -117,7 +132,6 @@ export default function FriendsPage() {
 
       {data.friends.length === 0 ? (
         <EmptyState
-          icon={<UserRoundPlus className="size-6" />}
           title="No friends added yet"
           description="Swap codes with a friend to split things between just the two of you. People in your groups show up here too."
           action={
@@ -133,35 +147,20 @@ export default function FriendsPage() {
         />
       ) : (
         <>
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <p className="min-w-0 text-subhead leading-relaxed text-muted">
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <p className="min-w-0 text-body leading-relaxed text-muted">
               {owed.size === 0 && owes.size === 0 ? (
-                <span className="font-semibold text-text">You are settled up with everyone.</span>
+                <span className="text-text">You&rsquo;re settled up with everyone.</span>
               ) : (
                 <>
-                  Overall,{" "}
-                  {owes.size > 0 ? (
-                    <>
-                      you owe{" "}
-                      {[...owes].map(([currency, value], index) => (
-                        <React.Fragment key={currency}>
-                          {index > 0 ? " and " : ""}
-                          <Amount value={-value} currency={currency} size="sm" />
-                        </React.Fragment>
-                      ))}
-                    </>
-                  ) : null}
-                  {owes.size > 0 && owed.size > 0 ? " and " : ""}
                   {owed.size > 0 ? (
-                    <>
-                      you are owed{" "}
-                      {[...owed].map(([currency, value], index) => (
-                        <React.Fragment key={currency}>
-                          {index > 0 ? " and " : ""}
-                          <Amount value={value} currency={currency} size="sm" />
-                        </React.Fragment>
-                      ))}
-                    </>
+                    <span className="tabular font-medium text-positive-text">
+                      You&rsquo;re owed {list(owed)} <ArrowDownLeft aria-hidden className="inline size-3.5" strokeWidth={2.25} />
+                    </span>
+                  ) : null}
+                  {owed.size > 0 && owes.size > 0 ? <span aria-hidden> · </span> : null}
+                  {owes.size > 0 ? (
+                    <span className="tabular font-medium text-negative-text">You owe {list(owes)} <ArrowUpRight aria-hidden className="inline size-3.5" strokeWidth={2.25} /></span>
                   ) : null}
                 </>
               )}
@@ -174,19 +173,16 @@ export default function FriendsPage() {
               }}
               aria-label="Filter this list"
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full transition active:opacity-70",
-                filter === "all"
-                  ? "text-muted hover:bg-surface-2"
-                  : "bg-brand-soft text-brand-soft-text",
+                "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                filter === "all" ? "text-muted hover:bg-surface-2" : "bg-text text-inverse",
               )}
             >
-              <SlidersHorizontal className="size-[18px]" />
+              <SlidersHorizontal className="size-[18px]" strokeWidth={1.75} />
             </button>
           </div>
 
           {visible.length === 0 ? (
             <EmptyState
-              icon={<UserRoundPlus className="size-6" />}
               title="Nobody matches that"
               description={`No ${FILTERS.find((option) => option.value === filter)?.label.toLowerCase()}.`}
               action={
@@ -197,51 +193,19 @@ export default function FriendsPage() {
             />
           ) : null}
 
-          {owing.length > 0 ? (
-            <section className="mb-6">
-              <SectionHeader title="Outstanding" />
-              <ul className="space-y-2.5">
-                {owing.map((friend, index) => (
-                  <motion.li key={friend.person.id} custom={index} variants={listItem} initial="hidden" animate="shown">
-                    <FriendCard friend={friend} />
-                  </motion.li>
-                ))}
-              </ul>
-            </section>
+          {added.length > 0 ? (
+            <PeopleSection title="Friends" friends={added} largest={largest} showSettled={showSettled} onShowSettled={() => setShowSettled(true)} />
           ) : null}
-
-          {/*
-            Settled friends are folded away by default once there are enough of
-            them to bury the ones that need attention. The list is a to-do list
-            first and an address book second.
-          */}
-          {settled.length > 0 ? (
-            <section>
-              {owing.length > 0 && settled.length > 3 && !showSettled ? (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  fullWidth
-                  onClick={() => {
-                    haptic();
-                    setShowSettled(true);
-                  }}
-                >
-                  Show {settled.length} settled-up {settled.length === 1 ? "friend" : "friends"}
-                </Button>
-              ) : (
-                <>
-                  <SectionHeader title={owing.length > 0 ? "Settled up" : "All settled up"} />
-                  <ul className="space-y-2.5">
-                    {settled.map((friend, index) => (
-                      <motion.li key={friend.person.id} custom={owing.length + index} variants={listItem} initial="hidden" animate="shown">
-                        <FriendCard friend={friend} />
-                      </motion.li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </section>
+          {inGroups.length > 0 ? (
+            <PeopleSection
+              title="In your groups"
+              caption="People you share a group with but haven't added."
+              friends={inGroups}
+              largest={largest}
+              showSettled={showSettled}
+              onShowSettled={() => setShowSettled(true)}
+              offerAdd
+            />
           ) : null}
         </>
       )}
@@ -258,10 +222,8 @@ export default function FriendsPage() {
                 }}
                 className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-1 py-3.5 text-left transition active:bg-surface-2"
               >
-                <span className="flex-1 text-input font-semibold text-text">{option.label}</span>
-                {filter === option.value ? (
-                  <Check className="size-5 shrink-0 text-brand" strokeWidth={3} />
-                ) : null}
+                <span className="flex-1 text-body-lg font-medium text-text">{option.label}</span>
+                {filter === option.value ? <Check className="size-5 shrink-0 text-text" strokeWidth={2.5} /> : null}
               </button>
             </li>
           ))}
@@ -274,65 +236,147 @@ export default function FriendsPage() {
   );
 }
 
-function FriendCard({ friend }: { friend: FriendDto }) {
-  const entries = Object.entries(friend.net);
+/**
+ * One list of people: those with money outstanding first, then the settled,
+ * folded away once there are enough of them to bury the ones that need you.
+ */
+function PeopleSection({
+  title,
+  caption,
+  friends,
+  largest,
+  showSettled,
+  onShowSettled,
+  offerAdd,
+}: {
+  title: string;
+  caption?: string;
+  friends: FriendDto[];
+  largest: bigint;
+  showSettled: boolean;
+  onShowSettled: () => void;
+  offerAdd?: boolean;
+}) {
+  const owing = friends.filter((friend) => Object.keys(friend.net).length > 0);
+  const settled = friends.filter((friend) => Object.keys(friend.net).length === 0);
+  const fold = owing.length > 0 && settled.length > 3 && !showSettled;
+  const rows = fold ? owing : [...owing, ...settled];
 
   return (
-    <Link
-      href={`/friends/${friend.person.id}`}
-      className="block rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5 transition active:opacity-70 active:bg-surface-2 hover:border-line-strong"
-    >
-      <span className="flex items-center gap-3.5">
+    <section className="mb-8">
+      <h2 className="px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
+      {caption ? <p className="mt-0.5 px-1 text-caption text-muted">{caption}</p> : null}
+      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+        {rows.map((friend) => (
+          <li key={friend.person.id}>
+            <FriendRow friend={friend} largest={largest} offerAdd={offerAdd} />
+          </li>
+        ))}
+      </ul>
+      {fold ? (
+        <button
+          onClick={() => {
+            haptic();
+            onShowSettled();
+          }}
+          className="mt-2 px-1 text-body text-muted hover:text-text"
+        >
+          Show {settled.length} settled up
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: bigint; offerAdd?: boolean }) {
+  const entries = Object.entries(friend.net);
+  const hue = usePersonHue(friend.person);
+  const biggest = entries.reduce((max, [, value]) => {
+    const amount = BigInt(value);
+    return (amount < 0n ? -amount : amount) > (max < 0n ? -max : max) ? amount : max;
+  }, 0n);
+  const share = largest > 0n ? Number(biggest < 0n ? -biggest : biggest) / Number(largest) : 0;
+  const where =
+    friend.ledgers.length > 1
+      ? `In ${friend.ledgers.length} places`
+      : friend.ledgers[0]
+        ? friend.ledgers[0].name
+          ? `In ${friend.ledgers[0].name}`
+          : "Just between you"
+        : null;
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <Link href={`/friends/${friend.person.id}`} className="flex min-w-0 flex-1 items-center gap-3">
         <Avatar person={friend.person} size="md" />
-
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-subhead font-semibold text-text">
-            {friend.person.displayName}
+          <span className="block truncate text-body-lg font-medium text-text">{friend.person.displayName}</span>
+          <span className="block truncate text-caption text-subtle">
+            {friend.person.isGhost ? "not on Divvy yet" : (where ?? "settled up")}
           </span>
+          {/* Their segment of the flow: how big this balance is next to the rest. */}
+          {share > 0 ? (
+            <span className="mt-1.5 block h-1 w-full max-w-[160px] overflow-hidden rounded-full bg-surface-2">
+              <span
+                className="block h-full rounded-full"
+                style={{
+                  width: `${Math.max(6, share * 100)}%`,
+                  background:
+                    biggest > 0n
+                      ? hue
+                      : `repeating-linear-gradient(135deg, ${hue} 0 3px, color-mix(in oklch, ${hue} 35%, var(--surface)) 3px 6px)`,
+                }}
+              />
+            </span>
+          ) : null}
         </span>
-
         <span className="shrink-0 text-right">
           {entries.length === 0 ? (
-            <span className="text-body font-semibold text-subtle">settled up</span>
+            <span className="text-caption text-subtle">settled up</span>
           ) : (
             entries.map(([currency, value]) => {
               const amount = BigInt(value);
               return (
                 <span key={currency} className="block">
                   <Amount value={amount} currency={currency} size="md" />
-                  <span className="block text-micro font-semibold text-subtle">
-                    {amount > 0n ? "owes you" : "you owe"}
-                  </span>
+                  <span className="block text-caption text-subtle">{amount > 0n ? "owes you" : "you owe"}</span>
                 </span>
               );
             })
           )}
         </span>
-      </span>
+      </Link>
+      {offerAdd && !friend.person.isGhost ? <AddFriendButton personId={friend.person.id} name={friend.person.displayName} /> : null}
+    </div>
+  );
+}
 
-      {/*
-        Where the figure came from. Only worth the room when there is more than
-        one ledger — with a single one the total *is* the breakdown, and
-        repeating it would be noise.
-      */}
-      {friend.ledgers.length > 1 ? (
-        <span className="mt-2.5 block border-l-2 border-line pl-3">
-          {friend.ledgers.map((ledger) => {
-            const amount = BigInt(ledger.net);
-            const name = ledger.name ?? "expenses outside groups";
-            return (
-              <span
-                key={ledger.groupId ?? "direct"}
-                className="block truncate text-caption leading-relaxed text-subtle"
-              >
-                {amount > 0n ? "Owes you " : "You owe "}
-                <Amount value={amount} currency={ledger.currency} size="xs" />
-                {ledger.name ? ` in “${name}”` : ` in ${name}`}
-              </span>
-            );
-          })}
-        </span>
-      ) : null}
-    </Link>
+function AddFriendButton({ personId, name }: { personId: string; name: string }) {
+  const add = useAddFriend();
+  const toast = useToast();
+  return (
+    <button
+      type="button"
+      disabled={add.isPending}
+      onClick={() => {
+        haptic();
+        add.mutate(
+          { id: personId },
+          {
+            onSuccess: () => toast({ tone: "success", title: `Added ${name.split(" ")[0]} as a friend` }),
+            onError: (error) =>
+              toast({
+                tone: "error",
+                title: "Couldn\u2019t add them",
+                description: error instanceof ApiError ? error.message : undefined,
+              }),
+          },
+        );
+      }}
+      aria-label={`Add ${name} as a friend`}
+      className="shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition-colors hover:bg-surface-2 disabled:opacity-50"
+    >
+      Add
+    </button>
   );
 }

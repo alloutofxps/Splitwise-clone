@@ -20,6 +20,7 @@ import {
 } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
 import { formatMoney } from "@/lib/money";
+import { shortDate } from "@/lib/day-groups";
 import type { PersonDto } from "@/lib/types";
 
 /**
@@ -132,35 +133,47 @@ export function ExpenseDetailSheet({
           </div>
         ) : (
           <div className="px-5 pb-6">
-            {/* Head ------------------------------------------------------- */}
+            {/* Head: what, how much, who added it and when; and what you can do. */}
             <div className="flex items-start gap-3.5 pt-1">
-              <span
-                className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text"
-              >
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text">
                 <CategoryGlyph name={category!.icon} className="size-5" />
               </span>
-
               <div className="min-w-0 flex-1">
                 <h2 className="text-title-lg font-semibold leading-tight tracking-[-0.02em] text-text">
                   {expense.description}
                 </h2>
-                <p className="mt-1 text-body text-muted">
-                  {category!.name} ·{" "}
-                  {new Date(expense.date).toLocaleDateString(undefined, {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                <p className="mt-1 text-caption text-subtle">
+                  Added by{" "}
+                  {expense.createdByPersonId === meId
+                    ? "you"
+                    : (people.get(expense.createdByPersonId)?.displayName.split(" ")[0] ?? "someone")}{" "}
+                  · {shortDate(new Date(expense.date), new Date(expense.date).getFullYear() !== new Date().getFullYear())}
+                  {" "}· {category!.name}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 flex items-baseline gap-2">
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)} icon={<Pencil className="size-4" strokeWidth={1.75} />}>
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmDelete(true)}
+                icon={<Trash2 className="size-4" strokeWidth={1.75} />}
+                className="text-danger"
+              >
+                Delete
+              </Button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-baseline gap-x-2">
               <Amount
                 value={expense.amount}
                 currency={expense.currency}
-                size="xl"
                 tone="plain"
+                className="text-display font-semibold tracking-[-0.03em]"
               />
               {expense.currency !== expense.settlementCurrency ? (
                 <span className="tabular text-body text-subtle">
@@ -169,117 +182,62 @@ export function ExpenseDetailSheet({
               ) : null}
             </div>
 
-            {/* Paid by ---------------------------------------------------- */}
+            {/* Who paid and who owes, each person once ------------------- */}
             <div className="mt-5">
-              <SectionLabel>Paid by</SectionLabel>
-              <ul className="space-y-1.5">
-                {expense.payers.map((payer) => {
-                  const person = people.get(payer.personId);
+              <SectionLabel>{`Who paid · ${splitLabel(expense.splitMode).toLowerCase()}`}</SectionLabel>
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+                {[...new Set([...expense.payers.map((payer) => payer.personId), ...expense.splits.filter((split) => split.included || BigInt(split.amount) !== 0n).map((split) => split.personId)])].map((personId) => {
+                  const person = people.get(personId);
                   if (!person) return null;
+                  const paid = expense.payers
+                    .filter((payer) => payer.personId === personId)
+                    .reduce((total, payer) => total + BigInt(payer.amount), 0n);
+                  const split = expense.splits.find((entry) => entry.personId === personId);
+                  const share = split ? BigInt(split.amount) : 0n;
+                  const net = paid - share;
+                  const theirItems = expense.items.filter((item) => item.participantIds.includes(personId));
+                  const isMe = personId === meId;
+
+                  const parts: string[] = [];
+                  if (paid > 0n) parts.push(`paid ${formatMoney(paid, expense.currency)}`);
+                  if (share > 0n) parts.push(`share ${formatMoney(share, expense.currency)}`);
+                  if (split?.percent !== null && split?.percent !== undefined) parts.push(`${split.percent}%`);
+                  else if (split?.weight !== null && split?.weight !== undefined) parts.push(`${split.weight} ${split.weight === 1 ? "share" : "shares"}`);
+
                   return (
-                    <li
-                      key={payer.personId}
-                      className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5"
-                    >
-                      <Avatar person={person} size="sm" />
-                      <span className="flex-1 truncate text-body-lg font-semibold text-text">
-                        {payer.personId === meId ? "You" : person.displayName}
+                    <li key={personId} className="flex items-start gap-3 px-4 py-3">
+                      <Avatar person={person} size="sm" className="mt-0.5" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-body-lg font-medium text-text">
+                          {isMe ? "You" : person.displayName}
+                        </span>
+                        <span className="tabular block text-caption text-subtle">{parts.join(" · ")}</span>
+                        {theirItems.length > 0 ? (
+                          <span className="mt-0.5 block text-caption text-subtle">
+                            {theirItems.map((item) => item.name).join(", ")}
+                          </span>
+                        ) : null}
                       </span>
-                      <Amount
-                        value={payer.amount}
-                        currency={expense.currency}
-                        size="sm"
-                        tone="plain"
-                      />
+                      <span className="shrink-0 pt-0.5 text-right">
+                        {net === 0n ? (
+                          <span className="text-caption text-subtle">even</span>
+                        ) : (
+                          <span
+                            className={cn(
+                              "tabular block text-body font-medium",
+                              net > 0n ? "text-positive-text" : "text-negative-text",
+                            )}
+                          >
+                            {net > 0n ? "lent " : isMe ? "owe " : "owes "}
+                            {formatMoney(net > 0n ? net : -net, expense.currency)}
+                          </span>
+                        )}
+                      </span>
                     </li>
                   );
                 })}
               </ul>
             </div>
-
-            {/* Split ------------------------------------------------------ */}
-            <div className="mt-5">
-              <SectionLabel>{splitLabel(expense.splitMode)}</SectionLabel>
-              <ul className="space-y-1.5">
-                {expense.splits
-                  .filter((split) => split.included || BigInt(split.amount) !== 0n)
-                  .map((split) => {
-                    const person = people.get(split.personId);
-                    if (!person) return null;
-                    const paid = expense.payers
-                      .filter((p) => p.personId === split.personId)
-                      .reduce((total, p) => total + BigInt(p.amount), 0n);
-                    const net = paid - BigInt(split.amount);
-
-                    return (
-                      <li
-                        key={split.personId}
-                        className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5"
-                      >
-                        <Avatar person={person} size="sm" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-body-lg font-semibold text-text">
-                            {split.personId === meId ? "You" : person.displayName}
-                          </span>
-                          {split.percent !== null || split.weight !== null ? (
-                            <span className="block text-tiny text-subtle">
-                              {split.percent !== null
-                                ? `${split.percent}%`
-                                : `${split.weight} ${split.weight === 1 ? "share" : "shares"}`}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="text-right">
-                          <span className="tabular block text-body-lg font-semibold text-text">
-                            {formatMoney(BigInt(split.amount), expense.currency)}
-                          </span>
-                          {net !== 0n ? (
-                            <span
-                              className={cn(
-                                "block text-tiny font-semibold",
-                                net > 0n ? "text-positive-text" : "text-negative-text",
-                              )}
-                            >
-                              {net > 0n ? "lent " : "borrowed "}
-                              {formatMoney(net > 0n ? net : -net, expense.currency)}
-                            </span>
-                          ) : null}
-                        </span>
-                      </li>
-                    );
-                  })}
-              </ul>
-            </div>
-
-            {/* Items ------------------------------------------------------ */}
-            {expense.items.length > 0 ? (
-              <div className="mt-5">
-                <SectionLabel>Receipt</SectionLabel>
-                <ul className="divide-y divide-line rounded-[var(--radius-md)] bg-surface-2 px-3">
-                  {expense.items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-3 py-2.5">
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body font-medium text-text">
-                          {item.name}
-                        </span>
-                        <span className="block truncate text-tiny text-subtle">
-                          {item.participantIds
-                            .map((id) =>
-                              id === meId
-                                ? "you"
-                                : (people.get(id)?.displayName.split(" ")[0] ?? "?"),
-                            )
-                            .join(", ")}
-                        </span>
-                      </span>
-                      <span className="tabular shrink-0 text-body font-semibold text-muted">
-                        {formatMoney(BigInt(item.amount), expense.currency)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
 
             {/* Attachments ------------------------------------------------ */}
             {expense.attachments.length > 0 ? (
@@ -396,40 +354,13 @@ export function ExpenseDetailSheet({
                   }}
                   disabled={!draft.trim()}
                   aria-label="Post comment"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-inverse transition active:opacity-70 disabled:opacity-40"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-inverse transition-opacity active:opacity-70 disabled:opacity-40"
                 >
                   <Send className="size-[18px]" />
                 </button>
               </div>
             </div>
 
-            {/* Actions ---------------------------------------------------- */}
-            <div className="mt-6 flex gap-2.5">
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setEditing(true)}
-                icon={<Pencil className="size-[17px]" />}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setConfirmDelete(true)}
-                icon={<Trash2 className="size-[17px]" />}
-                className="text-negative-text"
-              >
-                Delete
-              </Button>
-            </div>
-
-            <p className="mt-3 text-center text-tiny text-subtle">
-              Added by{" "}
-              {expense.createdByPersonId === meId
-                ? "you"
-                : (people.get(expense.createdByPersonId)?.displayName ?? "someone")}
-            </p>
           </div>
         )}
       </Sheet>
@@ -467,7 +398,7 @@ export function ExpenseDetailSheet({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 px-1 text-caption font-medium text-subtle">
       {children}
     </p>
   );

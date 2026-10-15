@@ -662,6 +662,15 @@ function writeId<T extends { id?: string }>(input: T, prefix: string): string {
  * what you owe them. Pessimistic, because the answer depends on a balance the
  * client would have to recompute to predict.
  */
+/** Adds someone you share a group with as a friend. */
+export function useAddFriend() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.post(`/api/friends/${id}`, {}),
+    onSuccess: () => invalidateLedger(client, null),
+  });
+}
+
 export function useRemoveFriend() {
   const client = useQueryClient();
   return useMutation({

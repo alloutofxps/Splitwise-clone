@@ -165,7 +165,7 @@ export function SettleAcrossSheet({
         </p>
 
         {/* What gets written ------------------------------------------------ */}
-        <p className="mb-2 mt-6 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-6 px-1 text-caption font-medium text-subtle">
           This will save
         </p>
         <ul className="space-y-1.5">
@@ -196,7 +196,7 @@ export function SettleAcrossSheet({
                   <span
                     className={cn(
                       "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition",
-                      included ? "border-brand bg-brand text-inverse" : "border-line-strong",
+                      included ? "border-text bg-text text-inverse" : "border-line-strong",
                     )}
                   >
                     {included ? <Check className="size-3.5" strokeWidth={3.5} /> : null}
@@ -234,7 +234,7 @@ export function SettleAcrossSheet({
 
         {/* How -------------------------------------------------------------- */}
         <div className="mt-5">
-          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-medium text-subtle">
             How was it paid?
           </p>
           <div className="flex flex-wrap gap-2">
@@ -248,8 +248,8 @@ export function SettleAcrossSheet({
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   method === option
-                    ? "border-brand bg-brand text-inverse"
-                    : "border-line bg-surface text-muted",
+                    ? "border-text bg-text text-inverse"
+                    : "border-line bg-surface text-text hover:bg-surface-2",
                 )}
               >
                 {option}

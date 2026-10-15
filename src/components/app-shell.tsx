@@ -51,7 +51,10 @@ export function AppShell({
         <OfflineBanner />
         <main
           className={cn(
-            "mx-auto w-full max-w-[560px] flex-1 px-4 lg:max-w-[720px] lg:px-8 xl:max-w-[880px]",
+            "mx-auto w-full max-w-[560px] flex-1 px-4 lg:px-8",
+            // Home and a group use two columns on a desktop; everything else
+            // keeps rows at a readable width.
+            pathname === "/" || pathname.startsWith("/groups/") ? "lg:max-w-[1120px]" : "lg:max-w-[720px]",
             // Clears the tab bar plus the home indicator on mobile.
             "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:pb-12",
           )}

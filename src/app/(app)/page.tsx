@@ -3,22 +3,40 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Plus, Search, UsersRound } from "lucide-react";
-import { useDashboard } from "@/lib/client/queries";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ChevronRight,
+  Download,
+  Plus,
+  Search,
+  ShieldCheck,
+  Target,
+  Ticket,
+} from "lucide-react";
+import { useActivity, useBudgets, useDashboard } from "@/lib/client/queries";
 import { Amount } from "@/components/ui/money";
-import { AvatarStack } from "@/components/ui/avatar";
-import { hueVar } from "@/lib/avatar";
-import { FlowBar } from "@/components/flow/flow-bar";
-import { Button, EmptyState, SectionHeader, cn } from "@/components/ui/primitives";
-import { listItem } from "@/components/ui/motion";
+import { Avatar } from "@/components/ui/avatar";
+import { Skeleton, cn } from "@/components/ui/primitives";
 import { NewGroupSheet } from "@/components/group/new-group-sheet";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { ImportSheet } from "@/components/group/import-sheet";
 import { Wordmark } from "@/components/app-shell";
+import { FlowBar } from "@/components/flow/flow-bar";
+import { GroupMark } from "@/components/group/group-mark";
+import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
+import { formatMoney } from "@/lib/money";
+import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
-import type { GroupSummaryDto } from "@/lib/types";
+import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
 
+/**
+ * Home: what needs you (DESIGN-PLAN 3.2).
+ *
+ * From the top: where you stand, then the few things worth doing about it,
+ * then your groups. On a desktop the balance moves to a right-hand column so
+ * the lists aren't pushed below the fold.
+ */
 export default function HomePage() {
   const { data } = useDashboard();
   const [newGroup, setNewGroup] = React.useState(false);
@@ -29,97 +47,94 @@ export default function HomePage() {
 
   const active = data.groups.filter((group) => !group.archivedAt);
   const archived = data.groups.filter((group) => group.archivedAt);
+  const firstRun = active.length === 0 && archived.length === 0 && data.friends.length === 0;
 
   return (
-    <div className="pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="mb-4 flex items-center justify-between gap-4">
-        <Wordmark />
-        <Link
-          href="/search"
-          aria-label="Search expenses"
-          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 active:opacity-70 lg:hidden"
-        >
-          <Search className="size-[20px]" />
-        </Link>
+    <div className="pt-[max(1rem,env(safe-area-inset-top))]">
+      <header className="mb-5 flex items-center justify-between gap-3">
+        {/* On a desktop the sidebar already carries the logo. */}
+        <Wordmark className="lg:invisible" />
+        <div className="flex items-center gap-1">
+          <Link
+            href="/search"
+            aria-label="Search expenses"
+            className="flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-2 lg:hidden"
+          >
+            <Search className="size-5" strokeWidth={1.75} />
+          </Link>
+          <Link href="/account" aria-label="You" className="rounded-full p-1 transition-opacity active:opacity-70">
+            <Avatar person={data.me} size="sm" />
+          </Link>
+        </div>
       </header>
 
-      <Hero data={data} />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-10">
+        <div className="min-w-0 lg:sticky lg:top-6 lg:order-2">
+          <Balance data={data} />
+          <ThisMonth />
+        </div>
 
-      {active.length === 0 && data.friends.length === 0 ? (
-        <FirstRun
-          onCreate={() => setNewGroup(true)}
-          onJoin={() => setJoining(true)}
-          onImport={() => setImporting(true)}
-        />
-      ) : (
-        <>
-          {/*
-            Two columns from xl, one below it. On a phone this is a single
-            scroll in priority order; on a desktop the two lists sit side by
-            side instead of leaving a screen of empty space.
-          */}
-          <div className="mt-8 xl:grid xl:grid-cols-[1.35fr_1fr] xl:items-start xl:gap-8">
-            <div className="min-w-0">
-              <SectionHeader
-                title="Groups"
-                action={
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setJoining(true)}
-                      className="rounded-full px-3 py-1.5 text-body font-semibold text-brand transition active:opacity-70 hover:bg-brand-soft"
-                    >
-                      Join
-                    </button>
-                    <button
-                      onClick={() => setNewGroup(true)}
-                      className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-body font-semibold text-brand-soft-text transition active:opacity-70"
-                    >
-                      <Plus className="size-3.5" strokeWidth={2.8} />
-                      New
-                    </button>
-                  </div>
-                }
-              />
-
-              {active.length === 0 ? (
-                <EmptyState
-                  icon={<UsersRound className="size-6" />}
-                  title="No groups yet"
-                  description="Make a group for a trip, your flat or a night out. Add what people paid and Divvy works out who owes who."
-                  action={
-                    <Button variant="primary" onClick={() => setNewGroup(true)}>
-                      Create a group
-                    </Button>
-                  }
+        <div className="min-w-0 lg:order-1">
+          {firstRun ? (
+            <Section title="Get started">
+              <Rows>
+                <ActionRow
+                  icon={<Plus className="size-5" strokeWidth={1.75} />}
+                  title="Start a group"
+                  caption="For a trip, a flat or a night out"
+                  onClick={() => setNewGroup(true)}
                 />
-              ) : (
-                <ul className="space-y-3">
-                  {active.map((group, index) => (
-                    <motion.li key={group.id} custom={index} variants={listItem} initial="hidden" animate="shown">
-                      <GroupCard group={group} />
-                    </motion.li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                <ActionRow
+                  icon={<Ticket className="size-5" strokeWidth={1.75} />}
+                  title="Join with a code"
+                  caption="Someone sent you an invite"
+                  onClick={() => setJoining(true)}
+                />
+                <ActionRow
+                  icon={<Download className="size-5" strokeWidth={1.75} />}
+                  title="Move from Splitwise"
+                  caption="Bring a group and its expenses across"
+                  onClick={() => setImporting(true)}
+                />
+              </Rows>
+            </Section>
+          ) : (
+            <NeedsYou data={data} />
+          )}
 
-            <div className="min-w-0">
-              {archived.length > 0 ? (
-                <div className="mt-9 xl:mt-0">
-                  <SectionHeader title="Archived" />
-                  <ul className="space-y-3 opacity-70">
-                    {archived.map((group) => (
-                      <li key={group.id}>
-                        <GroupCard group={group} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </>
-      )}
+          {!firstRun ? (
+            <Section
+              title="Groups"
+              action={
+                <span className="flex items-center gap-1">
+                  <TextButton onClick={() => setJoining(true)}>Join</TextButton>
+                  <TextButton onClick={() => setNewGroup(true)}>New group</TextButton>
+                </span>
+              }
+            >
+              {active.length === 0 ? (
+                <p className="rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-4 text-body text-muted">
+                  No groups yet.{" "}
+                  <button
+                    onClick={() => setNewGroup(true)}
+                    className="font-medium text-text underline-offset-2 hover:underline"
+                  >
+                    Start one
+                  </button>
+                </p>
+              ) : (
+                <Rows>
+                  {active.map((group) => (
+                    <GroupRow key={group.id} group={group} meId={data.me.id} />
+                  ))}
+                </Rows>
+              )}
+            </Section>
+          ) : null}
+
+          {archived.length > 0 ? <Archived groups={archived} meId={data.me.id} /> : null}
+        </div>
+      </div>
 
       <NewGroupSheet
         open={newGroup}
@@ -136,226 +151,464 @@ export default function HomePage() {
 }
 
 // ---------------------------------------------------------------------------
+// Balance
 
 /**
- * The headline: where you stand, and underneath it the two halves that make it
- * up, so "€187 overall" is never the only thing you can see.
+ * Where you stand: what you're owed and what you owe, one line each per
+ * currency, with the flow bar of who makes it up underneath.
  */
-function Hero({ data }: { data: DashboardPayload }) {
+function Balance({ data }: { data: DashboardPayload }) {
   const router = useRouter();
-  const totals = Object.entries(data.totals);
-  const firstName = data.me.displayName.split(" ")[0];
-  const split = breakdown(data);
-  const only = totals.length === 1 ? BigInt(totals[0][1]) : 0n;
+  const currencies = Object.keys(data.totals);
+  const nothingYet = data.groups.length === 0 && data.friends.length === 0;
+
+  if (currencies.length === 0) {
+    return (
+      <section className="mb-8">
+        <p className="text-hero font-semibold leading-[1.1] tracking-[-0.035em] text-text">
+          {nothingYet ? "Nothing owed yet" : "All settled up"}
+        </p>
+        <p className="mt-2 text-body text-muted">
+          {nothingYet
+            ? "Add what people paid and Divvy works out who owes who."
+            : "Nobody owes anybody anything."}
+        </p>
+      </section>
+    );
+  }
+
+  // Split by direction, per currency, from the people who make it up: a
+  // single net figure hides that you can be owed by some and owe others.
+  const lines = currencies.map((currency) => {
+    const entries = data.friends
+      .filter((friend) => friend.net[currency])
+      .map((friend) => ({ person: friend.person, amount: BigInt(friend.net[currency]) }));
+    const owed = entries.reduce((sum, entry) => (entry.amount > 0n ? sum + entry.amount : sum), 0n);
+    const owe = entries.reduce((sum, entry) => (entry.amount < 0n ? sum - entry.amount : sum), 0n);
+    return { currency, owed, owe, entries };
+  });
+
+  const approx = data.approxTotal ? BigInt(data.approxTotal.amount) : null;
 
   return (
-    <section className="rounded-[28px] border border-[var(--card-border)] bg-surface p-5 pb-4">
-      <p className="text-subhead font-semibold text-muted">
-        {greeting()}, <span className="text-text">{firstName}</span>
-      </p>
+    <section className="mb-8">
+      <div className="space-y-5">
+        {lines.map((line) => (
+          <div key={line.currency}>
+            {line.owed > 0n ? (
+              <BalanceLine label="You're owed" amount={line.owed} currency={line.currency} />
+            ) : null}
+            {line.owe > 0n ? (
+              <BalanceLine label="You owe" amount={-line.owe} currency={line.currency} />
+            ) : null}
+            <FlowBar
+              className="mt-3"
+              currency={line.currency}
+              entries={line.entries}
+              onSelect={(personId) => router.push(`/friends/${personId}`)}
+            />
+          </div>
+        ))}
+      </div>
 
-      {totals.length === 0 ? (
-        <div className="mt-3">
-          <p className="font-display text-display font-semibold leading-tight tracking-[-0.03em] text-text">
-            All settled up
-          </p>
-          <p className="mt-2 text-body-lg text-muted">Nobody owes anybody anything.</p>
-        </div>
-      ) : totals.length === 1 ? (
-        <div className="mt-2">
-          <Amount value={only} currency={totals[0][0]} size="hero" className="text-hero tracking-[-0.04em]" />
-          <p className="mt-2 text-body-lg font-medium text-muted">
-            {only > 0n ? "In total, people owe you this much." : "In total, you owe this much."}
-          </p>
-          {/* Who that total is made of, one segment per person. */}
-          <FlowBar
-            className="mt-4"
-            currency={totals[0][0]}
-            entries={data.friends
-              .filter((friend) => friend.net[totals[0][0]])
-              .map((friend) => ({ person: friend.person, amount: BigInt(friend.net[totals[0][0]]) }))}
-            onSelect={(personId) => router.push(`/friends/${personId}`)}
-          />
-        </div>
-      ) : (
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          {totals.map(([currency, value]) => (
-            <Amount key={currency} value={value} currency={currency} size="xl" />
-          ))}
-          <span className="w-full text-body font-semibold text-muted">
-            {data.approxTotal ? (
-              <>
-                In {totals.length} currencies. About{" "}
-                <Amount value={BigInt(data.approxTotal.amount) < 0n ? -BigInt(data.approxTotal.amount) : BigInt(data.approxTotal.amount)} currency={data.approxTotal.currency} size="sm" tone="plain" />{" "}
-                {BigInt(data.approxTotal.amount) >= 0n ? "owed to you" : "that you owe"} in total.
-              </>
-            ) : (
-              <>in {totals.length} currencies</>
-            )}
-          </span>
-        </div>
-      )}
+      {approx !== null && data.approxTotal ? (
+        <p className="mt-3 text-body text-muted">
+          About {formatMoney(approx < 0n ? -approx : approx, data.approxTotal.currency)}{" "}
+          {approx >= 0n ? "owed to you" : "that you owe"} overall
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
-      {split ? (
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Chip direction="in" value={split.owedToYou} currency={split.currency} label="owed to you" />
-          <Chip direction="out" value={split.youOwe} currency={split.currency} label="you owe" />
+function BalanceLine({ label, amount, currency }: { label: string; amount: bigint; currency: string }) {
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-2">
+      <span className="text-body text-muted">{label}</span>
+      <Amount
+        value={amount}
+        currency={currency}
+        arrow
+        className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
+      />
+    </p>
+  );
+}
+
+/** The month so far against an overall budget, if one is set. */
+function ThisMonth() {
+  const { data: budgets } = useBudgets();
+  const overall = budgets?.find(
+    (budget) => !budget.groupId && !budget.categoryId && budget.period === "MONTHLY",
+  );
+  if (!overall) return null;
+  const spent = BigInt(overall.spent);
+  const limit = BigInt(overall.amount);
+  const share = limit > 0n ? Math.min(1, Number(spent) / Number(limit)) : 0;
+  return (
+    <Link
+      href="/account"
+      className="mb-8 block rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
+    >
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="text-body text-muted">This month</span>
+        <span className="tabular text-body text-text">
+          {formatMoney(spent, overall.currency)}{" "}
+          <span className="text-muted">of {formatMoney(limit, overall.currency)}</span>
+        </span>
+      </span>
+      <span className="mt-2 block h-1 overflow-hidden rounded-full bg-surface-2">
+        <span
+          className={cn("block h-full rounded-full", share >= 1 ? "bg-negative" : "bg-text")}
+          style={{ width: `${share * 100}%` }}
+        />
+      </span>
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Needs you
+
+/**
+ * Only what you can act on, at most four rows: backing up the account, money
+ * you can pay, things others changed that you haven't seen, and a budget
+ * nearly used up.
+ */
+function NeedsYou({ data }: { data: DashboardPayload }) {
+  const { data: activity, isLoading } = useActivity();
+  const { data: budgets } = useBudgets();
+  const [backup] = React.useState(() => recoveryPending());
+  const people = React.useMemo(
+    () => new Map(data.people.map((person) => [person.id, person])),
+    [data.people],
+  );
+
+  const rows: React.ReactNode[] = [];
+
+  if (backup) {
+    rows.push(
+      <LinkRow
+        key="backup"
+        href="/account"
+        icon={<ShieldCheck className="size-5" strokeWidth={1.75} />}
+        title="Back up your account"
+        caption="So you can get back in on a new phone · 1 minute"
+      />,
+    );
+  }
+
+  // Money you can pay, biggest first.
+  const toPay = data.friends
+    .flatMap((friend) =>
+      Object.entries(friend.net)
+        .filter(([, value]) => BigInt(value) < 0n)
+        .map(([currency, value]) => ({ person: friend.person, currency, amount: -BigInt(value) })),
+    )
+    .sort((a, b) => (b.amount > a.amount ? 1 : -1))
+    .slice(0, 2);
+  for (const item of toPay) {
+    rows.push(
+      <LinkRow
+        key={`pay-${item.person.id}-${item.currency}`}
+        href={`/friends/${item.person.id}`}
+        avatar={item.person}
+        title={`Pay ${item.person.displayName.split(" ")[0]} ${formatMoney(item.amount, item.currency)}`}
+        caption="Settle up"
+        tone="owe"
+      />,
+    );
+  }
+
+  // Changes by other people you haven't seen yet.
+  const unread = (activity?.pages[0]?.items ?? [])
+    .filter((item) => item.isUnread && item.actorPersonId !== data.me.id)
+    .slice(0, 2);
+  for (const item of unread) {
+    rows.push(<UnreadRow key={item.id} activity={item} meId={data.me.id} people={people} />);
+  }
+
+  const nearLimit = (budgets ?? []).find((budget) => {
+    const limit = BigInt(budget.amount);
+    return limit > 0n && Number(BigInt(budget.spent)) / Number(limit) >= 0.8;
+  });
+  if (nearLimit) {
+    rows.push(
+      <LinkRow
+        key="budget"
+        href="/account"
+        icon={<Target className="size-5" strokeWidth={1.75} />}
+        title={`${formatMoney(BigInt(nearLimit.spent), nearLimit.currency)} of ${formatMoney(BigInt(nearLimit.amount), nearLimit.currency)} budget used`}
+        caption={
+          nearLimit.period === "WEEKLY" ? "This week" : nearLimit.period === "YEARLY" ? "This year" : "This month"
+        }
+      />,
+    );
+  }
+
+  if (isLoading && rows.length === 0) {
+    return (
+      <Section title="Needs you">
+        <Rows>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Skeleton className="size-8 rounded-full" />
+            <Skeleton className="h-4 flex-1" />
+          </div>
+        </Rows>
+      </Section>
+    );
+  }
+
+  if (rows.length === 0) return null;
+
+  return (
+    <Section
+      title="Needs you"
+      action={
+        unread.length > 0 ? (
+          <Link href="/activity" className="flex items-center gap-0.5 text-body text-muted hover:text-text">
+            All activity <ArrowRight className="size-3.5" />
+          </Link>
+        ) : undefined
+      }
+    >
+      <Rows>{rows.slice(0, 4)}</Rows>
+    </Section>
+  );
+}
+
+function UnreadRow({
+  activity,
+  meId,
+  people,
+}: {
+  activity: ActivityDto;
+  meId: string;
+  people: Map<string, PersonDto>;
+}) {
+  const actor = people.get(activity.actorPersonId);
+  const { sentence } = describeActivity(
+    activity,
+    actor?.displayName.split(" ")[0] ?? "Someone",
+    meId,
+    people,
+  );
+  const effect = activityEffect(activity);
+  return (
+    <Link
+      href={activity.groupId ? `/groups/${activity.groupId}` : "/activity"}
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+    >
+      {actor ? <Avatar person={actor} size="sm" /> : <span className="size-8 rounded-full bg-surface-2" />}
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-2 block text-body leading-snug text-muted">{sentence}</span>
+        <span className="mt-0.5 block text-caption text-subtle">
+          {activity.groupName ? `${activity.groupEmoji ?? ""} ${activity.groupName} · ` : ""}
+          {timeAgo(activity.createdAt)}
+          {effect ? (
+            <span className={effect.owed ? "text-positive-text" : "text-negative-text"}> · {effect.text}</span>
+          ) : null}
+        </span>
+      </span>
+      <span className="size-2 shrink-0 rounded-full bg-text" aria-label="Unread" />
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Groups
+
+function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
+  const net = BigInt(group.yourNet);
+  return (
+    <Link
+      href={`/groups/${group.id}`}
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
+    >
+      <GroupMark group={group} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className="truncate text-title font-semibold tracking-[-0.01em] text-text">{group.name}</span>
+          {group.unreadCount > 0 ? (
+            <span className="size-2 shrink-0 rounded-full bg-text" aria-label="New activity" />
+          ) : null}
+        </span>
+        <span className="mt-0.5 block truncate text-caption text-subtle">{groupCaption(group, meId)}</span>
+      </span>
+      <span className="shrink-0 text-right">
+        {net === 0n ? (
+          <span className="text-caption text-subtle">settled</span>
+        ) : (
+          <>
+            <Amount value={net} currency={group.currency} size="md" className="block" />
+            <span className="block text-caption text-subtle">{net > 0n ? "you're owed" : "you owe"}</span>
+          </>
+        )}
+      </span>
+    </Link>
+  );
+}
+
+/** "Ravi added Taxi · 2h", or how many people are in it if nothing has happened. */
+function groupCaption(group: GroupSummaryDto, meId: string): string {
+  const last = group.lastActivity;
+  const when = group.lastActivityAt ? timeAgo(group.lastActivityAt) : null;
+  if (!last || !when) return `${group.memberCount} ${group.memberCount === 1 ? "person" : "people"}`;
+  const actor =
+    last.actorPersonId === meId
+      ? "You"
+      : (group.members.find((member) => member.id === last.actorPersonId)?.displayName.split(" ")[0] ??
+        "Someone");
+  const what = last.description ? ` ${last.description}` : "";
+  const verb =
+    last.type === "expense.created"
+      ? `added${what}`
+      : last.type === "expense.updated"
+        ? `edited${what}`
+        : last.type === "expense.deleted"
+          ? `deleted${what}`
+          : last.type === "settlement.created"
+            ? "recorded a payment"
+            : last.type === "member.joined"
+              ? "joined"
+              : last.type === "comment.created"
+                ? `commented${what ? ` on${what}` : ""}`
+                : last.type === "group.created"
+                  ? "started the group"
+                  : "made a change";
+  return `${actor} ${verb} · ${when}`;
+}
+
+function Archived({ groups, meId }: { groups: GroupSummaryDto[]; meId: string }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <section className="mb-8">
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1 px-1 text-body text-muted hover:text-text"
+      >
+        Archived ({groups.length})
+        <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+      </button>
+      {open ? (
+        <div className="mt-2 opacity-80">
+          <Rows>
+            {groups.map((group) => (
+              <GroupRow key={group.id} group={group} meId={meId} />
+            ))}
+          </Rows>
         </div>
       ) : null}
     </section>
   );
 }
 
-function Chip({
-  direction,
-  value,
-  currency,
-  label,
-}: {
-  direction: "in" | "out";
-  value: bigint;
-  currency: string;
-  label: string;
-}) {
-  const Icon = direction === "in" ? ArrowDownRight : ArrowUpRight;
-  return (
-    <div className="flex items-center gap-2.5 rounded-[18px] bg-surface-2 px-3 py-2.5">
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-full",
-          direction === "in" ? "bg-positive-soft text-positive-text" : "bg-negative-soft text-negative-text",
-        )}
-      >
-        <Icon className="size-4" strokeWidth={2.6} />
-      </span>
-      <span className="min-w-0">
-        <Amount value={value} currency={currency} size="md" tone="plain" className="block" />
-        <span className="block text-caption font-semibold text-subtle">{label}</span>
-      </span>
-    </div>
-  );
-}
-
-/**
- * The two halves of a single-currency total: what people owe you, and what you
- * owe them, across every group and direct ledger. Null when there is more than
- * one currency, where halves would mean summing across currencies.
- */
-function breakdown(data: DashboardPayload): { currency: string; owedToYou: bigint; youOwe: bigint } | null {
-  const currencies = Object.keys(data.totals);
-  if (currencies.length !== 1) return null;
-  const currency = currencies[0];
-  let owedToYou = 0n;
-  let youOwe = 0n;
-  const add = (value: bigint) => {
-    if (value > 0n) owedToYou += value;
-    else youOwe -= value;
-  };
-  for (const group of data.groups) {
-    // Archived groups included, to match the headline total.
-    if (group.currency !== currency) continue;
-    add(BigInt(group.yourNet));
-  }
-  for (const friend of data.friends) {
-    const direct = friend.directNet[currency];
-    if (direct) add(BigInt(direct));
-  }
-  return { currency, owedToYou, youOwe };
-}
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 5) return "Hi";
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 // ---------------------------------------------------------------------------
+// Building blocks
 
-function GroupCard({ group }: { group: GroupSummaryDto }) {
-  const net = BigInt(group.yourNet);
-  const colour = hueVar(group.color);
-
-  return (
-    <motion.div whileTap={{ opacity: 0.85 }} transition={{ duration: 0.15 }}>
-      <Link
-        href={`/groups/${group.id}`}
-        className="surface-card flex items-center gap-3.5 p-3.5 transition-colors duration-150 hover:border-line-strong"
-      >
-        <span
-          className="flex size-12 shrink-0 items-center justify-center rounded-[14px] text-title-lg"
-          style={{ background: `color-mix(in oklch, ${colour} 18%, var(--surface))` }}
-        >
-          {group.emoji}
-        </span>
-
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="truncate font-display text-subhead font-semibold tracking-[-0.01em] text-text">
-              {group.name}
-            </span>
-            {group.unreadCount > 0 ? (
-              <span className="size-2 shrink-0 rounded-full bg-brand" aria-label="New activity" />
-            ) : null}
-          </span>
-          <span className="mt-1.5 block">
-            <AvatarStack people={group.members} size="xs" max={5} />
-          </span>
-        </span>
-
-        <span className="shrink-0 text-right">
-          {net === 0n ? (
-            <span className="rounded-full bg-neutral-soft px-2.5 py-1 text-caption font-semibold text-subtle">
-              settled
-            </span>
-          ) : (
-            <>
-              <Amount value={net} currency={group.currency} size="lg" />
-              <span className="mt-0.5 block text-tiny font-semibold text-subtle">
-                {net > 0n ? "you are owed" : "you owe"}
-              </span>
-            </>
-          )}
-        </span>
-      </Link>
-    </motion.div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function FirstRun({
-  onCreate,
-  onJoin,
-  onImport,
+function Section({
+  title,
+  action,
+  children,
 }: {
-  onCreate: () => void;
-  onJoin: () => void;
-  onImport: () => void;
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="surface-card mt-8 rounded-[28px] p-6">
-      <h2 className="font-display text-heading font-semibold tracking-[-0.03em] text-text">
-        Start your first group
-      </h2>
-      <p className="mt-1.5 text-body-lg leading-relaxed text-muted">
-        Make a group for a trip or the people you live with. Or join a friend&rsquo;s
-        group with their invite code.
-      </p>
-
-      <div className="mt-5 space-y-2.5">
-        <Button variant="primary" size="md" fullWidth onClick={onCreate}>
-          <Plus className="size-[18px]" strokeWidth={2.6} />
-          Create a group
-        </Button>
-        <Button variant="secondary" size="md" fullWidth onClick={onJoin}>
-          Join with an invite code
-        </Button>
-        <Button variant="ghost" size="md" fullWidth onClick={onImport}>
-          Move a group from Splitwise
-        </Button>
+    <section className="mb-8">
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <h2 className="text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
+        {action}
       </div>
+      {children}
+    </section>
+  );
+}
+
+/** A grouped inset list: one card, rows separated by hairlines. */
+function Rows({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+      {children}
     </div>
+  );
+}
+
+function TextButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-[var(--radius-sm)] px-2 py-1 text-body font-medium text-text transition-colors hover:bg-surface-2"
+    >
+      {children}
+    </button>
+  );
+}
+
+function LinkRow({
+  href,
+  icon,
+  avatar,
+  title,
+  caption,
+  tone,
+}: {
+  href: string;
+  icon?: React.ReactNode;
+  avatar?: PersonDto;
+  title: string;
+  caption?: string;
+  tone?: "owe";
+}) {
+  return (
+    <Link href={href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+      {avatar ? (
+        <Avatar person={avatar} size="sm" />
+      ) : (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text">
+          {icon}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn("block text-body font-medium", tone === "owe" ? "text-negative-text" : "text-text")}
+        >
+          {tone === "owe" ? <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} /> : null}
+          {title}
+        </span>
+        {caption ? <span className="mt-0.5 block text-caption text-subtle">{caption}</span> : null}
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-subtle" />
+    </Link>
+  );
+}
+
+function ActionRow({
+  icon,
+  title,
+  caption,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  caption: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-2"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-body-lg font-medium text-text">{title}</span>
+        <span className="mt-0.5 block text-caption text-subtle">{caption}</span>
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-subtle" />
+    </button>
   );
 }

@@ -77,13 +77,14 @@ export function GroupCharts({
         <button
           onClick={() => setAsTable((current) => !current)}
           aria-pressed={asTable}
-          aria-label={asTable ? "Show charts" : "Show as a table"}
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition active:opacity-70",
-            asTable ? "bg-brand-soft text-brand-soft-text" : "bg-surface-2 text-subtle",
-          )}
+          className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
         >
-          {asTable ? <BarChart3 className="size-[17px]" /> : <Table2 className="size-[17px]" />}
+          {asTable ? (
+            <BarChart3 className="size-4" strokeWidth={1.75} />
+          ) : (
+            <Table2 className="size-4" strokeWidth={1.75} />
+          )}
+          {asTable ? "Show charts" : "Show as a table"}
         </button>
       </div>
 
@@ -91,9 +92,9 @@ export function GroupCharts({
         <DataTable stats={stats} lens={lens} people={people} />
       ) : (
         <>
-          <MonthlyChart stats={stats} lens={lens} />
-          <CategoryChart stats={stats} lens={lens} />
           <PersonChart stats={stats} people={people} />
+          <CategoryChart stats={stats} lens={lens} />
+          <MonthlyChart stats={stats} lens={lens} />
         </>
       )}
     </div>
@@ -111,28 +112,24 @@ export function GroupCharts({
  * figure rendered large is a better answer than a plot with one bar on it.
  */
 function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
-  const tiles = [
-    { label: "Group total", value: stats.totalSpend },
+  const figures = [
+    { label: "Total", value: stats.totalSpend },
     { label: "Your share", value: stats.yourTotalShare },
     { label: "You paid", value: stats.yourTotalPaid },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {tiles.map((tile) => (
-        <div
-          key={tile.label}
-          className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3"
-        >
-          <p className="text-micro font-semibold uppercase tracking-[0.05em] text-subtle">
-            {tile.label}
-          </p>
-          <p className="display-number mt-1 truncate text-title font-semibold text-text">
-            {formatMoney(BigInt(tile.value), stats.currency)}
-          </p>
-        </div>
+    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body text-muted">
+      {figures.map((figure, index) => (
+        <span key={figure.label} className="whitespace-nowrap">
+          {index > 0 ? <span aria-hidden className="mr-2">·</span> : null}
+          {figure.label}{" "}
+          <span className="tabular font-medium text-text">
+            {formatMoney(BigInt(figure.value), stats.currency)}
+          </span>
+        </span>
       ))}
-    </div>
+    </p>
   );
 }
 
@@ -178,8 +175,8 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
 
   return (
     <ChartCard
-      title={lens === "group" ? "What the group spent" : "What you spent"}
-      subtitle="By month"
+      title="Over time"
+      subtitle={lens === "group" ? "What the group spent each month" : "What you spent each month"}
     >
       <div
         className="relative"
@@ -190,7 +187,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
         <div className="mb-2 h-9">
           {active ? (
             <div className="inline-flex flex-col rounded-[var(--radius-sm)] bg-surface-2 px-2.5 py-1.5">
-              <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
+              <span className="text-caption font-medium tracking-wide text-subtle">
                 {formatMonth(active.month, true)}
               </span>
               <span className="tabular text-body font-semibold text-text">
@@ -202,7 +199,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
             </div>
           ) : (
             <div className="inline-flex flex-col px-2.5 py-1.5">
-              <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
+              <span className="text-caption font-medium tracking-wide text-subtle">
                 Peak month
               </span>
               <span className="tabular text-body font-semibold text-text">
@@ -398,7 +395,7 @@ function PersonChart({
 
   return (
     <ChartCard
-      title="Who paid more than their share"
+      title="Who paid"
       subtitle="What each person paid, minus their own share, since the group started"
     >
       <ul className="space-y-3">
@@ -548,7 +545,7 @@ function TableCard({
       {/* The table scrolls inside its own box; the page never scrolls sideways. */}
       <div className="scroll-area overflow-x-auto">
         <table className="w-full text-left text-body">
-          <caption className="px-4 pb-2 pt-3.5 text-left text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
+          <caption className="px-4 pb-2 pt-3.5 text-left text-caption font-medium text-subtle">
             {caption}
           </caption>
           <thead>
@@ -604,8 +601,8 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
-      <h3 className="text-body-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
+    <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+      <h3 className="text-title font-semibold tracking-[-0.01em] text-text">{title}</h3>
       {subtitle ? (
         <p className="mb-3.5 mt-0.5 text-caption leading-snug text-muted">{subtitle}</p>
       ) : (
