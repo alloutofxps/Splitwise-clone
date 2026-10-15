@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Plus, Target, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { useResetOnClose } from "../ui/state-hooks";
 import { Amount, AmountInput } from "../ui/money";
 import { Button, EmptyState, Segmented, Skeleton, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -39,11 +40,8 @@ export function BudgetsSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [adding, setAdding] = React.useState(false);
 
   // On close rather than on open, so the editor is not left mounted behind a
-  // shut sheet. Nothing is painted during that transition, so an effect is the
-  // right tool here - unlike the reset-on-open cases, which would flash.
-  React.useEffect(() => {
-    if (!open) setAdding(false);
-  }, [open]);
+  // shut sheet.
+  useResetOnClose(open, () => setAdding(false));
 
   const groupName = (id: string | null) =>
     id ? (dashboard?.groups.find((group) => group.id === id)?.name ?? "A group") : "All groups";

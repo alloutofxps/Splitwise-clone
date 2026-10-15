@@ -41,6 +41,7 @@ import { api, ApiError } from "@/lib/client/api";
 import { pending } from "@/lib/client/outbox";
 import { wipeLocalData } from "@/lib/client/wipe";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
+import { useClientValue, useMirror, useResetOnClose } from "@/components/ui/state-hooks";
 import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
@@ -57,7 +58,7 @@ export default function AccountPage() {
   const updateProfile = useUpdateProfile();
   const [privacyScreen, setPrivacyScreen] = usePrivacyScreenSetting();
 
-  const [name, setName] = React.useState("");
+  const [name, setName] = useMirror(data?.me.displayName ?? "");
   const [currencyOpen, setCurrencyOpen] = React.useState(false);
   const [myCode, setMyCode] = React.useState(false);
   const [recovery, setRecovery] = React.useState(false);
@@ -68,16 +69,13 @@ export default function AccountPage() {
   const [discardCount, setDiscardCount] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const [keyUnsaved, setKeyUnsaved] = React.useState(false);
+  // Whether the recovery key made at sign-up was never confirmed saved. Lives in
+  // localStorage, so it is read without an effect and hidden once a new one is.
+  const keyPending = useClientValue(recoveryPending, false);
+  const [keySaved, setKeySaved] = React.useState(false);
+  const keyUnsaved = keyPending && !keySaved;
   const [emojiOpen, setEmojiOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    if (data) setName(data.me.displayName);
-  }, [data]);
-
-  // Read after mount: the server has no localStorage, and initialising from it
-  // during render would mismatch hydration.
-  React.useEffect(() => setKeyUnsaved(recoveryPending()), []);
 
   if (isLoading || !data) {
     return (
@@ -437,7 +435,7 @@ export default function AccountPage() {
       <RecoverySheet
         open={recovery}
         onClose={() => setRecovery(false)}
-        onSaved={() => setKeyUnsaved(false)}
+        onSaved={() => setKeySaved(true)}
       />
 
       <PaymentMethodsSheet
@@ -599,10 +597,8 @@ function RecoverySheet({
 
   // Cleared on *close* rather than on open: the key is a secret, and leaving
   // it in state after the sheet shuts keeps it in a heap snapshot for no
-  // reason. Nothing paints it in that gap, so an effect is fine here.
-  React.useEffect(() => {
-    if (!open) setKey(null);
-  }, [open]);
+  // reason.
+  useResetOnClose(open, () => setKey(null));
 
   const rotate = async () => {
     setBusy(true);

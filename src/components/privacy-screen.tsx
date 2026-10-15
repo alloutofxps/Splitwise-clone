@@ -3,6 +3,7 @@
 import * as React from "react";
 import { EyeOff } from "lucide-react";
 import { readStored, writeStored } from "@/lib/client/storage";
+import { useClientValue } from "./ui/state-hooks";
 
 /**
  * The app-switcher privacy screen.
@@ -40,27 +41,33 @@ function storedPreference(): boolean {
   return readStored(KEY) !== "0";
 }
 
-export function usePrivacyScreenSetting(): [boolean, (value: boolean) => void] {
-  const [enabled, setEnabled] = React.useState(true);
+/**
+ * The setting as the browser holds it right now. Kept in memory as well as
+ * localStorage so a browser that refuses storage (private mode) still honours
+ * a change for the rest of the visit.
+ */
+let remembered: boolean | null = null;
+const readSetting = () => remembered ?? storedPreference();
 
-  // Read after mount rather than during render: the server has no localStorage,
-  // so initialising from it directly would mismatch hydration.
-  React.useEffect(() => setEnabled(storedPreference()), []);
+function subscribe(onChange: () => void): () => void {
+  // Other instances on this page (the overlay and the settings row are
+  // mounted separately) and other tabs.
+  window.addEventListener(EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+export function usePrivacyScreenSetting(): [boolean, (value: boolean) => void] {
+  // On during the server render too, matching the default.
+  const enabled = useClientValue(readSetting, true, subscribe);
 
   const update = React.useCallback((value: boolean) => {
-    setEnabled(value);
+    remembered = value;
     writeStored(KEY, value ? "1" : "0");
-    // Tell any other instance on the page - the overlay and the settings row
-    // are mounted separately and neither owns the other.
-    window.dispatchEvent(new CustomEvent(EVENT, { detail: value }));
-  }, []);
-
-  React.useEffect(() => {
-    const onChange = (event: Event) => {
-      setEnabled((event as CustomEvent<boolean>).detail);
-    };
-    window.addEventListener(EVENT, onChange);
-    return () => window.removeEventListener(EVENT, onChange);
+    window.dispatchEvent(new Event(EVENT));
   }, []);
 
   return [enabled, update];

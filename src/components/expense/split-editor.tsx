@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Equal, Hash, Percent, Plus, Receipt, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { currencySymbol, toDecimalString } from "@/lib/money";
@@ -68,8 +69,7 @@ export function SplitEditor({
   const [local, setLocal] = React.useState<SplitParticipant[]>(participants);
   const [items, setItems] = React.useState<ReceiptItem[]>([]);
 
-  React.useEffect(() => {
-    if (!open) return;
+  useResetOnOpen(open, () => {
     setLocalMode(mode);
     // The lines come from the draft, not from whatever this editor last held:
     // editing an itemised expense opens with its receipt, and a fresh expense
@@ -86,7 +86,7 @@ export function SplitEditor({
           },
       ),
     );
-  }, [open, mode, participants, members, initialItems]);
+  });
 
   const resolved = resolveSplit({
     mode: localMode,

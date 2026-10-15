@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, Users } from "lucide-react";
 import { Sheet } from "../ui/sheet";
+import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { currencySymbol, toDecimalString } from "@/lib/money";
@@ -41,11 +42,10 @@ export function PayerPicker({
   const [multiple, setMultiple] = React.useState(payers.length > 1);
   const [local, setLocal] = React.useState(payers);
 
-  React.useEffect(() => {
-    if (!open) return;
+  useResetOnOpen(open, () => {
     setLocal(payers);
     setMultiple(payers.length > 1);
-  }, [open, payers]);
+  });
 
   const assigned = local.reduce((sum, payer) => sum + payer.amount, 0n);
   const remaining = total - assigned;

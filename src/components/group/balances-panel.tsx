@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ArrowRight, BellRing, Check, Info, Sparkles } from "lucide-react";
 import { Amount } from "../ui/money";
+import { useMirror } from "../ui/state-hooks";
 import { Avatar } from "../ui/avatar";
 import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -38,9 +39,8 @@ export function BalancesPanel({
   onSettle: (edge?: { fromPersonId: string; toPersonId: string; amount: string }) => void;
 }) {
   const updateGroup = useUpdateGroup(group.id);
-  const [simplified, setSimplified] = React.useState(group.simplifyDebts);
-
-  React.useEffect(() => setSimplified(group.simplifyDebts), [group.simplifyDebts]);
+  // Flips at once when tapped, and follows the group when it changes elsewhere.
+  const [simplified, setSimplified] = useMirror(group.simplifyDebts);
 
   const edges = simplified ? group.balances.simplified : group.balances.pairwise;
 

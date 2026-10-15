@@ -22,12 +22,15 @@ export function ConversionNote({
   rate: string;
   onRateChange: (rate: string) => void;
 }) {
-  const [fetching, setFetching] = React.useState(false);
+  // Which currency pair's lookup has finished. "Getting the rate" is simply
+  // the current pair not having finished yet - nothing to switch on and off.
+  const pair = `${from}>${to}`;
+  const [settled, setSettled] = React.useState<string | null>(null);
+  const fetching = settled !== pair;
 
   // Fetch a live rate on first appearance, falling back to manual entry.
   React.useEffect(() => {
     let cancelled = false;
-    setFetching(true);
     fetch(`/api/rates?base=${from}&quote=${to}`)
       .then((response) => response.json())
       .then((payload: { rate?: { rate: string } | null }) => {
@@ -36,7 +39,9 @@ export function ConversionNote({
       .catch(() => {
         // Offline: the manual field below is the fallback.
       })
-      .finally(() => !cancelled && setFetching(false));
+      .finally(() => {
+        if (!cancelled) setSettled(`${from}>${to}`);
+      });
     return () => {
       cancelled = true;
     };

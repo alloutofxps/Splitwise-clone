@@ -72,6 +72,10 @@ export function useLaunchIntent(enabled: boolean): LaunchIntent {
     );
 
     if (share === "unavailable") {
+      // This effect reads the address the app was opened with, once, and erases
+      // the flag from it - an outside system, which is what effects are for. The
+      // state it sets is the result of that read, not a copy of another value.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIntent({
         compose: true,
         attachments: [],
