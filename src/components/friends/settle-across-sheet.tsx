@@ -165,7 +165,7 @@ export function SettleAcrossSheet({
         </p>
 
         {/* What gets written ------------------------------------------------ */}
-        <p className="mb-2 mt-6 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-6 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
           This will save
         </p>
         <ul className="space-y-1.5">
@@ -189,14 +189,14 @@ export function SettleAcrossSheet({
                   }}
                   aria-pressed={included}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border px-3.5 py-3 text-left transition active:scale-[0.985]",
+                    "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border px-3.5 py-3 text-left transition active:opacity-70",
                     included ? "border-brand/40 bg-brand-soft/30" : "border-line bg-surface opacity-60",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition",
-                      included ? "border-brand bg-brand text-white" : "border-line-strong",
+                      included ? "border-brand bg-brand text-inverse" : "border-line-strong",
                     )}
                   >
                     {included ? <Check className="size-3.5" strokeWidth={3.5} /> : null}
@@ -234,7 +234,7 @@ export function SettleAcrossSheet({
 
         {/* How -------------------------------------------------------------- */}
         <div className="mt-5">
-          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             How was it paid?
           </p>
           <div className="flex flex-wrap gap-2">
@@ -246,9 +246,9 @@ export function SettleAcrossSheet({
                   setMethod(method === option ? null : option);
                 }}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                  "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   method === option
-                    ? "border-brand bg-brand text-white"
+                    ? "border-brand bg-brand text-inverse"
                     : "border-line bg-surface text-muted",
                 )}
               >
@@ -262,7 +262,7 @@ export function SettleAcrossSheet({
           value={note}
           onChange={(event) => setNote(event.target.value.slice(0, 500))}
           placeholder="Add a note (optional)"
-          className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
         />
       </div>
     </Sheet>

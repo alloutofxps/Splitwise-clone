@@ -18,18 +18,20 @@ import { cn } from "./primitives";
 // ---------------------------------------------------------------------------
 
 /**
- * Lists assemble rather than blink in: each row a beat after the last. Use as
- * `variants` on a `motion.li` with `custom={index}`. framer-motion skips the
- * movement under Reduce Motion on its own.
+ * The redesign's timing (DESIGN-PLAN 1.5): 150ms for small changes, 240ms for
+ * movement, 320ms for sheets, all on one curve that leaves quickly and lands
+ * softly. Motion explains a change, or it doesn't happen.
+ */
+export const EASE = [0.2, 0, 0, 1] as const;
+export const DURATION = { small: 0.15, move: 0.24, sheet: 0.32 } as const;
+
+/**
+ * Lists appear with a short fade, all at once. Rows used to rise in one after
+ * another, which is a load animation, and nothing on load moves any more.
  */
 export const listItem = {
-  hidden: { opacity: 0, y: 14, scale: 0.98 },
-  shown: (index: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { delay: Math.min(index * 0.05, 0.35), type: "spring" as const, stiffness: 260, damping: 24 },
-  }),
+  hidden: { opacity: 0 },
+  shown: () => ({ opacity: 1, transition: { duration: DURATION.small, ease: EASE } }),
 };
 
 // ---------------------------------------------------------------------------
@@ -67,13 +69,7 @@ export function AnimatedAmount({
       motionValue.set(target);
       return;
     }
-    const controls = animate(motionValue, target, {
-      type: "spring",
-      stiffness: 70,
-      damping: 18,
-      mass: 1,
-      restDelta: 0.5,
-    });
+    const controls = animate(motionValue, target, { duration: 0.5, ease: EASE });
     return () => controls.stop();
   }, [target, reduce, motionValue]);
 

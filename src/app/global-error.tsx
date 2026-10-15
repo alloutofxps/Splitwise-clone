@@ -36,7 +36,7 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "2rem",
-          background: "#fafafa",
+          background: "#fafaf8",
           color: "#17161a",
           fontFamily:
             "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
@@ -44,7 +44,7 @@ export default function GlobalError({
       >
         <style>{`
           @media (prefers-color-scheme: dark) {
-            body { background: #111014 !important; color: #f4f3f6 !important; }
+            body { background: #0b0b0a !important; color: #f3f2ee !important; }
             .divvy-muted { color: #a3a1ab !important; }
             .divvy-secondary { background: #26242c !important; color: #f4f3f6 !important; border-color: #37343f !important; }
           }

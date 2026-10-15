@@ -235,7 +235,7 @@ export async function createIdentity(input: NewIdentity): Promise<{ person: Pers
   const person = await prisma.person.create({
     data: {
       displayName: input.displayName.trim().slice(0, 60) || "Someone",
-      avatarColor: input.avatarColor ?? "iris",
+      avatarColor: input.avatarColor ?? "cobalt",
       avatarEmoji: input.avatarEmoji ?? null,
       defaultCurrency: input.defaultCurrency ?? "USD",
       inviteCode: await uniquePersonalCode(),

@@ -159,7 +159,7 @@ export function JoinSheet({
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="go"
-          className="h-14 w-full rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus)]:[box-shadow:var(--highlight),var(--shadow-sm)] px-4 text-center text-title-lg font-bold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-14 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-center text-title-lg font-semibold tracking-[0.02em] text-text outline-none transition placeholder:font-medium placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
         />
 
         <p className="mt-2 text-center text-caption text-subtle">
@@ -168,7 +168,7 @@ export function JoinSheet({
 
         <div className="mt-5">
           {checking ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
+            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
               <Skeleton className="size-11 rounded-[var(--radius-md)]" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-3.5 w-32" />
@@ -180,13 +180,13 @@ export function JoinSheet({
               That code doesn&rsquo;t match anyone. Check it and try again.
             </p>
           ) : preview?.kind === "group" ? (
-            <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
               <div className="flex items-center gap-3">
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-heading">
                   {preview.group.emoji}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-subhead font-bold text-text">
+                  <p className="truncate text-subhead font-semibold text-text">
                     {preview.group.name}
                   </p>
                   <p className="text-caption text-muted">
@@ -219,7 +219,7 @@ export function JoinSheet({
                             setClaimId(claimId === member.id ? null : member.id);
                           }}
                           className={cn(
-                            "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition active:scale-[0.985]",
+                            "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition active:opacity-70",
                             claimId === member.id
                               ? "border-brand bg-brand-soft"
                               : "border-line bg-surface-2",
@@ -255,10 +255,10 @@ export function JoinSheet({
               ) : null}
             </div>
           ) : preview?.kind === "person" ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
+            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
               <Avatar person={preview.person} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-subhead font-bold text-text">
+                <p className="truncate text-subhead font-semibold text-text">
                   {preview.person.displayName}
                 </p>
                 <p className="text-caption text-muted">

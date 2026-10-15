@@ -367,7 +367,7 @@ export function ExpenseComposer({
           <div className="mt-4 flex flex-col items-center rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
             <button
               onClick={() => setPanel("currency")}
-              className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-caption font-bold text-muted transition active:scale-95"
+              className="mb-2 flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-caption font-semibold text-muted transition active:opacity-70"
             >
               {draft.currency}
               <ChevronDown className="size-3" />
@@ -461,15 +461,11 @@ export function ExpenseComposer({
           ) : null}
 
           {/* Description ---------------------------------------------------- */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}
-              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition active:scale-90"
-              style={{
-                background: `color-mix(in oklch, var(--avatar-${category.color}) 16%, transparent)`,
-                color: `var(--avatar-${category.color})`,
-              }}
+              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition active:opacity-70 bg-surface-2 text-text"
             >
               <CategoryGlyph name={category.icon} />
             </button>
@@ -651,7 +647,7 @@ export function ExpenseComposer({
             rows={5}
             autoFocus
             placeholder="Add a note…"
-            className="w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
           />
           <Button
             variant="primary"
@@ -898,7 +894,7 @@ function ScopePicker({
               aria-pressed={on}
               onClick={() => toggleFriend(friend.person.id)}
               className={cn(
-                "flex h-8 items-center gap-1 rounded-full border px-3 text-body font-semibold transition active:scale-95",
+                "flex h-8 items-center gap-1 rounded-full border px-3 text-body font-semibold transition active:opacity-70",
                 on
                   ? "border-transparent bg-brand-soft text-brand-soft-text"
                   : "border-[var(--card-border)] bg-surface text-muted",
@@ -943,7 +939,7 @@ function SummaryTile({
         onClick();
       }}
       className={cn(
-        "flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-md)] border bg-surface px-3 py-2 text-left transition active:scale-[0.985]",
+        "flex min-w-0 flex-col gap-0.5 rounded-[var(--radius-md)] border bg-surface px-3 py-2 text-left transition active:opacity-70",
         warning ? "border-negative/50 bg-negative-soft/40" : "border-line",
       )}
     >
@@ -992,7 +988,7 @@ function Chip({
             },
           })}
       className={cn(
-        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
         active
           ? "border-brand/40 bg-brand-soft text-brand-soft-text"
           : "border-line bg-surface text-muted hover:bg-surface-2",
@@ -1035,7 +1031,7 @@ function SplitPreview({
       className="mt-4 overflow-hidden"
     >
       <div className="rounded-[var(--radius-lg)] bg-surface-2 p-3.5">
-        <p className="mb-2.5 text-tiny font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2.5 text-tiny font-semibold uppercase tracking-[0.06em] text-subtle">
           Who owes what
         </p>
         <ul className="space-y-2">
@@ -1056,7 +1052,7 @@ function SplitPreview({
                 {net !== 0n ? (
                   <span
                     className={cn(
-                      "tabular min-w-[68px] shrink-0 text-right text-caption font-bold",
+                      "tabular min-w-[68px] shrink-0 text-right text-caption font-semibold",
                       net > 0n ? "text-positive-text" : "text-negative-text",
                     )}
                   >

@@ -6,7 +6,7 @@ import { balanceSheetDto, groupBalanceSheet, personDto } from "@/server/read";
 import { requireGroupAccess, requireGroupOwner } from "@/server/access";
 import { recordActivity } from "@/server/write";
 import type { GroupDetailDto } from "@/lib/types";
-import { AVATAR_COLORS } from "@/lib/avatar";
+import { ACCEPTED_COLORS, normalizeColor } from "@/lib/avatar";
 import { defaultSplitProblem, parseDefaultSplit } from "@/lib/default-split";
 
 type Params = { params: Promise<{ id: string }> };
@@ -65,7 +65,7 @@ const updateSchema = z.object({
   name: text(60, "The group name").optional(),
   kind: z.enum(["trip", "home", "couple", "event", "project", "other"]).optional(),
   emoji: z.string().trim().max(8).optional(),
-  color: z.enum(AVATAR_COLORS).optional(),
+  color: z.enum(ACCEPTED_COLORS).transform(normalizeColor).optional(),
   currency: currencyCode.optional(),
   simplifyDebts: z.boolean().optional(),
   archived: z.boolean().optional(),

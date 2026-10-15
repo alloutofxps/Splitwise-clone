@@ -22,9 +22,9 @@ export default function PrivacyPage() {
 
   return (
     <main className="mx-auto w-full max-w-[640px] px-6 py-12 text-body-lg leading-relaxed text-text">
-      <h1 className="text-display-sm font-black tracking-[-0.03em]">Privacy</h1>
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em]">Privacy</h1>
 
-      <h2 className="mt-8 text-title-lg font-bold">What we keep</h2>
+      <h2 className="mt-8 text-title-lg font-semibold">What we keep</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-muted">
         <li>The name, colour and emoji you pick. We don&rsquo;t ask for your email, phone number or a password.</li>
         <li>Your groups, and the expenses, payments, comments and receipt photos that you and the people in them add.</li>
@@ -33,19 +33,19 @@ export default function PrivacyPage() {
         <li>What we need to sign you in: a scrambled copy of your recovery key that can&rsquo;t be turned back into the key, the public part of any passkey, and a list of the devices you&rsquo;re signed in on (browser and phone type only).</li>
       </ul>
 
-      <h2 className="mt-8 text-title-lg font-bold">What we don&rsquo;t do</h2>
+      <h2 className="mt-8 text-title-lg font-semibold">What we don&rsquo;t do</h2>
       <p className="mt-3 text-muted">
         No ads, no tracking, and we never sell or share your data. To convert currencies,
         Divvy looks up exchange rates from a public website. Nothing about you is sent.
       </p>
 
-      <h2 className="mt-8 text-title-lg font-bold">Who can see it</h2>
+      <h2 className="mt-8 text-title-lg font-semibold">Who can see it</h2>
       <p className="mt-3 text-muted">
         Everyone in a group can see everything in that group. An expense between two friends
         can only be seen by those two. Whoever runs Divvy can see the stored data.
       </p>
 
-      <h2 className="mt-8 text-title-lg font-bold">Getting a copy or deleting it</h2>
+      <h2 className="mt-8 text-title-lg font-semibold">Getting a copy or deleting it</h2>
       <p className="mt-3 text-muted">
         Get a copy of everything you can see from <strong>Account → Download a backup</strong>.
         Once you&rsquo;re settled up, you can delete your account from{" "}
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
 
       {contact ? (
         <>
-          <h2 className="mt-8 text-title-lg font-bold">Contact</h2>
+          <h2 className="mt-8 text-title-lg font-semibold">Contact</h2>
           <p className="mt-3 text-muted">{contact}</p>
         </>
       ) : null}

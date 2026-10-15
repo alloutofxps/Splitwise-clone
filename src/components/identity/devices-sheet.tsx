@@ -148,7 +148,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {data && data.passkeys.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-micro font-bold uppercase tracking-wider text-subtle">
+              <h3 className="mb-2 text-micro font-semibold uppercase tracking-wider text-subtle">
                 Passkeys
               </h3>
               <ul className="space-y-2">
@@ -175,7 +175,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {data && data.sessions.length > 0 ? (
             <section>
-              <h3 className="mb-2 text-micro font-bold uppercase tracking-wider text-subtle">
+              <h3 className="mb-2 text-micro font-semibold uppercase tracking-wider text-subtle">
                 Signed in
               </h3>
               <ul className="space-y-2">
@@ -241,7 +241,7 @@ function Row({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3",
+        "flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface p-3",
         dimmed && "opacity-60",
       )}
     >
@@ -259,7 +259,7 @@ function Row({
         }}
         disabled={busy}
         aria-label={`Remove ${title}`}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2 hover:text-negative-text disabled:opacity-40"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2 hover:text-negative-text disabled:opacity-40"
       >
         <Trash2 className="size-[18px]" />
       </button>

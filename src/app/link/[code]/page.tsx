@@ -52,14 +52,14 @@ export default function LinkPage() {
       {state === "working" ? (
         <>
           <Loader2 className="mb-5 size-8 animate-spin text-brand" />
-          <h1 className="text-title font-bold text-text">Signing you in…</h1>
+          <h1 className="text-title font-semibold text-text">Signing you in…</h1>
         </>
       ) : state === "done" ? (
         <>
           <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-positive-soft text-positive-soft-text">
             <Check className="size-7" strokeWidth={3} />
           </span>
-          <h1 className="text-title font-bold text-text">You&rsquo;re signed in</h1>
+          <h1 className="text-title font-semibold text-text">You&rsquo;re signed in</h1>
           <p className="mt-2 text-subhead text-muted">Taking you to your groups…</p>
         </>
       ) : (
@@ -67,7 +67,7 @@ export default function LinkPage() {
           <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-warning-soft text-warning-soft-text">
             <TriangleAlert className="size-7" />
           </span>
-          <h1 className="text-title font-bold text-text">That link didn&rsquo;t work</h1>
+          <h1 className="text-title font-semibold text-text">That link didn&rsquo;t work</h1>
           <p className="mt-2 text-subhead leading-relaxed text-muted">{message}</p>
           <p className="mt-2 text-caption leading-relaxed text-subtle">
             Each code works once and only for five minutes. Open Divvy on your other device and make

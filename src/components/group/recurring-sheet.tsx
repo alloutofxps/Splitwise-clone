@@ -114,7 +114,7 @@ export function RecurringSheet({
                 <li
                   key={recurrence.id}
                   className={cn(
-                    "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5",
+                    "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5",
                     !recurrence.active && "opacity-60",
                   )}
                 >
@@ -153,7 +153,7 @@ export function RecurringSheet({
                       <button
                         onClick={() => void toggle(recurrence.id, !recurrence.active)}
                         aria-label={recurrence.active ? "Pause" : "Resume"}
-                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2"
+                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2"
                       >
                         {recurrence.active ? (
                           <Pause className="size-4" />
@@ -164,7 +164,7 @@ export function RecurringSheet({
                       <button
                         onClick={() => void remove(recurrence.id)}
                         aria-label="Stop repeating"
-                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
+                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -301,7 +301,7 @@ function NewRecurrenceSheet({
           onChange={(event) => setDescription(event.target.value.slice(0, 140))}
           placeholder="Rent"
           autoFocus
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
         />
 
         <div className="mt-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
@@ -313,7 +313,7 @@ function NewRecurrenceSheet({
           />
         </div>
 
-        <p className="mb-2 mt-5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
           How often
         </p>
         <div className="flex flex-wrap gap-2">
@@ -325,9 +325,9 @@ function NewRecurrenceSheet({
                 setFrequency(option);
               }}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                 frequency === option
-                  ? "border-brand bg-brand text-white"
+                  ? "border-brand bg-brand text-inverse"
                   : "border-line bg-surface text-muted",
               )}
             >
@@ -337,7 +337,7 @@ function NewRecurrenceSheet({
         </div>
 
         <label className="mt-5 block">
-          <span className="mb-1.5 block text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <span className="mb-1.5 block text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             Starting
           </span>
           <input
@@ -349,11 +349,11 @@ function NewRecurrenceSheet({
                 setStartDate(new Date(year, month - 1, day, 12));
               }
             }}
-            className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+            className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none focus:ring-[1.5px] focus:ring-text"
           />
         </label>
 
-        <p className="mb-2 mt-5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+        <p className="mb-2 mt-5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
           Paid by
         </p>
         <div className="flex flex-wrap gap-2">
@@ -365,9 +365,9 @@ function NewRecurrenceSheet({
                 setPayerId(member.id);
               }}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                 payerId === member.id
-                  ? "border-brand bg-brand text-white"
+                  ? "border-brand bg-brand text-inverse"
                   : "border-line bg-surface text-muted",
               )}
             >

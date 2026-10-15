@@ -10,6 +10,7 @@ import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { CurrencyPicker } from "../expense/currency-picker";
 import { useCreateGroup, useDashboard } from "@/lib/client/queries";
+import { colorForName } from "@/lib/avatar";
 import { ApiError } from "@/lib/client/api";
 
 /**
@@ -108,7 +109,7 @@ export function NewGroupSheet({
         name: name.trim(),
         kind,
         emoji,
-        color: "iris",
+        color: colorForName(name.trim()),
         currency,
         simplifyDebts: simplify,
         // Fold in a name still sitting in the input, so the user does not lose
@@ -154,7 +155,7 @@ export function NewGroupSheet({
                 setEmoji(next.emoji);
               }}
               aria-label="Change group icon"
-              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-display-sm transition active:scale-90"
+              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-surface-2 text-display-sm transition active:opacity-70"
             >
               {emoji}
             </button>
@@ -165,7 +166,7 @@ export function NewGroupSheet({
               autoFocus
               enterKeyHint="done"
               aria-label="Group name"
-              className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
             />
           </div>
         }
@@ -194,9 +195,9 @@ export function NewGroupSheet({
                   setEmoji(entry.emoji);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   kind === entry.value
-                    ? "border-brand bg-brand text-white"
+                    ? "border-brand bg-brand text-inverse"
                     : "border-line bg-surface text-muted",
                 )}
               >
@@ -208,16 +209,16 @@ export function NewGroupSheet({
 
           <button
             onClick={() => setCurrencyOpen(true)}
-            className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985]"
+            className="mt-5 flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70"
           >
             <span className="text-body-lg font-semibold text-muted">Main currency</span>
-            <span className="text-body-lg font-bold text-text">{currency}</span>
+            <span className="text-body-lg font-semibold text-text">{currency}</span>
           </button>
           <p className="mt-1.5 px-1 text-caption leading-relaxed text-subtle">
             You can add expenses in any currency. Totals are shown in this one.
           </p>
 
-          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+          <div className="mt-4 flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
                 Simplify debts
@@ -248,7 +249,7 @@ export function NewGroupSheet({
                         onClick={() => togglePerson(person.id)}
                         aria-pressed={on}
                         className={cn(
-                          "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-left transition active:scale-[0.985]",
+                          "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-left transition active:opacity-70",
                           on ? "border-brand/40 bg-brand-soft" : "border-line bg-surface",
                         )}
                       >
@@ -276,13 +277,13 @@ export function NewGroupSheet({
                 }}
                 placeholder="Add a name"
                 enterKeyHint="done"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
               />
               <button
                 onClick={addName}
                 disabled={!draftName.trim()}
                 aria-label="Add name"
-                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-muted transition active:scale-90 disabled:opacity-40"
+                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-muted transition active:opacity-70 disabled:opacity-40"
               >
                 <Plus className="size-5" />
               </button>
@@ -297,7 +298,7 @@ export function NewGroupSheet({
                         haptic();
                         setNames((current) => current.filter((item) => item !== entry));
                       }}
-                      className="flex items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-3 pr-2 text-body font-semibold text-text transition active:scale-95"
+                      className="flex items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-3 pr-2 text-body font-semibold text-text transition active:opacity-70"
                     >
                       {entry}
                       <X className="size-3.5 text-subtle" />

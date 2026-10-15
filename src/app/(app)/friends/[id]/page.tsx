@@ -100,11 +100,11 @@ export default function FriendPage() {
             router.back();
           }}
           aria-label="Back"
-          className="flex size-10 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+          className="flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <ChevronLeft className="size-6" />
         </button>
-        <h1 className="min-w-0 flex-1 truncate px-1 text-title font-bold tracking-[-0.02em] text-text">
+        <h1 className="min-w-0 flex-1 truncate px-1 text-title font-semibold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
         <button
@@ -113,14 +113,14 @@ export default function FriendPage() {
             setSettings(true);
           }}
           aria-label="Friend settings"
-          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <Settings2 className="size-5" />
         </button>
       </header>
 
       {/* Balance ---------------------------------------------------------- */}
-      <div className="mt-2 rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-5">
+      <div className="mt-2 rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface p-5">
         <div className="flex items-center gap-4">
           <Avatar person={data.person} size="lg" />
           <div className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ export default function FriendPage() {
               setShowBreakdown(!showBreakdown);
             }}
             aria-expanded={showBreakdown}
-            className="flex w-full items-center gap-1.5 px-1 py-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle"
+            className="flex w-full items-center gap-1.5 px-1 py-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle"
           >
             Made up of {ledgers.length} {ledgers.length === 1 ? "balance" : "balances"}
             <ChevronDown
@@ -220,12 +220,12 @@ export default function FriendPage() {
                     {ledger.groupId ? (
                       <Link
                         href={`/groups/${ledger.groupId}`}
-                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 transition active:scale-[0.985]"
+                        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 transition active:opacity-70"
                       >
                         {body}
                       </Link>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+                      <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
                         {body}
                       </div>
                     )}
@@ -237,7 +237,7 @@ export default function FriendPage() {
         </section>
       ) : data.sharedGroups.length > 0 ? (
         <section className="mt-6">
-          <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+          <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
             Also in
           </h2>
           <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
@@ -245,7 +245,7 @@ export default function FriendPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2 text-body font-semibold text-text transition active:scale-95"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--card-border)] bg-surface px-3 py-2 text-body font-semibold text-text transition active:opacity-70"
               >
                 <span>{group.emoji}</span>
                 <span className="max-w-[140px] truncate">{group.name}</span>
@@ -257,7 +257,7 @@ export default function FriendPage() {
 
       {/* Direct ledger ----------------------------------------------------- */}
       <section className="mt-6">
-        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
           Just between you
         </h2>
 
@@ -333,7 +333,7 @@ export default function FriendPage() {
         <div className="px-5 pb-6">
           {data.sharedGroups.length > 0 ? (
             <>
-              <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+              <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
                 Shared groups
               </p>
               <ul className="space-y-1.5">
@@ -342,7 +342,7 @@ export default function FriendPage() {
                     <Link
                       href={`/groups/${group.id}`}
                       onClick={() => setSettings(false)}
-                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 transition active:scale-[0.985]"
+                      className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 transition active:opacity-70"
                     >
                       <span className="text-input">{group.emoji}</span>
                       <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
@@ -361,7 +361,7 @@ export default function FriendPage() {
             </p>
           )}
 
-          <p className="mb-2 mt-6 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 mt-6 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             Manage
           </p>
           <button
@@ -371,7 +371,7 @@ export default function FriendPage() {
               setRemoving(true);
             }}
             disabled={anythingOutstanding}
-            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] disabled:opacity-50 disabled:active:scale-100"
+            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 disabled:opacity-50"
           >
             <UserMinus className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
             <span className="min-w-0 flex-1">

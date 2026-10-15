@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, Settings2, Share2 } from "lucide-react";
 import { BalanceHeadline } from "@/components/ui/money";
-import { AvatarStack } from "@/components/ui/avatar";
+import { AvatarStack, GroupHues } from "@/components/ui/avatar";
 import { Button, Segmented, Skeleton, haptic } from "@/components/ui/primitives";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
@@ -67,6 +67,7 @@ export default function GroupPage() {
   const meId = dashboard.me.id;
 
   return (
+    <GroupHues members={group.members}>
     <div className="pt-[max(0.5rem,env(safe-area-inset-top))]">
       {/* Header ---------------------------------------------------------- */}
       <header className="-mx-1 flex items-center gap-1 py-2">
@@ -76,13 +77,13 @@ export default function GroupPage() {
             router.back();
           }}
           aria-label="Back"
-          className="flex size-10 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+          className="flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <ChevronLeft className="size-6" />
         </button>
 
         <div className="min-w-0 flex-1 px-1">
-          <h1 className="flex items-center gap-2 truncate text-title font-bold tracking-[-0.02em] text-text">
+          <h1 className="flex items-center gap-2 truncate text-title font-semibold tracking-[-0.02em] text-text">
             <span>{group.emoji}</span>
             <span className="truncate">{group.name}</span>
           </h1>
@@ -94,7 +95,7 @@ export default function GroupPage() {
             setInvite(true);
           }}
           aria-label="Invite people"
-          className="flex size-10 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+          className="flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <Share2 className="size-[19px]" />
         </button>
@@ -104,7 +105,7 @@ export default function GroupPage() {
             setSettings(true);
           }}
           aria-label="Group settings"
-          className="flex size-10 items-center justify-center rounded-full text-muted transition active:scale-90 hover:bg-surface-2"
+          className="flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <Settings2 className="size-[19px]" />
         </button>
@@ -124,7 +125,7 @@ export default function GroupPage() {
               haptic();
               setInvite(true);
             }}
-            className="flex shrink-0 items-center gap-2 rounded-full py-1 pr-1 transition active:scale-95"
+            className="flex shrink-0 items-center gap-2 rounded-full py-1 pr-1 transition active:opacity-70"
           >
             <AvatarStack people={group.members} size="xs" max={4} />
             <span className="whitespace-nowrap text-caption font-semibold text-subtle">
@@ -158,10 +159,10 @@ export default function GroupPage() {
       <AnimatePresence mode="wait">
         <motion.div
           key={tab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6, pointerEvents: "none" }}
-          transition={{ duration: 0.18 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, pointerEvents: "none" }}
+          transition={{ duration: 0.15 }}
           className="mt-4"
         >
           {tab === "expenses" ? (
@@ -208,6 +209,7 @@ export default function GroupPage() {
         initialEdge={settleEdge}
       />
     </div>
+    </GroupHues>
   );
 }
 

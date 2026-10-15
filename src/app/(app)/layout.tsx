@@ -146,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-subhead font-semibold text-white"
+          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-subhead font-semibold text-inverse"
         >
           Try again
         </button>

@@ -136,18 +136,10 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
   };
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
       <div className="flex items-start gap-3">
         <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-          style={
-            category
-              ? {
-                  background: `color-mix(in oklch, var(--avatar-${category.color}) 15%, transparent)`,
-                  color: `var(--avatar-${category.color})`,
-                }
-              : undefined
-          }
+          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text"
         >
           {category ? (
             <CategoryGlyph name={category.icon} />
@@ -169,7 +161,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
           onClick={() => void remove()}
           disabled={setBudget.isPending}
           aria-label="Remove this budget"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative-text disabled:opacity-40"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative-text disabled:opacity-40"
         >
           <Trash2 className="size-4" />
         </button>
@@ -348,9 +340,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
                 active={categoryId === category.id}
                 onClick={() => setCategoryId(categoryId === category.id ? null : category.id)}
               >
-                <span style={{ color: `var(--avatar-${category.color})` }}>
-                  <CategoryGlyph name={category.icon} className="size-3.5" />
-                </span>
+                <CategoryGlyph name={category.icon} className="size-3.5" />
                 {category.name}
               </Chip>
             ))}
@@ -365,7 +355,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
       {children}
     </p>
   );
@@ -404,9 +394,9 @@ function Chip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-white"
+          ? "border-brand bg-brand text-inverse"
           : "border-line bg-surface text-muted hover:text-text",
       )}
     >

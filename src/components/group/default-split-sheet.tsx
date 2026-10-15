@@ -169,7 +169,7 @@ export function DefaultSplitSheet({
                       }
                       onFocus={(event) => event.currentTarget.select()}
                       aria-label={`${mode === "PERCENT" ? "Percent" : "Shares"} for ${member.id === meId ? "you" : member.displayName}`}
-                      className="h-10 w-20 rounded-[var(--radius-sm)] border border-line bg-surface-2 px-2.5 text-right text-input font-bold text-text outline-none focus:border-brand"
+                      className="h-10 w-20 rounded-[var(--radius-sm)] border border-line bg-surface-2 px-2.5 text-right text-input font-semibold text-text outline-none focus:border-brand"
                     />
                     <span className="w-12 text-body font-semibold text-muted">
                       {mode === "PERCENT" ? "%" : number(member.id) === 1 ? "share" : "shares"}

@@ -96,10 +96,10 @@ export function InviteSheet({
     <Sheet open={open} onClose={onClose} title={`Invite to ${group.name}`}>
       <div className="px-5 pb-6">
         <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
-          <p className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
             Invite code
           </p>
-          <p className="mt-2 select-all break-words text-display-sm font-black tracking-[-0.01em] text-text">
+          <p className="mt-2 select-all break-words text-display-sm font-semibold tracking-[-0.01em] text-text">
             {code}
           </p>
           <p className="mt-2 text-caption text-muted">
@@ -147,7 +147,7 @@ export function InviteSheet({
           <button
             onClick={() => void rotate()}
             disabled={rotating}
-            className="mt-2.5 flex items-center gap-1.5 text-caption font-bold text-brand transition active:scale-95 disabled:opacity-50"
+            className="mt-2.5 flex items-center gap-1.5 text-caption font-semibold text-brand transition active:opacity-70 disabled:opacity-50"
           >
             <RefreshCw className={rotating ? "size-3.5 animate-spin" : "size-3.5"} />
             Make a new code

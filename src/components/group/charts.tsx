@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { BarChart3, Table2 } from "lucide-react";
-import { Avatar } from "../ui/avatar";
+import { Avatar, usePersonHue } from "../ui/avatar";
 import { EmptyState, Segmented, Skeleton, cn } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { useGroupStats } from "@/lib/client/queries";
@@ -79,7 +79,7 @@ export function GroupCharts({
           aria-pressed={asTable}
           aria-label={asTable ? "Show charts" : "Show as a table"}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition active:scale-90",
+            "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition active:opacity-70",
             asTable ? "bg-brand-soft text-brand-soft-text" : "bg-surface-2 text-subtle",
           )}
         >
@@ -122,12 +122,12 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3"
+          className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3"
         >
-          <p className="text-micro font-bold uppercase tracking-[0.05em] text-subtle">
+          <p className="text-micro font-semibold uppercase tracking-[0.05em] text-subtle">
             {tile.label}
           </p>
-          <p className="display-number mt-1 truncate text-title font-bold text-text">
+          <p className="display-number mt-1 truncate text-title font-semibold text-text">
             {formatMoney(BigInt(tile.value), stats.currency)}
           </p>
         </div>
@@ -193,7 +193,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
               <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
                 {formatMonth(active.month, true)}
               </span>
-              <span className="tabular text-body font-bold text-text">
+              <span className="tabular text-body font-semibold text-text">
                 {formatMoney(
                   BigInt(lens === "group" ? active.total : active.yourShare),
                   stats.currency,
@@ -205,7 +205,7 @@ function MonthlyChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | "
               <span className="text-micro font-semibold uppercase tracking-wide text-subtle">
                 Peak month
               </span>
-              <span className="tabular text-body font-bold text-text">
+              <span className="tabular text-body font-semibold text-text">
                 {formatMoney(peak, stats.currency)}
               </span>
             </div>
@@ -303,7 +303,7 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
   return (
     <ChartCard title="Where it went" subtitle={`${rows.length} categories`}>
       <ul className="space-y-2.5">
-        {shown.map((row) => {
+        {shown.map((row, rank) => {
           const category = categoryById(row.categoryId);
           const width = Math.max(2, Number((row.value * 100n) / peak));
           const share = total > 0n ? Number((row.value * 1000n) / total) / 10 : 0;
@@ -312,11 +312,7 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
             <li key={row.categoryId}>
               <div className="mb-1 flex items-center gap-2">
                 <span
-                  className="flex size-5 shrink-0 items-center justify-center rounded-[5px]"
-                  style={{
-                    background: `color-mix(in oklch, var(--avatar-${category.color}) 18%, transparent)`,
-                    color: `var(--avatar-${category.color})`,
-                  }}
+                  className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-surface-2 text-text"
                 >
                   <CategoryGlyph name={category.icon} className="size-3" />
                 </span>
@@ -336,7 +332,12 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
               >
                 <div
                   className="h-full rounded-full transition-[width] duration-500"
-                  style={{ width: `${width}%`, background: "var(--chart-bar)" }}
+                  // Categories are ink, a step lighter for each rank down:
+                  // colour is kept for people and money.
+                  style={{
+                    width: `${width}%`,
+                    background: `color-mix(in oklch, var(--chart-bar) ${Math.max(30, 100 - rank * 10)}%, transparent)`,
+                  }}
                 />
               </div>
             </li>
@@ -415,7 +416,7 @@ function PersonChart({
                 </span>
                 <span
                   className={cn(
-                    "tabular shrink-0 text-caption font-bold",
+                    "tabular shrink-0 text-caption font-semibold",
                     row.net === 0n
                       ? "text-subtle"
                       : positive
@@ -440,13 +441,12 @@ function PersonChart({
                   style={{ background: "var(--chart-grid)" }}
                 />
                 {row.net !== 0n ? (
-                  <div
-                    className="absolute inset-y-0 rounded-full transition-[width] duration-500"
+                  // In the person's own colour: up to the right of the line,
+                  // down to the left.
+                  <PersonBar
+                    person={row.person!}
                     style={{
                       width: `${Math.max(1.5, width)}%`,
-                      background: positive
-                        ? "var(--chart-positive)"
-                        : "var(--chart-negative)",
                       left: positive ? "50%" : undefined,
                       right: positive ? undefined : "50%",
                     }}
@@ -544,11 +544,11 @@ function TableCard({
   rows: string[][];
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface">
       {/* The table scrolls inside its own box; the page never scrolls sideways. */}
       <div className="scroll-area overflow-x-auto">
         <table className="w-full text-left text-body">
-          <caption className="px-4 pb-2 pt-3.5 text-left text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <caption className="px-4 pb-2 pt-3.5 text-left text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             {caption}
           </caption>
           <thead>
@@ -558,7 +558,7 @@ function TableCard({
                   key={cell}
                   scope="col"
                   className={cn(
-                    "whitespace-nowrap px-4 py-2 text-tiny font-bold uppercase tracking-wide text-subtle",
+                    "whitespace-nowrap px-4 py-2 text-tiny font-semibold uppercase tracking-wide text-subtle",
                     index > 0 && "text-right",
                   )}
                 >
@@ -604,8 +604,8 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
-      <h3 className="text-body-lg font-bold tracking-[-0.01em] text-text">{title}</h3>
+    <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
+      <h3 className="text-body-lg font-semibold tracking-[-0.01em] text-text">{title}</h3>
       {subtitle ? (
         <p className="mb-3.5 mt-0.5 text-caption leading-snug text-muted">{subtitle}</p>
       ) : (
@@ -622,4 +622,14 @@ function formatMonth(month: string, long = false): string {
   return long
     ? date.toLocaleDateString(undefined, { month: "long", year: "numeric" })
     : date.toLocaleDateString(undefined, { month: "short" });
+}
+
+function PersonBar({ person, style }: { person: PersonDto; style: React.CSSProperties }) {
+  const hue = usePersonHue(person);
+  return (
+    <div
+      className="absolute inset-y-0 rounded-full transition-[width] duration-500"
+      style={{ ...style, background: hue }}
+    />
+  );
 }

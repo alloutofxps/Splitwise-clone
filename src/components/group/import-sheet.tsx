@@ -167,7 +167,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 "Save the file, then choose it here.",
               ].map((step, i) => (
                 <li key={step} className="flex items-start gap-3">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-caption font-bold text-brand-soft-text">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-caption font-semibold text-brand-soft-text">
                     {i + 1}
                   </span>
                   <span className="pt-0.5 text-body-lg text-text">{step}</span>
@@ -201,7 +201,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value.slice(0, 60))}
-                className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input font-semibold text-text outline-none focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none focus:ring-[1.5px] focus:ring-text"
               />
             </label>
 
@@ -238,14 +238,14 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                       setMeIndex(index);
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-[var(--radius-md)] border px-3.5 py-3 text-left text-body-lg font-semibold transition active:scale-[0.99]",
+                      "flex w-full items-center justify-between rounded-[var(--radius-md)] border px-3.5 py-3 text-left text-body-lg font-semibold transition active:opacity-70",
                       meIndex === index
                         ? "border-brand bg-brand-soft text-brand-soft-text"
                         : "border-[var(--card-border)] bg-surface text-text",
                     )}
                   >
                     {person}
-                    {meIndex === index ? <span className="text-caption font-bold">You</span> : null}
+                    {meIndex === index ? <span className="text-caption font-semibold">You</span> : null}
                   </button>
                 </li>
               ))}

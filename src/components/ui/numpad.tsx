@@ -79,7 +79,7 @@ export function AmountPad({
   return (
     <div className={cn("select-none", className)}>
       <div className="flex items-baseline justify-center gap-1.5 px-2 py-1">
-        <span className="display-number shrink-0 font-display text-display font-bold text-subtle">
+        <span className="display-number shrink-0 font-display text-display font-semibold text-subtle">
           {symbol}
         </span>
         <input
@@ -101,13 +101,19 @@ export function AmountPad({
             if (event.key === "Enter") onSubmit?.();
           }}
           style={{ width: `${Math.max(1, (text || "0").length)}ch` }}
-          className="display-number min-w-0 bg-transparent text-center font-display text-hero font-extrabold leading-none tracking-[-0.04em] text-text outline-none placeholder:text-subtle/60"
+          className="display-number min-w-0 bg-transparent text-center font-display text-hero font-semibold leading-none tracking-[-0.04em] text-text outline-none placeholder:text-subtle/60"
           aria-label="Amount"
         />
       </div>
 
       {open ? (
-        <div className="mt-4 grid grid-cols-3 gap-1.5" role="group" aria-label="Amount keypad">
+        // A calculator grid: hairlines between the keys rather than twelve
+        // floating buttons, so the pad is a compact block under the amount.
+        <div
+          className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
+          role="group"
+          aria-label="Amount keypad"
+        >
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((key) => (
             <Key key={key} onPress={() => press(key)}>
               {key}
@@ -136,7 +142,7 @@ export function AmountPad({
               haptic();
               setOpen(false);
             }}
-            className="col-span-3 mt-1 flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-body-lg font-bold text-brand transition active:scale-[0.98]"
+            className="col-span-3 flex h-11 items-center justify-center gap-1.5 bg-surface text-body font-semibold text-text transition-colors active:bg-surface-2"
           >
             <Check className="size-4" />
             Done
@@ -167,10 +173,9 @@ function Key({
       disabled={disabled}
       aria-label={label}
       className={cn(
-        "display-number flex h-12 items-center justify-center rounded-[16px] bg-surface font-display text-title-lg font-semibold text-text",
-        // Keys that feel pressed: a lit top edge and a springy squash on tap.
-        "border border-[var(--card-border)] [box-shadow:var(--highlight),var(--shadow-sm)] transition duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-90 active:bg-surface-3 active:[box-shadow:none]",
-        "disabled:opacity-30 disabled:active:scale-100",
+        "display-number flex h-[46px] items-center justify-center bg-surface text-title font-medium text-text",
+        "transition-colors duration-150 active:bg-surface-2",
+        "disabled:text-subtle/50",
       )}
     >
       {children}

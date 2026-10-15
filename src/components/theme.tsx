@@ -71,7 +71,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Keep the browser chrome in step with the app on Android, where the
     // address bar is painted with theme-color.
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", dark ? "#111014" : "#fafafa");
+    if (meta) meta.setAttribute("content", dark ? "#0b0b0a" : "#fafaf8");
   }, [resolved]);
 
   const setTheme = React.useCallback((next: Theme) => {

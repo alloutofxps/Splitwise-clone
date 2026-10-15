@@ -77,7 +77,7 @@ export const DELETE = route(async () => {
       data: {
         displayName: "Deleted user",
         avatarEmoji: null,
-        avatarColor: "iris",
+        avatarColor: "sand",
         // A fresh, unredeemable handle: the old personal code must stop
         // resolving to anyone.
         inviteCode: `deleted-${generateGhostCode().slice("ghost-".length)}`,

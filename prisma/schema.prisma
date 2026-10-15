@@ -27,7 +27,7 @@ datasource db {
 model Person {
   id              String  @id @default(cuid())
   displayName     String
-  avatarColor     String  @default("iris")
+  avatarColor     String  @default("iris") // legacy default; the app always sets one (see lib/avatar.ts)
   avatarEmoji     String?
   defaultCurrency String  @default("USD")
 
@@ -245,7 +245,7 @@ model Group {
   /// trip | home | couple | event | project | other
   kind     String @default("other")
   emoji    String @default("🧾")
-  color    String @default("iris")
+  color    String @default("iris") // legacy default; the app always sets one
   currency String @default("USD")
 
   /// When true, balances are collapsed with a min-cash-flow pass so the group
