@@ -10,5 +10,7 @@ prisma/dev.db*
 .env.*
 npm-debug.log*
 scripts/*.mjs
+# ...except the build step that copies the receipt reader into public/ocr.
+!scripts/copy-ocr-assets.mjs
 coverage
 .DS_Store
