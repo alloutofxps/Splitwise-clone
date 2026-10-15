@@ -97,6 +97,46 @@ self.addEventListener("message", (event) => {
   if (event.data === "skip-waiting") self.skipWaiting();
 });
 
+// Phone notifications (see src/server/push.ts). The server sends
+// { title, body, url, tag }; anything unreadable still shows something,
+// because a push that shows nothing is treated by browsers as abuse.
+self.addEventListener("push", (event) => {
+  let message = { title: "Divvy", body: "Something changed in one of your groups.", url: "/activity", tag: "divvy" };
+  try {
+    if (event.data) message = { ...message, ...event.data.json() };
+  } catch {
+    // Keep the fallback text.
+  }
+  event.waitUntil(
+    self.registration.showNotification(message.title, {
+      body: message.body,
+      tag: message.tag,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: message.url },
+    }),
+  );
+});
+
+// Tapping a notification opens the group it is about, reusing an open window.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if ("focus" in client) {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(target).catch(() => {});
+          return;
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);

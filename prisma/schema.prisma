@@ -70,8 +70,32 @@ model Person {
   credentials        Credential[]
   deviceLinks        DeviceLink[]
   sessions           Session[]
+  pushSubscriptions  PushSubscription[]
 
   @@index([inviteCode])
+}
+
+/// One phone or browser that has agreed to show notifications.
+///
+/// The three strings are what the browser's push service hands over when
+/// someone turns notifications on; together they address that one device.
+/// Tied to the sign-in it was made under, so signing out of a phone - or
+/// removing it from Your devices - also stops it receiving your updates.
+model PushSubscription {
+  id        String @id @default(cuid())
+  personId  String
+  sessionId String
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+
+  createdAt DateTime @default(now())
+
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([sessionId])
 }
 
 /// One signed-in device.
@@ -95,6 +119,8 @@ model Session {
 
   createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
+
+  pushSubscriptions PushSubscription[]
 
   @@index([personId])
   @@index([lastSeenAt])
@@ -512,7 +538,10 @@ model Activity {
   /// after the underlying record is edited or deleted.
   data String @default("{}")
 
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  /// When notifications for this entry were sent (or judged unnecessary).
+  /// Null means the push job has not looked at it yet.
+  notifiedAt DateTime?
 
   group      Group?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
   actor      Person      @relation("ActivityActor", fields: [actorPersonId], references: [id], onDelete: Cascade)
@@ -524,6 +553,7 @@ model Activity {
   @@index([createdAt])
   @@index([targetPersonId, createdAt])
   @@index([actorPersonId])
+  @@index([notifiedAt, createdAt])
 }
 
 // ---------------------------------------------------------------------------

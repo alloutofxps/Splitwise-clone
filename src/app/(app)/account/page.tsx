@@ -10,6 +10,7 @@ import {
   Database,
   Download,
   EyeOff,
+  Bell,
   Heart,
   KeyRound,
   LogOut,
@@ -40,6 +41,7 @@ import { api, ApiError } from "@/lib/client/api";
 import { pending } from "@/lib/client/outbox";
 import { wipeLocalData } from "@/lib/client/wipe";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
+import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
 import { AVATAR_COLORS, initials } from "@/lib/avatar";
@@ -103,6 +105,9 @@ export default function AccountPage() {
     }
 
     try {
+      // Stop this phone getting the account's notifications. The server drops
+      // the subscription with the session too; this also tells the browser.
+      await disablePush().catch(() => {});
       await api.del("/api/identity");
     } catch (error) {
       toast({
@@ -298,6 +303,8 @@ export default function AccountPage() {
             label="Hide balances when you switch apps"
           />
         </div>
+
+        <NotificationsRow />
 
         <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Appearance</p>
@@ -825,5 +832,84 @@ function PaymentMethodsSheet({
         </div>
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * Phone notifications, per device: the switch reflects whether this browser
+ * is subscribed, not a setting on the account.
+ */
+function NotificationsRow() {
+  const toast = useToast();
+  const [support, setSupport] = React.useState<PushSupport | null>(null);
+  const [on, setOn] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    const s = pushSupport();
+    void (async () => {
+      const enabled = s === "ready" ? await pushEnabled().catch(() => false) : false;
+      if (!alive) return;
+      setSupport(s);
+      setOn(enabled);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (support === null || support === "unsupported") return null;
+
+  const toggle = async (next: boolean) => {
+    setBusy(true);
+    try {
+      if (next) {
+        const result = await enablePush();
+        if (result === "on") {
+          setOn(true);
+          toast({ tone: "success", title: "Notifications are on" });
+        } else if (result === "denied") {
+          setSupport(pushSupport());
+          toast({ tone: "info", title: "Notifications are blocked", description: "Allow them for Divvy in your phone's settings, then try again." });
+        } else {
+          toast({ tone: "info", title: "Notifications aren't available here yet" });
+        }
+      } else {
+        await disablePush();
+        setOn(false);
+      }
+    } catch (error) {
+      toast({ tone: "error", title: "Couldn't change that", description: error instanceof ApiError ? error.message : undefined });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+      <span className="shrink-0 text-muted">
+        <Bell className="size-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-body-lg font-semibold text-text">Notifications</span>
+        <span className="mt-0.5 block text-caption leading-snug text-subtle">
+          {support === "install"
+            ? "To get notifications on iPhone, add Divvy to your home screen first."
+            : support === "blocked"
+              ? "Notifications are blocked for Divvy. You can allow them in your phone's settings."
+              : "Get a message on this phone when someone adds an expense with you, pays you, or sends a reminder."}
+        </span>
+      </span>
+      {support === "ready" ? (
+        <Switch
+          checked={on}
+          onChange={(next) => {
+            if (!busy) void toggle(next);
+          }}
+          label="Notifications on this phone"
+        />
+      ) : null}
+    </div>
   );
 }
