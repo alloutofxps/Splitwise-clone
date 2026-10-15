@@ -45,7 +45,7 @@ import { useClientValue, useMirror, useResetOnClose } from "@/components/ui/stat
 import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
 import { storageStatus, type StorageStatus } from "@/lib/client/persistence";
 import { PAYMENT_KINDS } from "@/lib/payments";
-import { AVATAR_COLORS, initials } from "@/lib/avatar";
+import { AVATAR_COLORS, hueVar, initials } from "@/lib/avatar";
 import type { PaymentMethodDto } from "@/lib/types";
 
 export default function AccountPage() {
@@ -146,10 +146,10 @@ export default function AccountPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Account</h1>
+      <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Account</h1>
 
       {/* Profile ----------------------------------------------------------- */}
-      <section className="rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-5">
+      <section className="rounded-[var(--radius-xl)] border border-[var(--card-border)] bg-surface p-5">
         <div className="flex items-center gap-4">
           {/*
             The avatar is the obvious thing to tap to change how you look, so
@@ -162,7 +162,7 @@ export default function AccountPage() {
               setEmojiOpen(true);
             }}
             aria-label="Change your emoji"
-            className="shrink-0 rounded-full transition active:scale-90"
+            className="shrink-0 rounded-full transition active:opacity-70"
           >
             <Avatar person={me} size="lg" />
           </button>
@@ -180,7 +180,7 @@ export default function AccountPage() {
               }}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
               aria-label="Your name"
-              className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-bold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+              className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
             />
             <p className="mt-0.5 text-body text-subtle">
               Member since{" "}
@@ -202,11 +202,11 @@ export default function AccountPage() {
             haptic();
             setEmojiOpen(true);
           }}
-          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-2.5 text-left transition active:scale-[0.985]"
+          className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-2.5 text-left transition active:opacity-70"
         >
           <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-body-lg font-bold text-white"
-            style={{ background: `var(--avatar-${me.avatarColor})` }}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-body-lg font-semibold text-[var(--on-person)]"
+            style={{ background: hueVar(me.avatarColor) }}
           >
             {me.avatarEmoji ?? initials(me.displayName)}
           </span>
@@ -234,10 +234,10 @@ export default function AccountPage() {
               }}
               aria-label={`Use the ${color} avatar colour`}
               className={cn(
-                "aspect-square w-full max-w-9 rounded-full [box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),var(--shadow-sm)] transition active:scale-90",
+                "aspect-square w-full max-w-9 rounded-full [box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),var(--shadow-sm)] transition active:opacity-70",
                 me.avatarColor === color && "outline-2 outline-offset-2 outline-brand outline-solid",
               )}
-              style={{ background: `var(--avatar-${color})` }}
+              style={{ background: hueVar(color) }}
             />
           ))}
         </div>
@@ -245,7 +245,7 @@ export default function AccountPage() {
 
       {/* Preferences -------------------------------------------------------- */}
       <section className="mt-5">
-        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
           Preferences
         </h2>
 
@@ -284,7 +284,7 @@ export default function AccountPage() {
           />
         </div>
 
-        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+        <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
           <span className="shrink-0 text-muted">
             <EyeOff className="size-[18px]" />
           </span>
@@ -304,7 +304,7 @@ export default function AccountPage() {
 
         <NotificationsRow />
 
-        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
+        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Appearance</p>
           <Segmented
             value={theme}
@@ -320,7 +320,7 @@ export default function AccountPage() {
 
       {/* Data --------------------------------------------------------------- */}
       <section className="mt-5">
-        <h2 className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+        <h2 className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
           Your data
         </h2>
         <div className="space-y-1.5">
@@ -504,7 +504,7 @@ function StorageRow() {
   if (!status?.supported) return null;
 
   return (
-    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+    <div className="mt-1.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
       <span className="shrink-0 pt-0.5 text-muted">
         <Database className="size-[18px]" />
       </span>
@@ -550,7 +550,7 @@ function Row({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+      className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:bg-surface-2"
     >
       <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
         {icon}
@@ -752,7 +752,7 @@ function PaymentMethodsSheet({
               return (
                 <li
                   key={method.id}
-                  className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2.5"
                 >
                   <span className="text-title">{entry?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
@@ -766,7 +766,7 @@ function PaymentMethodsSheet({
                   <button
                     onClick={() => void remove(method.id)}
                     aria-label={`Remove ${entry?.label ?? method.kind}`}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
                   >
                     <X className="size-4" />
                   </button>
@@ -776,7 +776,7 @@ function PaymentMethodsSheet({
           </ul>
         ) : null}
 
-        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
+        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Add a way to pay</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
@@ -789,9 +789,9 @@ function PaymentMethodsSheet({
                   setKind(entry.value);
                 }}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   kind === entry.value
-                    ? "border-brand bg-brand text-white"
+                    ? "border-brand bg-brand text-inverse"
                     : "border-line bg-surface-2 text-muted",
                 )}
               >
@@ -810,13 +810,13 @@ function PaymentMethodsSheet({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
             />
             <button
               onClick={() => void add()}
               disabled={!value.trim() || busy}
               aria-label="Add payment method"
-              className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-white transition active:scale-90 disabled:opacity-40"
+              className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-inverse transition active:opacity-70 disabled:opacity-40"
             >
               <Plus className="size-5" />
             </button>
@@ -883,7 +883,7 @@ function NotificationsRow() {
   };
 
   return (
-    <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3">
+    <div className="mt-1.5 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3">
       <span className="shrink-0 text-muted">
         <Bell className="size-[18px]" />
       </span>

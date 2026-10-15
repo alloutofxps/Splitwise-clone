@@ -3,7 +3,6 @@
 import * as React from "react";
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
-import { Loader2 } from "lucide-react";
 import { TEXT_SCALE } from "@/lib/type-scale";
 
 /**
@@ -15,7 +14,7 @@ import { TEXT_SCALE } from "@/lib/type-scale";
  * "text-positive-text")` dropped the font size and kept the colour, silently,
  * on every element that sets both. That is most of the balances in the app: the
  * home headline rendered at the inherited 16px while its class list still
- * carried the `font-bold leading-none` from the same branch, which is what made
+ * carried the `font-semibold leading-none` from the same branch, which is what made
  * it look like a styling bug rather than a merge bug.
  *
  * Declaring the group fixes it at the root instead of at forty call sites. The
@@ -69,19 +68,19 @@ const VARIANTS: Record<ButtonVariant, string> = {
   // One solid colour, no gradient and no glow: it is the one thing on a
   // screen meant to be pressed, and it doesn't need to shout about it.
   primary:
-    "bg-brand text-white hover:bg-brand-hover active:bg-brand-hover disabled:opacity-50",
+    "bg-brand text-inverse hover:bg-brand-hover active:bg-brand-hover disabled:opacity-50",
   secondary:
-    "surface-card text-text hover:bg-surface-2 active:bg-surface-3",
+    "border border-line bg-surface text-text hover:bg-surface-2 active:bg-surface-2",
   outline: "border border-line-strong text-text hover:bg-surface-2 active:bg-surface-2",
-  ghost: "text-muted hover:bg-surface-2 hover:text-text active:bg-surface-3",
-  danger: "bg-negative text-white hover:opacity-90 active:opacity-90",
-  positive: "bg-positive text-white hover:opacity-90 active:opacity-90",
+  ghost: "text-text hover:bg-surface-2 active:bg-surface-2",
+  danger: "bg-danger text-inverse hover:opacity-90 active:opacity-90",
+  positive: "bg-positive text-inverse hover:opacity-90 active:opacity-90",
 };
 
 const SIZES: Record<ButtonSize, string> = {
   sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)]",
-  md: "h-11 px-4 text-subhead gap-2 rounded-full",
-  lg: "h-14 px-6 text-input gap-2 rounded-full",
+  md: "h-11 px-4 text-subhead gap-2 rounded-[var(--radius-md)]",
+  lg: "h-[52px] px-6 text-subhead gap-2 rounded-[var(--radius-lg)]",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -118,10 +117,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         className={cn(
           "relative inline-flex select-none items-center justify-center font-semibold",
-          "transition-[background-color,color,opacity,transform,filter] duration-150",
-          // A press that visibly compresses reads as a physical button. Scaled
-          // rather than translated so it works at any size.
-          "active:scale-[0.975] disabled:pointer-events-none disabled:opacity-55",
+          "overflow-hidden transition-[background-color,color,opacity] duration-150",
+          "disabled:pointer-events-none",
+          !loading && "disabled:opacity-50",
           VARIANTS[variant],
           SIZES[size],
           fullWidth && "w-full",
@@ -129,12 +127,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading ? (
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-        ) : (
-          icon
-        )}
+        {icon}
         {children}
+        {/* Working: a thin line runs along the bottom edge, rather than a
+            spinner replacing the label you just pressed. */}
+        {loading ? (
+          <span aria-hidden className="divvy-progress absolute inset-x-0 bottom-0 h-[2px]" />
+        ) : null}
       </button>
     );
   },
@@ -163,7 +162,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         }}
         className={cn(
           "inline-flex shrink-0 items-center justify-center rounded-full transition",
-          "active:scale-90 disabled:opacity-40 disabled:pointer-events-none",
+          "active:opacity-70 disabled:opacity-40 disabled:pointer-events-none",
           // 44px is the smallest reliable touch target on a phone; the visual
           // circle can be smaller than the tappable area.
           size === "md" ? "size-11" : "size-9",
@@ -192,7 +191,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)]",
+        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface",
         className,
       )}
       {...props}
@@ -216,7 +215,7 @@ export const PressableCard = React.forwardRef<
       }}
       className={cn(
         "block w-full text-left transition duration-150",
-        "active:scale-[0.985] active:bg-surface-2",
+        "active:opacity-70 active:bg-surface-2",
         className,
       )}
       {...props}
@@ -265,19 +264,15 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className={cn(
-        "relative grid gap-1 rounded-full bg-surface-2 p-1",
-        className,
-      )}
+      className={cn("relative grid border-b border-line", className)}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-1 rounded-full bg-surface transition-transform duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] [box-shadow:var(--highlight),var(--shadow-md)]"
+        className="pointer-events-none absolute -bottom-px left-0 h-[2px] bg-text transition-transform duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)]"
         style={{
-          width: `calc((100% - 0.5rem - ${(options.length - 1) * 0.25}rem) / ${options.length})`,
-          transform: `translateX(calc(${index} * (100% + 0.25rem)))`,
-          left: "0.25rem",
+          width: `calc(100% / ${options.length})`,
+          transform: `translateX(${index * 100}%)`,
         }}
       />
       {options.map((option) => (
@@ -290,8 +285,8 @@ export function Segmented<T extends string>({
             onChange(option.value);
           }}
           className={cn(
-            "relative z-10 rounded-[var(--radius-sm)] font-semibold transition-colors duration-200",
-            size === "md" ? "h-9 text-body" : "h-8 text-caption",
+            "relative font-medium transition-colors duration-150",
+            size === "md" ? "h-11 text-body" : "h-9 text-caption",
             option.value === value ? "text-text" : "text-subtle hover:text-muted",
           )}
         >
@@ -335,7 +330,8 @@ export function Switch({
     >
       <span
         className={cn(
-          "absolute left-0 top-[3px] size-6 rounded-full bg-white shadow-card",
+          "absolute left-0 top-[3px] size-6 rounded-full",
+          checked ? "bg-inverse" : "bg-white dark:bg-muted",
           "transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
           checked ? "translate-x-[23px]" : "translate-x-[3px]",
         )}
@@ -352,13 +348,29 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("shimmer rounded-[var(--radius-sm)]", className)} />;
 }
 
+/**
+ * The small drawing on an empty screen: three people, two lines between them.
+ * The app's one picture, in the same language as the flow map.
+ */
+export function FlowDoodle({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 96 40" className={cn("h-10 w-24", className)} aria-hidden="true">
+      <path d="M 18 26 Q 33 6 48 20" fill="none" stroke="var(--person-azure)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M 48 20 Q 63 34 78 14" fill="none" stroke="var(--person-coral)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="14" cy="27" r="6" fill="var(--person-azure)" />
+      <circle cx="48" cy="20" r="6" fill="var(--person-teal)" />
+      <circle cx="82" cy="13" r="6" fill="var(--person-coral)" />
+    </svg>
+  );
+}
+
 export function EmptyState({
-  icon,
   title,
   description,
   action,
   className,
 }: {
+  /** No longer drawn: every empty state shows the same small flow drawing. */
   icon?: React.ReactNode;
   title: string;
   description?: string;
@@ -372,14 +384,10 @@ export function EmptyState({
         className,
       )}
     >
-      {icon ? (
-        <span className="mb-5 flex size-14 items-center justify-center rounded-[16px] bg-surface-2 text-muted">
-          {icon}
-        </span>
-      ) : null}
-      <p className="font-display text-title-lg font-bold tracking-[-0.02em] text-text">{title}</p>
+      <FlowDoodle className="mb-5" />
+      <p className="text-title font-semibold tracking-[-0.01em] text-text">{title}</p>
       {description ? (
-        <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[34ch] text-body leading-relaxed text-muted">
           {description}
         </p>
       ) : null}
@@ -435,7 +443,7 @@ export function SectionHeader({
     // A headline, not a form label: the display face, sentence case, with the
     // weight to anchor the list beneath it.
     <div className={cn("flex items-end justify-between px-1 pb-3", className)}>
-      <h2 className="font-display text-title-lg font-bold tracking-[-0.02em] text-text">
+      <h2 className="font-display text-title-lg font-semibold tracking-[-0.02em] text-text">
         {title}
       </h2>
       {action}

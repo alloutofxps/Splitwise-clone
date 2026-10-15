@@ -8,6 +8,7 @@ import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "luci
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
+import { AppMark } from "./app-mark";
 
 /**
  * The frame every screen sits in.
@@ -39,7 +40,7 @@ export function AppShell({
     { href: "/", label: "Home", icon: Home },
     { href: "/friends", label: "Friends", icon: Users },
     { href: "/activity", label: "Activity", icon: Activity, badge: data?.unreadActivityCount },
-    { href: "/account", label: "Account", icon: User },
+    { href: "/account", label: "You", icon: User },
   ];
 
   return (
@@ -57,9 +58,9 @@ export function AppShell({
         >
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
           >
             {children}
           </motion.div>
@@ -111,7 +112,7 @@ function TabBar({
               onAddExpense();
             }}
             aria-label="Add an expense"
-            className="flex size-12 items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-hover active:scale-95"
+            className="flex size-12 items-center justify-center rounded-full bg-brand text-inverse transition hover:bg-brand-hover active:opacity-70"
           >
             <Plus className="size-6" strokeWidth={2.4} />
           </button>
@@ -133,37 +134,16 @@ function TabLink({ destination, active }: { destination: Destination; active: bo
       href={destination.href}
       onClick={() => haptic()}
       aria-current={active ? "page" : undefined}
-      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 transition active:scale-90"
+      className={cn(
+        "relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors duration-150",
+        active ? "text-text" : "text-subtle hover:text-muted",
+      )}
     >
-      {active ? (
-        <motion.span
-          layoutId="tab-pill"
-          className="absolute inset-x-1 inset-y-1.5 rounded-[20px] bg-brand-soft"
-          transition={{ type: "spring", stiffness: 480, damping: 36 }}
-        />
-      ) : null}
       <span className="relative">
-        <motion.span
-          className="flex"
-          animate={active ? { y: -1, scale: 1.08 } : { y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 500, damping: 22 }}
-        >
-          <Icon
-            className={cn(
-              "size-[22px] transition-colors duration-200",
-              active ? "text-brand-soft-text" : "text-subtle",
-            )}
-            strokeWidth={active ? 2.4 : 2}
-          />
-        </motion.span>
+        <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.75} />
         {destination.badge ? <Dot count={destination.badge} /> : null}
       </span>
-      <span
-        className={cn(
-          "relative text-micro font-semibold transition-colors duration-200",
-          active ? "text-brand-soft-text" : "text-subtle",
-        )}
-      >
+      <span className={cn("text-micro", active ? "font-semibold" : "font-medium")}>
         {destination.label}
       </span>
     </Link>
@@ -172,7 +152,7 @@ function TabLink({ destination, active }: { destination: Destination; active: bo
 
 function Dot({ count }: { count: number }) {
   return (
-    <span className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-negative px-1 text-micro font-bold leading-[16px] text-white ring-2 ring-surface">
+    <span className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-text px-1 text-micro font-semibold leading-[16px] text-inverse ring-2 ring-surface">
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -197,7 +177,7 @@ function Sidebar({
 
       <button
         onClick={onAddExpense}
-        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-white shadow-card transition hover:bg-brand-hover active:scale-[0.98]"
+        className="mb-6 flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-inverse transition-colors hover:bg-brand-hover"
       >
         <Plus className="size-[18px]" strokeWidth={2.6} />
         Add expense
@@ -213,21 +193,14 @@ function Sidebar({
               href={destination.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-semibold transition",
-                active ? "text-brand" : "text-muted hover:bg-surface-2 hover:text-text",
+                "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-medium transition-colors",
+                active ? "bg-surface-2 text-text" : "text-muted hover:bg-surface-2 hover:text-text",
               )}
             >
-              {active ? (
-                <motion.span
-                  layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-[var(--radius-md)] bg-brand-soft"
-                  transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                />
-              ) : null}
-              <Icon className="relative size-[18px]" strokeWidth={active ? 2.4 : 2} />
+              <Icon className="relative size-[18px]" strokeWidth={1.75} />
               <span className="relative">{destination.label}</span>
               {destination.badge ? (
-                <span className="relative ml-auto rounded-full bg-negative px-1.5 text-micro font-bold leading-4 text-white">
+                <span className="relative ml-auto rounded-full bg-text px-1.5 text-micro font-semibold leading-4 text-inverse">
                   {destination.badge > 9 ? "9+" : destination.badge}
                 </span>
               ) : null}
@@ -238,13 +211,13 @@ function Sidebar({
         <Link
           href="/search"
           className={cn(
-            "flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-semibold transition",
+            "flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-medium transition-colors",
             pathname.startsWith("/search")
-              ? "bg-brand-soft text-brand"
+              ? "bg-surface-2 text-text"
               : "text-muted hover:bg-surface-2 hover:text-text",
           )}
         >
-          <Search className="size-[18px]" />
+          <Search className="size-[18px]" strokeWidth={1.75} />
           Search
         </Link>
       </nav>
@@ -261,10 +234,8 @@ function Sidebar({
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2", className)}>
-      <span className="flex size-8 items-center justify-center rounded-[10px] bg-brand font-display text-subhead font-extrabold text-white">
-        D
-      </span>
-      <span className="font-display text-title-lg font-extrabold tracking-[-0.03em] text-text">Divvy</span>
+      <AppMark />
+      <span className="text-title-lg font-semibold tracking-[-0.03em] text-text">Divvy</span>
     </span>
   );
 }

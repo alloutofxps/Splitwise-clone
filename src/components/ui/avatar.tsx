@@ -2,8 +2,33 @@
 
 import * as React from "react";
 import { cn } from "./primitives";
-import { initials } from "@/lib/avatar";
+import { hueVar, initials, resolveHues, type AvatarColor } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
+
+/**
+ * Hues for the people on screen, when two of them chose the same one. A group
+ * screen wraps itself in this so nobody in the group shares a colour; outside
+ * a group, everyone simply shows their own.
+ */
+const HueContext = React.createContext<Map<string, AvatarColor> | null>(null);
+
+export function GroupHues({
+  members,
+  children,
+}: {
+  members: { id: string; avatarColor: string }[];
+  children: React.ReactNode;
+}) {
+  const hues = React.useMemo(() => resolveHues(members), [members]);
+  return <HueContext.Provider value={hues}>{children}</HueContext.Provider>;
+}
+
+/** The colour to draw a person in, here. */
+export function usePersonHue(person: { id?: string; avatarColor: string }): string {
+  const hues = React.useContext(HueContext);
+  const resolved = person.id ? hues?.get(person.id) : undefined;
+  return hueVar(resolved ?? person.avatarColor);
+}
 
 const SIZES = {
   xs: "size-6 text-micro",
@@ -29,7 +54,7 @@ export function Avatar({
   ring,
   single,
 }: {
-  person: Pick<PersonDto, "displayName" | "avatarColor" | "avatarEmoji" | "isGhost">;
+  person: Pick<PersonDto, "displayName" | "avatarColor" | "avatarEmoji" | "isGhost"> & { id?: string };
   size?: AvatarSize;
   className?: string;
   /** Draws a ring in the surface colour, for overlapping stacks. */
@@ -41,23 +66,23 @@ export function Avatar({
   single?: boolean;
 }) {
   const label = initials(person.displayName);
-  const colour = `var(--avatar-${person.avatarColor}, var(--avatar-iris))`;
-  // A flat disc in the person's colour; a placeholder's is softened.
-  const background = person.isGhost
-    ? `color-mix(in oklch, ${colour} 38%, var(--surface-3))`
-    : colour;
+  const colour = usePersonHue(person);
 
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 select-none items-center justify-center rounded-full font-bold text-white",
+        "relative inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold text-[var(--on-person)]",
         SIZES[size],
         ring && "ring-2 ring-surface",
         className,
       )}
-      // A placeholder's softened disc needs the page's text colour to keep its
-      // initials legible in both themes.
-      style={{ background, ...(person.isGhost ? { color: "var(--text-muted)" } : {}) }}
+      // Someone not on Divvy yet is an outline in their colour rather than a
+      // filled disc: the same person, not quite here.
+      style={
+        person.isGhost
+          ? { background: "var(--surface)", color: colour, boxShadow: `inset 0 0 0 1.5px ${colour}` }
+          : { background: colour }
+      }
       aria-hidden
     >
       {person.avatarEmoji ? (
@@ -67,14 +92,6 @@ export function Avatar({
           {single ? label.slice(0, 1) : label}
         </span>
       )}
-      {person.isGhost ? (
-        // Not joined yet: softened colour and a fine dotted outline, which
-        // reads as "pending" where the old thick dashed ring read as a glitch.
-        <span
-          className="absolute inset-0 rounded-full border border-dotted"
-          style={{ borderColor: `color-mix(in oklch, ${colour} 80%, transparent)` }}
-        />
-      ) : null}
     </span>
   );
 }
@@ -105,7 +122,7 @@ export function AvatarStack({
       {overflow > 0 ? (
         <span
           className={cn(
-            "-ml-1.5 inline-flex items-center justify-center rounded-full bg-surface-3 font-bold text-muted ring-2 ring-surface",
+            "-ml-1.5 inline-flex items-center justify-center rounded-full bg-surface-2 font-semibold text-muted ring-2 ring-surface",
             SIZES[size],
           )}
         >

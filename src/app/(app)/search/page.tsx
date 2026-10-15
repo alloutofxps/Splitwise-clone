@@ -55,10 +55,10 @@ export default function SearchPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Search</h1>
+      <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Search</h1>
 
       <div className="sticky top-0 z-20 -mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">
-        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus-within)]:[box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-ring)]">
+        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus-within)]: px-3.5 py-3 focus-within:border-brand focus-within:ring-[1.5px] focus-within:ring-text">
           <Search className="size-[18px] shrink-0 text-subtle" />
           <input
             value={query}
@@ -85,7 +85,7 @@ export default function SearchPage() {
 
       {debounced.trim().length < 2 ? (
         <div className="mt-2">
-          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
             Try a category
           </p>
           <div className="flex flex-wrap gap-2">
@@ -100,7 +100,7 @@ export default function SearchPage() {
                   haptic();
                   setQuery(`category:${category.id}`);
                 }}
-                className="rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-1.5 text-body font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+                className="rounded-full border border-[var(--card-border)] bg-surface px-3 py-1.5 text-body font-semibold text-muted transition active:opacity-70 hover:bg-surface-2"
               >
                 {category.name}
               </button>
@@ -126,7 +126,7 @@ export default function SearchPage() {
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1">
-            <p className="text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            <p className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
               {items.length} {items.length === 1 ? "match" : "matches"}
             </p>
             {[...totals].map(([currency, total]) => (

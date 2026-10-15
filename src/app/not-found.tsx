@@ -22,7 +22,7 @@ export default function NotFound() {
         <Compass className="size-7" />
       </span>
 
-      <h1 className="mt-6 text-heading font-black tracking-[-0.03em] text-text">
+      <h1 className="mt-6 text-heading font-semibold tracking-[-0.03em] text-text">
         Nothing here
       </h1>
       <p className="mt-2 text-body-lg leading-relaxed text-muted">
@@ -32,7 +32,7 @@ export default function NotFound() {
 
       <Link
         href="/"
-        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-subhead font-semibold text-white transition active:scale-[0.98]"
+        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-subhead font-semibold text-inverse transition active:opacity-70"
       >
         Back to Divvy
       </Link>

@@ -121,7 +121,7 @@ export function PayerPicker({
             }
           }}
           className={cn(
-            "mb-4 flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border px-3.5 py-2.5 text-left transition active:scale-[0.985]",
+            "mb-4 flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border px-3.5 py-2.5 text-left transition active:opacity-70",
             multiple ? "border-brand/40 bg-brand-soft" : "border-line bg-surface",
           )}
         >
@@ -135,7 +135,7 @@ export function PayerPicker({
               multiple ? "border-brand bg-brand" : "border-line-strong",
             )}
           >
-            {multiple ? <Check className="size-3 text-white" strokeWidth={3} /> : null}
+            {multiple ? <Check className="size-3 text-inverse" strokeWidth={3} /> : null}
           </span>
         </button>
 

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Bricolage_Grotesque, Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -10,24 +10,17 @@ import { Providers } from "@/components/providers";
  * that still needs the network, and the resulting flash of fallback text is
  * exactly the kind of detail that makes a PWA feel like a website.
  */
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
-  // The variable font covers every weight the design uses in one file.
-  axes: ["opsz"],
+  variable: "--font-geist",
 });
 
-/**
- * The display face, for the numbers people come to look at and the headlines.
- * Expressive at large sizes - its optical-size axis tightens the letterforms
- * as they grow - with tabular figures, so a balance that counts does not wobble.
- */
-const display = Bricolage_Grotesque({
+/** For the things people read out or copy: invite codes, the recovery key. */
+const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-bricolage",
-  axes: ["opsz", "wdth"],
+  variable: "--font-geist-mono",
 });
 
 export const metadata: Metadata = {
@@ -76,8 +69,8 @@ export const viewport: Viewport = {
   // areas; every edge is then handled with env(safe-area-inset-*).
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#111014" },
+    { media: "(prefers-color-scheme: light)", color: "#fafaf8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0a" },
   ],
 };
 
@@ -87,7 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         {/*
           Applied before first paint, inline and synchronous. A theme resolved

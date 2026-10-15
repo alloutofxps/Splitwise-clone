@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, Plus, Search, UsersRound } from "lucide-react";
 import { useDashboard } from "@/lib/client/queries";
 import { Amount } from "@/components/ui/money";
 import { AvatarStack } from "@/components/ui/avatar";
+import { hueVar } from "@/lib/avatar";
+import { FlowBar } from "@/components/flow/flow-bar";
 import { Button, EmptyState, SectionHeader, cn } from "@/components/ui/primitives";
 import { listItem } from "@/components/ui/motion";
 import { NewGroupSheet } from "@/components/group/new-group-sheet";
@@ -34,7 +37,7 @@ export default function HomePage() {
         <Link
           href="/search"
           aria-label="Search expenses"
-          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 active:scale-90 lg:hidden"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 active:opacity-70 lg:hidden"
         >
           <Search className="size-[20px]" />
         </Link>
@@ -63,13 +66,13 @@ export default function HomePage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setJoining(true)}
-                      className="rounded-full px-3 py-1.5 text-body font-semibold text-brand transition active:scale-95 hover:bg-brand-soft"
+                      className="rounded-full px-3 py-1.5 text-body font-semibold text-brand transition active:opacity-70 hover:bg-brand-soft"
                     >
                       Join
                     </button>
                     <button
                       onClick={() => setNewGroup(true)}
-                      className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-body font-semibold text-brand-soft-text transition active:scale-95"
+                      className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-body font-semibold text-brand-soft-text transition active:opacity-70"
                     >
                       <Plus className="size-3.5" strokeWidth={2.8} />
                       New
@@ -139,6 +142,7 @@ export default function HomePage() {
  * up, so "€187 overall" is never the only thing you can see.
  */
 function Hero({ data }: { data: DashboardPayload }) {
+  const router = useRouter();
   const totals = Object.entries(data.totals);
   const firstName = data.me.displayName.split(" ")[0];
   const split = breakdown(data);
@@ -152,7 +156,7 @@ function Hero({ data }: { data: DashboardPayload }) {
 
       {totals.length === 0 ? (
         <div className="mt-3">
-          <p className="font-display text-display font-bold leading-tight tracking-[-0.03em] text-text">
+          <p className="font-display text-display font-semibold leading-tight tracking-[-0.03em] text-text">
             All settled up
           </p>
           <p className="mt-2 text-body-lg text-muted">Nobody owes anybody anything.</p>
@@ -163,6 +167,15 @@ function Hero({ data }: { data: DashboardPayload }) {
           <p className="mt-2 text-body-lg font-medium text-muted">
             {only > 0n ? "In total, people owe you this much." : "In total, you owe this much."}
           </p>
+          {/* Who that total is made of, one segment per person. */}
+          <FlowBar
+            className="mt-4"
+            currency={totals[0][0]}
+            entries={data.friends
+              .filter((friend) => friend.net[totals[0][0]])
+              .map((friend) => ({ person: friend.person, amount: BigInt(friend.net[totals[0][0]]) }))}
+            onSelect={(personId) => router.push(`/friends/${personId}`)}
+          />
         </div>
       ) : (
         <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -262,10 +275,10 @@ function greeting(): string {
 
 function GroupCard({ group }: { group: GroupSummaryDto }) {
   const net = BigInt(group.yourNet);
-  const colour = `var(--avatar-${group.color}, var(--avatar-iris))`;
+  const colour = hueVar(group.color);
 
   return (
-    <motion.div whileTap={{ scale: 0.975 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}>
+    <motion.div whileTap={{ opacity: 0.85 }} transition={{ duration: 0.15 }}>
       <Link
         href={`/groups/${group.id}`}
         className="surface-card flex items-center gap-3.5 p-3.5 transition-colors duration-150 hover:border-line-strong"
@@ -279,7 +292,7 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="truncate font-display text-subhead font-bold tracking-[-0.01em] text-text">
+            <span className="truncate font-display text-subhead font-semibold tracking-[-0.01em] text-text">
               {group.name}
             </span>
             {group.unreadCount > 0 ? (
@@ -323,7 +336,7 @@ function FirstRun({
 }) {
   return (
     <div className="surface-card mt-8 rounded-[28px] p-6">
-      <h2 className="font-display text-heading font-extrabold tracking-[-0.03em] text-text">
+      <h2 className="font-display text-heading font-semibold tracking-[-0.03em] text-text">
         Start your first group
       </h2>
       <p className="mt-1.5 text-body-lg leading-relaxed text-muted">

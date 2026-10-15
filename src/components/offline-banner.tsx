@@ -101,7 +101,7 @@ export function OfflineBanner() {
                   <button
                     onClick={() => void retry()}
                     disabled={retrying}
-                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-caption font-bold text-brand transition active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-caption font-semibold text-brand transition active:opacity-70 disabled:opacity-50"
                   >
                     <RefreshCw className={retrying ? "size-3.5 animate-spin" : "size-3.5"} />
                     Retry
@@ -123,7 +123,7 @@ export function OfflineBanner() {
               >
                 <div className="flex items-center gap-2">
                   <TriangleAlert className="size-3.5 shrink-0 text-negative-text" />
-                  <p className="flex-1 text-caption font-bold text-negative-text">
+                  <p className="flex-1 text-caption font-semibold text-negative-text">
                     {failures.length === 1
                       ? "1 change couldn't be saved"
                       : `${failures.length} changes couldn't be saved`}
@@ -131,7 +131,7 @@ export function OfflineBanner() {
                   {failures.length > 1 ? (
                     <button
                       onClick={() => void discardAllRejected()}
-                      className="shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold text-muted transition active:scale-95"
+                      className="shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold text-muted transition active:opacity-70"
                     >
                       Dismiss all
                     </button>
@@ -157,14 +157,14 @@ export function OfflineBanner() {
                       <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => void retryRejected(failure.id)}
-                          className="rounded-full px-2 py-1 text-caption font-bold text-brand transition active:scale-95"
+                          className="rounded-full px-2 py-1 text-caption font-semibold text-brand transition active:opacity-70"
                         >
                           Retry
                         </button>
                         <button
                           onClick={() => void discardRejected(failure.id)}
                           aria-label={`Dismiss ${failure.label}`}
-                          className="flex size-6 items-center justify-center rounded-full text-subtle transition active:scale-90"
+                          className="flex size-6 items-center justify-center rounded-full text-subtle transition active:opacity-70"
                         >
                           <X className="size-3.5" />
                         </button>

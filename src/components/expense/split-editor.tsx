@@ -211,9 +211,9 @@ export function SplitEditor({
               key={option.value}
               onClick={() => switchMode(option.value)}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-body font-semibold transition active:scale-95",
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-body font-semibold transition active:opacity-70",
                 option.value === localMode
-                  ? "border-brand bg-brand text-white"
+                  ? "border-brand bg-brand text-inverse"
                   : "border-line bg-surface text-muted hover:bg-surface-2",
               )}
             >
@@ -376,7 +376,7 @@ function ModeInput({
               onUpdate({ percent: Number.isFinite(value) ? value : 0 });
             }}
             onFocus={(event) => event.currentTarget.select()}
-            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-input font-bold text-text outline-none focus:ring-2 focus:ring-[var(--brand-ring)]"
+            className="tabular w-14 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 text-right text-input font-semibold text-text outline-none focus:ring-[1.5px] focus:ring-text"
           />
           <span className="text-body font-semibold text-subtle">%</span>
         </div>
@@ -393,7 +393,7 @@ function ModeInput({
     case "ADJUSTMENT":
       return (
         <div className="flex shrink-0 items-center gap-1">
-          <span className="text-body font-bold text-subtle">+</span>
+          <span className="text-body font-semibold text-subtle">+</span>
           <CompactAmountInput
             value={entry.adjustment ?? 0n}
             currency={currency}
@@ -418,18 +418,18 @@ function Stepper({ value, onChange }: { value: number; onChange: (value: number)
           onChange(Math.max(0, value - 1));
         }}
         aria-label="One fewer share"
-        className="flex size-7 items-center justify-center rounded-full text-input font-bold text-muted transition active:scale-90 hover:bg-surface-3"
+        className="flex size-7 items-center justify-center rounded-full text-input font-semibold text-muted transition active:opacity-70 hover:bg-surface-3"
       >
         −
       </button>
-      <span className="tabular w-6 text-center text-body-lg font-bold text-text">{value}</span>
+      <span className="tabular w-6 text-center text-body-lg font-semibold text-text">{value}</span>
       <button
         onClick={() => {
           haptic();
           onChange(Math.min(99, value + 1));
         }}
         aria-label="One more share"
-        className="flex size-7 items-center justify-center rounded-full text-input font-bold text-muted transition active:scale-90 hover:bg-surface-3"
+        className="flex size-7 items-center justify-center rounded-full text-input font-semibold text-muted transition active:opacity-70 hover:bg-surface-3"
       >
         +
       </button>
@@ -444,7 +444,7 @@ function MiniButton({ children, onClick }: { children: React.ReactNode; onClick:
         haptic();
         onClick();
       }}
-      className="rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-1.5 text-caption font-semibold text-muted transition active:scale-95 hover:bg-surface-2"
+      className="rounded-full border border-[var(--card-border)] bg-surface px-3 py-1.5 text-caption font-semibold text-muted transition active:opacity-70 hover:bg-surface-2"
     >
       {children}
     </button>
@@ -574,7 +574,7 @@ function ItemEditor({
     <div className="mt-4">
       <ul className="space-y-2.5">
         {items.map((item, index) => (
-          <li key={item.id} className="rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3">
+          <li key={item.id} className="rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface p-3">
             <div className="flex items-center gap-2">
               <input
                 value={item.name}
@@ -607,7 +607,7 @@ function ItemEditor({
                   setItems((current) => current.filter((entry) => entry.id !== item.id));
                 }}
                 aria-label="Remove item"
-                className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -635,7 +635,7 @@ function ItemEditor({
                       );
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-caption font-semibold transition active:scale-95",
+                      "flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-caption font-semibold transition active:opacity-70",
                       active
                         ? "border-brand/40 bg-brand-soft text-brand-soft-text"
                         : "border-line bg-surface-2 text-subtle",
@@ -653,7 +653,7 @@ function ItemEditor({
 
       <button
         onClick={addItem}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-line-strong py-3 text-body-lg font-semibold text-muted transition active:scale-[0.98] hover:bg-surface-2"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-line-strong py-3 text-body-lg font-semibold text-muted transition active:opacity-70 hover:bg-surface-2"
       >
         <Plus className="size-4" />
         Add an item

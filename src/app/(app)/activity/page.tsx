@@ -64,7 +64,7 @@ export default function ActivityPage() {
   if (isLoading || !dashboard) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Activity</h1>
+        <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Activity</h1>
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((index) => (
             <Skeleton key={index} className="h-14 w-full rounded-[var(--radius-lg)]" />
@@ -90,7 +90,7 @@ export default function ActivityPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Activity</h1>
+      <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Activity</h1>
 
       {groupsInFeed.length > 1 ? (
         <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -188,9 +188,9 @@ function GroupChip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-white"
+          ? "border-brand bg-brand text-inverse"
           : "border-line bg-surface text-muted hover:text-text",
       )}
     >
@@ -233,7 +233,7 @@ function ActivityRow({
     <div
       className={cn(
         "flex items-start gap-3 rounded-[var(--radius-lg)] px-3 py-3 transition",
-        clickable && "hover:bg-surface-2 active:scale-[0.99] active:bg-surface-2",
+        clickable && "hover:bg-surface-2 active:opacity-70 active:bg-surface-2",
         activity.isUnread && "bg-brand-soft/30",
       )}
     >
@@ -337,7 +337,7 @@ function UndoButton({ activity }: { activity: ActivityDto }) {
       }}
       disabled={busy}
       aria-label={`Undo, bring this ${label} back`}
-      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-brand transition active:scale-95 hover:bg-surface-2 disabled:opacity-50"
+      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-brand transition active:opacity-70 hover:bg-surface-2 disabled:opacity-50"
     >
       {busy ? "…" : "Undo"}
     </button>

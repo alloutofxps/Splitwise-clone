@@ -176,7 +176,7 @@ export function ReceiptPicker({
                     onChange(attachments.filter((entry) => entry.id !== attachment.id));
                   }}
                   aria-label={`Remove ${attachment.filename}`}
-                  className="absolute -right-1.5 -top-1.5 flex size-7 items-center justify-center rounded-full bg-negative text-white shadow-card transition active:scale-90"
+                  className="absolute -right-1.5 -top-1.5 flex size-7 items-center justify-center rounded-full bg-negative text-inverse shadow-card transition active:opacity-70"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -196,7 +196,7 @@ export function ReceiptPicker({
                       type="button"
                       disabled={Boolean(reading)}
                       onClick={() => void read(attachment)}
-                      className="mt-1.5 flex w-full items-center justify-center gap-1 rounded-full bg-brand-soft py-1 text-caption font-semibold text-brand-soft-text transition active:scale-95 disabled:opacity-50"
+                      className="mt-1.5 flex w-full items-center justify-center gap-1 rounded-full bg-brand-soft py-1 text-caption font-semibold text-brand-soft-text transition active:opacity-70 disabled:opacity-50"
                     >
                       <ScanText className="size-3.5" />
                       Read receipt

@@ -34,7 +34,7 @@ export function CategoryPicker({
 
           return (
             <section key={groupName} className="mb-6 last:mb-0">
-              <h3 className="mb-2.5 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
+              <h3 className="mb-2.5 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
                 {groupName}
               </h3>
               <div className="grid grid-cols-2 gap-2 xs:grid-cols-3">
@@ -48,18 +48,14 @@ export function CategoryPicker({
                         onChange(category.id);
                       }}
                       className={cn(
-                        "relative flex flex-col items-start gap-2 rounded-[var(--radius-md)] border p-3 text-left transition active:scale-95",
+                        "relative flex flex-col items-start gap-2 rounded-[var(--radius-md)] border p-3 text-left transition active:opacity-70",
                         active
                           ? "border-brand bg-brand-soft"
                           : "border-line bg-surface hover:bg-surface-2",
                       )}
                     >
                       <span
-                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)]"
-                        style={{
-                          background: `color-mix(in oklch, var(--avatar-${category.color}) 18%, transparent)`,
-                          color: `var(--avatar-${category.color})`,
-                        }}
+                        className="flex size-9 items-center justify-center rounded-[var(--radius-sm)] bg-surface-2 text-text"
                       >
                         <CategoryGlyph name={category.icon} />
                       </span>

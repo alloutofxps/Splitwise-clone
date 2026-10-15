@@ -8,20 +8,65 @@
  * than assigned in join order.
  */
 
+/**
+ * The ten person hues (DESIGN-PLAN 1.1). Tuned to the same perceived lightness
+ * so nobody looks more important than anybody else, and each distinct from its
+ * neighbours and from the two money colours.
+ */
 export const AVATAR_COLORS = [
-  "iris",
+  "azure",
   "violet",
-  "fuchsia",
-  "rose",
-  "orange",
+  "orchid",
+  "coral",
   "amber",
-  "lime",
+  "olive",
   "teal",
-  "cyan",
-  "sky",
+  "cobalt",
+  "plum",
+  "sand",
 ] as const;
 
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
+
+/**
+ * The names stored before the redesign, each moved to its nearest new hue.
+ * Accepted on input so a copy of the app that is still open on somebody's
+ * phone from before the update can keep saving, and translated on the way in.
+ */
+export const LEGACY_COLORS: Record<string, AvatarColor> = {
+  iris: "violet",
+  violet: "plum",
+  fuchsia: "orchid",
+  rose: "coral",
+  orange: "sand",
+  amber: "amber",
+  lime: "olive",
+  teal: "teal",
+  cyan: "azure",
+  sky: "cobalt",
+};
+
+/** Every name the API accepts: the ten hues plus the old names. */
+export const ACCEPTED_COLORS = [
+  ...AVATAR_COLORS,
+  ...Object.keys(LEGACY_COLORS).filter((name) => !(AVATAR_COLORS as readonly string[]).includes(name)),
+] as [string, ...string[]];
+
+/**
+ * A stored or submitted colour name as one of the ten hues.
+ *
+ * "violet" is both an old name and a new one; the new meaning wins, because
+ * by the time anything reads this the stored values have been migrated.
+ */
+export function normalizeColor(name: string | null | undefined): AvatarColor {
+  if (name && (AVATAR_COLORS as readonly string[]).includes(name)) return name as AvatarColor;
+  return (name && LEGACY_COLORS[name]) || "cobalt";
+}
+
+/** The CSS colour for a hue, for inline styles. */
+export function hueVar(name: string | null | undefined): string {
+  return `var(--person-${normalizeColor(name)})`;
+}
 
 /** FNV-1a. Cheap, well-spread, and identical in every JS runtime. */
 function hash(value: string): number {
@@ -55,4 +100,36 @@ export function initials(name: string): string {
 
   const last = [...words[words.length - 1]][0] ?? "";
   return (first + last).toUpperCase();
+}
+
+/**
+ * Hues for the members of one group, so nobody in it shares a colour.
+ *
+ * Earlier members keep their own choice; a later member whose hue is already
+ * taken is shown in the nearest free one (by position on the wheel), for this
+ * group only. Their own choice is never changed. With more than ten members
+ * hues have to repeat, and they do so in the same order.
+ */
+export function resolveHues(
+  members: { id: string; avatarColor: string | null | undefined }[],
+): Map<string, AvatarColor> {
+  const result = new Map<string, AvatarColor>();
+  const taken = new Set<AvatarColor>();
+  for (const member of members) {
+    const own = normalizeColor(member.avatarColor);
+    let hue = own;
+    if (taken.has(own) && taken.size < AVATAR_COLORS.length) {
+      const start = AVATAR_COLORS.indexOf(own);
+      for (let step = 1; step < AVATAR_COLORS.length; step += 1) {
+        const candidate = AVATAR_COLORS[(start + step) % AVATAR_COLORS.length];
+        if (!taken.has(candidate)) {
+          hue = candidate;
+          break;
+        }
+      }
+    }
+    taken.add(hue);
+    result.set(member.id, hue);
+  }
+  return result;
 }

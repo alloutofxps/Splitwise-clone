@@ -90,10 +90,10 @@ export function useToast() {
 }
 
 const ICONS: Record<ToastTone, React.ReactNode> = {
-  success: <CheckCircle2 className="size-[18px] text-positive" />,
-  error: <TriangleAlert className="size-[18px] text-negative" />,
-  info: <Info className="size-[18px] text-brand" />,
-  offline: <CloudOff className="size-[18px] text-muted" />,
+  success: <CheckCircle2 className="size-[18px]" strokeWidth={1.75} />,
+  error: <TriangleAlert className="size-[18px]" strokeWidth={1.75} />,
+  info: <Info className="size-[18px]" strokeWidth={1.75} />,
+  offline: <CloudOff className="size-[18px]" strokeWidth={1.75} />,
 };
 
 function ToastViewport({
@@ -110,7 +110,7 @@ function ToastViewport({
     <div
       // Above the bottom nav on mobile so it never covers the tab bar, and
       // bottom-right on desktop where the eye is already near the content.
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-6 sm:left-auto sm:right-6 sm:items-end"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-6 sm:left-auto sm:right-6 sm:items-end"
       role="status"
       aria-live="polite"
     >
@@ -119,11 +119,11 @@ function ToastViewport({
           <motion.div
             key={toast.id}
             layout
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
             // Taps pass through as soon as it starts leaving, not when it is gone.
-            exit={{ opacity: 0, y: 8, scale: 0.96, pointerEvents: "none" }}
-            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            exit={{ opacity: 0, y: 8, pointerEvents: "none" }}
+            transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
             // A toast sits above everything, sheets included, so for the few
             // seconds it is up it covers whatever is beneath it. Tapping it
             // dismisses it, rather than the tap simply being swallowed - and the
@@ -133,15 +133,16 @@ function ToastViewport({
               onDismiss(toast.id);
             }}
             className={cn(
-              "pointer-events-auto flex w-full max-w-[420px] cursor-pointer items-start gap-3 rounded-[var(--radius-lg)]",
-              "border border-line bg-elevated px-4 py-3 shadow-float",
+              // An ink bar: one line, and one action when there is something to undo.
+              "pointer-events-auto flex w-full max-w-[420px] cursor-pointer items-center gap-3 rounded-[var(--radius-md)]",
+              "bg-text px-4 py-3 text-inverse shadow-float",
             )}
           >
-            <span className="mt-0.5 shrink-0">{ICONS[toast.tone ?? "info"]}</span>
+            <span className="shrink-0 opacity-80">{ICONS[toast.tone ?? "info"]}</span>
             <div className="min-w-0 flex-1">
-              <p className="text-body-lg font-semibold leading-snug text-text">{toast.title}</p>
+              <p className="text-body font-medium leading-snug">{toast.title}</p>
               {toast.description ? (
-                <p className="mt-0.5 text-body leading-snug text-muted">{toast.description}</p>
+                <p className="mt-0.5 text-caption leading-snug opacity-70">{toast.description}</p>
               ) : null}
             </div>
             {toast.action ? (
@@ -150,7 +151,7 @@ function ToastViewport({
                   toast.action?.onClick();
                   onDismiss(toast.id);
                 }}
-                className="-my-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1.5 text-body font-bold text-brand transition active:scale-95 hover:bg-brand-soft"
+                className="-my-1 flex shrink-0 items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1.5 text-body font-semibold underline-offset-2 transition-opacity hover:underline active:opacity-70"
               >
                 <Undo2 className="size-3.5" />
                 {toast.action.label}

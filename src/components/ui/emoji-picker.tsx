@@ -44,11 +44,11 @@ export function EmojiPicker({
           onClick={() => choose(null)}
           aria-pressed={value === null}
           className={cn(
-            "mb-5 flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3.5 py-3 text-left transition active:scale-[0.985]",
+            "mb-5 flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3.5 py-3 text-left transition active:opacity-70",
             value === null ? "border-brand/40 bg-brand-soft" : "border-line bg-surface",
           )}
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-body-lg font-bold text-text">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-body-lg font-semibold text-text">
             {initials}
           </span>
           <span className="text-body-lg font-semibold text-text">Use my initials</span>
@@ -56,7 +56,7 @@ export function EmojiPicker({
 
         {EMOJI_GROUPS.map((group) => (
           <div key={group.name} className="mb-5 last:mb-0">
-            <h3 className="mb-2 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+            <h3 className="mb-2 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
               {group.name}
             </h3>
             {/* Six across at 390px, more as the sheet widens. */}
@@ -68,7 +68,7 @@ export function EmojiPicker({
                   aria-label={emoji}
                   aria-pressed={value === emoji}
                   className={cn(
-                    "flex aspect-square items-center justify-center rounded-[var(--radius-sm)] text-title-lg transition active:scale-90",
+                    "flex aspect-square items-center justify-center rounded-[var(--radius-sm)] text-title-lg transition active:opacity-70",
                     value === emoji ? "bg-brand-soft ring-2 ring-brand" : "hover:bg-surface-2",
                   )}
                 >

@@ -7,6 +7,7 @@ import { cn, haptic } from "./ui/primitives";
 import { readStored, writeStored } from "@/lib/client/storage";
 import { requestPersistence } from "@/lib/client/persistence";
 import { PrivacyScreen } from "./privacy-screen";
+import { AppMark } from "./app-mark";
 
 /**
  * Installation and updates.
@@ -133,7 +134,7 @@ function ServiceWorkerManager() {
             haptic();
             waiting.postMessage("skip-waiting");
           }}
-          className="shrink-0 rounded-[var(--radius-sm)] bg-brand px-3 py-1.5 text-body font-bold text-white transition active:scale-95"
+          className="shrink-0 rounded-[var(--radius-sm)] bg-brand px-3 py-1.5 text-body font-semibold text-inverse transition active:opacity-70"
         >
           Reload
         </button>
@@ -243,24 +244,22 @@ function InstallPrompt() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24, pointerEvents: "none" }}
-          transition={{ type: "spring", stiffness: 400, damping: 34 }}
+          transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
           className="no-print fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[55] px-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[380px] sm:px-0"
         >
           <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-line bg-elevated p-4 shadow-float">
             <button
               onClick={dismiss}
               aria-label="Dismiss"
-              className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2"
+              className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2"
             >
               <X className="size-4" />
             </button>
 
             <div className="flex items-start gap-3 pr-6">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-title-lg font-black text-white">
-                D
-              </span>
+              <AppMark className="size-11" />
               <div className="min-w-0">
-                <p className="text-subhead font-bold tracking-[-0.01em] text-text">
+                <p className="text-subhead font-semibold tracking-[-0.01em] text-text">
                   Install Divvy
                 </p>
                 <p className="mt-0.5 text-body leading-snug text-muted">
@@ -288,7 +287,7 @@ function InstallPrompt() {
             ) : (
               <button
                 onClick={() => void install()}
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-white transition active:scale-[0.98]"
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] bg-brand text-subhead font-semibold text-inverse transition active:opacity-70"
               >
                 <Download className="size-[18px]" />
                 Install
@@ -321,7 +320,7 @@ function IosStep({
         {icon}
       </span>
       <span className="text-body leading-snug text-text">{children}</span>
-      <span className="ml-auto shrink-0 text-tiny font-bold text-subtle">{index}</span>
+      <span className="ml-auto shrink-0 text-tiny font-semibold text-subtle">{index}</span>
     </li>
   );
 }

@@ -7,7 +7,7 @@ import { visiblePeople } from "@/server/me";
 import { colorForName } from "@/lib/avatar";
 import { recordActivity } from "@/server/write";
 import { generateGhostCode } from "@/lib/codes";
-import { AVATAR_COLORS as GROUP_COLORS } from "@/lib/avatar";
+import { ACCEPTED_COLORS, normalizeColor } from "@/lib/avatar";
 import { limitByAccount, WRITE } from "@/server/rate-limit";
 
 const GROUP_KINDS = ["trip", "home", "couple", "event", "project", "other"] as const;
@@ -16,7 +16,7 @@ const createSchema = z.object({
   name: text(60, "The group name").refine((v) => v.length > 0, "Give the group a name."),
   kind: z.enum(GROUP_KINDS).default("other"),
   emoji: z.string().trim().max(8).default("🧾"),
-  color: z.enum(GROUP_COLORS).default("iris"),
+  color: z.enum(ACCEPTED_COLORS).default("cobalt").transform(normalizeColor),
   currency: currencyCode,
   simplifyDebts: z.boolean().default(true),
   /** Names to seed as placeholder members, for people not on the app yet. */

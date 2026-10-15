@@ -62,10 +62,10 @@ export function MyCodeSheet({
     <Sheet open={open} onClose={onClose} title="Your code">
       <div className="px-5 pb-6">
         <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
-          <p className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+          <p className="text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
             Your friend code
           </p>
-          <p className="mt-2 select-all break-words text-heading font-black tracking-[-0.01em] text-text">
+          <p className="mt-2 select-all break-words text-heading font-semibold tracking-[-0.01em] text-text">
             {me.inviteCode}
           </p>
         </div>

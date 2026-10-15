@@ -47,7 +47,7 @@ const ROW_MOTION = {
   layout: "position" as const,
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  transition: { type: "spring" as const, stiffness: 320, damping: 28 },
+  transition: { duration: 0.24, ease: [0.2, 0, 0, 1] as const },
 };
 
 export function GroupLedger({
@@ -143,7 +143,7 @@ export function GroupLedger({
           </motion.div>
         ) : (
           <>
-            <p className="flex-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle">
+            <p className="flex-1 text-caption font-semibold uppercase tracking-[0.07em] text-subtle">
               {items.length > 0
                 ? `${items.length}${hasNextPage ? "+" : ""} entries`
                 : "Nothing yet"}
@@ -156,7 +156,7 @@ export function GroupLedger({
               aria-label="Filter this group"
               aria-expanded={showFilters}
               className={cn(
-                "relative flex size-8 items-center justify-center rounded-full transition active:scale-90 hover:bg-surface-2",
+                "relative flex size-8 items-center justify-center rounded-full transition active:opacity-70 hover:bg-surface-2",
                 activeFilters > 0 ? "text-brand" : "text-subtle",
               )}
             >
@@ -173,7 +173,7 @@ export function GroupLedger({
                 setSearching(true);
               }}
               aria-label="Search this group"
-              className="flex size-8 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2"
+              className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2"
             >
               <Search className="size-[17px]" />
             </button>
@@ -214,9 +214,7 @@ export function GroupLedger({
                         active={category === id}
                         onClick={() => setCategory(category === id ? null : id)}
                       >
-                        <span style={{ color: `var(--avatar-${definition.color})` }}>
-                          <CategoryGlyph name={definition.icon} className="size-3.5" />
-                        </span>
+                        <CategoryGlyph name={definition.icon} className="size-3.5" />
                         {definition.name}
                       </FilterChip>
                     );
@@ -230,7 +228,7 @@ export function GroupLedger({
                     haptic();
                     clearFilters();
                   }}
-                  className="text-caption font-bold text-brand transition active:scale-95"
+                  className="text-caption font-semibold text-brand transition active:opacity-70"
                 >
                   Clear filters
                 </button>
@@ -365,7 +363,7 @@ export function ExpenseRow({
         onOpen();
       }}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5 text-left transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong",
+        "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3 py-2.5 text-left transition active:opacity-70 active:bg-surface-2 hover:border-line-strong",
         // Faded rather than spinner-topped: the row is real and its numbers are
         // already correct, so the only thing being signalled is that the server
         // has not acknowledged it. A spinner would suggest it might not be
@@ -376,11 +374,7 @@ export function ExpenseRow({
       {showDate ? <DateStamp date={expense.date} /> : null}
 
       <span
-        className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-        style={{
-          background: `color-mix(in oklch, var(--avatar-${category.color}) 15%, transparent)`,
-          color: `var(--avatar-${category.color})`,
-        }}
+        className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text"
       >
         <CategoryGlyph name={category.icon} />
       </span>
@@ -507,7 +501,7 @@ export function SettlementRow({
         aria-label={`${fromLabel} paid ${toLabel}. Remove this payment.`}
         className={cn(
           "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-left transition",
-          pending ? "opacity-60" : "active:scale-[0.99] hover:bg-surface-2",
+          pending ? "opacity-60" : "active:opacity-70 hover:bg-surface-2",
         )}
       >
       {showDate ? <DateStamp date={settlement.date} /> : null}
@@ -575,7 +569,7 @@ function formatBare(amount: string, currency: string): string {
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1.5 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
+      <p className="mb-1.5 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
         {label}
       </p>
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -605,9 +599,9 @@ function FilterChip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:scale-95",
+        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-body font-semibold transition active:opacity-70",
         active
-          ? "border-brand bg-brand text-white"
+          ? "border-brand bg-brand text-inverse"
           : "border-line bg-surface text-muted hover:text-text",
       )}
     >

@@ -12,14 +12,12 @@ import { formatRecoveryKey } from "@/lib/codes";
 import { prisma } from "@/lib/db";
 import { meDto } from "@/server/me";
 import { limitByAddress, SIGN_UP } from "@/server/rate-limit";
+import { ACCEPTED_COLORS, normalizeColor } from "@/lib/avatar";
 
-const AVATAR_COLORS = [
-  "iris", "violet", "sky", "cyan", "teal", "lime", "amber", "orange", "rose", "fuchsia",
-] as const;
 
 const profileSchema = z.object({
   displayName: text(60, "Your name").refine((v) => v.length > 0, "Tell us your name."),
-  avatarColor: z.enum(AVATAR_COLORS).optional(),
+  avatarColor: z.enum(ACCEPTED_COLORS).transform(normalizeColor).optional(),
   avatarEmoji: z.string().trim().max(8).nullable().optional(),
   defaultCurrency: currencyCode.optional(),
 });

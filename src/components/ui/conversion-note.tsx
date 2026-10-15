@@ -74,7 +74,7 @@ export function ConversionNote({
         )}
       </div>
       {converted ? (
-        <p className="tabular mt-1 text-body font-bold text-text">≈ {converted}</p>
+        <p className="tabular mt-1 text-body font-semibold text-text">≈ {converted}</p>
       ) : null}
     </div>
   );

@@ -27,7 +27,8 @@ import { cn, haptic, IconButton, useMounted } from "./primitives";
  * and what makes a web one feel wrong when it is missing.
  */
 
-const SPRING = { type: "spring" as const, stiffness: 420, damping: 38, mass: 0.9 };
+// Sheets slide: 320ms, quick out and a soft landing, no overshoot (DESIGN-PLAN 1.5).
+const SPRING = { type: "tween" as const, duration: 0.32, ease: [0.2, 0, 0, 1] as const };
 
 /**
  * Open sheets, oldest first. Panels open on top of one another - the split
@@ -372,7 +373,7 @@ function SheetBody({
             style={{ touchAction: "none" }}
             className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-1"
           >
-            <h2 className="text-title font-bold tracking-[-0.01em] text-text">{title}</h2>
+            <h2 className="text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
             {dismissible ? (
               <IconButton label="Close" size="sm" onClick={onClose} className="-mr-2">
                 <X className="size-5" />
@@ -431,7 +432,7 @@ export function ConfirmSheet({
         <div className="mt-6 flex gap-3">
           <button
             onClick={onClose}
-            className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-subhead font-semibold text-text transition active:scale-[0.975]"
+            className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-subhead font-semibold text-text transition active:opacity-70"
           >
             Cancel
           </button>
@@ -439,8 +440,8 @@ export function ConfirmSheet({
             onClick={onConfirm}
             disabled={loading}
             className={cn(
-              "h-11 flex-1 rounded-[var(--radius-md)] text-subhead font-semibold text-white transition active:scale-[0.975] disabled:opacity-60",
-              tone === "danger" ? "bg-negative" : "bg-brand",
+              "h-11 flex-1 rounded-[var(--radius-md)] text-subhead font-semibold text-inverse transition active:opacity-70 disabled:opacity-60",
+              tone === "danger" ? "bg-danger" : "bg-brand",
             )}
           >
             {loading ? "Working…" : confirmLabel}

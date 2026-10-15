@@ -20,9 +20,15 @@ export function Amount({
   size = "md",
   signed = false,
   className,
+  arrow,
 }: {
   /** Minor units, as a bigint or the decimal string the API sends. */
   value: bigint | string;
+  /**
+   * An arrow before the figure: ↙ for money coming to you, ↗ for money going
+   * out. With the colour and the words beside it, the third signal.
+   */
+  arrow?: boolean;
   currency: string;
   /**
    * `auto` colours by sign; `plain` inherits; `positive`/`negative` force it,
@@ -48,15 +54,20 @@ export function Amount({
         size === "xs" && "text-caption",
         size === "sm" && "text-body",
         size === "md" && "text-subhead",
-        size === "lg" && "text-title-lg font-bold",
-        size === "xl" && "text-display-sm font-bold",
-        size === "hero" && "text-display-lg font-bold leading-none",
+        size === "lg" && "text-title-lg font-semibold",
+        size === "xl" && "text-display-sm font-semibold",
+        size === "hero" && "text-display-lg font-semibold leading-none",
         resolvedTone === "positive" && "text-positive-text",
         resolvedTone === "negative" && "text-negative-text",
         resolvedTone === "plain" && "text-text",
         className,
       )}
     >
+      {arrow && amount !== 0n ? (
+        <span aria-hidden className="mr-[0.15em] inline-block font-normal">
+          {amount > 0n ? "↙" : "↗"}
+        </span>
+      ) : null}
       {formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
     </span>
   );
@@ -130,14 +141,14 @@ export function AmountInput({
         // The focus ring lives on the wrapper: a 2px outline drawn around a
         // borderless 46px input reads as a stray pill rather than as focus.
         "flex items-baseline gap-1.5 rounded-[var(--radius-md)] transition",
-        "focus-within:ring-4 focus-within:ring-[var(--brand-ring)]",
+        "focus-within:ring-[1.5px] focus-within:ring-text",
         size === "hero" && "justify-center px-2 py-1",
         className,
       )}
     >
       <span
         className={cn(
-          "display-number shrink-0 font-bold text-subtle",
+          "display-number shrink-0 font-semibold text-subtle",
           size === "md" && "text-title",
           size === "lg" && "text-heading",
           size === "hero" && "text-display",
@@ -190,7 +201,7 @@ export function AmountInput({
             : undefined
         }
         className={cn(
-          "display-number min-w-0 bg-transparent font-bold text-text",
+          "display-number min-w-0 bg-transparent font-semibold text-text",
           size !== "hero" && "w-full",
           // Suppressed here because the wrapper above carries the focus ring.
           "outline-none focus-visible:outline-none",
@@ -279,7 +290,7 @@ export function CompactAmountInput({
   const [text, setText] = useAmountText(value === 0n ? null : value, currency);
 
   return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-ring)]">
+    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-[1.5px] focus-within:ring-text">
       <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         type="text"
@@ -297,7 +308,7 @@ export function CompactAmountInput({
           onChange(masked === "" ? 0n : (parseAmount(masked, currency) ?? 0n));
         }}
         className={cn(
-          "tabular w-[84px] bg-transparent text-right text-input font-bold text-text outline-none placeholder:text-subtle/60",
+          "tabular w-[84px] bg-transparent text-right text-input font-semibold text-text outline-none placeholder:text-subtle/60",
           className,
         )}
       />
@@ -363,7 +374,7 @@ export function BalanceHeadline({
   if (net === 0n) {
     return (
       <div>
-        <p className="font-display text-display font-bold leading-none tracking-[-0.03em] text-text">{settledLabel}</p>
+        <p className="font-display text-display font-semibold leading-none tracking-[-0.03em] text-text">{settledLabel}</p>
       </div>
     );
   }
@@ -379,7 +390,7 @@ export function BalanceHeadline({
         value={net}
         currency={currency}
         className={cn(
-          "mt-1 block font-display font-extrabold leading-none tracking-[-0.04em]",
+          "mt-1 block font-display font-semibold leading-none tracking-[-0.04em]",
           size === "hero" ? "text-display-lg" : size === "xl" ? "text-display" : "text-title-lg",
           owed ? "text-positive-text" : "text-negative-text",
         )}

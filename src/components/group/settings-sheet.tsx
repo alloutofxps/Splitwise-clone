@@ -174,7 +174,7 @@ export function GroupSettingsSheet({
       <Sheet open={open} onClose={onClose} tall title="Group settings">
         <div className="px-5 pb-6">
           <label className="block">
-            <span className="mb-1.5 block text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            <span className="mb-1.5 block text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
               Name
             </span>
             <input
@@ -182,7 +182,7 @@ export function GroupSettingsSheet({
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               onBlur={commitName}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-              className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input font-semibold text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition focus:ring-[1.5px] focus:ring-text"
             />
           </label>
 
@@ -192,7 +192,7 @@ export function GroupSettingsSheet({
               haptic();
               onOpenBalances();
             }}
-            className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.99]"
+            className="mt-4 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70"
           >
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
@@ -207,7 +207,7 @@ export function GroupSettingsSheet({
 
           {/* Members ------------------------------------------------------- */}
           <div className="mt-6">
-            <p className="mb-2 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+            <p className="mb-2 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
               Members
             </p>
             <ul className="space-y-1.5">
@@ -216,7 +216,7 @@ export function GroupSettingsSheet({
                 return (
                   <li
                     key={member.id}
-                    className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2.5"
                   >
                     <Avatar person={member} size="sm" />
                     <span className="min-w-0 flex-1">
@@ -244,7 +244,7 @@ export function GroupSettingsSheet({
                         }}
                         aria-label={`${member.displayName} is someone already on Divvy`}
                         title="This is someone already on Divvy"
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2 hover:text-text"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2 hover:text-text"
                       >
                         <Merge className="size-4" />
                       </button>
@@ -264,7 +264,7 @@ export function GroupSettingsSheet({
                             ? "They still have a balance in this group"
                             : undefined
                         }
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-negative-soft hover:text-negative disabled:opacity-30 disabled:hover:bg-transparent"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         <X className="size-4" />
                       </button>
@@ -287,7 +287,7 @@ export function GroupSettingsSheet({
                     <button
                       onClick={() => void addExisting(person)}
                       disabled={addMember.isPending}
-                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2 text-left transition active:scale-[0.985] disabled:opacity-50"
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2 text-left transition active:opacity-70 disabled:opacity-50"
                     >
                       <Avatar person={person} size="sm" />
                       <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
@@ -311,13 +311,13 @@ export function GroupSettingsSheet({
                   }
                 }}
                 placeholder="Add someone by name"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
               />
               <button
                 onClick={() => void add()}
                 disabled={!newName.trim() || addMember.isPending}
                 aria-label="Add member"
-                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-muted transition active:scale-90 disabled:opacity-40"
+                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-muted transition active:opacity-70 disabled:opacity-40"
               >
                 <UserPlus className="size-[18px]" />
               </button>
@@ -451,7 +451,7 @@ function ActionRow({
         haptic();
         onClick();
       }}
-      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:bg-surface-2"
+      className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:bg-surface-2"
     >
       <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
         {icon}

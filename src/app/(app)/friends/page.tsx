@@ -65,7 +65,7 @@ export default function FriendsPage() {
   if (isLoading || !data) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <h1 className="mb-5 text-display-sm font-black tracking-[-0.03em] text-text">Friends</h1>
+        <h1 className="mb-5 text-display-sm font-semibold tracking-[-0.03em] text-text">Friends</h1>
         <div className="space-y-2.5">
           {[0, 1, 2].map((index) => (
             <Skeleton key={index} className="h-[68px] w-full rounded-[var(--radius-lg)]" />
@@ -99,7 +99,7 @@ export default function FriendsPage() {
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">Friends</h1>
+        <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">Friends</h1>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" variant="secondary" onClick={() => setMyCode(true)}>
             My code
@@ -174,7 +174,7 @@ export default function FriendsPage() {
               }}
               aria-label="Filter this list"
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full transition active:scale-90",
+                "flex size-9 shrink-0 items-center justify-center rounded-full transition active:opacity-70",
                 filter === "all"
                   ? "text-muted hover:bg-surface-2"
                   : "bg-brand-soft text-brand-soft-text",
@@ -280,7 +280,7 @@ function FriendCard({ friend }: { friend: FriendDto }) {
   return (
     <Link
       href={`/friends/${friend.person.id}`}
-      className="block rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5 transition active:scale-[0.985] active:bg-surface-2 hover:border-line-strong"
+      className="block rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5 transition active:opacity-70 active:bg-surface-2 hover:border-line-strong"
     >
       <span className="flex items-center gap-3.5">
         <Avatar person={friend.person} size="md" />

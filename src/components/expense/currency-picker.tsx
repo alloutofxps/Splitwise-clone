@@ -66,7 +66,7 @@ export function CurrencyPicker({
                     onChange(entry.code);
                   }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition active:scale-[0.985]",
+                    "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition active:opacity-70",
                     active ? "bg-brand-soft" : "hover:bg-surface-2",
                   )}
                 >

@@ -332,7 +332,7 @@ export function SettleUpSheet({
 
             {/* How ---------------------------------------------------------- */}
             <div className="mt-4">
-              <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+              <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
                 How was it paid?
               </p>
               <div className="flex flex-wrap gap-2">
@@ -344,9 +344,9 @@ export function SettleUpSheet({
                       setMethod(method === option ? null : option);
                     }}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
+                      "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                       method === option
-                        ? "border-brand bg-brand text-white"
+                        ? "border-brand bg-brand text-inverse"
                         : "border-line bg-surface text-muted",
                     )}
                   >
@@ -360,7 +360,7 @@ export function SettleUpSheet({
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 500))}
               placeholder="Add a note (optional)"
-              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+              className="mt-4 h-11 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
             />
           </>
         )}
@@ -410,7 +410,7 @@ function SuggestionList({
     <div className="space-y-5">
       {suggestions.length > 0 ? (
         <div>
-          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             {suggestions.length === 1 ? "Suggested" : "Suggested payments"}
           </p>
           <ul className="space-y-2">
@@ -424,7 +424,7 @@ function SuggestionList({
                 <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
                   <button
                     onClick={() => onPick(edge)}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 text-left transition active:scale-[0.985] hover:border-line-strong"
+                    className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:border-line-strong"
                   >
                     <Avatar person={iAmPaying ? to : from} size="md" />
                     <span className="min-w-0 flex-1">
@@ -455,7 +455,7 @@ function SuggestionList({
 
       {rest.length > 0 ? (
         <div>
-          <p className="mb-2 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <p className="mb-2 px-1 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             {suggestions.length > 0 ? "Someone else" : "Add a payment anyway"}
           </p>
           <ul className="space-y-1.5">
@@ -463,7 +463,7 @@ function SuggestionList({
               <li key={person.id}>
                 <button
                   onClick={() => onPick({ fromPersonId: meId, toPersonId: person.id, amount: "0" })}
-                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] px-3 py-2.5 text-left transition active:scale-[0.985]"
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2.5 text-left transition active:opacity-70"
                 >
                   <Avatar person={person} size="sm" />
                   <span className="flex-1 truncate text-body-lg font-semibold text-text">
@@ -530,8 +530,8 @@ function PayThem({
   };
 
   return (
-    <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-3.5">
-      <p className="mb-2.5 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+    <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
+      <p className="mb-2.5 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
         Pay {person.displayName.split(" ")[0]}
       </p>
       <ul className="space-y-1.5">
@@ -547,7 +547,7 @@ function PayThem({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => haptic()}
-                  className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 transition active:scale-[0.985]"
+                  className="flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 transition active:opacity-70"
                 >
                   <span className="text-input">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">
@@ -563,7 +563,7 @@ function PayThem({
               ) : (
                 <button
                   onClick={() => void copy(entry.value)}
-                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-left transition active:scale-[0.985]"
+                  className="flex w-full items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 text-left transition active:opacity-70"
                 >
                   <span className="text-input">{kind?.emoji ?? "💸"}</span>
                   <span className="min-w-0 flex-1">

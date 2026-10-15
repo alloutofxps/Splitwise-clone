@@ -117,7 +117,7 @@ const SCREENS = [
   { name: "Friends", path: "/friends" },
   { name: "Activity", path: "/activity" },
   { name: "Search", path: "/search" },
-  { name: "Account", path: "/account" },
+  { name: "You", path: "/account" },
 ];
 
 // ---------------------------------------------------------------------------

@@ -38,14 +38,21 @@ describe("the type scale", () => {
     expect(declared.find((step) => step.name === "input")?.px).toBeGreaterThanOrEqual(16);
   });
 
-  it("is strictly ascending in the order it is written", () => {
+  it("never goes down in the order it is written", () => {
     // The order in TEXT_SCALE is the order a reader will assume the sizes go.
+    // Never smaller than the step before, rather than always bigger: in the
+    // redesign, body text, row values and inputs all sit on 16px on purpose
+    // (they differ by weight, not size), and the input floor is 16 anyway.
     const byScaleOrder = TEXT_SCALE.map(
       (name) => declared.find((step) => step.name === name)?.px ?? Number.NaN,
     );
     for (let i = 1; i < byScaleOrder.length; i += 1) {
-      expect(byScaleOrder[i], TEXT_SCALE[i]).toBeGreaterThan(byScaleOrder[i - 1]);
+      expect(byScaleOrder[i], TEXT_SCALE[i]).toBeGreaterThanOrEqual(byScaleOrder[i - 1]);
     }
+    // But the scale still has to climb: no more than three steps share a size.
+    const counts = new Map<number, number>();
+    for (const px of byScaleOrder) counts.set(px, (counts.get(px) ?? 0) + 1);
+    expect(Math.max(...counts.values())).toBeLessThanOrEqual(3);
   });
 
   it("leaves no raw pixel font sizes behind in components", () => {

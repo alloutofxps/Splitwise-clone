@@ -11,6 +11,7 @@ import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
 import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
+import { FlowMap } from "../flow/flow-map";
 
 /**
  * Who owes whom.
@@ -47,11 +48,36 @@ export function BalancesPanel({
   const members = group.members;
   const netById = group.balances.net;
 
+  // Everyone on the map: the members, plus anyone who has left but still has
+  // a line to draw, so a debt never points at nobody.
+  const mapPeople = React.useMemo(() => {
+    const list = [...members];
+    for (const edge of [...group.balances.pairwise, ...group.balances.simplified]) {
+      for (const id of [edge.fromPersonId, edge.toPersonId]) {
+        const person = people.get(id);
+        if (person && !list.some((member) => member.id === id)) list.push(person);
+      }
+    }
+    return list;
+  }, [members, people, group.balances.pairwise, group.balances.simplified]);
+
+  const mapEdges = React.useMemo(
+    () => edges.map((edge) => ({ ...edge, amount: BigInt(edge.amount) })),
+    [edges],
+  );
+
   return (
     <div>
+      {/* Who owes whom, drawn. Switching Simplify untangles it. ------------ */}
+      {mapEdges.length > 0 && mapPeople.length > 1 ? (
+        <section className="mb-4 rounded-[var(--radius-lg)] border border-line bg-surface px-2 py-4">
+          <FlowMap people={mapPeople} edges={mapEdges} currency={group.currency} meId={meId} />
+        </section>
+      ) : null}
+
       {/* Per-person net ---------------------------------------------------- */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
-        <h3 className="mb-3 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+      <section className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
+        <h3 className="mb-3 text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
           Where everyone stands
         </h3>
         <ul className="space-y-2.5">
@@ -82,7 +108,7 @@ export function BalancesPanel({
       {/* Settlement plan ---------------------------------------------------- */}
       <section className="mt-4">
         <div className="mb-2.5 flex items-center justify-between gap-3 px-1">
-          <h3 className="text-caption font-bold uppercase tracking-[0.06em] text-subtle">
+          <h3 className="text-caption font-semibold uppercase tracking-[0.06em] text-subtle">
             {simplified ? "Fewest payments" : "Who owes who"}
           </h3>
           <div className="flex items-center gap-2">
@@ -108,7 +134,7 @@ export function BalancesPanel({
         {edges.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
             <Check className="mx-auto size-6 text-positive-text" strokeWidth={2.4} />
-            <p className="mt-2 text-subhead font-bold text-text">Everyone is settled up</p>
+            <p className="mt-2 text-subhead font-semibold text-text">Everyone is settled up</p>
             <p className="mt-1 text-body text-muted">
               Nobody in this group owes anything.
             </p>
@@ -258,7 +284,7 @@ function RowBody({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={cn(className, "rounded-[var(--radius-md)] transition active:scale-[0.985]")}
+      className={cn(className, "rounded-[var(--radius-md)] transition active:opacity-70")}
     >
       {children}
     </button>
@@ -306,7 +332,7 @@ function NudgeButton({
       disabled={nudge.isPending || sent}
       aria-label={`Remind ${name}`}
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full transition active:scale-90",
+        "flex size-8 shrink-0 items-center justify-center rounded-full transition active:opacity-70",
         sent
           ? "text-positive-text"
           : "text-subtle hover:bg-surface-2 hover:text-text disabled:opacity-40",

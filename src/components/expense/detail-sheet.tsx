@@ -135,17 +135,13 @@ export function ExpenseDetailSheet({
             {/* Head ------------------------------------------------------- */}
             <div className="flex items-start gap-3.5 pt-1">
               <span
-                className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
-                style={{
-                  background: `color-mix(in oklch, var(--avatar-${category!.color}) 16%, transparent)`,
-                  color: `var(--avatar-${category!.color})`,
-                }}
+                className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text"
               >
                 <CategoryGlyph name={category!.icon} className="size-5" />
               </span>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-title-lg font-bold leading-tight tracking-[-0.02em] text-text">
+                <h2 className="text-title-lg font-semibold leading-tight tracking-[-0.02em] text-text">
                   {expense.description}
                 </h2>
                 <p className="mt-1 text-body text-muted">
@@ -296,7 +292,7 @@ export function ExpenseDetailSheet({
                         href={attachment.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface-2 transition active:scale-95"
+                        className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface-2 transition active:opacity-70"
                       >
                         {attachment.mimeType.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -327,7 +323,7 @@ export function ExpenseDetailSheet({
                           haptic();
                           setConfirmRemoveReceipt(attachment.id);
                         }}
-                        className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] text-muted transition active:scale-90 disabled:opacity-40"
+                        className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full border border-[var(--card-border)] bg-surface text-muted transition active:opacity-70 disabled:opacity-40"
                       >
                         <X className="size-3.5" />
                       </button>
@@ -389,7 +385,7 @@ export function ExpenseDetailSheet({
                     }
                   }}
                   placeholder="Add a comment"
-                  className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                  className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
                 />
                 <button
                   onClick={() => {
@@ -400,7 +396,7 @@ export function ExpenseDetailSheet({
                   }}
                   disabled={!draft.trim()}
                   aria-label="Post comment"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-white transition active:scale-90 disabled:opacity-40"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand text-inverse transition active:opacity-70 disabled:opacity-40"
                 >
                   <Send className="size-[18px]" />
                 </button>
@@ -471,7 +467,7 @@ export function ExpenseDetailSheet({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2 text-tiny font-bold uppercase tracking-[0.07em] text-subtle">
+    <p className="mb-2 text-tiny font-semibold uppercase tracking-[0.07em] text-subtle">
       {children}
     </p>
   );

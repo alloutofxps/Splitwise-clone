@@ -9,7 +9,7 @@ import { Button, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { Wordmark } from "@/components/app-shell";
 import { api, ApiError } from "@/lib/client/api";
-import { colorForName, initials } from "@/lib/avatar";
+import { colorForName, hueVar, initials } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/invite-code";
 import type { MeDto, PersonDto } from "@/lib/types";
 
@@ -149,7 +149,7 @@ export default function JoinPage() {
     return (
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col justify-center px-6 text-center">
         <Wordmark className="mb-8 justify-center" />
-        <p className="text-title-lg font-bold text-text">This invite doesn&rsquo;t work</p>
+        <p className="text-title-lg font-semibold text-text">This invite doesn&rsquo;t work</p>
         <p className="mt-2 text-body-lg leading-relaxed text-muted">
           {error ?? "The group may have a new code, or it may have been deleted."}
         </p>
@@ -171,7 +171,7 @@ export default function JoinPage() {
 
         {preview.kind === "group" ? (
           <>
-            <h1 className="mt-2 flex items-center gap-2.5 text-display font-black leading-tight tracking-[-0.03em] text-text">
+            <h1 className="mt-2 flex items-center gap-2.5 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
               <span>{preview.group.emoji}</span>
               <span className="min-w-0 break-words">{preview.group.name}</span>
             </h1>
@@ -199,7 +199,7 @@ export default function JoinPage() {
           </>
         ) : (
           <>
-            <h1 className="mt-2 text-display font-black leading-tight tracking-[-0.03em] text-text">
+            <h1 className="mt-2 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
               {preview.person.displayName}
             </h1>
             <p className="mt-2 text-subhead text-muted">
@@ -213,7 +213,7 @@ export default function JoinPage() {
 
         {/* Placeholder claiming ------------------------------------------- */}
         {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
-          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
+          <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
             <p className="flex items-center gap-1.5 text-body-lg font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
               Which one are you?
@@ -233,7 +233,7 @@ export default function JoinPage() {
                       if (claimId !== member.id && !name) setName(member.displayName);
                     }}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition active:scale-[0.985]",
+                      "flex w-full items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition active:opacity-70",
                       claimId === member.id
                         ? "border-brand bg-brand-soft"
                         : "border-line bg-surface-2",
@@ -275,8 +275,8 @@ export default function JoinPage() {
               </span>
               <div className="flex items-center gap-3">
                 <span
-                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-title font-bold text-white transition-colors duration-300"
-                  style={{ background: `var(--avatar-${colorForName(name || "divvy")})` }}
+                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-title font-semibold text-[var(--on-person)] transition-colors duration-300"
+                  style={{ background: hueVar(colorForName(name || "divvy")) }}
                 >
                   {name.trim() ? initials(name) : "?"}
                 </span>
@@ -287,7 +287,7 @@ export default function JoinPage() {
                   placeholder="Priya"
                   autoFocus
                   enterKeyHint="go"
-                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
                 />
               </div>
             </label>

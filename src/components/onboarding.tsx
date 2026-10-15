@@ -27,7 +27,7 @@ import {
 } from "@/lib/client/recovery";
 import { EMOJI_QUICK_PICKS } from "@/lib/emoji";
 import { EmojiPicker } from "./ui/emoji-picker";
-import { colorForName, initials } from "@/lib/avatar";
+import { colorForName, hueVar, initials } from "@/lib/avatar";
 import {
   PasskeyCancelled,
   hasPlatformAuthenticator,
@@ -171,7 +171,7 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
       <div className="flex flex-1 flex-col justify-center py-6">
         <Wordmark className="mb-6" />
 
-        <h1 className="mt-4 font-display text-display-lg font-extrabold leading-[1.02] tracking-[-0.045em] text-text">
+        <h1 className="mt-4 font-display text-display-lg font-semibold leading-[1.02] tracking-[-0.045em] text-text">
           Split bills with friends.
           <br />
           <span className="text-muted">See who owes what.</span>
@@ -278,7 +278,7 @@ function ProfileStep({
         Back
       </button>
 
-      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
         What&rsquo;s your name?
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
@@ -287,8 +287,8 @@ function ProfileStep({
 
       <div className="mt-8 flex flex-col items-center">
         <span
-          className="flex size-20 items-center justify-center rounded-full text-display-sm font-bold text-white transition-colors duration-300"
-          style={{ background: `var(--avatar-${color})` }}
+          className="flex size-20 items-center justify-center rounded-full text-display-sm font-semibold text-[var(--on-person)] transition-colors duration-300"
+          style={{ background: hueVar(color) }}
         >
           {emoji ?? (name.trim() ? initials(name) : "?")}
         </span>
@@ -338,7 +338,7 @@ function ProfileStep({
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
         />
       </label>
 
@@ -349,7 +349,7 @@ function ProfileStep({
         <select
           value={currency}
           onChange={(event) => setCurrency(event.target.value)}
-          className="h-12 w-full rounded-[var(--radius-md)] border border-line bg-surface px-4 text-input font-medium text-text outline-none transition focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition focus:ring-[1.5px] focus:ring-text"
         >
           {CURRENCIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
@@ -400,7 +400,7 @@ function EmojiChip({
       }}
       className={cn(
         "flex size-11 shrink-0 items-center justify-center rounded-full text-title-lg transition",
-        "active:scale-90",
+        "active:opacity-70",
         active
           ? "bg-brand-soft ring-2 ring-brand"
           : "bg-surface-2 hover:bg-surface-3",
@@ -449,7 +449,7 @@ function RecoveryStep({
         <KeyRound className="size-6 text-text" />
       </div>
 
-      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
         Save your recovery key
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
@@ -566,7 +566,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         Back
       </button>
 
-      <h1 className="text-display-sm font-black tracking-[-0.03em] text-text">
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
         Enter your recovery key
       </h1>
       <p className="mt-2 text-subhead leading-relaxed text-muted">
@@ -583,7 +583,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-line bg-surface p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle/60 focus:border-brand focus:ring-4 focus:ring-[var(--brand-ring)]"
+        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
       />
 
       <div className="mt-auto pt-8">

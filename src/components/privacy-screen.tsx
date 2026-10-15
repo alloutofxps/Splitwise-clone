@@ -4,6 +4,7 @@ import * as React from "react";
 import { EyeOff } from "lucide-react";
 import { readStored, writeStored } from "@/lib/client/storage";
 import { useClientValue } from "./ui/state-hooks";
+import { AppMark } from "./app-mark";
 
 /**
  * The app-switcher privacy screen.
@@ -142,9 +143,7 @@ export function PrivacyScreen() {
         document.documentElement.classList.remove(CLASS);
       }}
     >
-      <span className="flex size-16 items-center justify-center rounded-[var(--radius-lg)] bg-brand text-display-sm font-black text-white">
-        D
-      </span>
+      <AppMark className="size-16" />
       <p className="mt-4 flex items-center gap-1.5 text-body font-semibold text-muted">
         <EyeOff className="size-3.5" />
         Hidden
