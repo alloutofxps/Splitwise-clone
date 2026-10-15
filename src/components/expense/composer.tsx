@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Camera, ChevronDown, NotebookPen, Users } from "lucide-react";
+import { CalendarDays, Camera, Check, ChevronDown, NotebookPen, Plus, Users } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
@@ -63,6 +63,8 @@ interface Draft {
   currency: string;
   groupId: string | null;
   friendId: string | null;
+  /** More friends on the same non-group expense, beyond `friendId`. */
+  extraFriendIds: string[];
   categoryId: string;
   date: Date;
   notes: string;
@@ -141,11 +143,23 @@ export function ExpenseComposer({
 
   const group = draft.groupId ? data.groups.find((g) => g.id === draft.groupId) : undefined;
 
+  // Outside a group, everyone the expense names is a member of it: you, the
+  // friends picked for it, and - when editing - whoever is already on it.
+  // Deriving this from the friend picker alone left an edited friend expense
+  // listing only you, so their share vanished from the split editor.
   const members: PersonDto[] = group
     ? group.members
-    : draft.friendId
-      ? [me, peopleById.get(draft.friendId)].filter(Boolean as unknown as (p: PersonDto | undefined) => p is PersonDto)
-      : [me];
+    : [
+        ...new Set([
+          me.id,
+          ...(draft.friendId ? [draft.friendId] : []),
+          ...draft.extraFriendIds,
+          ...draft.participants.map((p) => p.personId),
+          ...draft.payers.map((p) => p.personId),
+        ]),
+      ]
+        .map((id) => (id === me.id ? me : peopleById.get(id)))
+        .filter((p): p is PersonDto => Boolean(p));
 
   const amount = draft.amount ?? 0n;
 
@@ -459,7 +473,10 @@ export function ExpenseComposer({
               native picker on phones; showPicker() covers desktop browsers.
             */}
             <span className="relative inline-flex">
-              <Chip icon={<CalendarDays className="size-3.5" />} active={!isToday(draft.date)} onClick={() => {}}>
+              {/* Only a picture of a chip: the date field on top is the control,
+                  so this must not be a second, dead button for a screen reader
+                  or the Tab key to land on. */}
+              <Chip icon={<CalendarDays className="size-3.5" />} active={!isToday(draft.date)} decorative>
                 {formatDateChip(draft.date)}
               </Chip>
               <input
@@ -599,6 +616,7 @@ function freshDraft(
     currency: group?.currency ?? currency,
     groupId: group?.id ?? null,
     friendId: null,
+    extraFriendIds: [],
     categoryId: DEFAULT_CATEGORY_ID,
     date: new Date(),
     notes: "",
@@ -622,6 +640,7 @@ function draftFromExpense(expense: ExpenseDto): Draft {
     currency: expense.currency,
     groupId: expense.groupId,
     friendId: null,
+    extraFriendIds: [],
     categoryId: expense.categoryId,
     date: new Date(expense.date),
     notes: expense.notes ?? "",
@@ -657,7 +676,7 @@ function ScopePicker({
   locked,
 }: {
   draft: Draft;
-  data: { groups: { id: string; name: string; emoji: string; currency: string; members: PersonDto[] }[]; friends: { person: PersonDto }[]; me: PersonDto };
+  data: { groups: { id: string; name: string; emoji: string; currency: string; members: PersonDto[] }[]; friends: { person: PersonDto; isFriend?: boolean }[]; me: PersonDto };
   onChange: (changes: Partial<Draft>) => void;
   /** Editing: the scope is fixed and shown as a label rather than a control. */
   locked?: boolean;
@@ -669,17 +688,22 @@ function ScopePicker({
       apply: (): Partial<Draft> => ({
         groupId: group.id,
         friendId: null,
+        extraFriendIds: [],
         currency: group.currency,
         exchangeRate: "1",
         participants: group.members.map((m) => ({ personId: m.id, included: true })),
       }),
     })),
-    ...data.friends.map((friend) => ({
+    // Only people added as friends: someone you only share a group with can
+    // be split with inside that group, and the server refuses it out here.
+    ...data.friends.filter((friend) => friend.isFriend !== false).map((friend) => ({
       key: `friend:${friend.person.id}`,
       label: friend.person.displayName,
       apply: (): Partial<Draft> => ({
         groupId: null,
         friendId: friend.person.id,
+        extraFriendIds: [],
+        payers: [{ personId: data.me.id, amount: draft.amount ?? 0n }],
         participants: [
           { personId: data.me.id, included: true },
           { personId: friend.person.id, included: true },
@@ -697,7 +721,13 @@ function ScopePicker({
   if (options.length === 0) return null;
 
   if (locked) {
-    const label = options.find((option) => option.key === current)?.label;
+    // A non-group expense has no option to match, so name the people on it.
+    const friendNames = data.friends
+      .filter((f) => draft.participants.some((p) => p.personId === f.person.id))
+      .map((f) => f.person.displayName);
+    const label =
+      options.find((option) => option.key === current)?.label ??
+      (draft.groupId ? undefined : friendNames.join(", ") || undefined);
     if (!label) return null;
     return (
       <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
@@ -710,7 +740,34 @@ function ScopePicker({
     );
   }
 
+  // Splitting one bill with several friends outside a group: the first is
+  // picked above, the rest are toggled in here.
+  const others = draft.friendId
+    ? data.friends.filter((f) => f.person.id !== draft.friendId && f.isFriend !== false)
+    : [];
+  const toggleFriend = (id: string) => {
+    const on = draft.extraFriendIds.includes(id);
+    if (on) {
+      const payers = draft.payers.filter((p) => p.personId !== id);
+      onChange({
+        extraFriendIds: draft.extraFriendIds.filter((x) => x !== id),
+        participants: draft.participants.filter((p) => p.personId !== id),
+        payers: payers.length > 0 ? payers : [{ personId: data.me.id, amount: draft.amount ?? 0n }],
+        items: draft.items.map((item) => ({
+          ...item,
+          participantIds: item.participantIds.filter((x) => x !== id),
+        })),
+      });
+    } else {
+      onChange({
+        extraFriendIds: [...draft.extraFriendIds, id],
+        participants: [...draft.participants, { personId: id, included: true }],
+      });
+    }
+  };
+
   return (
+    <div className="space-y-2">
     <label className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
       <span className="shrink-0 text-body font-semibold text-muted">With</span>
       <select
@@ -733,7 +790,7 @@ function ScopePicker({
               ))}
           </optgroup>
         ) : null}
-        {data.friends.length > 0 ? (
+        {options.some((o) => o.key.startsWith("friend:")) ? (
           <optgroup label="Friends">
             {options
               .filter((o) => o.key.startsWith("friend:"))
@@ -746,6 +803,32 @@ function ScopePicker({
         ) : null}
       </select>
     </label>
+    {others.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-1.5 px-1" role="group" aria-label="Also split with">
+        <span className="mr-0.5 text-caption font-semibold text-subtle">Also with</span>
+        {others.map((friend) => {
+          const on = draft.extraFriendIds.includes(friend.person.id);
+          return (
+            <button
+              key={friend.person.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggleFriend(friend.person.id)}
+              className={cn(
+                "flex h-8 items-center gap-1 rounded-full border px-3 text-body font-semibold transition active:scale-95",
+                on
+                  ? "border-transparent bg-brand-soft text-brand-soft-text"
+                  : "border-[var(--card-border)] bg-surface text-muted",
+              )}
+            >
+              {on ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
+              {friend.person.displayName}
+            </button>
+          );
+        })}
+      </div>
+    ) : null}
+    </div>
   );
 }
 
@@ -804,18 +887,27 @@ function Chip({
   icon,
   active,
   onClick,
+  decorative,
 }: {
   children: React.ReactNode;
   icon: React.ReactNode;
   active?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
+  /** Drawn as a chip but not a control; something laid over it is. */
+  decorative?: boolean;
 }) {
+  const Tag = decorative ? "span" : "button";
   return (
-    <button
-      onClick={() => {
-        haptic();
-        onClick();
-      }}
+    <Tag
+      {...(decorative
+        ? { "aria-hidden": true }
+        : {
+            type: "button" as const,
+            onClick: () => {
+              haptic();
+              onClick?.();
+            },
+          })}
       className={cn(
         "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:scale-95",
         active
@@ -825,7 +917,7 @@ function Chip({
     >
       {icon}
       {children}
-    </button>
+    </Tag>
   );
 }
 

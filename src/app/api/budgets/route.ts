@@ -4,6 +4,8 @@ import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { CATEGORY_BY_ID } from "@/lib/categories";
 import { convertedBreakdown } from "@/server/read";
+import { getRate } from "@/server/rates";
+import { convert } from "@/lib/money";
 import type { BudgetDto } from "@/lib/types";
 import { ValidationError } from "@/lib/errors";
 import { requireGroupAccess } from "@/server/access";
@@ -58,25 +60,56 @@ export const GET = route(async (request: Request) => {
     },
   });
 
+  // Today's rate for every currency pair a budget needs, looked up once.
+  // Spending in another currency used to be skipped without a word, so a euro
+  // budget read zero for a whole trip paid in yen. Converting at today's rate
+  // only ever touches the current period, and the result is marked approximate
+  // so the screen can say so.
+  const pairs = new Set<string>();
+  for (const budget of budgets) {
+    for (const expense of expenses) {
+      const code = expense.group?.currency ?? expense.currency;
+      if (code !== budget.currency) pairs.add(`${code}>${budget.currency}`);
+    }
+  }
+  const rates = new Map<string, string | null>();
+  await Promise.all(
+    [...pairs].map(async (pair) => {
+      const [from, to] = pair.split(">");
+      const found = await getRate(from, to).catch(() => null);
+      rates.set(pair, found?.rate ?? null);
+    }),
+  );
+
   const result: BudgetDto[] = budgets.map((budget) => {
     const start = periodStart(budget.period, new Date(), timeZone);
     let spent = 0n;
+    const convertedFrom = new Set<string>();
+    const uncounted = new Set<string>();
 
     for (const expense of expenses) {
       if (expense.date < start) continue;
       if (budget.groupId && expense.groupId !== budget.groupId) continue;
       if (budget.categoryId && expense.categoryId !== budget.categoryId) continue;
 
-      // Only count expenses already denominated in the budget's currency.
-      // Converting across a whole history with today's rate would report a
-      // number that silently changes every time the market moves.
       const expenseCurrency = expense.group?.currency ?? expense.currency;
-      if (expenseCurrency !== budget.currency) continue;
-
       const { owed } = convertedBreakdown(expense);
-      spent += owed
+      const share = owed
         .filter((o) => o.personId === personId)
         .reduce((total, o) => total + o.amount, 0n);
+      if (share === 0n) continue;
+
+      if (expenseCurrency === budget.currency) {
+        spent += share;
+        continue;
+      }
+      const rate = rates.get(`${expenseCurrency}>${budget.currency}`);
+      if (!rate) {
+        uncounted.add(expenseCurrency);
+        continue;
+      }
+      spent += convert(share, expenseCurrency, budget.currency, rate);
+      convertedFrom.add(expenseCurrency);
     }
 
     return {
@@ -87,6 +120,8 @@ export const GET = route(async (request: Request) => {
       currency: budget.currency,
       period: budget.period as BudgetDto["period"],
       spent: spent.toString(),
+      convertedFrom: [...convertedFrom].sort(),
+      uncounted: [...uncounted].sort(),
     };
   });
 

@@ -4,7 +4,8 @@ import { ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { SPLIT_MODES } from "@/lib/split";
 import { CATEGORY_BY_ID, DEFAULT_CATEGORY_ID } from "@/lib/categories";
-import { assertCanInvolve } from "./access";
+import { areFriends, assertCanInvolve } from "./access";
+import { computeBalances } from "@/lib/balances";
 import { decodeDataUrl, MAX_ATTACHMENT_BYTES, type ExpenseWriteInput } from "./write";
 import { checkRateIsPlausible } from "./rates";
 
@@ -124,6 +125,36 @@ export async function prepareExpense(
     ...input.splits.filter((s) => s.amount !== 0n || s.included !== false).map((s) => s.personId),
   ];
   await assertCanInvolve(involved, actorId, groupId, existing?.personIds ?? []);
+
+  // Outside a group, every debt an expense creates has to be between two
+  // friends. With several friends and several payers, one friend can end up
+  // owing another; if those two are not friends on Divvy, neither could see
+  // or settle that debt. A group is where people who don't know each other
+  // share costs.
+  if (!groupId) {
+    const { pairwise } = computeBalances([
+      {
+        kind: "expense",
+        id: "check",
+        paid: input.payers.map((p) => ({ personId: p.personId, amount: p.amount })),
+        owed: input.splits
+          .filter((s) => s.amount !== 0n)
+          .map((s) => ({ personId: s.personId, amount: s.amount })),
+      },
+    ]);
+    for (const edge of pairwise) {
+      if (edge.fromPersonId === actorId || edge.toPersonId === actorId) continue;
+      if (await areFriends(edge.fromPersonId, edge.toPersonId)) continue;
+      const people = await prisma.person.findMany({
+        where: { id: { in: [edge.fromPersonId, edge.toPersonId] } },
+        select: { displayName: true },
+      });
+      const [a, b] = people.map((p) => p.displayName);
+      throw new ValidationError(
+        `${a ?? "Two people"} and ${b ?? "someone"} aren't friends on Divvy, so one can't owe the other outside a group. Make a group for this, or pick one person who paid.`,
+      );
+    }
+  }
 
   if (settlementCurrency !== input.currency && !input.exchangeRate) {
     throw new ValidationError(

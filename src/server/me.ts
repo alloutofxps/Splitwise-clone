@@ -15,6 +15,8 @@ import {
   personDto,
 } from "./read";
 import type { BalanceSheet } from "@/lib/balances";
+import { getRate } from "./rates";
+import { convert } from "@/lib/money";
 
 export async function meDto(person: Person): Promise<MeDto> {
   const paymentMethods = await prisma.paymentMethod.findMany({
@@ -87,9 +89,11 @@ export async function friendDtos(
   // Union, because the two overlap: somebody added by code who then joined your
   // flat group is one person, not two rows.
   const byId = new Map<string, (typeof coMembers)[number]>();
+  const directFriends = new Set<string>();
   for (const friendship of friendships) {
     const other = friendship.personAId === personId ? friendship.personB : friendship.personA;
     byId.set(other.id, other);
+    directFriends.add(other.id);
   }
   for (const person of coMembers) byId.set(person.id, person);
 
@@ -184,6 +188,7 @@ export async function friendDtos(
       directNet,
       ledgers,
       sharedGroupIds: shared.map((entry) => entry.groupId),
+      isFriend: directFriends.has(other.id),
       lastActivityAt: null,
     });
   }
@@ -218,8 +223,10 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
     totals.set(code, (totals.get(code) ?? 0n) + value);
   };
 
+  // Archived groups count too. Archiving hides a group from the list; it
+  // does not settle it, and leaving its balance out made money that was still
+  // owed vanish from the headline while the Friends page went on showing it.
   for (const group of groups) {
-    if (group.archivedAt) continue;
     add(group.currency, BigInt(group.yourNet));
   }
   // `directNet`, not `net`: a friend's headline figure now includes their share
@@ -231,11 +238,32 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
 
   const unreadActivityCount = groups.reduce((total, g) => total + g.unreadCount, 0);
 
+  // With balances in more than one currency, a rough single figure in the
+  // person's own currency, so they can tell at a glance whether they are up or
+  // down overall. Today's rate; left out if any rate is unavailable rather
+  // than showing a total that silently skips a currency.
+  let approxTotal: { currency: string; amount: string } | null = null;
+  const live = [...totals].filter(([, value]) => value !== 0n);
+  if (live.length > 1) {
+    const target = person.defaultCurrency;
+    const parts = await Promise.all(
+      live.map(async ([code, value]) => {
+        if (code === target) return value;
+        const found = await getRate(code, target).catch(() => null);
+        return found ? convert(value, code, target, found.rate) : null;
+      }),
+    );
+    if (parts.every((part) => part !== null)) {
+      approxTotal = { currency: target, amount: parts.reduce((t: bigint, v) => t + (v ?? 0n), 0n).toString() };
+    }
+  }
+
   return {
     me,
     totals: Object.fromEntries(
-      [...totals].filter(([, value]) => value !== 0n).map(([code, value]) => [code, value.toString()]),
+      live.map(([code, value]) => [code, value.toString()]),
     ),
+    approxTotal,
     groups,
     friends,
     unreadActivityCount,

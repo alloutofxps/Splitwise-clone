@@ -114,4 +114,19 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },
+
+  // TypeScript audit scripts read raw JSON from the API to check it against
+  // the app's own arithmetic. Typing every response would be a second copy of
+  // the API's types that could drift from the real ones; `any` is honest here.
+  {
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+    },
+  },
 );

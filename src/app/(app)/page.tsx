@@ -229,7 +229,17 @@ function Hero({ data }: { data: DashboardPayload }) {
                 )}
               />
             ))}
-            <span className="w-full text-body font-semibold text-muted">in {totals.length} currencies</span>
+            <span className="w-full text-body font-semibold text-muted">
+              {data.approxTotal ? (
+                <>
+                  In {totals.length} currencies. About{" "}
+                  <Amount value={BigInt(data.approxTotal.amount) < 0n ? -BigInt(data.approxTotal.amount) : BigInt(data.approxTotal.amount)} currency={data.approxTotal.currency} size="sm" tone="plain" />{" "}
+                  {BigInt(data.approxTotal.amount) >= 0n ? "owed to you" : "that you owe"} in total.
+                </>
+              ) : (
+                <>in {totals.length} currencies</>
+              )}
+            </span>
           </div>
         )}
 
@@ -290,7 +300,8 @@ function breakdown(data: DashboardPayload): { currency: string; owedToYou: bigin
     else youOwe -= value;
   };
   for (const group of data.groups) {
-    if (group.archivedAt || group.currency !== currency) continue;
+    // Archived groups included, to match the headline total.
+    if (group.currency !== currency) continue;
     add(BigInt(group.yourNet));
   }
   for (const friend of data.friends) {
