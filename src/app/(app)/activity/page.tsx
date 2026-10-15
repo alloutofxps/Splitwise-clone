@@ -131,7 +131,7 @@ export default function ActivityPage() {
         <div className="space-y-5">
           {days.map(({ label, entries }) => (
             <section key={label}>
-              <h2 className="mb-2 mt-1 px-1 font-serif text-title italic text-muted">
+              <h2 className="mb-2 mt-1 px-1 text-caption font-semibold text-subtle">
                 {label}
               </h2>
               <ul className="space-y-1">

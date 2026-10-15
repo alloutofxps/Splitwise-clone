@@ -77,7 +77,7 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(500);
 await page.keyboard.press("Escape");
 await page.waitForTimeout(500);
-await page.getByRole("button", { name: /Add an expense|^Add$/ }).first().click();
+await page.getByRole("button", { name: "Add an expense" }).first().click();
 await page.waitForTimeout(900);
 const composerText = await sheet().innerText();
 check("a new expense starts with the usual split", /By percent|Percent/i.test(composerText), composerText.slice(0, 200).replace(/\n/g, " | "));
@@ -158,7 +158,7 @@ await receiptPage.close();
 
 await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
-await page.getByRole("button", { name: /Add an expense|^Add$/ }).first().click();
+await page.getByRole("button", { name: "Add an expense" }).first().click();
 await page.waitForTimeout(900);
 await sheet().getByRole("button", { name: /^Receipt/ }).click();
 await page.waitForTimeout(700);

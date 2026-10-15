@@ -3,18 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Plus, Search, Sparkles, UsersRound } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Plus, Search, UsersRound } from "lucide-react";
 import { useDashboard } from "@/lib/client/queries";
 import { Amount } from "@/components/ui/money";
-import { Avatar, AvatarStack } from "@/components/ui/avatar";
+import { AvatarStack } from "@/components/ui/avatar";
 import { Button, EmptyState, SectionHeader, cn } from "@/components/ui/primitives";
-import { AnimatedAmount, listItem } from "@/components/ui/motion";
+import { listItem } from "@/components/ui/motion";
 import { NewGroupSheet } from "@/components/group/new-group-sheet";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { ImportSheet } from "@/components/group/import-sheet";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/app-shell";
-import { moodFromTotals } from "@/components/ambient";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { GroupSummaryDto } from "@/lib/types";
 
@@ -33,16 +31,13 @@ export default function HomePage() {
     <div className="pt-[max(1.25rem,env(safe-area-inset-top))]">
       <header className="mb-4 flex items-center justify-between gap-4">
         <Wordmark />
-        <div className="flex shrink-0 items-center gap-1">
-          <Link
-            href="/search"
-            aria-label="Search expenses"
-            className="flex size-10 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 active:scale-90 lg:hidden"
-          >
-            <Search className="size-[20px]" />
-          </Link>
-          <ThemeToggle />
-        </div>
+        <Link
+          href="/search"
+          aria-label="Search expenses"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 active:scale-90 lg:hidden"
+        >
+          <Search className="size-[20px]" />
+        </Link>
       </header>
 
       <Hero data={data} />
@@ -106,38 +101,8 @@ export default function HomePage() {
             </div>
 
             <div className="min-w-0">
-              {data.friends.length > 0 ? (
-                <div className="mt-9 xl:mt-0">
-                  <SectionHeader
-                    title="Friends"
-                    action={
-                      <Link
-                        href="/friends"
-                        className="flex items-center gap-0.5 rounded-full px-3 py-1.5 text-body font-semibold text-brand transition hover:bg-brand-soft"
-                      >
-                        All
-                        <ArrowRight className="size-3.5" />
-                      </Link>
-                    }
-                  />
-                  <ul className="surface-card divide-y divide-line overflow-hidden">
-                    {data.friends.slice(0, 4).map((friend, index) => (
-                      <motion.li
-                        key={friend.person.id}
-                        custom={index + active.length}
-                        variants={listItem}
-                        initial="hidden"
-                        animate="shown"
-                      >
-                        <FriendRow friend={friend} />
-                      </motion.li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
               {archived.length > 0 ? (
-                <div className="mt-9">
+                <div className="mt-9 xl:mt-0">
                   <SectionHeader title="Archived" />
                   <ul className="space-y-3 opacity-70">
                     {archived.map((group) => (
@@ -170,101 +135,61 @@ export default function HomePage() {
 // ---------------------------------------------------------------------------
 
 /**
- * The headline: where you stand, as a lit card in the colour of it.
- *
- * Mint when the table owes you, coral when you owe, iris when you are square.
- * The figure counts up to its value, and underneath it the two halves that
- * make it up - so "€187 overall" is never the only thing you can see.
+ * The headline: where you stand, and underneath it the two halves that make it
+ * up, so "€187 overall" is never the only thing you can see.
  */
 function Hero({ data }: { data: DashboardPayload }) {
   const totals = Object.entries(data.totals);
-  const mood = moodFromTotals(data.totals);
   const firstName = data.me.displayName.split(" ")[0];
   const split = breakdown(data);
+  const only = totals.length === 1 ? BigInt(totals[0][1]) : 0n;
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 12, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", stiffness: 200, damping: 22 }}
-      className="relative overflow-hidden rounded-[28px] border border-[var(--card-border)] bg-surface p-5 pb-4"
-      style={{
-        boxShadow:
-          "var(--highlight), 0 24px 48px -20px color-mix(in oklch, var(--mood) 55%, transparent), var(--shadow-md)",
-      }}
-    >
-      {/* The light inside the card: two washes of the mood colour. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 transition-[background] duration-1000"
-        style={{
-          background:
-            "radial-gradient(90% 80% at 0% 0%, color-mix(in oklch, var(--mood) 30%, transparent) 0%, transparent 60%), radial-gradient(70% 70% at 100% 100%, color-mix(in oklch, var(--mood-2) 22%, transparent) 0%, transparent 65%)",
-        }}
-      />
+    <section className="rounded-[28px] border border-[var(--card-border)] bg-surface p-5 pb-4">
+      <p className="text-subhead font-semibold text-muted">
+        {greeting()}, <span className="text-text">{firstName}</span>
+      </p>
 
-      <div className="relative">
-        <p className="text-subhead font-semibold text-muted">
-          {greeting()},{" "}
-          <span className="font-serif text-title-lg italic font-normal text-text">{firstName}</span>
-        </p>
+      {totals.length === 0 ? (
+        <div className="mt-3">
+          <p className="font-display text-display font-bold leading-tight tracking-[-0.03em] text-text">
+            All settled up
+          </p>
+          <p className="mt-2 text-body-lg text-muted">Nobody owes anybody anything.</p>
+        </div>
+      ) : totals.length === 1 ? (
+        <div className="mt-2">
+          <Amount value={only} currency={totals[0][0]} size="hero" className="text-hero tracking-[-0.04em]" />
+          <p className="mt-2 text-body-lg font-medium text-muted">
+            {only > 0n ? "In total, people owe you this much." : "In total, you owe this much."}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          {totals.map(([currency, value]) => (
+            <Amount key={currency} value={value} currency={currency} size="xl" />
+          ))}
+          <span className="w-full text-body font-semibold text-muted">
+            {data.approxTotal ? (
+              <>
+                In {totals.length} currencies. About{" "}
+                <Amount value={BigInt(data.approxTotal.amount) < 0n ? -BigInt(data.approxTotal.amount) : BigInt(data.approxTotal.amount)} currency={data.approxTotal.currency} size="sm" tone="plain" />{" "}
+                {BigInt(data.approxTotal.amount) >= 0n ? "owed to you" : "that you owe"} in total.
+              </>
+            ) : (
+              <>in {totals.length} currencies</>
+            )}
+          </span>
+        </div>
+      )}
 
-        {totals.length === 0 ? (
-          <div className="mt-3">
-            <p className="font-serif text-display-lg italic leading-none text-text">
-              All settled up <Sparkles className="inline size-7 -translate-y-1 text-brand" />
-            </p>
-            <p className="mt-2 text-body-lg text-muted">Nobody owes anybody anything.</p>
-          </div>
-        ) : totals.length === 1 ? (
-          <div className="mt-2">
-            <AnimatedAmount
-              value={totals[0][1]}
-              currency={totals[0][0]}
-              fromZero
-              className={cn(
-                "font-display text-hero font-extrabold leading-none tracking-[-0.04em]",
-                BigInt(totals[0][1]) > 0n ? "text-positive-text" : "text-negative-text",
-              )}
-            />
-            <p className="mt-2 text-body-lg font-medium text-muted">{moodLine(mood)}</p>
-          </div>
-        ) : (
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            {totals.map(([currency, value]) => (
-              <AnimatedAmount
-                key={currency}
-                value={value}
-                currency={currency}
-                fromZero
-                className={cn(
-                  "font-display text-display font-extrabold tracking-[-0.03em]",
-                  BigInt(value) > 0n ? "text-positive-text" : "text-negative-text",
-                )}
-              />
-            ))}
-            <span className="w-full text-body font-semibold text-muted">
-              {data.approxTotal ? (
-                <>
-                  In {totals.length} currencies. About{" "}
-                  <Amount value={BigInt(data.approxTotal.amount) < 0n ? -BigInt(data.approxTotal.amount) : BigInt(data.approxTotal.amount)} currency={data.approxTotal.currency} size="sm" tone="plain" />{" "}
-                  {BigInt(data.approxTotal.amount) >= 0n ? "owed to you" : "that you owe"} in total.
-                </>
-              ) : (
-                <>in {totals.length} currencies</>
-              )}
-            </span>
-          </div>
-        )}
-
-        {split ? (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Chip direction="in" value={split.owedToYou} currency={split.currency} label="owed to you" />
-            <Chip direction="out" value={split.youOwe} currency={split.currency} label="you owe" />
-          </div>
-        ) : null}
-      </div>
-    </motion.section>
+      {split ? (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Chip direction="in" value={split.owedToYou} currency={split.currency} label="owed to you" />
+          <Chip direction="out" value={split.youOwe} currency={split.currency} label="you owe" />
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -281,7 +206,7 @@ function Chip({
 }) {
   const Icon = direction === "in" ? ArrowDownRight : ArrowUpRight;
   return (
-    <div className="glass-strong flex items-center gap-2.5 rounded-[18px] px-3 py-2.5">
+    <div className="flex items-center gap-2.5 rounded-[18px] bg-surface-2 px-3 py-2.5">
       <span
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-full",
@@ -325,12 +250,6 @@ function breakdown(data: DashboardPayload): { currency: string; owedToYou: bigin
   return { currency, owedToYou, youOwe };
 }
 
-function moodLine(mood: "owed" | "owe" | "square"): string {
-  if (mood === "owed") return "In total, people owe you this much.";
-  if (mood === "owe") return "In total, you owe this much.";
-  return "Overall, you're even.";
-}
-
 function greeting(): string {
   const hour = new Date().getHours();
   if (hour < 5) return "Hi";
@@ -349,20 +268,13 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
     <motion.div whileTap={{ scale: 0.975 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}>
       <Link
         href={`/groups/${group.id}`}
-        className="surface-card group flex items-center gap-3.5 p-3.5 transition-colors duration-150 hover:border-line-strong"
+        className="surface-card flex items-center gap-3.5 p-3.5 transition-colors duration-150 hover:border-line-strong"
       >
-        {/* The group's own colour as a lit tile - a trip and a flat share now
-            look like different things before you read a word. */}
         <span
-          className="relative flex size-12 shrink-0 items-center justify-center rounded-[16px] text-title-lg"
-          style={{
-            background: `linear-gradient(140deg, color-mix(in oklch, ${colour} 30%, var(--surface)) 0%, color-mix(in oklch, ${colour} 55%, var(--surface)) 100%)`,
-            boxShadow: `inset 0 1px 0 oklch(1 0 0 / 0.45), 0 6px 14px -6px color-mix(in oklch, ${colour} 70%, transparent)`,
-          }}
+          className="flex size-12 shrink-0 items-center justify-center rounded-[14px] text-title-lg"
+          style={{ background: `color-mix(in oklch, ${colour} 18%, var(--surface))` }}
         >
-          <span className="transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
-            {group.emoji}
-          </span>
+          {group.emoji}
         </span>
 
         <span className="min-w-0 flex-1">
@@ -371,10 +283,7 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
               {group.name}
             </span>
             {group.unreadCount > 0 ? (
-              <span className="relative flex size-2 shrink-0" aria-label="New activity">
-                <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-60" />
-                <span className="relative size-2 rounded-full bg-brand" />
-              </span>
+              <span className="size-2 shrink-0 rounded-full bg-brand" aria-label="New activity" />
             ) : null}
           </span>
           <span className="mt-1.5 block">
@@ -401,39 +310,6 @@ function GroupCard({ group }: { group: GroupSummaryDto }) {
   );
 }
 
-function FriendRow({ friend }: { friend: DashboardPayload["friends"][number] }) {
-  const entries = Object.entries(friend.net);
-
-  return (
-    <Link
-      href={`/friends/${friend.person.id}`}
-      className="flex items-center gap-3.5 px-3.5 py-3 transition active:bg-surface-2 hover:bg-surface-2/60"
-    >
-      <Avatar person={friend.person} size="md" />
-      <span className="min-w-0 flex-1 truncate text-subhead font-semibold text-text">
-        {friend.person.displayName}
-      </span>
-      <span className="shrink-0 text-right">
-        {entries.length === 0 ? (
-          <span className="text-body font-semibold text-subtle">settled</span>
-        ) : (
-          entries.map(([currency, value]) => {
-            const amount = BigInt(value);
-            return (
-              <span key={currency} className="block">
-                <Amount value={amount} currency={currency} size="md" className="block" />
-                <span className="block text-micro font-semibold text-subtle">
-                  {amount > 0n ? "owes you" : "you owe"}
-                </span>
-              </span>
-            );
-          })
-        )}
-      </span>
-    </Link>
-  );
-}
-
 // ---------------------------------------------------------------------------
 
 function FirstRun({
@@ -447,22 +323,8 @@ function FirstRun({
 }) {
   return (
     <div className="surface-card mt-8 rounded-[28px] p-6">
-      <div className="flex -space-x-2 text-display-sm">
-        {["🏝️", "🍕", "🏡", "🍻"].map((emoji, index) => (
-          <motion.span
-            key={emoji}
-            initial={{ opacity: 0, y: 10, rotate: -12 }}
-            animate={{ opacity: 1, y: 0, rotate: (index - 1.5) * 8 }}
-            transition={{ delay: 0.1 + index * 0.08, type: "spring", stiffness: 300, damping: 16 }}
-            className="surface-card flex size-12 items-center justify-center rounded-[16px]"
-          >
-            {emoji}
-          </motion.span>
-        ))}
-      </div>
-
-      <h2 className="mt-5 font-display text-heading font-extrabold tracking-[-0.03em] text-text">
-        Start <span className="font-serif font-normal italic">your first</span> group
+      <h2 className="font-display text-heading font-extrabold tracking-[-0.03em] text-text">
+        Start your first group
       </h2>
       <p className="mt-1.5 text-body-lg leading-relaxed text-muted">
         Make a group for a trip or the people you live with. Or join a friend&rsquo;s

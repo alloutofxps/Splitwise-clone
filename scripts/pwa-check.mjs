@@ -297,12 +297,12 @@ console.log("\nAn expense added offline");
   });
 
   await off.goto(`${BASE}/groups/${groupId}`, { waitUntil: "domcontentloaded" });
-  await off.getByRole("button", { name: /^Add$/ }).waitFor({ timeout: 30000 });
+  await off.getByRole("button", { name: "Add an expense" }).first().waitFor({ timeout: 30000 });
   await off.waitForTimeout(1500);
 
   await durable.setOffline(true);
   await off.waitForTimeout(500);
-  await off.getByRole("button", { name: /^Add$/ }).click();
+  await off.getByRole("button", { name: "Add an expense" }).first().click();
   await off.waitForTimeout(900);
   for (const digit of ["4", "2"]) {
     await off.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();

@@ -15,7 +15,6 @@ import { ApiError } from "@/lib/client/api";
 import { paymentLink, PAYMENT_KINDS } from "@/lib/payments";
 import type { GroupDetailDto, PaymentMethodDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
-import { celebrate } from "../ui/motion";
 
 /**
  * Settling up.
@@ -185,8 +184,6 @@ export function SettleUpSheet({
         method,
       });
       haptic([8, 30, 8]);
-      // Settling up is the best moment in a money app; it gets a little party.
-      celebrate();
       toast({ tone: "success", title: "Payment saved", description: "Nice one." });
       onClose();
     } catch (error) {

@@ -57,7 +57,7 @@ export default function SearchPage() {
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
       <h1 className="mb-4 text-display-sm font-black tracking-[-0.03em] text-text">Search</h1>
 
-      <div className="sticky top-0 z-20 -mx-4 bg-bg/90 px-4 pb-3 backdrop-blur lg:-mx-8 lg:px-8">
+      <div className="sticky top-0 z-20 -mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">
         <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus-within)]:[box-shadow:var(--highlight),var(--shadow-sm)] px-3.5 py-3 focus-within:border-brand focus-within:ring-4 focus-within:ring-[var(--brand-ring)]">
           <Search className="size-[18px] shrink-0 text-subtle" />
           <input

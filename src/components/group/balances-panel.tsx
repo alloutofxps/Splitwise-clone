@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, BellRing, Check, Info, Sparkles } from "lucide-react";
+import { ArrowRight, BellRing, Check, Info } from "lucide-react";
 import { Amount } from "../ui/money";
 import { useMirror } from "../ui/state-hooks";
 import { Avatar } from "../ui/avatar";
@@ -107,7 +107,7 @@ export function BalancesPanel({
 
         {edges.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
-            <Sparkles className="mx-auto size-6 text-positive-text" />
+            <Check className="mx-auto size-6 text-positive-text" strokeWidth={2.4} />
             <p className="mt-2 text-subhead font-bold text-text">Everyone is settled up</p>
             <p className="mt-1 text-body text-muted">
               Nobody in this group owes anything.

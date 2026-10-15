@@ -42,10 +42,10 @@ export function Avatar({
 }) {
   const label = initials(person.displayName);
   const colour = `var(--avatar-${person.avatarColor}, var(--avatar-iris))`;
-  // Lit from the top left, like a bead rather than a flat disc.
+  // A flat disc in the person's colour; a placeholder's is softened.
   const background = person.isGhost
     ? `color-mix(in oklch, ${colour} 38%, var(--surface-3))`
-    : `radial-gradient(120% 120% at 25% 15%, color-mix(in oklch, ${colour} 70%, white) 0%, ${colour} 55%, color-mix(in oklch, ${colour} 82%, black) 100%)`;
+    : colour;
 
   return (
     <span

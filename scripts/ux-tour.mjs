@@ -108,7 +108,7 @@ async function tour(theme, viewport, tag) {
   // Composer journey, reopening for each panel
   const openComposer = async () => {
     await go(`/groups/${seed.trip}`);
-    await page.getByRole("button", { name: /^Add$/ }).first().click();
+    await page.getByRole("button", { name: "Add an expense" }).first().click();
     await page.waitForTimeout(900);
   };
   const tryStep = async (name, fn) => {
