@@ -56,6 +56,8 @@ async function onboard() {
     await start.click();
     await page.locator('input[placeholder="Priya"]').fill("Tester");
     await page.getByRole("button", { name: "Continue" }).click();
+    // Sign-up now asks how to protect the account; take the recovery key.
+    await page.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
     // The recovery key is shown once and never again, so the step holds the
     // screen until it is acknowledged. Everything below this line needs the app
     // itself, not onboarding, so signing up is not finished until this is done.
@@ -200,6 +202,8 @@ console.log("\nA share that lands on a device with no identity");
   await freshPage.getByRole("button", { name: /get started|create/i }).first().click();
   await freshPage.locator('input[placeholder="Priya"]').fill("Newcomer");
   await freshPage.getByRole("button", { name: "Continue" }).click();
+  // Sign-up now asks how to protect the account; take the recovery key.
+  await freshPage.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
   await freshPage.getByText("Save your recovery key").waitFor({ timeout: 15000 });
   await freshPage.locator("input[type=checkbox]").check();
   await freshPage.getByRole("button", { name: "Start using Divvy" }).click();

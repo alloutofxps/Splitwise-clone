@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateGhostCode, generateInviteCode, generatePersonalCode } from "../codes";
-import { normalizeInviteCode } from "../invite-code";
+import { codeFromScan, normalizeInviteCode } from "../invite-code";
 
 describe("codes", () => {
   it("invite codes are readable words with an unguessable tail", () => {
@@ -27,5 +27,20 @@ describe("codes", () => {
     const b = generateGhostCode();
     expect(a).toMatch(/^ghost-/);
     expect(a).not.toBe(b);
+  });
+});
+
+describe("codeFromScan", () => {
+  it("takes the code out of an invite link", () => {
+    expect(codeFromScan("https://divvy.up.railway.app/join/mango-tiger-42")).toBe("mango-tiger-42");
+    expect(codeFromScan("https://divvy.up.railway.app/join/mango-tiger-42?x=1")).toBe("mango-tiger-42");
+  });
+
+  it("keeps a bare code as it is", () => {
+    expect(codeFromScan("  mango-tiger-42 ")).toBe("mango-tiger-42");
+  });
+
+  it("never throws on a broken link", () => {
+    expect(codeFromScan("https://x/join/%E0%A4%A")).toBe("%E0%A4%A");
   });
 });

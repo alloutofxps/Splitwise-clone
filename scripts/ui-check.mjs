@@ -568,6 +568,8 @@ console.log("\nSign-up shows the recovery key");
   await signup.waitForTimeout(600);
   await signup.locator("input").first().fill("Keyholder");
   await signup.getByRole("button", { name: "Continue" }).click();
+  // Sign-up now asks how to protect the account; take the recovery key.
+  await signup.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
 
   const step = signup.getByText("Save your recovery key");
   const shown = await step
@@ -908,6 +910,8 @@ console.log("\nThings that only show up on a phone");
 
   await p2.getByPlaceholder("Priya").fill("Reload Tester");
   await p2.getByRole("button", { name: /Continue|Next|Done/i }).first().click();
+  // Sign-up now asks how to protect the account; take the recovery key.
+  await p2.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
   await p2.waitForTimeout(2500);
 
   // -- The recovery key did not survive going to a password manager --------

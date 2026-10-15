@@ -14,7 +14,10 @@ import {
   Target,
   Ticket,
 } from "lucide-react";
-import { useActivity, useBudgets, useDashboard } from "@/lib/client/queries";
+import { useActivity, useBudgets, useDashboard, useUpdateGroup } from "@/lib/client/queries";
+import { ActionSheet, useLongPress } from "@/components/ui/swipe-row";
+import { useToast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/client/api";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton, cn } from "@/components/ui/primitives";
@@ -76,6 +79,8 @@ export default function HomePage() {
 
         <div className="min-w-0 lg:order-1">
           {firstRun ? (
+            <>
+            <BackupNotice />
             <Section title="Get started">
               <Rows>
                 <ActionRow
@@ -98,6 +103,7 @@ export default function HomePage() {
                 />
               </Rows>
             </Section>
+            </>
           ) : (
             <NeedsYou data={data} />
           )}
@@ -377,6 +383,24 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
   );
 }
 
+/** A brand-new account sees this above "Get started" until it's backed up. */
+function BackupNotice() {
+  const [backup] = React.useState(() => recoveryPending());
+  if (!backup) return null;
+  return (
+    <Section title="Needs you">
+      <Rows>
+        <LinkRow
+          href="/account"
+          icon={<ShieldCheck className="size-5" strokeWidth={1.75} />}
+          title="Back up your account"
+          caption="So you can get back in on a new phone · 1 minute"
+        />
+      </Rows>
+    </Section>
+  );
+}
+
 function UnreadRow({
   activity,
   meId,
@@ -420,10 +444,55 @@ function UnreadRow({
 
 function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
   const net = BigInt(group.yourNet);
+  const router = useRouter();
+  const toast = useToast();
+  const update = useUpdateGroup(group.id);
+  const [menu, setMenu] = React.useState(false);
+  // Long-press (or right-click) for the things you'd otherwise open the group
+  // to do (DESIGN-PLAN Part 4).
+  const press = useLongPress(() => setMenu(true));
+  const archive = (archived: boolean) =>
+    update.mutate(
+      { archived },
+      {
+        onSuccess: () =>
+          toast({
+            tone: "success",
+            title: archived ? `Archived ${group.name}` : `${group.name} is back`,
+            action: archived ? { label: "Undo", onClick: () => archive(false) } : undefined,
+          }),
+        onError: (error) =>
+          toast({
+            tone: "error",
+            title: "Couldn\u2019t change that",
+            description: error instanceof ApiError ? error.message : undefined,
+          }),
+      },
+    );
+
   return (
+    <>
+    <ActionSheet
+      open={menu}
+      onClose={() => setMenu(false)}
+      title={`${group.emoji} ${group.name}`}
+      actions={[
+        ...(net !== 0n
+          ? [{ label: "Settle up", onPress: () => router.push(`/groups/${group.id}?open=settle`) }]
+          : []),
+        { label: "Invite people", onPress: () => router.push(`/groups/${group.id}?open=invite`) },
+        group.archivedAt
+          ? { label: "Unarchive", onPress: () => archive(false) }
+          : { label: "Archive", onPress: () => archive(true) },
+      ]}
+    />
     <Link
       href={`/groups/${group.id}`}
-      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
+      {...press.handlers}
+      onClick={(event) => {
+        if (press.consumed()) event.preventDefault();
+      }}
+      className="flex select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
     >
       <GroupMark group={group} />
       <span className="min-w-0 flex-1">
@@ -446,6 +515,7 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
         )}
       </span>
     </Link>
+    </>
   );
 }
 

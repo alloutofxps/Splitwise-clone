@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/client/api";
 import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 import { FlowMap } from "../flow/flow-map";
+import { SwipeRow } from "../ui/swipe-row";
 
 /**
  * Who owes whom.
@@ -43,6 +44,21 @@ export function BalancesPanel({
   travel?: { fromPersonId: string; toPersonId: string; nonce: number } | null;
 }) {
   const updateGroup = useUpdateGroup(group.id);
+  const nudge = useNudge();
+  const toast = useToast();
+  const remind = (person: PersonDto) =>
+    nudge.mutate(
+      { personId: person.id, groupId: group.id },
+      {
+        onSuccess: () => toast({ tone: "success", title: `Reminded ${person.displayName.split(" ")[0]}` }),
+        onError: (error) =>
+          toast({
+            tone: "error",
+            title: "Couldn’t send that",
+            description: error instanceof ApiError ? error.message : undefined,
+          }),
+      },
+    );
   // Flips at once when tapped, and follows the group when it changes elsewhere.
   const [simplified, setSimplified] = useMirror(group.simplifyDebts);
 
@@ -142,58 +158,128 @@ export function BalancesPanel({
               };
 
               return (
-                <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`} className="flex items-center gap-3 px-4 py-3">
-                  <Avatar person={mine ? to : from} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body font-medium text-text">
-                      {mine
-                        ? `You pay ${firstName(to)}`
-                        : toMe
-                          ? `${firstName(from)} pays you`
-                          : `${firstName(from)} pays ${firstName(to)}`}
-                    </span>
-                    <span
-                      className={cn(
-                        "tabular block text-caption",
-                        mine ? "text-negative-text" : toMe ? "text-positive-text" : "text-muted",
+                <li key={`${edge.fromPersonId}-${edge.toPersonId}-${index}`}>
+                  {/* Owed to you by someone on Divvy: swipe left to remind them. */}
+                  {toMe && !from.isGhost ? (
+                    <SwipeRow
+                      action={{
+                        label: "Remind",
+                        ariaLabel: `Remind ${from.displayName}`,
+                        tone: "default",
+                        onPress: () => remind(from),
+                      }}
+                    >
+                      {() => (
+                        <div className="flex items-center gap-3 px-4 py-3">
+                        <Avatar person={mine ? to : from} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-body font-medium text-text">
+                            {mine
+                              ? `You pay ${firstName(to)}`
+                              : toMe
+                                ? `${firstName(from)} pays you`
+                                : `${firstName(from)} pays ${firstName(to)}`}
+                          </span>
+                          <span
+                            className={cn(
+                              "tabular block text-caption",
+                              mine ? "text-negative-text" : toMe ? "text-positive-text" : "text-muted",
+                            )}
+                          >
+                            {/* Icons, not arrow characters: at caption size the
+                                font's \u2199 reads like a tick. */}
+                            {mine ? (
+                              <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                            ) : toMe ? (
+                              <ArrowDownLeft aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                            ) : null}
+                            {money}
+                            {toMe && from.isGhost ? <span className="text-subtle"> · not on Divvy yet</span> : null}
+                          </span>
+                        </span>
+      
+                        {/* Only your own transfers are one tap away: volunteering that
+                            somebody else has paid up isn't. */}
+                        {mine || toMe ? (
+                          <button
+                            type="button"
+                            onClick={settle}
+                            aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                            className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+                          >
+                            Settle
+                          </button>
+                        ) : null}
+                        {/* Only on debts owed *to* the viewer: reminding somebody on
+                            behalf of a third party is how a shared ledger turns into
+                            an argument. Someone not on Divvy can't receive one. */}
+                        {toMe ? (
+                          from.isGhost ? (
+                            <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
+                              Remind
+                            </span>
+                          ) : (
+                            <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
+                          )
+                        ) : null}
+                        </div>
                       )}
-                    >
-                      {/* Icons, not arrow characters: at caption size the
-                          font's \u2199 reads like a tick. */}
-                      {mine ? (
-                        <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
-                      ) : toMe ? (
-                        <ArrowDownLeft aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
-                      ) : null}
-                      {money}
-                      {toMe && from.isGhost ? <span className="text-subtle"> · not on Divvy yet</span> : null}
-                    </span>
-                  </span>
-
-                  {/* Only your own transfers are one tap away: volunteering that
-                      somebody else has paid up isn't. */}
-                  {mine || toMe ? (
-                    <button
-                      type="button"
-                      onClick={settle}
-                      aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
-                      className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
-                    >
-                      Settle
-                    </button>
-                  ) : null}
-                  {/* Only on debts owed *to* the viewer: reminding somebody on
-                      behalf of a third party is how a shared ledger turns into
-                      an argument. Someone not on Divvy can't receive one. */}
-                  {toMe ? (
-                    from.isGhost ? (
-                      <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
-                        Remind
+                    </SwipeRow>
+                  ) : (
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <Avatar person={mine ? to : from} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-body font-medium text-text">
+                          {mine
+                            ? `You pay ${firstName(to)}`
+                            : toMe
+                              ? `${firstName(from)} pays you`
+                              : `${firstName(from)} pays ${firstName(to)}`}
+                        </span>
+                        <span
+                          className={cn(
+                            "tabular block text-caption",
+                            mine ? "text-negative-text" : toMe ? "text-positive-text" : "text-muted",
+                          )}
+                        >
+                          {/* Icons, not arrow characters: at caption size the
+                              font's \u2199 reads like a tick. */}
+                          {mine ? (
+                            <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                          ) : toMe ? (
+                            <ArrowDownLeft aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                          ) : null}
+                          {money}
+                          {toMe && from.isGhost ? <span className="text-subtle"> · not on Divvy yet</span> : null}
+                        </span>
                       </span>
-                    ) : (
-                      <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
-                    )
-                  ) : null}
+    
+                      {/* Only your own transfers are one tap away: volunteering that
+                          somebody else has paid up isn't. */}
+                      {mine || toMe ? (
+                        <button
+                          type="button"
+                          onClick={settle}
+                          aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                          className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+                        >
+                          Settle
+                        </button>
+                      ) : null}
+                      {/* Only on debts owed *to* the viewer: reminding somebody on
+                          behalf of a third party is how a shared ledger turns into
+                          an argument. Someone not on Divvy can't receive one. */}
+                      {toMe ? (
+                        from.isGhost ? (
+                          <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
+                            Remind
+                          </span>
+                        ) : (
+                          <NudgeButton personId={edge.fromPersonId} groupId={group.id} name={from.displayName} />
+                        )
+                      ) : null}
+                    </div>
+                  )}
                 </li>
               );
             })}

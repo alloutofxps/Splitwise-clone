@@ -6,6 +6,7 @@ import { Sheet } from "../ui/sheet";
 import { Button, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import type { MeDto } from "@/lib/types";
+import { QrCode } from "../ui/qr-code";
 
 /**
  * Your personal code.
@@ -61,13 +62,12 @@ export function MyCodeSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Your code">
       <div className="px-5 pb-6">
-        <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
-          <p className="text-caption font-medium text-subtle">
-            Your friend code
-          </p>
-          <p className="mt-2 select-all break-words text-heading font-semibold tracking-[-0.01em] text-text">
+        <div className="flex flex-col items-center">
+          <QrCode value={url} label="Your friend code" />
+          <p className="mt-4 select-all break-all text-center font-mono text-title font-medium text-text">
             {me.inviteCode}
           </p>
+          <p className="mt-1 text-center text-caption text-muted">Scan it, open the link, or type the code in Divvy.</p>
         </div>
 
         <div className="mt-4 space-y-2.5">

@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { setBadge } from "@/lib/client/badge";
 import { stashedRecoveryKey } from "@/lib/client/recovery";
 import type { PendingAttachment } from "@/lib/client/attachments";
+import type { ExpenseDto } from "@/lib/types";
 
 /**
  * The gate between "no identity yet" and the app proper.
@@ -39,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     groupId?: string;
     attachments?: PendingAttachment[];
     description?: string;
+    template?: ExpenseDto;
   }>({ open: false });
 
   /**
@@ -106,9 +108,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
    * makes an app feel unfinished.
    */
   const openComposer = React.useCallback(
-    (groupId?: string) => {
+    (groupId?: string, template?: ExpenseDto) => {
       const fromRoute = /^\/groups\/([^/]+)/.exec(pathname)?.[1];
-      setComposer({ open: true, groupId: groupId ?? fromRoute });
+      setComposer({ open: true, groupId: template?.groupId ?? groupId ?? fromRoute, template });
     },
     [pathname],
   );
@@ -163,6 +165,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         groupId={composer.groupId}
         initialAttachments={composer.attachments}
         initialDescription={composer.description}
+        template={composer.template}
         onClose={() => setComposer({ open: false })}
       />
     </ComposerContext.Provider>

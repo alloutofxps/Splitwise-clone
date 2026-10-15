@@ -223,6 +223,68 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(600);
 check("and the next Escape closes the one below", (await page.locator('[role="dialog"]').count()) === 0);
 
+// --- Undo, the row menu, and the invite code ---------------------------------
+console.log("\nUndo and the row menu");
+await page.goto(`${BASE}/groups/${seed.groupId}`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+await page.getByRole("button", { name: "Add an expense" }).first().click();
+await page.waitForTimeout(900);
+await page.getByPlaceholder("What was it for?").fill("Undo me");
+await page.getByLabel("Amount").first().fill("12");
+await page.getByRole("button", { name: "Add expense" }).last().click();
+await page.waitForTimeout(1500);
+const undo = page.getByRole("button", { name: "Undo", exact: true });
+check("adding an expense offers Undo", (await undo.count()) > 0);
+await undo.first().click().catch(() => {});
+await page.waitForTimeout(2000);
+const afterUndo = await page.evaluate(async (id) => {
+  const ledger = await (await fetch(`/api/groups/${id}/expenses`)).json();
+  return (ledger.items ?? []).some((item) => item.expense?.description === "Undo me");
+}, seed.groupId);
+check("and Undo takes it back out", afterUndo === false);
+
+// Right-click is the desktop's long-press.
+const row = page.getByRole("button", { name: /Groceries/ }).first();
+await row.click({ button: "right" });
+await page.waitForTimeout(700);
+const menuText = await sheet().innerText().catch(() => "");
+check("a row's menu offers Edit, Duplicate and Delete", /Edit/.test(menuText) && /Duplicate/.test(menuText) && /Delete/.test(menuText), menuText.slice(0, 80).replace(/\n/g, " | "));
+await sheet().getByRole("button", { name: "Duplicate" }).click();
+await page.waitForTimeout(1000);
+const copyText = await page.getByPlaceholder("What was it for?").inputValue().catch(() => "");
+check("Duplicate opens a new expense filled in from it", copyText === "Groceries", copyText);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(600);
+
+console.log("\nInviting in person");
+await page.getByRole("button", { name: /^(Invite|Invite people)$/ }).first().click();
+await page.waitForTimeout(1200);
+const qr = await sheet().locator('[role="img"] svg').count();
+check("the invite shows a QR code", qr > 0);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(500);
+
+console.log("\nProtecting a new account");
+{
+  const fresh = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await fresh.newPage();
+  await p.goto(BASE, { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: "Get started" }).click();
+  await p.locator('input[placeholder="Priya"]').fill("Later Person");
+  await p.getByRole("button", { name: "Continue" }).click();
+  await p.getByText("Protect your account").waitFor({ timeout: 15000 });
+  check("sign-up asks how to protect the account", true);
+  check("with a recovery key as the other way", (await p.getByRole("button", { name: "Save a recovery key instead" }).count()) > 0);
+  await p.getByRole("button", { name: "Not now" }).click();
+  await p.waitForTimeout(2500);
+  const home = await p.locator("body").innerText();
+  check("Not now still gets you in", /Nothing owed yet|Get started/.test(home), home.slice(0, 100).replace(/\n/g, " | "));
+  check("and Home asks you to back up later", /Back up your account/.test(home));
+  const stash = await p.evaluate(() => sessionStorage.getItem("divvy-recovery-key"));
+  check("the unseen key isn't kept on the phone", stash === null, String(stash));
+  await fresh.close();
+}
+
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));
 console.log(`\n${passed} passed, ${failed} failed`);
 await browser.close();

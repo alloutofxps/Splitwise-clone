@@ -38,6 +38,8 @@ async function tour(theme, viewport, tag) {
     await page.locator('input[placeholder="Priya"]').fill("Priya Shah");
     await shot("01b-name-filled");
     await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Save a recovery key instead" }).waitFor({ timeout: 15000 }).catch(() => {}); await shot("01c-protect");
+    await page.getByRole("button", { name: "Save a recovery key instead" }).click().catch(() => {});
     await page.getByText("Save your recovery key").waitFor({ timeout: 15000 }).catch(() => {});
     await shot("02-recovery-key");
     await page.locator("input[type=checkbox]").check();

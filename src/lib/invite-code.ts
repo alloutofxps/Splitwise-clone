@@ -38,3 +38,16 @@ export function formatRecoveryKey(secret: string): string {
   const body = secret.replace(/^dvy_/, "");
   return (body.match(/.{1,8}/g) ?? []).join(" ");
 }
+
+/**
+ * The code inside a scanned invite: the last part of a /join/ link, or the
+ * text itself if the QR code held just a code.
+ */
+export function codeFromScan(raw: string): string {
+  const match = /\/join\/([^/?#\s]+)/.exec(raw);
+  try {
+    return decodeURIComponent(match ? match[1] : raw.trim());
+  } catch {
+    return match ? match[1] : raw.trim();
+  }
+}

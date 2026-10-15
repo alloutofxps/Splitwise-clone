@@ -85,15 +85,17 @@ export function OfflineBanner() {
           transition={{ duration: 0.22 }}
           className="no-print overflow-hidden"
         >
+          {/* A slim bar under the header, not a floating pill (DESIGN-PLAN 3.12). */}
+          <div className="border-b border-line bg-surface-2">
           <div className="mx-auto max-w-[560px] px-4 py-2 lg:max-w-[720px] lg:px-8">
             {!online || queue.length > 0 ? (
               <div className="flex items-center gap-2.5" role="status">
-                <span className="flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1.5 text-caption font-semibold text-text">
+                <span className="flex items-center gap-2 text-caption text-muted">
                   <CloudOff className="size-3.5 shrink-0" />
                   {!online
                     ? queue.length > 0
                       ? `Offline · ${queue.length} change${queue.length === 1 ? "" : "s"} will be sent later`
-                      : "Offline · your changes are saved on this phone"
+                      : "Offline · changes will send when you’re back"
                     : `${queue.length} change${queue.length === 1 ? "" : "s"} waiting to send`}
                 </span>
 
@@ -101,7 +103,7 @@ export function OfflineBanner() {
                   <button
                     onClick={() => void retry()}
                     disabled={retrying}
-                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-caption font-semibold text-brand transition active:opacity-70 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-text underline-offset-2 transition-opacity hover:underline disabled:opacity-50"
                   >
                     <RefreshCw className={retrying ? "size-3.5 animate-spin" : "size-3.5"} />
                     Retry
@@ -174,6 +176,7 @@ export function OfflineBanner() {
                 </ul>
               </div>
             ) : null}
+          </div>
           </div>
         </motion.div>
       ) : null}

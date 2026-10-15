@@ -7,7 +7,7 @@ import { AmountInput } from "../ui/money";
 import { Avatar, usePersonHue } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
-import { useCreateSettlement, useDashboard } from "@/lib/client/queries";
+import { useCreateSettlement, useDashboard, useDeleteSettlement } from "@/lib/client/queries";
 import { convert, exactRate, formatMoney, inverseRate } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { CurrencyPicker } from "../expense/currency-picker";
@@ -57,6 +57,7 @@ export function SettleUpSheet({
 }) {
   const toast = useToast();
   const settle = useCreateSettlement(meId);
+  const removeSettlement = useDeleteSettlement();
   const { data: dashboard } = useDashboard();
   // The payee's own ways of being paid: fetched for someone else, already in
   // hand for yourself.
@@ -171,7 +172,7 @@ export function SettleUpSheet({
   const submit = async () => {
     if (!selected || !amount || amount <= 0n) return;
     try {
-      await settle.mutateAsync({
+      const saved = await settle.mutateAsync({
         groupId: group?.id ?? null,
         fromPersonId: selected.fromPersonId,
         toPersonId: selected.toPersonId,
@@ -192,7 +193,23 @@ export function SettleUpSheet({
         method,
       });
       haptic([8, 30, 8]);
-      toast({ tone: "success", title: "Payment saved" });
+      toast({
+        tone: "success",
+        title: "Payment saved",
+        action: saved
+          ? {
+              label: "Undo",
+              onClick: () =>
+                removeSettlement.mutate(
+                  { id: saved.id, groupId: group?.id ?? null },
+                  {
+                    onSuccess: () => toast({ tone: "success", title: "Payment removed" }),
+                    onError: () => toast({ tone: "error", title: "Couldn\u2019t undo that" }),
+                  },
+                ),
+            }
+          : undefined,
+      });
       onSaved?.({ fromPersonId: selected.fromPersonId, toPersonId: selected.toPersonId });
       onClose();
     } catch (error) {

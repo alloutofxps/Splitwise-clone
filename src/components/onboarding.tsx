@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Check,
   ChevronLeft,
+  Download,
   Copy,
   KeyRound,
   ShieldCheck,
@@ -23,6 +24,7 @@ import {
   clearRecoveryPending,
   clearStashedRecoveryKey,
   markRecoveryPending,
+  saveRecoveryKeyFile,
   stashRecoveryKey,
   stashedRecoveryKey,
 } from "@/lib/client/recovery";
@@ -31,6 +33,7 @@ import { colorForName, hueVar, initials } from "@/lib/avatar";
 import {
   PasskeyCancelled,
   hasPlatformAuthenticator,
+  registerPasskey,
   signInWithPasskey,
 } from "./identity/passkey";
 import { CurrencyPicker } from "./expense/currency-picker";
@@ -52,7 +55,7 @@ import { FlowMap } from "./flow/flow-map";
  * too late.
  */
 
-type Step = "welcome" | "profile" | "recovery" | "restore";
+type Step = "welcome" | "profile" | "protect" | "recovery" | "restore";
 
 
 export function Onboarding({ onFinished }: { onFinished: () => void }) {
@@ -85,9 +88,18 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
               onDone={(key) => {
                 stashRecoveryKey(key);
                 setRecoveryKey(key);
-                setStep("recovery");
+                setStep("protect");
               }}
               onBack={() => setStep("welcome")}
+            />
+          </StepShell>
+        ) : null}
+
+        {step === "protect" ? (
+          <StepShell key="protect">
+            <ProtectStep
+              onRecoveryKey={() => setStep("recovery")}
+              onFinished={onFinished}
             />
           </StepShell>
         ) : null}
@@ -441,6 +453,100 @@ function ProfileStep({
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Protect your account (DESIGN-PLAN 3.1), instead of a wall of recovery key.
+ *
+ * The easy way first: a passkey, so Face ID or a fingerprint gets you back in
+ * on a new phone. The recovery key is the alternative, and "Not now" is
+ * allowed: Home then shows a quiet "Back up your account" until one of them
+ * is done, and You → Recovery key makes a key at any time.
+ */
+function ProtectStep({
+  onRecoveryKey,
+  onFinished,
+}: {
+  onRecoveryKey: () => void;
+  onFinished: () => void;
+}) {
+  const toast = useToast();
+  const client = useQueryClient();
+  const [canPasskey, setCanPasskey] = React.useState<boolean | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    void hasPlatformAuthenticator()
+      .catch(() => false)
+      .then((available) => alive && setCanPasskey(available));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const finish = (protectedNow: boolean) => {
+    // The key made at sign-up is not kept: it was never shown, and storing a
+    // live credential for no reason is how it leaks. A new one can be made
+    // from You whenever it's wanted.
+    clearStashedRecoveryKey();
+    if (protectedNow) clearRecoveryPending();
+    void client.invalidateQueries({ queryKey: keys.dashboard });
+    onFinished();
+  };
+
+  const withPasskey = async () => {
+    setBusy(true);
+    try {
+      await registerPasskey("This phone");
+      haptic([10, 40, 10]);
+      toast({ tone: "success", title: "You can get back in with your face or fingerprint" });
+      finish(true);
+    } catch (error) {
+      if (!(error instanceof PasskeyCancelled)) {
+        toast({
+          tone: "error",
+          title: "That didn\u2019t work",
+          description: "Try again, or save a recovery key instead.",
+        });
+      }
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-text">
+          <ShieldCheck className="size-6" strokeWidth={1.75} />
+        </span>
+        <h1 className="mt-5 text-heading font-semibold tracking-[-0.02em] text-text">Protect your account</h1>
+        <p className="mt-2 text-body-lg leading-relaxed text-muted">
+          Divvy has no email or password. To get back in on a new phone, use your face or
+          fingerprint, or save a recovery key.
+        </p>
+      </div>
+
+      <div className="space-y-2 pt-8">
+        {canPasskey ? (
+          <Button variant="primary" size="lg" fullWidth loading={busy} onClick={() => void withPasskey()}>
+            Use Face ID or fingerprint
+          </Button>
+        ) : null}
+        <Button
+          variant={canPasskey ? "secondary" : "primary"}
+          size="lg"
+          fullWidth
+          onClick={onRecoveryKey}
+        >
+          Save a recovery key instead
+        </Button>
+        <Button variant="ghost" size="md" fullWidth onClick={() => finish(false)}>
+          Not now
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function RecoveryStep({
   recoveryKey,
   onFinished,
@@ -496,16 +602,26 @@ function RecoveryStep({
         </p>
       </div>
 
-      <Button
-        variant={copied ? "positive" : "secondary"}
-        size="md"
-        fullWidth
-        className="mt-3"
-        onClick={() => void copy()}
-        icon={copied ? <Check className="size-[18px]" /> : <Copy className="size-[18px]" />}
-      >
-        {copied ? "Copied" : "Copy key"}
-      </Button>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button
+          variant={copied ? "positive" : "secondary"}
+          size="md"
+          fullWidth
+          onClick={() => void copy()}
+          icon={copied ? <Check className="size-[18px]" /> : <Copy className="size-[18px]" />}
+        >
+          {copied ? "Copied" : "Copy key"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          onClick={() => saveRecoveryKeyFile(recoveryKey)}
+          icon={<Download className="size-[18px]" strokeWidth={1.75} />}
+        >
+          Save as file
+        </Button>
+      </div>
 
       <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
         <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />

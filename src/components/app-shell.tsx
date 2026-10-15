@@ -8,6 +8,7 @@ import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "luci
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
+import { PullToRefresh } from "./pull-to-refresh";
 import { AppMark } from "./app-mark";
 
 /**
@@ -48,6 +49,9 @@ export function AppShell({
       <Sidebar destinations={destinations} pathname={pathname} onAddExpense={onAddExpense} />
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <PullToRefresh
+          enabled={pathname === "/" || pathname.startsWith("/groups/") || pathname === "/friends" || pathname === "/activity"}
+        />
         <OfflineBanner />
         <main
           className={cn(
