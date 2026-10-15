@@ -560,7 +560,7 @@ export function SettlementRow({
 
 
 function formatBare(amount: string, currency: string): string {
-  return formatMoney(BigInt(amount), currency, { trimZeros: true });
+  return formatMoney(BigInt(amount), currency);
 }
 
 // ---------------------------------------------------------------------------

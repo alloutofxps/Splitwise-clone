@@ -9,7 +9,7 @@ import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
-import { toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 
 /**
@@ -98,6 +98,13 @@ export function BalancesPanel({
           </div>
         </div>
 
+        {simplified && edges.length > 0 ? (
+          <p className="mb-2.5 px-1 text-caption leading-relaxed text-muted">
+            Debts are passed along so everyone makes fewer payments. Who pays who here can
+            differ from what two people owe each other.
+          </p>
+        ) : null}
+
         {edges.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-positive-soft/50 p-6 text-center">
             <Sparkles className="mx-auto size-6 text-positive-text" />
@@ -150,8 +157,8 @@ export function BalancesPanel({
                     label={
                       involvesMe
                         ? edge.fromPersonId === meId
-                          ? `Pay ${to.displayName} ${toDecimalString(BigInt(edge.amount), group.currency)}`
-                          : `Add ${from.displayName} paying you ${toDecimalString(BigInt(edge.amount), group.currency)}`
+                          ? `Pay ${to.displayName} ${formatMoney(BigInt(edge.amount), group.currency)}`
+                          : `Add ${from.displayName} paying you ${formatMoney(BigInt(edge.amount), group.currency)}`
                         : undefined
                     }
                   >

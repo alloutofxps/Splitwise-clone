@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { convert, toDecimalString } from "@/lib/money";
+import { convert, formatMoney } from "@/lib/money";
 
 /**
  * Today's exchange rate between two currencies, fetched when it appears and
@@ -74,7 +74,7 @@ export function ConversionNote({
         )}
       </div>
       {converted ? (
-        <p className="tabular mt-1 text-body font-bold text-text">≈ {converted} {to}</p>
+        <p className="tabular mt-1 text-body font-bold text-text">≈ {converted}</p>
       ) : null}
     </div>
   );
@@ -86,7 +86,7 @@ export function ConversionNote({
  */
 function convertPreview(amount: bigint, from: string, to: string, rate: string): string | null {
   if (!/^\d+(\.\d+)?$/.test(rate)) return null;
-  return toDecimalString(convert(amount, from, to, rate), to);
+  return formatMoney(convert(amount, from, to, rate), to);
 }
 
 /**

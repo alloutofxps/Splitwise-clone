@@ -19,7 +19,7 @@ import {
   useExpense,
 } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
-import { formatMoney, toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
 
 /**
@@ -166,9 +166,9 @@ export function ExpenseDetailSheet({
                 size="xl"
                 tone="plain"
               />
-              {expense.currency !== "" && expense.exchangeRate !== "1" ? (
+              {expense.currency !== expense.settlementCurrency ? (
                 <span className="tabular text-body text-subtle">
-                  ≈ {toDecimalString(BigInt(expense.convertedAmount), expense.currency)}
+                  ≈ {formatMoney(BigInt(expense.convertedAmount), expense.settlementCurrency)}
                 </span>
               ) : null}
             </div>

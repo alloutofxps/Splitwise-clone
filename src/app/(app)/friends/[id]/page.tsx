@@ -23,6 +23,7 @@ import { ConfirmSheet, Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { useDashboard, useFriend, useRemoveFriend } from "@/lib/client/queries";
 import { groupByDay } from "@/lib/day-groups";
+import { formatMoney } from "@/lib/money";
 
 /**
  * One friend.
@@ -50,7 +51,9 @@ export default function FriendPage() {
   const [settleUp, setSettleUp] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
   const [settings, setSettings] = React.useState(false);
-  const [showBreakdown, setShowBreakdown] = React.useState(false);
+  // Null until the person toggles it: then it follows whether there is
+  // something on it that needs explaining.
+  const [breakdownChoice, setShowBreakdown] = React.useState<boolean | null>(null);
   const toast = useToast();
   const removeFriend = useRemoveFriend();
 
@@ -79,6 +82,9 @@ export default function FriendPage() {
   const combined = Object.entries(data.combined ?? {});
   const ledgers = data.ledgers ?? [];
   const anythingOutstanding = combined.length > 0 || ledgers.length > 0;
+  // Open by itself when a group plan differs from the total, because that is
+  // the moment the two screens seem to disagree.
+  const showBreakdown = breakdownChoice ?? ledgers.some((ledger) => ledger.planned !== null);
 
   // Settling is per currency: a euro balance and a rupee balance are two
   // different transfers, and one sheet cannot honestly represent both.
@@ -173,7 +179,7 @@ export default function FriendPage() {
           <button
             onClick={() => {
               haptic();
-              setShowBreakdown((current) => !current);
+              setShowBreakdown(!showBreakdown);
             }}
             aria-expanded={showBreakdown}
             className="flex w-full items-center gap-1.5 px-1 py-1 text-caption font-bold uppercase tracking-[0.07em] text-subtle"
@@ -202,8 +208,15 @@ export default function FriendPage() {
                     </span>
                   </>
                 );
+                const note =
+                  ledger.planned !== null
+                    ? planNote(net, BigInt(ledger.planned), data.person.displayName.split(" ")[0], ledger.currency)
+                    : null;
                 return (
                   <li key={ledger.groupId ?? "direct"}>
+                    {note ? (
+                      <p className="mb-1 px-1 text-caption leading-relaxed text-muted">{note}</p>
+                    ) : null}
                     {ledger.groupId ? (
                       <Link
                         href={`/groups/${ledger.groupId}`}
@@ -421,4 +434,36 @@ export default function FriendPage() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * Why the group screen shows a different payment between you than the total
+ * here. The group's "fewest payments" plan passes debts along between people,
+ * so a friend who owes you can end up paying someone else, who pays you.
+ */
+function planNote(net: bigint, planned: bigint, name: string, currency: string): string {
+  const money = (value: bigint) => formatMoney(value < 0n ? -value : value, currency);
+  const head = "In the group's plan for fewer payments, ";
+  if (net > 0n) {
+    if (planned > 0n && planned < net) {
+      return `${head}${name} pays you ${money(planned)}. The other ${money(net - planned)} reaches you through other people in the group.`;
+    }
+    if (planned > net) {
+      return `${head}${name} pays you ${money(planned)}. That includes money passed on from others in the group.`;
+    }
+    if (planned === 0n) {
+      return `${head}${name} doesn't pay you directly. What they owe you reaches you through other people in the group.`;
+    }
+    return `${head}you pay ${name} ${money(planned)}. Debts are passed along between people, and it all evens out.`;
+  }
+  if (planned < 0n && planned > net) {
+    return `${head}you pay ${name} ${money(planned)}. The other ${money(net - planned)} goes to other people in the group, who pass it on.`;
+  }
+  if (planned < net) {
+    return `${head}you pay ${name} ${money(planned)}. That includes money you pass on for others in the group.`;
+  }
+  if (planned === 0n) {
+    return `${head}you don't pay ${name} directly. You pay other people in the group, and it reaches ${name} through them.`;
+  }
+  return `${head}${name} pays you ${money(planned)}. Debts are passed along between people, and it all evens out.`;
 }

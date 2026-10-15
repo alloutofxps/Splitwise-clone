@@ -16,7 +16,7 @@ import {
   LogOut,
   Monitor,
   Moon,
-  Smartphone,
+  MonitorSmartphone,
   Plus,
   Sun,
   Target,
@@ -341,7 +341,7 @@ export default function AccountPage() {
             </button>
           ) : null}
           <Row
-            icon={<Smartphone className="size-[18px]" />}
+            icon={<MonitorSmartphone className="size-[18px]" />}
             label="Your devices"
             value="Manage"
             onClick={() => setDevices(true)}

@@ -891,6 +891,21 @@ export function useUpdateProfile() {
   });
 }
 
+/**
+ * Marks the whole Activity feed as seen. The feed itself is left as it was
+ * fetched, so this visit still shows which entries were new; the badge and
+ * the group dots clear straight away.
+ */
+export function useMarkActivitySeen() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post("/api/activity/read"),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.dashboard });
+    },
+  });
+}
+
 export function useMarkGroupRead(groupId: string) {
   const client = useQueryClient();
   return useMutation({

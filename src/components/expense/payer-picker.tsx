@@ -6,7 +6,7 @@ import { Sheet } from "../ui/sheet";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
-import { currencySymbol, toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { CompactAmountInput } from "../ui/money";
 import { apportion } from "@/lib/split";
 import type { PersonDto } from "@/lib/types";
@@ -91,8 +91,8 @@ export function PayerPicker({
               {remaining === 0n
                 ? "Adds up to the total"
                 : remaining > 0n
-                  ? `${currencySymbol(currency)}${toDecimalString(remaining, currency)} still to add`
-                  : `${currencySymbol(currency)}${toDecimalString(-remaining, currency)} over the total`}
+                  ? `${formatMoney(remaining, currency)} still to add`
+                  : `${formatMoney(-remaining, currency)} over the total`}
             </p>
             <Button
               variant="primary"

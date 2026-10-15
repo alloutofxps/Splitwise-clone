@@ -70,7 +70,10 @@ export function CurrencyPicker({
                     active ? "bg-brand-soft" : "hover:bg-surface-2",
                   )}
                 >
-                  <span className="text-title-lg leading-none">{entry.flag}</span>
+                  {/* The symbol, not a flag: Windows draws flag emoji as two letters. */}
+                  <span className={cn("grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] bg-surface-2 font-mono font-semibold text-text", entry.symbol.length > 2 ? "text-caption" : "text-body-lg")}>
+                    {entry.symbol}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-body-lg font-semibold text-text">
                       {entry.code}
@@ -78,9 +81,6 @@ export function CurrencyPicker({
                     <span className="block truncate text-caption text-subtle">
                       {entry.name}
                     </span>
-                  </span>
-                  <span className="shrink-0 text-body-lg font-semibold text-muted">
-                    {entry.symbol}
                   </span>
                   {active ? (
                     <Check className="size-[18px] shrink-0 text-brand" strokeWidth={3} />

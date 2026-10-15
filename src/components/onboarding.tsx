@@ -35,6 +35,7 @@ import {
   signInWithPasskey,
 } from "./identity/passkey";
 import { CURRENCIES } from "@/lib/money";
+import { guessCurrency } from "@/lib/guess-currency";
 import type { MeDto } from "@/lib/types";
 import { celebrate } from "./ui/motion";
 
@@ -298,7 +299,7 @@ function ProfileStep({
   const [name, setName] = React.useState("");
   const [emoji, setEmoji] = React.useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const [currency, setCurrency] = React.useState(guessCurrency());
+  const [currency, setCurrency] = React.useState(() => guessCurrency());
   const [saving, setSaving] = React.useState(false);
 
   const color = colorForName(name || "divvy");
@@ -415,7 +416,7 @@ function ProfileStep({
         >
           {CURRENCIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
-              {entry.flag} {entry.code} · {entry.name}
+              {entry.code} · {entry.name} ({entry.symbol})
             </option>
           ))}
         </select>
@@ -666,42 +667,3 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
   );
 }
 
-/**
- * A sensible currency default from the browser's locale.
- *
- * Only a guess, and always changeable - but "INR" preselected for someone in
- * Mumbai is a better first impression than "USD" for everyone.
- */
-function guessCurrency(): string {
-  if (typeof navigator === "undefined") return "USD";
-
-  /*
-   * Both halves of this line throw on inputs that exist in the wild.
-   * `new Intl.Locale("")` is a RangeError, and `navigator.language` is empty
-   * or non-standard in more embedded webviews than one would like; `maximize`
-   * is absent in browsers older than the app otherwise supports, which makes
-   * it a TypeError rather than an undefined. This runs on the very first
-   * screen anybody sees, so an exception here is a blank page on first run —
-   * the guess is not worth a single one of those.
-   */
-  let region: string | undefined;
-  try {
-    region = new Intl.Locale(navigator.language).maximize().region;
-  } catch {
-    return "USD";
-  }
-
-  const byRegion: Record<string, string> = {
-    US: "USD", GB: "GBP", IN: "INR", JP: "JPY", AU: "AUD", CA: "CAD",
-    CH: "CHF", CN: "CNY", SG: "SGD", HK: "HKD", NZ: "NZD", SE: "SEK",
-    NO: "NOK", DK: "DKK", PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON",
-    TR: "TRY", AE: "AED", SA: "SAR", IL: "ILS", ZA: "ZAR", NG: "NGN",
-    KE: "KES", BR: "BRL", MX: "MXN", AR: "ARS", CL: "CLP", CO: "COP",
-    KR: "KRW", TW: "TWD", TH: "THB", VN: "VND", ID: "IDR", MY: "MYR",
-    PH: "PHP", PK: "PKR", BD: "BDT", LK: "LKR", NP: "NPR", EG: "EGP",
-    DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", PT: "EUR",
-    IE: "EUR", AT: "EUR", BE: "EUR", FI: "EUR", GR: "EUR",
-  };
-
-  return (region && byRegion[region]) || "USD";
-}

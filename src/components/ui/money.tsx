@@ -20,7 +20,6 @@ export function Amount({
   size = "md",
   signed = false,
   className,
-  compact,
 }: {
   /** Minor units, as a bigint or the decimal string the API sends. */
   value: bigint | string;
@@ -32,7 +31,6 @@ export function Amount({
   tone?: "auto" | "plain" | "positive" | "negative";
   size?: "xs" | "sm" | "md" | "lg" | "xl" | "hero";
   signed?: boolean;
-  compact?: boolean;
   className?: string;
 }) {
   const amount = typeof value === "bigint" ? value : BigInt(value || "0");
@@ -59,10 +57,7 @@ export function Amount({
         className,
       )}
     >
-      {formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, {
-        signed,
-        compact,
-      })}
+      {formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
     </span>
   );
 }
@@ -107,7 +102,23 @@ export function AmountInput({
   const symbol = currencySymbol(currency);
   const [text, setText] = useAmountText(value, currency);
 
-  const handleChange = (next: string) => {
+  /*
+   * Typing into a field that already holds an amount replaces it, as if the
+   * whole number were selected, but without selecting it. A selected amount
+   * opens the sheet with the figure painted in a blue block, which reads as a
+   * glitch rather than an invitation. Typing in the middle of the number, or
+   * moving the caret, is a person editing it, and edits as normal.
+   */
+  const fresh = React.useRef(false);
+  const pointer = React.useRef(false);
+
+  const handleChange = (raw: string) => {
+    let next = raw;
+    if (fresh.current && text !== "") {
+      if (raw.length === text.length + 1 && raw.startsWith(text)) next = raw.slice(-1);
+      else if (raw === text.slice(0, -1)) next = "";
+    }
+    fresh.current = false;
     const masked = maskAmount(next, decimals);
     setText(masked);
     onChange(masked === "" ? null : parseAmount(masked, currency));
@@ -148,8 +159,28 @@ export function AmountInput({
         onChange={(event) => handleChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") onEnter?.();
+          // Arrow keys and Home/End mean the person is moving through the number.
+          if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End") {
+            fresh.current = false;
+          }
         }}
-        onFocus={(event) => event.currentTarget.select()}
+        onPointerDown={() => {
+          pointer.current = true;
+        }}
+        onFocus={(event) => {
+          // A tap leaves the caret where the finger landed; anything else
+          // (opening the sheet, tabbing in) puts it at the end.
+          fresh.current = true;
+          const tapped = pointer.current;
+          pointer.current = false;
+          if (!tapped) {
+            const end = event.currentTarget.value.length;
+            event.currentTarget.setSelectionRange(end, end);
+          }
+        }}
+        onBlur={() => {
+          fresh.current = false;
+        }}
         // At hero size the field is centred with the currency symbol beside it,
         // so it has to be as wide as its content and no wider - a full-width
         // input centres its text and strands the symbol at the far left.

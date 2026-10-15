@@ -2,7 +2,7 @@ import { json, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { beforeCursor, encodeCursor, parseCursor } from "@/server/cursor";
-import { activityDto } from "@/server/read";
+import { activityDto, feedScope } from "@/server/read";
 
 const PAGE_SIZE = 50;
 
@@ -35,39 +35,11 @@ export const GET = route(async (request: Request) => {
       // catching up on three months does exactly that - and a bare `lt` cursor
       // drops every one of them but the first at a page boundary.
       AND: beforeCursor("createdAt", cursor),
-      OR: [
-        // A nudge concerns two people even when the debt is a group one, so it
-        // is addressed rather than broadcast: only its sender and its recipient
-        // ever see it. Listed first so the group clause below cannot leak one
-        // into everybody else's feed.
-        { targetPersonId: session.person.id },
-        {
-          groupId: { in: groupIds },
-          // Everything else in a group is group-wide by nature.
-          targetPersonId: null,
-        },
-        { actorPersonId: session.person.id, targetPersonId: { not: null } },
-        // Direct expenses have no group, so they are matched through the
-        // expense's own participants.
-        {
-          groupId: null,
-          expense: {
-            OR: [
-              { payers: { some: { personId: session.person.id } } },
-              { splits: { some: { personId: session.person.id } } },
-            ],
-          },
-        },
-        {
-          groupId: null,
-          settlement: {
-            OR: [
-              { fromPersonId: session.person.id },
-              { toPersonId: session.person.id },
-            ],
-          },
-        },
-      ],
+      // The same scope as the unread badge (see feedScope in server/read.ts):
+      // a reminder is shown only to its sender and recipient, everything else
+      // in a group to the group, and entries outside groups to the people on
+      // them.
+      OR: feedScope(session.person.id, groupIds),
     },
     include: {
       group: { select: { name: true, emoji: true } },
@@ -85,7 +57,11 @@ export const GET = route(async (request: Request) => {
   const hasMore = activities.length > PAGE_SIZE;
 
   const items = page.map((activity) =>
-    activityDto(activity, activity.groupId ? lastReadByGroup.get(activity.groupId) ?? null : null),
+    activityDto(
+      activity,
+      activity.groupId ? lastReadByGroup.get(activity.groupId) ?? null : null,
+      { id: session.person.id, activitySeenAt: session.person.activitySeenAt ?? null },
+    ),
   );
 
   const last = page[page.length - 1];

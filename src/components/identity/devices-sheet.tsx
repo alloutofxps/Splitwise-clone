@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { KeyRound, Loader2, Smartphone, Trash2, TriangleAlert } from "lucide-react";
+import { KeyRound, Laptop, Loader2, MonitorSmartphone, Smartphone, Tablet, Trash2, TriangleAlert } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { useResetOnOpen } from "@/components/ui/use-reset-on-open";
 import { Button, cn, haptic } from "@/components/ui/primitives";
@@ -182,7 +182,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
                 {data.sessions.map((item) => (
                   <Row
                     key={item.id}
-                    icon={<Smartphone className="size-[18px]" />}
+                    icon={<DeviceIcon label={item.label} />}
                     title={item.current ? `${item.label} · this device` : item.label}
                     detail={
                       item.current
@@ -209,6 +209,18 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
       <LinkSheet open={linking} onClose={() => setLinking(false)} />
     </>
   );
+}
+
+/** A computer gets a computer, not a phone. The label comes from describeDevice. */
+function DeviceIcon({ label }: { label: string }) {
+  const Icon = /^(iPhone|Android)/.test(label)
+    ? Smartphone
+    : /^iPad/.test(label)
+      ? Tablet
+      : /^(Mac|Windows|Linux)/.test(label)
+        ? Laptop
+        : MonitorSmartphone;
+  return <Icon className="size-[18px]" />;
 }
 
 function Row({

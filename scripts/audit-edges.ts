@@ -130,6 +130,40 @@ async function main() {
     check("and the new amount reaches both friends", netWith(after, D.id) === "4000" && netWith(after, F.id) === "4000", `${netWith(after, D.id)} / ${netWith(after, F.id)}`);
   }
 
+  console.log("\nUnread dots and the Activity badge");
+  const P = client(), Q = client(), R = client();
+  for (const [c, name] of [[P, "Pia"], [Q, "Quin"], [R, "Rae"]] as const) c.id = (await c.call("/api/identity", { method: "POST", body: { displayName: name, defaultCurrency: "EUR" } })).body.me.id;
+  const pg = (await P.call("/api/groups", { method: "POST", body: { name: "Plan", currency: "EUR" } })).body.group;
+  await Q.call(`/api/invite/${pg.inviteCode}/join`, { method: "POST", body: {} });
+  await R.call(`/api/invite/${pg.inviteCode}/join`, { method: "POST", body: {} });
+  await P.call("/api/expenses", { method: "POST", body: { groupId: pg.id, description: "Pia buys Quin lunch", amount: "3000", currency: "EUR", splitMode: "EXACT", payers: [{ personId: P.id, amount: "3000" }], splits: [{ personId: Q.id, amount: "3000" }] } });
+  await Q.call("/api/expenses", { method: "POST", body: { groupId: pg.id, description: "Quin buys Rae lunch", amount: "3000", currency: "EUR", splitMode: "EXACT", payers: [{ personId: Q.id, amount: "3000" }], splits: [{ personId: R.id, amount: "3000" }] } });
+  await P.call(`/api/invite/${await codeOf(Q)}/join`, { method: "POST", body: {} });
+  await P.call("/api/expenses", { method: "POST", body: { friendId: Q.id, description: "Coffee", amount: "400", currency: "EUR", splitMode: "EQUAL", payers: [{ personId: P.id, amount: "400" }], splits: eq(400, [P.id, Q.id]) } });
+  const pFeed = (await P.call("/api/activity")).body.items;
+  const ownUnread = pFeed.filter((item: any) => item.actorPersonId === P.id && item.isUnread);
+  check("your own actions never show as unread", ownUnread.length === 0, `${ownUnread.length} of ${pFeed.length}`);
+  const qFeed = (await Q.call("/api/activity")).body.items;
+  const qDots = qFeed.filter((item: any) => item.isUnread).length;
+  const qBadge = (await Q.call("/api/dashboard")).body.unreadActivityCount;
+  check("the badge counts exactly the entries with a dot", qDots === qBadge && qBadge > 0, `dots ${qDots}, badge ${qBadge}`);
+  check("an expense outside any group shows as unread too", qFeed.some((item: any) => item.groupId === null && item.isUnread), "");
+  await Q.call("/api/activity/read", { method: "POST" });
+  const qAfter = (await Q.call("/api/dashboard")).body.unreadActivityCount;
+  const qFeedAfter = (await Q.call("/api/activity")).body.items.filter((item: any) => item.isUnread).length;
+  check("opening Activity clears the badge, direct entries included", qAfter === 0 && qFeedAfter === 0, `badge ${qAfter}, dots ${qFeedAfter}`);
+
+  console.log("\nWhy a friend's total can differ from the group's plan");
+  const pq = (await P.call(`/api/friends/${Q.id}`)).body;
+  const planLedger = (pq.ledgers ?? []).find((ledger: any) => ledger.groupId === pg.id);
+  check("Quin owes Pia €30 in the group, person to person", planLedger?.net === "3000", JSON.stringify(planLedger));
+  check("and the friend page knows the group plan has Quin pay Pia nothing", planLedger?.planned === "0", JSON.stringify(planLedger));
+  const direct = (pq.ledgers ?? []).find((ledger: any) => ledger.groupId === null);
+  check("a direct balance never carries a plan", direct?.planned === null, JSON.stringify(direct));
+  await P.call(`/api/groups/${pg.id}`, { method: "PATCH", body: { simplifyDebts: false } });
+  const plain = ((await P.call(`/api/friends/${Q.id}`)).body.ledgers ?? []).find((ledger: any) => ledger.groupId === pg.id);
+  check("with simplifying off there is nothing to explain", plain?.planned === null, JSON.stringify(plain));
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   process.exit(failures.length ? 1 : 0);
 }

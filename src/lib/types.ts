@@ -279,6 +279,14 @@ export interface SharedLedgerDto {
   currency: string;
   /** Positive: they owe you. Negative: you owe them. Minor units of `currency`. */
   net: string;
+  /**
+   * What the group's "fewest payments" plan has pass between the two of you,
+   * same sign rule, when that differs from `net`. Simplifying routes debts
+   * through other people, so the group screen can show a smaller (or no)
+   * payment between you than you actually owe each other. Null when the group
+   * doesn't simplify, or when the two agree.
+   */
+  planned: string | null;
 }
 
 export interface BudgetDto {

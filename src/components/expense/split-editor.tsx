@@ -6,7 +6,7 @@ import { Sheet } from "../ui/sheet";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
-import { currencySymbol, toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { CompactAmountInput } from "../ui/money";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
 import type { PersonDto } from "@/lib/types";
@@ -322,8 +322,7 @@ function ParticipantRow({
           </span>
           {included && mode !== "EXACT" ? (
             <span className="tabular block text-caption text-subtle">
-              {currencySymbol(currency)}
-              {toDecimalString(resolvedAmount, currency)}
+              {formatMoney(resolvedAmount, currency)}
             </span>
           ) : null}
         </span>
@@ -497,13 +496,11 @@ function RunningTotal({
   return (
     <p className="text-center text-body font-semibold text-muted">
       <span className="tabular text-text">
-        {currencySymbol(currency)}
-        {toDecimalString(assigned, currency)}
+        {formatMoney(assigned, currency)}
       </span>{" "}
       of{" "}
       <span className="tabular text-text">
-        {currencySymbol(currency)}
-        {toDecimalString(total, currency)}
+        {formatMoney(total, currency)}
       </span>{" "}
       · {included} {included === 1 ? "person" : "people"}
     </p>
@@ -519,7 +516,7 @@ function friendlyError(message: string, currency: string): string {
     const value = BigInt(match);
     // Percentages and people counts are small; amounts are in minor units.
     if (message.includes("%")) return match;
-    return `${currencySymbol(currency)}${toDecimalString(value, currency)}`;
+    return formatMoney(value, currency);
   });
 }
 
@@ -667,15 +664,13 @@ function ItemEditor({
           {extras > 0n ? (
             <>
               <span className="tabular text-text">
-                {currencySymbol(currency)}
-                {toDecimalString(extras, currency)}
+                {formatMoney(extras, currency)}
               </span>{" "}
               of tax and tip, split by how much each person ordered
             </>
           ) : extras < 0n ? (
             <span className="text-negative-text">
-              Items come to more than the total by {currencySymbol(currency)}
-              {toDecimalString(-extras, currency)}
+              Items come to more than the total by {formatMoney(-extras, currency)}
             </span>
           ) : (
             "Items add up to the whole bill"
