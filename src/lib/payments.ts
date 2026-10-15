@@ -67,7 +67,7 @@ export const PAYMENT_KINDS: PaymentKind[] = [
     label: "IBAN",
     emoji: "🏦",
     placeholder: "GB29 NWBK 6016 1331 9268 19",
-    hint: "Copied to the clipboard — no bank supports a universal deep link.",
+    hint: "Your friend gets it copied, ready to paste into their bank app.",
   },
   {
     value: "bank",
@@ -79,7 +79,7 @@ export const PAYMENT_KINDS: PaymentKind[] = [
     value: "custom",
     label: "Something else",
     emoji: "💬",
-    placeholder: "However you want to be paid",
+    placeholder: "How you'd like to be paid",
   },
 ];
 

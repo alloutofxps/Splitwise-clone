@@ -59,7 +59,7 @@ export function Ambient() {
           height: "50vmax",
           bottom: "-36vmax",
           left: "10vmax",
-          background: "var(--sunset-2)",
+          background: "var(--accent-2)",
           opacity: "calc(var(--glow-strength) * 0.45)",
           animationDelay: "-17s",
           animationDuration: "38s",

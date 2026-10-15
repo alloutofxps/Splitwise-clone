@@ -74,7 +74,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     });
     if (present !== 2) {
       throw new ValidationError(
-        "Somebody on this payment has left the group. Add them back before restoring it.",
+        "Someone on this payment has left the group. Add them back first.",
       );
     }
   }

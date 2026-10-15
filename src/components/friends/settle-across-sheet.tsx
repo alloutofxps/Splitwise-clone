@@ -89,23 +89,23 @@ export function SettleAcrossSheet({
         result === null
           ? {
               tone: "offline",
-              title: "Saved on your device",
-              description: "It will sync as soon as you are back online.",
+              title: "Saved on your phone",
+              description: "It'll be sent when you're back online.",
             }
           : {
               tone: "success",
-              title: chosen.length === 1 ? "Payment recorded" : `Settled ${chosen.length} balances`,
+              title: chosen.length === 1 ? "Payment saved" : `Settled ${chosen.length} balances`,
               description:
                 chosen.length === 1
                   ? undefined
-                  : "Each one is recorded in its own group. Undoing it undoes all of them.",
+                  : "Each one is saved in its own group. If you undo it, they're all undone.",
             },
       );
       onClose();
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not record that",
+        title: "Couldn't save that",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -132,8 +132,8 @@ export function SettleAcrossSheet({
           {chosen.length === 0
             ? "Nothing selected"
             : net === 0n
-              ? "These cancel out"
-              : `Record ${formatMoney(magnitude, currency)}`}
+              ? "These even out"
+              : `Save ${formatMoney(magnitude, currency)}`}
         </Button>
       }
     >
@@ -160,15 +160,15 @@ export function SettleAcrossSheet({
         </p>
         <p className="mt-1 text-center text-body text-muted">
           {net === 0n
-            ? "What you owe each other cancels out exactly."
+            ? "You owe each other the same amount, so it evens out."
             : chosen.length === 1
               ? "One balance"
-              : `The net of ${chosen.length} balances`}
+              : `${chosen.length} balances added together`}
         </p>
 
         {/* What gets written ------------------------------------------------ */}
         <p className="mb-2 mt-6 px-1 text-caption font-bold uppercase tracking-[0.06em] text-subtle">
-          This records
+          This will save
         </p>
         <ul className="space-y-1.5">
           {ledgers.map((ledger) => {
@@ -230,8 +230,8 @@ export function SettleAcrossSheet({
         </ul>
 
         <p className="mt-2 px-1 text-tiny leading-relaxed text-subtle">
-          Each of these is recorded separately in its own group, so everyone else
-          sees only what happened in theirs. Undoing the payment undoes all of them.
+          Each one is saved in its own group, so other people only see the part
+          that&rsquo;s in their group. If you undo it, they&rsquo;re all undone.
         </p>
 
         {/* How -------------------------------------------------------------- */}

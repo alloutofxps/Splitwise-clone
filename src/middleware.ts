@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (declared > MAX_DECLARED_BODY) {
     return NextResponse.json(
-      { error: "That request is too large.", code: "too_large" },
+      { error: "That's too big to upload.", code: "too_large" },
       { status: 413 },
     );
   }

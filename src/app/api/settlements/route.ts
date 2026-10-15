@@ -23,7 +23,7 @@ import { pairKey, serialize } from "@/server/mutex";
 import { isUniqueViolation, recordActivity } from "@/server/write";
 
 const schema = z.object({
-  id: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/, "That id is not valid.").optional(),
+  id: z.string().min(6).max(80).regex(/^[A-Za-z0-9_-]+$/, "Something went wrong. Please try again.").optional(),
   groupId: z.string().max(80).nullable().optional(),
   fromPersonId: z.string().min(1).max(80),
   toPersonId: z.string().min(1).max(80),
@@ -82,18 +82,18 @@ export const POST = route(async (request: Request) => {
   } else {
     // The payer or the payee can record a direct payment; nobody else can.
     if (!isParticipant) {
-      throw new ValidationError("You can only record payments you are part of.");
+      throw new ValidationError("You can only add payments you're part of.");
     }
     const other = input.fromPersonId === me ? input.toPersonId : input.fromPersonId;
     // No implicit friendship here: a person id is not consent.
     if (!(await areFriends(me, other))) {
-      throw new ValidationError("You can only settle up with people you have added.");
+      throw new ValidationError("You can only settle up with people you've added.");
     }
   }
 
   if (settlementCurrency !== input.currency && !input.exchangeRate) {
     throw new ValidationError(
-      `This group settles in ${settlementCurrency}, so an exchange rate is needed.`,
+      `This group uses ${settlementCurrency}, so add an exchange rate.`,
     );
   }
 
@@ -104,7 +104,7 @@ export const POST = route(async (request: Request) => {
   }
   const convertedAmount = convert(input.amount, input.currency, settlementCurrency, exchangeRate);
   if (convertedAmount <= 0n || convertedAmount > MAX_MINOR_UNITS) {
-    throw new ValidationError("That exchange rate produces an amount that cannot be stored.");
+    throw new ValidationError("That exchange rate gives an amount that's too big. Check the rate.");
   }
 
   /*
@@ -126,7 +126,7 @@ export const POST = route(async (request: Request) => {
       const ceiling = payerOwes < payeeIsOwed ? payerOwes : payeeIsOwed;
       if (ceiling <= 0n || convertedAmount > ceiling) {
         throw new ValidationError(
-          "You can record a payment between two other people only up to what is actually owed. Ask one of them to record the rest.",
+          "For a payment between two other people, you can only add up to what's owed. Ask one of them to add the rest.",
         );
       }
     }
@@ -157,7 +157,7 @@ export const POST = route(async (request: Request) => {
       // Lost a race with our own replay - or the id belongs to somebody else.
       const existing = await existingReplay(id, me, groupId);
       if (existing) return json({ settlement: settlementDto(existing) }, { status: 200 });
-      throw new ConflictError("That id is already in use. Try again.");
+      throw new ConflictError("Something clashed. Please try again.");
     }
 
     await recordActivity({
@@ -186,7 +186,7 @@ async function existingReplay(id: string, me: string, groupId: string | null) {
   const existing = await prisma.settlement.findUnique({ where: { id } });
   if (!existing) return null;
   if (existing.createdByPersonId !== me || existing.groupId !== groupId) {
-    throw new ConflictError("That id is already in use. Try again.");
+    throw new ConflictError("Something clashed. Please try again.");
   }
   return existing;
 }

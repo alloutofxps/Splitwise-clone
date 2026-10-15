@@ -31,7 +31,7 @@ export const DELETE = route(async () => {
   const unsettledDirect = [...directSheets.values()].some((sheet) => (sheet.net.get(me) ?? 0n) !== 0n);
   if (unsettledGroups || unsettledDirect) {
     throw new ValidationError(
-      "Settle up everywhere first - you still owe or are owed money. Deleting your account cannot leave a debt behind.",
+      "You need to settle up with everyone first. You still owe money, or someone owes you.",
     );
   }
 

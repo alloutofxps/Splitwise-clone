@@ -57,7 +57,7 @@
 The feeling of the end of a trip — warm light, a long table, everyone square. Confident and warm, not childish; premium, not corporate.
 
 - **Type:** *Bricolage Grotesque* for numbers and headlines (expressive, characterful, tabular figures). *Instrument Serif Italic* for emotional words — names, "all square", greetings. Inter stays for everything you read in bulk.
-- **Colour:** a sunset gradient (iris → fuchsia → apricot) as the brand mark, used sparingly. A **mood colour** behind the balance: mint glow when you are owed, coral when you owe, iris when you are square. Each group's colour becomes a gradient identity on its card.
+- **Colour:** one deep indigo as the brand mark, darkening slightly across a button for depth. (The first pass used a sunset gradient, iris → fuchsia → apricot; it read as Instagram, so it was replaced.) A **mood colour** behind the balance: mint glow when you are owed, coral when you owe, iris when you are square. Each group's colour becomes a gradient identity on its card.
 - **Depth:** a living background (slow-drifting aurora blobs + fine film grain), glass for anything floating (tab bar, header), cards with a top highlight and soft coloured shadows.
 - **Motion:** spring physics everywhere — numbers count, lists assemble, cards press like objects, sheets push the page back, the theme changes with a circular wipe. All of it switches off under *Reduce Motion*.
 - **Moments:** confetti when you settle up to zero and when you finish sign-up; a floating "receipts" welcome; playful empty states.
@@ -71,7 +71,7 @@ See the "Design pass" commit on the `fix/production-audit` branch, and before/af
 | # | Change | Fixes |
 |---|---|---|
 | 1 | Display + serif fonts, self-hosted via `next/font` | 1, 15 |
-| 2 | Sunset brand gradient, mood colours, glows, film grain, glass tokens | 3, 5 |
+| 2 | Indigo brand gradient, mood colours, glows, film grain, glass tokens | 3, 5 |
 | 3 | Living aurora background tied to your balance mood | 3, 4 |
 | 4 | Home hero card: counting balance, mood gradient, serif greeting, owed/owe split | 4, 9, 15 |
 | 5 | Group cards with gradient identity tiles and spring press | 2, 5, 13 |
@@ -101,3 +101,14 @@ See the "Design pass" commit on the `fix/production-audit` branch, and before/af
   code) and the selected-colour ring on Account. Each keeps its ring again.
 
 **Guard rails kept:** every colour still meets contrast in both themes, balances are still stated in words as well as colour, and everything animated honours the operating system's *Reduce Motion* setting (set once for the whole app, so new animations inherit it).
+
+## 5. Plain-language pass
+
+Every sentence in the app was rewritten in plain, spoken English: short
+sentences, no dashes, no technical words ("placeholder", "ledger", "sync",
+"one-way hash", "invalidates"), and copy that says what things do rather than
+how they feel. The welcome screen now explains the app in one line ("Split
+bills with friends. See who owes what."), and the home balance says what the
+number means ("In total, people owe you this much."). Server error messages,
+which show up in the app when something can't be saved, were rewritten the
+same way.

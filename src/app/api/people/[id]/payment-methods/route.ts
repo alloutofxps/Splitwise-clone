@@ -28,7 +28,7 @@ export const GET = route(async (_request: Request, { params }: Params) => {
           },
         })) > 0;
 
-    if (!sharesGroup) throw new ForbiddenError("You do not share a group with them.");
+    if (!sharesGroup) throw new ForbiddenError("You're not in a group with them.");
   }
 
   const paymentMethods = await prisma.paymentMethod.findMany({

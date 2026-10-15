@@ -198,7 +198,7 @@ export async function checkRateIsPlausible(from: string, to: string, rate: strin
   const ratio = typed / expected;
   if (ratio > PLAUSIBLE_FACTOR || ratio < 1 / PLAUSIBLE_FACTOR) {
     throw new ValidationError(
-      `That exchange rate (${rate}) is far from today's ${from}→${to} rate of about ${Number(reference.rate).toPrecision(4)}. Check it hasn't been entered the wrong way round.`,
+      `That exchange rate (${rate}) is very different from today's ${from}→${to} rate of about ${Number(reference.rate).toPrecision(4)}. Check you haven't typed it the wrong way round.`,
     );
   }
 }

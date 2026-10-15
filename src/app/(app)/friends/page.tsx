@@ -28,7 +28,7 @@ import type { FriendDto } from "@/lib/types";
 
 const FILTERS = [
   { value: "all", label: "Everyone" },
-  { value: "outstanding", label: "Outstanding balances" },
+  { value: "outstanding", label: "Anyone with money owed" },
   { value: "you-owe", label: "People you owe" },
   { value: "owes-you", label: "People who owe you" },
 ] as const;
@@ -119,7 +119,7 @@ export default function FriendsPage() {
         <EmptyState
           icon={<UserRoundPlus className="size-6" />}
           title="No friends added yet"
-          description="Swap codes with someone to split expenses one-to-one, or share a group with them."
+          description="Swap codes with a friend to split things between just the two of you. People in your groups show up here too."
           action={
             <div className="flex gap-2.5">
               <Button variant="primary" onClick={() => setAdding(true)}>
@@ -319,7 +319,7 @@ function FriendCard({ friend }: { friend: FriendDto }) {
         <span className="mt-2.5 block border-l-2 border-line pl-3">
           {friend.ledgers.map((ledger) => {
             const amount = BigInt(ledger.net);
-            const name = ledger.name ?? "non-group expenses";
+            const name = ledger.name ?? "expenses outside groups";
             return (
               <span
                 key={ledger.groupId ?? "direct"}

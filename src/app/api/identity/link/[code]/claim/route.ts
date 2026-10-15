@@ -26,11 +26,11 @@ export const POST = route(async (request: Request, { params }: Params) => {
     include: { person: true },
   });
   if (!link || link.person.deletedAt) {
-    throw new NotFoundError("That link is not valid. Ask for a fresh code.");
+    throw new NotFoundError("That link doesn't work. Ask for a new code.");
   }
-  if (link.usedAt) throw new ValidationError("That code has already been used. Ask for a fresh one.");
+  if (link.usedAt) throw new ValidationError("That code has already been used. Ask for a new one.");
   if (link.expiresAt.getTime() < Date.now()) {
-    throw new ValidationError("That code has expired. Ask for a fresh one.");
+    throw new ValidationError("That code has run out. Ask for a new one.");
   }
 
   const claimed = await prisma.deviceLink.updateMany({
@@ -38,7 +38,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     data: { usedAt: new Date() },
   });
   if (claimed.count === 0) {
-    throw new ValidationError("That code has already been used. Ask for a fresh one.");
+    throw new ValidationError("That code has already been used. Ask for a new one.");
   }
 
   await startSession(link.personId, describeDevice(request.headers.get("user-agent")));

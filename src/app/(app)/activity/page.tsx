@@ -104,11 +104,11 @@ export default function ActivityPage() {
       {items.length === 0 ? (
         <EmptyState
           icon={<Receipt className="size-6" />}
-          title={groupFilter ? "Nothing in that group yet" : "Nothing has happened yet"}
+          title={groupFilter ? "Nothing in this group yet" : "Nothing here yet"}
           description={
             groupFilter
-              ? "Nothing has happened in that group in the entries loaded so far."
-              : "Expenses, payments and comments from all your groups show up here."
+              ? "Nothing has happened in this group yet."
+              : "When someone adds an expense, pays someone back or leaves a comment, you'll see it here."
           }
           action={
             groupFilter ? (
@@ -315,11 +315,11 @@ function UndoButton({ activity }: { activity: ActivityDto }) {
         haptic();
         const options = {
           onSuccess: () =>
-            toast({ tone: "success", title: `Put the ${label} back` }),
+            toast({ tone: "success", title: `${label[0].toUpperCase()}${label.slice(1)} is back` }),
           onError: (error: unknown) =>
             toast({
               tone: "error",
-              title: `Could not put the ${label} back`,
+              title: `Couldn't bring the ${label} back`,
               description: error instanceof ApiError ? error.message : undefined,
             }),
         };
@@ -327,7 +327,7 @@ function UndoButton({ activity }: { activity: ActivityDto }) {
         else restoreSettlement.mutate({ id }, options);
       }}
       disabled={busy}
-      aria-label={`Undo — restore this ${label}`}
+      aria-label={`Undo, bring this ${label} back`}
       className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-brand transition active:scale-95 hover:bg-surface-2 disabled:opacity-50"
     >
       {busy ? "…" : "Undo"}
@@ -520,11 +520,11 @@ function describe(
         sentence:
           was && was !== now ? (
             <>
-              {strong(actorName)} merged {strong(was)} into {strong(now)}
+              {strong(actorName)} moved {strong(was)}&rsquo;s expenses to {strong(now)}
             </>
           ) : (
             <>
-              {strong(actorName)} merged a placeholder into {strong(now)}
+              {strong(actorName)} moved an added name&rsquo;s expenses to {strong(now)}
             </>
           ),
       };

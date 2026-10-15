@@ -32,7 +32,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     const involved =
       settlement.fromPersonId === session.person.id ||
       settlement.toPersonId === session.person.id;
-    if (!involved) throw new ForbiddenError("That payment is not yours to undo.");
+    if (!involved) throw new ForbiddenError("You can't undo that payment.");
   }
 
   // Already deleted is the state the caller asked for - an offline replay, or
@@ -56,7 +56,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
       row.fromPersonId !== session.person.id &&
       row.toPersonId !== session.person.id
     ) {
-      throw new ForbiddenError("That payment is not yours to undo.");
+      throw new ForbiddenError("You can't undo that payment.");
     }
   }
 

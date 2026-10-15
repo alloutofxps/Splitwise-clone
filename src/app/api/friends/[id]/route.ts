@@ -29,12 +29,12 @@ export const GET = route(async (_request: Request, { params }: Params) => {
   const me = session.person.id;
 
   const person = await prisma.person.findUnique({ where: { id } });
-  if (!person) throw new NotFoundError("That person is not here.");
+  if (!person) throw new NotFoundError("We couldn't find that person.");
   // A shared group counts as much as a friendship here: the group already
   // shows you this person and what they owe, so refusing to total it up across
   // their groups hides arithmetic rather than protecting anything.
   if (id !== me && !(await areFriends(me, id)) && !(await sharesAGroup(me, id))) {
-    throw new ForbiddenError("You have not added that person.");
+    throw new ForbiddenError("You haven't added that person.");
   }
 
   const [sheets, ledgers] = await Promise.all([

@@ -31,7 +31,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
    * owner's "nobody else joins" by switching the link straight back on.
    */
   if (action === "enable" && !isOwner) {
-    throw new ForbiddenError("Only whoever created the group can turn the invite link back on.");
+    throw new ForbiddenError("Only the person who made the group can turn the invite link back on.");
   }
 
   const data =

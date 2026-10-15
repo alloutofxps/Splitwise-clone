@@ -44,11 +44,11 @@ const serif = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: {
-    default: "Divvy - split expenses with friends",
+    default: "Divvy: split bills with friends",
     template: "%s · Divvy",
   },
   description:
-    "Share expenses with friends and housemates. Every feature, no accounts, no paywall.",
+    "Split bills with friends and housemates. See who owes what and pay each other back. Free, with no ads.",
   applicationName: "Divvy",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

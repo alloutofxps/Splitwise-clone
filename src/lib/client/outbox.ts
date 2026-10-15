@@ -262,7 +262,7 @@ export async function flush(): Promise<FlushResult> {
             reason:
               error instanceof Error && error.message
                 ? `${error.message} (tried ${attempts} times)`
-                : `The server could not save this after ${attempts} tries.`,
+                : `Couldn't save this after ${attempts} tries.`,
             status: error instanceof ApiError ? error.status : 0,
             rejectedAt: Date.now(),
           } satisfies RejectedMutation);

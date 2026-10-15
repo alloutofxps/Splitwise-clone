@@ -14,7 +14,7 @@ export class UnauthorizedError extends Error {
 }
 
 export class ForbiddenError extends Error {
-  constructor(message = "You do not have access to that.") {
+  constructor(message = "You don't have access to that.") {
     super(message);
     this.name = "ForbiddenError";
   }
@@ -37,7 +37,7 @@ export class NotFoundError extends Error {
  * ledger that is a balance nobody agreed to.
  */
 export class ConflictError extends Error {
-  constructor(message = "Somebody else changed this first.") {
+  constructor(message = "Someone else changed this first. Please try again.") {
     super(message);
     this.name = "ConflictError";
   }
@@ -58,7 +58,7 @@ export class RateLimitError extends Error {
 
 /** A request body larger than the endpoint accepts. */
 export class PayloadTooLargeError extends Error {
-  constructor(message = "That request is too large.") {
+  constructor(message = "That's too big to upload.") {
     super(message);
     this.name = "PayloadTooLargeError";
   }
@@ -68,7 +68,7 @@ export class ValidationError extends Error {
   details: string[];
   constructor(details: string[] | string) {
     const list = Array.isArray(details) ? details : [details];
-    super(list[0] ?? "That does not look right.");
+    super(list[0] ?? "Something there doesn't look right.");
     this.name = "ValidationError";
     this.details = list;
   }

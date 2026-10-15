@@ -134,7 +134,7 @@ export function JoinSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not join",
+        title: "Couldn't join",
         description: error instanceof ApiError ? error.message : undefined,
       });
     } finally {
@@ -173,7 +173,7 @@ export function JoinSheet({
         />
 
         <p className="mt-2 text-center text-caption text-subtle">
-          Ask whoever set the group up for their invite code.
+          Ask the person who made the group for the code.
         </p>
 
         <div className="mt-5">
@@ -187,7 +187,7 @@ export function JoinSheet({
             </div>
           ) : notFound ? (
             <p className="rounded-[var(--radius-md)] bg-negative-soft px-4 py-3 text-center text-body font-semibold text-negative-text">
-              No group or person has that code.
+              That code doesn&rsquo;t match anyone. Check it and try again.
             </p>
           ) : preview?.kind === "group" ? (
             <div className="rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface [box-shadow:var(--highlight),var(--shadow-sm)] p-4">
@@ -216,8 +216,8 @@ export function JoinSheet({
                     Are you one of these?
                   </p>
                   <p className="mt-1 text-caption leading-relaxed text-muted">
-                    Someone has been splitting with these names. Pick yours and
-                    everything filed against it becomes yours.
+                    Someone in this group added these names. If one is you, pick
+                    it and its expenses become yours.
                   </p>
 
                   <ul className="mt-3 space-y-1.5">
@@ -259,7 +259,7 @@ export function JoinSheet({
                     }}
                     className="mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
                   >
-                    None of these — I&rsquo;m new here
+                    None of these, I&rsquo;m new here
                   </button>
                 </div>
               ) : null}
@@ -272,7 +272,7 @@ export function JoinSheet({
                   {preview.person.displayName}
                 </p>
                 <p className="text-caption text-muted">
-                  Add them so you can split expenses one-to-one.
+                  Add them to split things between just the two of you.
                 </p>
               </div>
             </div>

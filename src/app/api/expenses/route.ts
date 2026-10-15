@@ -25,7 +25,7 @@ export const POST = route(async (request: Request) => {
   if (input.groupId) {
     await requireGroupAccess(input.groupId, session.person.id);
   } else if (!input.friendId) {
-    throw new ValidationError("An expense needs a group or a person to be with.");
+    throw new ValidationError("Pick a group or a friend for this expense.");
   }
 
   const expenseId = input.id ?? newId("exp");

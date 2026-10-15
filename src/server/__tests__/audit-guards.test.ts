@@ -49,7 +49,7 @@ describe("expense validation", () => {
   it("refuses item lines naming somebody outside the split", () => {
     expect(() =>
       validateExpense({ ...base, items: [{ name: "x", amount: 100n, quantity: 1, participantIds: ["stranger"] }] }),
-    ).toThrow(/not in the split/);
+    ).toThrow(/isn't in the split/);
   });
 
   it("refuses negative item prices and out-of-range percentages", () => {
@@ -72,7 +72,7 @@ describe("receipt uploads", () => {
 
   it("refuses an HTML page labelled as an image", () => {
     const html = Buffer.from("<html><script>alert(1)</script></html>").toString("base64");
-    expect(() => decodeDataUrl(`data:image/png;base64,${html}`, "r.png")).toThrow(/not the kind of file/);
+    expect(() => decodeDataUrl(`data:image/png;base64,${html}`, "r.png")).toThrow(/isn't really a photo or PDF/);
   });
 
   it("refuses the percent-encoded form that used to crash with a 500", () => {
@@ -120,7 +120,7 @@ describe("rate limiting", () => {
 describe("request bodies", () => {
   it("stops reading once a body passes the limit", async () => {
     const big = new Request("http://x/", { method: "POST", body: "a".repeat(10_000) });
-    await expect(readLimitedText(big, 1_000)).rejects.toThrow(/too large/);
+    await expect(readLimitedText(big, 1_000)).rejects.toThrow(/too big/);
   });
 
   it("refuses a declared length over the limit without reading", async () => {
@@ -129,7 +129,7 @@ describe("request bodies", () => {
       body: "small",
       headers: { "content-length": "999999999" },
     });
-    await expect(readLimitedText(declared, 1_000)).rejects.toThrow(/too large/);
+    await expect(readLimitedText(declared, 1_000)).rejects.toThrow(/too big/);
   });
 
   it("reads a body under the limit", async () => {

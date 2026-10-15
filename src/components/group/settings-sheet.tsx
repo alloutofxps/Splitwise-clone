@@ -91,7 +91,7 @@ export function GroupSettingsSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not add them",
+        title: "Couldn't add them",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -108,7 +108,7 @@ export function GroupSettingsSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not add them",
+        title: "Couldn't add them",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -121,7 +121,7 @@ export function GroupSettingsSheet({
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not remove them",
+        title: "Couldn't remove them",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -139,7 +139,7 @@ export function GroupSettingsSheet({
       setConfirmLeave(false);
       toast({
         tone: "error",
-        title: "Could not leave",
+        title: "Couldn't leave",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -157,7 +157,7 @@ export function GroupSettingsSheet({
       setConfirmDelete(false);
       toast({
         tone: "error",
-        title: "Could not delete the group",
+        title: "Couldn't delete the group",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -186,7 +186,7 @@ export function GroupSettingsSheet({
                 Simplify debts
               </span>
               <span className="mt-0.5 block text-caption leading-relaxed text-muted">
-                Show the fewest payments that settle the group.
+                Settle up with as few payments as possible.
               </span>
             </span>
             <Switch
@@ -216,7 +216,7 @@ export function GroupSettingsSheet({
                       </span>
                       {member.isGhost ? (
                         <span className="block text-tiny text-subtle">
-                          Has not joined yet
+                          Not on Divvy yet
                         </span>
                       ) : null}
                     </span>
@@ -233,8 +233,8 @@ export function GroupSettingsSheet({
                           haptic();
                           setMerging(member);
                         }}
-                        aria-label={`${member.displayName} is somebody I already know`}
-                        title="This is somebody already on Divvy"
+                        aria-label={`${member.displayName} is someone already on Divvy`}
+                        title="This is someone already on Divvy"
                         className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:scale-90 hover:bg-surface-2 hover:text-text"
                       >
                         <Merge className="size-4" />
@@ -326,7 +326,7 @@ export function GroupSettingsSheet({
             <ActionRow
               icon={<Download className="size-[18px]" />}
               label="Export as CSV"
-              description="Every expense and payment"
+              description="A spreadsheet of every expense and payment"
               onClick={() => {
                 haptic();
                 // Absolute, and a full navigation rather than a router push:
@@ -341,8 +341,8 @@ export function GroupSettingsSheet({
               label={group.archivedAt ? "Unarchive group" : "Archive group"}
               description={
                 group.archivedAt
-                  ? "Bring it back to your home screen"
-                  : "Hide it without deleting anything"
+                  ? "Show it on your home screen again"
+                  : "Hide it. Nothing gets deleted."
               }
               onClick={() => {
                 updateGroup.mutate({ archived: !group.archivedAt });
@@ -359,14 +359,14 @@ export function GroupSettingsSheet({
             <ActionRow
               icon={<LogOut className="size-[18px]" />}
               label="Leave group"
-              description="You have to be settled up first"
+              description="You need to be settled up first"
               tone="danger"
               onClick={() => setConfirmLeave(true)}
             />
             <ActionRow
               icon={<Trash2 className="size-[18px]" />}
               label="Delete group"
-              description="Removes every expense in it, for everyone"
+              description="Deletes all its expenses, for everyone"
               tone="danger"
               onClick={() => setConfirmDelete(true)}
             />
@@ -393,7 +393,7 @@ export function GroupSettingsSheet({
         onClose={() => setConfirmLeave(false)}
         onConfirm={() => void leave()}
         title={`Leave ${group.name}?`}
-        description="Your past expenses stay in the group so everyone else's history still adds up."
+        description="Your past expenses stay in the group, so everyone else's totals still add up."
         confirmLabel="Leave"
       />
 
@@ -402,7 +402,7 @@ export function GroupSettingsSheet({
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => void destroy()}
         title={`Delete ${group.name}?`}
-        description="This removes every expense in the group for everyone in it, permanently. Archiving keeps the history instead."
+        description="This deletes every expense in the group, for everyone, forever. If you just want it out of the way, archive it instead."
         confirmLabel="Delete for everyone"
       />
     </>

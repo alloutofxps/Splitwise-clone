@@ -76,7 +76,7 @@ export function useLaunchIntent(enabled: boolean): LaunchIntent {
         compose: true,
         attachments: [],
         description: "",
-        notice: "That receipt could not be brought across. Add it here instead.",
+        notice: "Couldn't add that receipt. Please add it here instead.",
       });
       return;
     }
@@ -110,7 +110,7 @@ export function useLaunchIntent(enabled: boolean): LaunchIntent {
         description: payload.note,
         notice:
           failures.length > 0
-            ? `${failures.length} shared file${failures.length === 1 ? "" : "s"} could not be read.`
+            ? `${failures.length} shared file${failures.length === 1 ? "" : "s"} couldn't be opened.`
             : null,
       });
     };

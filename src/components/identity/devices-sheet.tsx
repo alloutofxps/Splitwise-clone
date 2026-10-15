@@ -65,7 +65,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
       if (error instanceof PasskeyCancelled) return;
       toast({
         tone: "error",
-        title: "Could not add that passkey",
+        title: "Couldn't add that passkey",
         description: error instanceof ApiError ? error.message : undefined,
       });
     },
@@ -80,7 +80,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
     onError: (error) =>
       toast({
         tone: "error",
-        title: "Could not remove that",
+        title: "Couldn't remove that",
         description: error instanceof ApiError ? error.message : undefined,
       }),
   });
@@ -93,7 +93,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
       <Sheet open={open} onClose={onClose} title="Your devices" tall>
         <div className="space-y-6 px-5 pb-8">
           <p className="text-subhead leading-relaxed text-muted">
-            Anything listed here can open your account. Remove whatever you no longer use.
+            Anything on this list can open your account. Remove anything you don&rsquo;t use.
           </p>
 
           <div className="space-y-2.5">
@@ -119,7 +119,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
                   addPasskey.mutate();
                 }}
               >
-                Add a passkey to this device
+                Add a passkey on this device
               </Button>
             ) : null}
           </div>
@@ -134,9 +134,9 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
             <div className="flex gap-3 rounded-[var(--radius-md)] border border-warning-line bg-warning-soft p-3.5">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning-soft-text" />
               <p className="text-caption leading-relaxed text-warning-soft-text">
-                {stale.length === 1 ? "One passkey was" : `${stale.length} passkeys were`} created
-                for a different web address, so {stale.length === 1 ? "it" : "they"} will not appear
-                here. Add a new passkey on this address, then remove the old{" "}
+                {stale.length === 1 ? "One passkey was" : `${stale.length} passkeys were`} made
+                on a different web address, so {stale.length === 1 ? "it" : "they"} won&rsquo;t work
+                here. Add a new passkey here, then remove the old{" "}
                 {stale.length === 1 ? "one" : "ones"}.
               </p>
             </div>
@@ -162,7 +162,7 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
                         ? passkey.lastUsedAt
                           ? `Last used ${when(passkey.lastUsedAt)}`
                           : `Added ${when(passkey.createdAt)}`
-                        : `For ${passkey.rpId ?? "another address"} — not usable here`
+                        : `Made on ${passkey.rpId ?? "another address"}, doesn't work here`
                     }
                     dimmed={!passkey.usableHere}
                     busy={revoke.isPending}
@@ -199,8 +199,8 @@ export function DevicesSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {data && !data.hasRecoveryKey ? (
             <p className="text-caption leading-relaxed text-muted">
-              You have no recovery key saved. If you lose every device listed here, there will be no
-              way back into this account — generate one from the account screen.
+              You haven&rsquo;t saved a recovery key. If you lose all of these, you won&rsquo;t be
+              able to get back in. You can make one on the Account screen.
             </p>
           ) : null}
         </div>
@@ -286,7 +286,7 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     onError: (error) =>
       toast({
         tone: "error",
-        title: "Could not make a code",
+        title: "Couldn't make a code",
         description: error instanceof ApiError ? error.message : undefined,
       }),
   });
@@ -308,8 +308,8 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     <Sheet open={open} onClose={onClose} title="Add another device">
       <div className="space-y-5 px-5 pb-8">
         <p className="text-subhead leading-relaxed text-muted">
-          On the other device, open the camera and point it at this code. It signs that device in —
-          no recovery key to type.
+          On your other phone or computer, open the camera and point it at this code. It signs
+          you in there, with nothing to type.
         </p>
 
         <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-line bg-white p-4">
@@ -333,8 +333,8 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         ) : null}
 
         <p className="text-caption leading-relaxed text-subtle">
-          The code works once and expires in five minutes. Anyone who scans it gets into your
-          account, so only show it to a device you own.
+          The code works once and stops working after five minutes. Anyone who scans it can get
+          into your account, so only scan it with your own device.
         </p>
       </div>
     </Sheet>

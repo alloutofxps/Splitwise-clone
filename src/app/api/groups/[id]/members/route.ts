@@ -55,7 +55,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     const allowed = (await visiblePeople(session.person.id)).some(
       (person) => person.id === input.personId,
     );
-    if (!allowed) throw new ValidationError("You do not share a group with that person.");
+    if (!allowed) throw new ValidationError("You're not in a group with that person.");
 
     const person = await prisma.person.findUnique({ where: { id: input.personId } });
     if (!person || person.deletedAt) throw new ValidationError("That person no longer exists.");
@@ -64,7 +64,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     // the same thing the invite-code path below already refused.
     if (person.isGhost) {
       throw new ValidationError(
-        `${person.displayName} is a placeholder in another group. Add them by name here, and they can claim both when they join.`,
+        `${person.displayName} isn't on Divvy yet. Add them by name here, and they can pick their name in both groups when they join.`,
       );
     }
 
@@ -105,7 +105,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
     // it belongs to whichever group created it, and pulling it into a second
     // group would silently entangle two sets of balances.
     if (!person || person.isGhost || person.deletedAt) {
-      throw new ValidationError("No one has that personal code.");
+      throw new ValidationError("No one has that friend code.");
     }
 
     const existing = await prisma.membership.findUnique({

@@ -68,7 +68,7 @@ export const POST = route(async (request: Request) => {
     include: { person: true },
   });
   if (!stored || stored.kind !== "passkey" || !stored.publicKey || stored.person.deletedAt) {
-    throw new UnauthorizedError("That passkey is not registered here.");
+    throw new UnauthorizedError("That passkey isn't set up for Divvy.");
   }
 
   const verification = await verifyAuthenticationResponse({
@@ -84,7 +84,7 @@ export const POST = route(async (request: Request) => {
     },
   }).catch(() => null);
 
-  if (!verification?.verified) throw new UnauthorizedError("That passkey could not be verified.");
+  if (!verification?.verified) throw new UnauthorizedError("That passkey didn't work. Please try again.");
 
   await prisma.$transaction([
     prisma.credential.update({

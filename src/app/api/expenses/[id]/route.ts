@@ -39,7 +39,7 @@ async function loadVisibleExpense(
     expense.createdByPersonId === personId ||
     expense.payers.some((p) => p.personId === personId) ||
     expense.splits.some((s) => s.personId === personId);
-  if (!involved) throw new ForbiddenError("That expense is not yours to see.");
+  if (!involved) throw new ForbiddenError("You can't see that expense.");
 
   return expense;
 }

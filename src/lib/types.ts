@@ -257,6 +257,12 @@ export interface FriendDto {
    */
   ledgers: SharedLedgerDto[];
   sharedGroupIds: string[];
+  /**
+   * Added directly with their code, so expenses outside a group can include
+   * them. People you only share a group with appear here too, but can only be
+   * split with inside that group.
+   */
+  isFriend?: boolean;
   lastActivityAt: string | null;
 }
 
@@ -280,6 +286,10 @@ export interface BudgetDto {
   period: "WEEKLY" | "MONTHLY" | "YEARLY";
   /** Spent so far in the current period, viewer's share only. */
   spent: string;
+  /** Other currencies converted at today's rate to reach `spent`. */
+  convertedFrom?: string[];
+  /** Currencies left out because no rate was available. */
+  uncounted?: string[];
 }
 
 export interface CategoryTotalDto {
@@ -313,6 +323,8 @@ export interface DashboardDto {
   me: MeDto;
   /** Net per currency across every group and friend. */
   totals: Record<string, string>;
+  /** With several currencies: roughly what they add up to in the viewer's own, at today's rate. */
+  approxTotal?: { currency: string; amount: string } | null;
   groups: GroupSummaryDto[];
   friends: FriendDto[];
   unreadActivityCount: number;

@@ -58,11 +58,11 @@ export const POST = route(async (request: Request) => {
     throw new ValidationError("Each row of a payment needs its own id.");
   }
   if (new Set(input.rows.map((row) => row.groupId ?? "")).size !== input.rows.length) {
-    throw new ValidationError("A ledger can only appear once in a payment.");
+    throw new ValidationError("The same balance is in this payment twice.");
   }
 
   const person = await prisma.person.findUnique({ where: { id: input.personId } });
-  if (!person || person.deletedAt) throw new ValidationError("That person is not here.");
+  if (!person || person.deletedAt) throw new ValidationError("We couldn't find that person.");
 
   const batchId = input.batchId ?? newId("btc");
 
@@ -80,7 +80,7 @@ export const POST = route(async (request: Request) => {
         (row) => row.createdByPersonId === me && row.batchId === batchId,
       );
       if (!mine || already.length !== input.rows.length) {
-        throw new ConflictError("That payment id is already in use. Try again.");
+        throw new ConflictError("Something clashed. Please try again.");
       }
       return json({ batchId, settlements: already.map(settlementDto) }, { status: 200 });
     }
@@ -90,7 +90,7 @@ export const POST = route(async (request: Request) => {
     // invite code that is meant to be the consent.
     const ledgers = await sharedLedgers(me, input.personId);
     if (ledgers.length === 0 && !(await areFriends(me, input.personId))) {
-      throw new ValidationError("You can only settle up with people you have added.");
+      throw new ValidationError("You can only settle up with people you've added.");
     }
 
     const byGroup = new Map(
@@ -103,7 +103,7 @@ export const POST = route(async (request: Request) => {
       const ledger = byGroup.get(row.groupId ?? "");
       if (!ledger) {
         throw new ValidationError(
-          "One of those ledgers has nothing outstanding in it any more. Reopen the sheet to see where you stand.",
+          "One of these is already settled. Close this and open it again to see the latest.",
         );
       }
       if (row.amount <= 0n) {
@@ -114,7 +114,7 @@ export const POST = route(async (request: Request) => {
       const magnitude = outstanding < 0n ? -outstanding : outstanding;
       if (row.amount > magnitude) {
         throw new ValidationError(
-          "That is more than is outstanding in one of those ledgers. Reopen the sheet to see where you stand.",
+          "That's more than is owed in one of these. Close this and open it again to see the latest.",
         );
       }
 
@@ -164,7 +164,7 @@ export const POST = route(async (request: Request) => {
       >[];
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ConflictError("That payment id is already in use. Try again.");
+        throw new ConflictError("Something clashed. Please try again.");
       }
       throw error;
     }

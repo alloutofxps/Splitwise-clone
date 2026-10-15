@@ -69,7 +69,7 @@ export default function JoinPage() {
         .catch((caught: unknown) => {
           if (!cancelled) {
             setError(
-              caught instanceof ApiError ? caught.message : "That invite link is not valid.",
+              caught instanceof ApiError ? caught.message : "That invite link doesn't work.",
             );
           }
           return null;
@@ -106,7 +106,7 @@ export default function JoinPage() {
     } catch (caught) {
       toast({
         tone: "error",
-        title: "Could not join",
+        title: "Couldn't join",
         description: caught instanceof ApiError ? caught.message : undefined,
       });
       setJoining(false);
@@ -129,7 +129,7 @@ export default function JoinPage() {
     } catch (caught) {
       toast({
         tone: "error",
-        title: "Could not set that up",
+        title: "Something went wrong",
         description: caught instanceof ApiError ? caught.message : undefined,
       });
       setJoining(false);
@@ -149,9 +149,9 @@ export default function JoinPage() {
     return (
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col justify-center px-6 text-center">
         <Wordmark className="mb-8 justify-center" />
-        <p className="text-title-lg font-bold text-text">This invite is not valid</p>
+        <p className="text-title-lg font-bold text-text">This invite doesn&rsquo;t work</p>
         <p className="mt-2 text-body-lg leading-relaxed text-muted">
-          {error ?? "The code may have been changed or the group deleted."}
+          {error ?? "The group may have a new code, or it may have been deleted."}
         </p>
         <Button variant="primary" className="mt-6" onClick={() => router.push("/")}>
           Open Divvy
@@ -179,7 +179,7 @@ export default function JoinPage() {
               {preview.group.memberCount}{" "}
               {preview.group.memberCount === 1 ? "person" : "people"} ·{" "}
               {preview.group.expenseCount}{" "}
-              {preview.group.expenseCount === 1 ? "expense" : "expenses"} · settles in{" "}
+              {preview.group.expenseCount === 1 ? "expense" : "expenses"} · uses{" "}
               {preview.group.currency}
             </p>
 
@@ -203,7 +203,7 @@ export default function JoinPage() {
               {preview.person.displayName}
             </h1>
             <p className="mt-2 text-subhead text-muted">
-              Add them to split expenses one-to-one.
+              Add them to split things between just the two of you.
             </p>
             <div className="mt-5">
               <Avatar person={preview.person} size="xl" />
@@ -219,8 +219,8 @@ export default function JoinPage() {
               Which one are you?
             </p>
             <p className="mt-1 text-body leading-relaxed text-muted">
-              These names have been splitting expenses already. Pick yours and
-              everything filed against it becomes yours.
+              Someone in the group added these names. If one is you, pick it and
+              its expenses become yours.
             </p>
 
             <ul className="mt-3 space-y-1.5">
@@ -261,7 +261,7 @@ export default function JoinPage() {
               }}
               className="mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
             >
-              None of these — I&rsquo;m new
+              None of these, I&rsquo;m new
             </button>
           </div>
         ) : null}
@@ -292,8 +292,8 @@ export default function JoinPage() {
               </div>
             </label>
             <p className="mt-2 text-caption leading-relaxed text-subtle">
-              No email, no password. You will get a recovery key afterwards to
-              save — that is the only way back in on another device.
+              No email or password needed. Next you&rsquo;ll get a recovery key. Save
+              it, because it&rsquo;s the only way back in if you change phones.
             </p>
           </div>
         ) : null}

@@ -86,7 +86,7 @@ export function ExpenseDetailSheet({
               { id, groupId },
               {
                 onSuccess: () => toast({ tone: "success", title: `${description} restored` }),
-                onError: () => toast({ tone: "error", title: "Could not put that back" }),
+                onError: () => toast({ tone: "error", title: "Couldn't bring that back" }),
               },
             );
           },
@@ -95,7 +95,7 @@ export function ExpenseDetailSheet({
       setConfirmDelete(false);
       onClose();
     } catch {
-      toast({ tone: "error", title: "Could not delete that" });
+      toast({ tone: "error", title: "Couldn't delete that" });
     }
   };
 
@@ -109,7 +109,7 @@ export function ExpenseDetailSheet({
       haptic([10, 40, 10]);
       toast({ tone: "success", title: "Receipt removed" });
     } catch {
-      toast({ tone: "error", title: "Could not remove that receipt" });
+      toast({ tone: "error", title: "Couldn't remove that receipt" });
     } finally {
       setConfirmRemoveReceipt(null);
     }
@@ -453,7 +453,7 @@ export function ExpenseDetailSheet({
         onConfirm={() => void remove()}
         loading={deleteExpense.isPending}
         title="Delete this expense?"
-        description="Everyone's balance in this group will be recalculated without it."
+        description="Everyone's balances will update as if it never happened."
         confirmLabel="Delete"
       />
 
@@ -463,7 +463,7 @@ export function ExpenseDetailSheet({
         onConfirm={() => void removeReceipt()}
         loading={deleteAttachment.isPending}
         title="Remove this receipt?"
-        description="The image is deleted from the server. The expense and everyone's balances stay exactly as they are."
+        description="The photo will be deleted. The expense and balances won't change."
         confirmLabel="Remove"
       />
     </>

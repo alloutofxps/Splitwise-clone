@@ -28,7 +28,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   // except for placeholders, which belong to whoever is tidying up.
   const removingSelf = personId === session.person.id;
   if (!removingSelf && !isOwner && !target.isGhost) {
-    throw new ForbiddenError("Only whoever created the group can remove other people.");
+    throw new ForbiddenError("Only the person who made the group can remove other people.");
   }
 
   const sheet = await groupBalanceSheet(id);
@@ -36,7 +36,7 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
   if (balance !== 0n) {
     throw new ForbiddenError(
       removingSelf
-        ? "Settle your balance in this group before leaving it."
+        ? "Settle up in this group before you leave it."
         : `${target.displayName} still has a balance here. Settle up first.`,
     );
   }

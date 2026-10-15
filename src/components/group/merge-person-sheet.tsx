@@ -50,14 +50,14 @@ export function MergePersonSheet({
       toast({
         tone: "success",
         title: `${ghost.displayName} is ${chosen.id === dashboard?.me.id ? "you" : chosen.displayName}`,
-        description: "Their expenses and payments moved across.",
+        description: "Their expenses and payments have moved over.",
       });
       setChosen(null);
       onClose();
     } catch (error) {
       toast({
         tone: "error",
-        title: "Could not merge them",
+        title: "Couldn't do that",
         description: error instanceof ApiError ? error.message : undefined,
       });
     }
@@ -68,16 +68,16 @@ export function MergePersonSheet({
       <Sheet open={open} onClose={onClose} title={ghost ? `Who is ${ghost.displayName}?` : "Who is this?"}>
         <div className="px-5 pb-6">
           <p className="mb-4 text-subhead leading-relaxed text-muted">
-            Pick the account this placeholder belongs to. Everything filed against{" "}
-            <span className="font-semibold text-text">{ghost?.displayName}</span> — every share,
-            every payment — becomes theirs, and no balance changes.
+            Pick the person on Divvy who is really{" "}
+            <span className="font-semibold text-text">{ghost?.displayName}</span>. Everything under
+            that name moves to them. Nobody&rsquo;s balance changes.
           </p>
 
           {candidates.length === 0 ? (
             <EmptyState
               icon={<Merge className="size-6" />}
-              title="Nobody to merge into"
-              description="Only people already on Divvy can take over a placeholder. Share the group link with them first."
+              title="No one to pick yet"
+              description="They need to join Divvy first. Send them the group's invite link."
             />
           ) : (
             <ul className="space-y-1.5">
@@ -111,15 +111,15 @@ export function MergePersonSheet({
       <ConfirmSheet
         open={chosen !== null}
         onClose={() => setChosen(null)}
-        title={`Merge ${ghost?.displayName ?? "this placeholder"}?`}
+        title={`Move ${ghost?.displayName ?? "this name"} over?`}
         description={
           chosen
-            ? `Everything filed against ${ghost?.displayName ?? "the placeholder"} moves to ${
+            ? `Everything under ${ghost?.displayName ?? "this name"} moves to ${
                 chosen.id === dashboard?.me.id ? "you" : chosen.displayName
-              }, and the placeholder disappears. This cannot be undone.`
+              }, and the old name goes away. You can't undo this.`
             : ""
         }
-        confirmLabel="Merge them"
+        confirmLabel="Move it over"
         onConfirm={() => void confirm()}
         loading={merge.isPending}
       />

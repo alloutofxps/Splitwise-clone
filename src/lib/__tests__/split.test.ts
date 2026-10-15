@@ -282,6 +282,6 @@ describe("validateExpenseBalance", () => {
       ],
     );
 
-    expect(errors).toContain("A share cannot be negative.");
+    expect(errors).toContain("A share can't be below zero.");
   });
 });

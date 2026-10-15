@@ -24,35 +24,35 @@ export default function PrivacyPage() {
     <main className="mx-auto w-full max-w-[640px] px-6 py-12 text-body-lg leading-relaxed text-text">
       <h1 className="text-display-sm font-black tracking-[-0.03em]">Privacy</h1>
 
-      <h2 className="mt-8 text-title-lg font-bold">What is stored</h2>
+      <h2 className="mt-8 text-title-lg font-bold">What we keep</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-muted">
-        <li>The name, colour and emoji you pick. No email address, phone number or password.</li>
-        <li>The groups you are in, and the expenses, payments, comments and receipt photos you or the people in them add.</li>
-        <li>Any payment handles you choose to save (a UPI id, IBAN or similar), shown only to people you share a group or a direct connection with.</li>
+        <li>The name, colour and emoji you pick. We don&rsquo;t ask for your email, phone number or a password.</li>
+        <li>Your groups, and the expenses, payments, comments and receipt photos that you and the people in them add.</li>
+        <li>Any payment details you choose to add, like a UPI ID or bank account. Only people you share a group with, or have added as a friend, can see them.</li>
         <li>Your budgets, which only you can see.</li>
-        <li>For signing in: a one-way hash of your recovery key, the public half of any passkey, and a list of signed-in devices described by browser and operating system.</li>
+        <li>What we need to sign you in: a scrambled copy of your recovery key that can&rsquo;t be turned back into the key, the public part of any passkey, and a list of the devices you&rsquo;re signed in on (browser and phone type only).</li>
       </ul>
 
-      <h2 className="mt-8 text-title-lg font-bold">What is not</h2>
+      <h2 className="mt-8 text-title-lg font-bold">What we don&rsquo;t do</h2>
       <p className="mt-3 text-muted">
-        No analytics, no advertising, no tracking, and nothing is sold or shared. Exchange
-        rates are fetched from a public rate service by the server; nothing about you is sent.
+        No ads, no tracking, and we never sell or share your data. To convert currencies,
+        Divvy looks up exchange rates from a public website. Nothing about you is sent.
       </p>
 
       <h2 className="mt-8 text-title-lg font-bold">Who can see it</h2>
       <p className="mt-3 text-muted">
-        Everything in a group is visible to its members. A direct expense is visible to the
-        people on it. The people running this server can see the database.
+        Everyone in a group can see everything in that group. An expense between two friends
+        can only be seen by those two. Whoever runs Divvy can see the stored data.
       </p>
 
-      <h2 className="mt-8 text-title-lg font-bold">Keeping and deleting it</h2>
+      <h2 className="mt-8 text-title-lg font-bold">Getting a copy or deleting it</h2>
       <p className="mt-3 text-muted">
-        You can download everything you can see from <strong>Account → Download a backup</strong>,
-        and delete your account from <strong>Account → Delete my account</strong> once you are
-        settled up. Deleting erases your name, payment details, budgets, comments and sign-in
-        methods. Expenses you shared stay on the other people&apos;s books, shown as
-        &ldquo;Deleted user&rdquo;, because they are part of their records too. Devices unused for
-        six months are signed out automatically.
+        Get a copy of everything you can see from <strong>Account → Download a backup</strong>.
+        Once you&rsquo;re settled up, you can delete your account from{" "}
+        <strong>Account → Delete my account</strong>. That removes your name, payment details,
+        budgets, comments and sign-in details. Other people still see the expenses you shared
+        with them, under the name &ldquo;Deleted user&rdquo;, because they&rsquo;re part of their
+        records too. If a device isn&rsquo;t used for six months, it gets signed out.
       </p>
 
       {contact ? (

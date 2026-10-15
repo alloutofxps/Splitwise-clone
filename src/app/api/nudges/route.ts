@@ -41,7 +41,7 @@ export const POST = route(async (request: Request) => {
   const input = await readBody(request, schema);
 
   if (input.personId === me) {
-    throw new ValidationError("You cannot nudge yourself.");
+    throw new ValidationError("You can't remind yourself.");
   }
 
   const groupId = input.groupId ?? null;
@@ -52,10 +52,10 @@ export const POST = route(async (request: Request) => {
       where: { groupId_personId: { groupId, personId: input.personId } },
     });
     if (!membership || membership.leftAt) {
-      throw new ValidationError("They are not in that group.");
+      throw new ValidationError("They're not in that group.");
     }
   } else if (!(await areFriends(me, input.personId))) {
-    throw new ValidationError("You can only nudge people you have added.");
+    throw new ValidationError("You can only remind people you've added.");
   }
 
   const debtor = await prisma.person.findUnique({ where: { id: input.personId } });
@@ -64,7 +64,7 @@ export const POST = route(async (request: Request) => {
     // A placeholder has no device to be reminded on, and telling the sender it
     // worked would be a lie.
     throw new ValidationError(
-      `${debtor.displayName} has not joined yet, so there is nowhere to send this.`,
+      `${debtor.displayName} isn't on Divvy yet, so they can't get reminders.`,
     );
   }
 
@@ -73,7 +73,7 @@ export const POST = route(async (request: Request) => {
   // activity entry claiming a debt that does not exist.
   const owed = await amountOwedToMe(groupId, input.personId, me);
   if (owed <= 0n) {
-    throw new ValidationError(`${debtor.displayName} does not owe you anything right now.`);
+    throw new ValidationError(`${debtor.displayName} doesn't owe you anything right now.`);
   }
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -88,7 +88,7 @@ export const POST = route(async (request: Request) => {
   });
   if (recent) {
     throw new ValidationError(
-      `You already reminded ${debtor.displayName} today. Give them a chance.`,
+      `You already reminded ${debtor.displayName} today.`,
     );
   }
 

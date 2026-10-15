@@ -107,8 +107,8 @@ export default function SearchPage() {
             ))}
           </div>
           <p className="mt-4 px-1 text-caption leading-relaxed text-subtle">
-            Searches descriptions and notes across every group you are in. You
-            can also filter inline with <code>category:dining</code>.
+            Searches the names and notes of expenses in all your groups. Tip: type
+            <code>category:dining</code> to see only one category.
           </p>
         </div>
       ) : isFetching && items.length === 0 ? (

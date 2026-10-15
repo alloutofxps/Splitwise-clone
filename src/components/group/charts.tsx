@@ -53,8 +53,8 @@ export function GroupCharts({
     return (
       <EmptyState
         icon={<BarChart3 className="size-6" />}
-        title="Nothing to chart yet"
-        description="Add a few expenses and the breakdown shows up here."
+        title="No charts yet"
+        description="Add a few expenses and you'll see where the money went."
       />
     );
   }
@@ -397,8 +397,8 @@ function PersonChart({
 
   return (
     <ChartCard
-      title="Who fronted what"
-      subtitle="Paid, minus their own share, over the group's whole history"
+      title="Who paid more than their share"
+      subtitle="What each person paid, minus their own share, since the group started"
     >
       <ul className="space-y-3">
         {rows.map((row) => {
@@ -459,9 +459,8 @@ function PersonChart({
       </ul>
 
       <p className="mt-4 border-t border-line pt-3 text-tiny leading-relaxed text-subtle">
-        Right of the line means they have paid out more than they have consumed.
-        This is lifetime activity, not the current balance — settling up does
-        not change it.
+        Right of the line means they paid more than their share. This counts
+        everything since the start, so settling up doesn&rsquo;t change it.
       </p>
     </ChartCard>
   );

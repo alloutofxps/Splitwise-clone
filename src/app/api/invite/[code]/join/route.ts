@@ -62,7 +62,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
       const inGroup = await prisma.membership.findUnique({
         where: { groupId_personId: { groupId: group.id, personId: input.claimPersonId } },
       });
-      if (!inGroup) throw new NotFoundError("That name is not in this group.");
+      if (!inGroup) throw new NotFoundError("That name isn't in this group.");
       await absorbGhost(input.claimPersonId, me.id);
     }
 
@@ -91,10 +91,10 @@ export const POST = route(async (request: Request, { params }: Params) => {
 
   const person = await prisma.person.findUnique({ where: { inviteCode: normalized } });
   if (!person || person.isGhost || person.deletedAt) {
-    throw new NotFoundError("That code does not match a group or a person.");
+    throw new NotFoundError("That code doesn't match any group or person.");
   }
   if (person.id === me.id) {
-    throw new ValidationError("That is your own code.");
+    throw new ValidationError("That's your own code.");
   }
 
   await prisma.friendship.upsert({

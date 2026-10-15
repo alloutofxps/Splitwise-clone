@@ -262,7 +262,7 @@ export function GroupLedger({
           <EmptyState
             icon={<Receipt className="size-6" />}
             title="No expenses yet"
-            description="Add the first one and everyone's balance updates straight away."
+            description="Add the first one and everyone's balance updates right away."
             action={
               <Button variant="primary" onClick={onAdd}>
                 Add an expense
@@ -485,7 +485,7 @@ export function SettlementRow({
           setConfirming(false);
           toast({
             tone: "error",
-            title: "Could not remove that payment",
+            title: "Couldn't remove that payment",
             description: error instanceof Error ? error.message : undefined,
           });
         },
@@ -541,7 +541,7 @@ export function SettlementRow({
         onConfirm={undo}
         loading={remove.isPending}
         title="Remove this payment?"
-        description={`${fromLabel} paid ${toLabel} ${formatMoney(BigInt(settlement.amount), settlement.currency)}. Removing it puts that amount back on the balance.`}
+        description={`${fromLabel} paid ${toLabel} ${formatMoney(BigInt(settlement.amount), settlement.currency)}. If you remove it, that amount will be owed again.`}
         confirmLabel="Remove"
       />
     </>

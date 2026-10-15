@@ -1075,7 +1075,7 @@ async function main() {
   );
   check(
     "and says who to blame",
-    JSON.stringify(secondSave.body).includes("Somebody else edited"),
+    JSON.stringify(secondSave.body).includes("Someone else changed"),
     JSON.stringify(secondSave.body).slice(0, 110),
   );
 
@@ -1244,7 +1244,7 @@ async function main() {
     check(`${label} is refused as a 422`, tooBig.status === 422, String(tooBig.status));
     check(
       `${label} says why`,
-      JSON.stringify(tooBig.body).includes("too large"),
+      JSON.stringify(tooBig.body).includes("too big"),
       JSON.stringify(tooBig.body).slice(0, 100),
     );
   }
@@ -1282,7 +1282,7 @@ async function main() {
   );
   check(
     "and the reason says so",
-    JSON.stringify(negativeShare.body).includes("share cannot be negative"),
+    JSON.stringify(negativeShare.body).includes("share can't be below zero"),
     JSON.stringify(negativeShare.body).slice(0, 120),
   );
 

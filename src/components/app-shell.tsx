@@ -131,7 +131,7 @@ function TabBar({
             className="bg-gradient-brand relative flex size-[3.4rem] -translate-y-4 items-center justify-center rounded-full text-white"
             style={{
               boxShadow:
-                "inset 0 1px 0 oklch(1 0 0 / 0.35), 0 10px 24px -6px color-mix(in oklch, var(--sunset-2) 70%, transparent), 0 4px 10px -2px color-mix(in oklch, var(--sunset-1) 60%, transparent)",
+                "inset 0 1px 0 oklch(1 0 0 / 0.35), 0 10px 24px -6px color-mix(in oklch, var(--accent-2) 70%, transparent), 0 4px 10px -2px color-mix(in oklch, var(--accent-1) 60%, transparent)",
             }}
           >
             {/* A slow halo, so the one action that matters most is the one
@@ -274,9 +274,9 @@ function Sidebar({
       </nav>
 
       <p className="mt-auto px-3 text-tiny leading-relaxed text-subtle">
-        Every feature, free.
+        Free to use.
         <br />
-        No accounts, no ads, no paywall.
+        No ads. No email or password.
       </p>
     </aside>
   );

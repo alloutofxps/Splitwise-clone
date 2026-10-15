@@ -139,7 +139,7 @@ export default function GroupPage() {
         <BalanceHeadline
           net={net}
           currency={group.currency}
-          settledLabel="Everyone is square"
+          settledLabel="Everyone is settled up"
         />
 
         <div className="mt-4 flex items-center justify-between gap-3">

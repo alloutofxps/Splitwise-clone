@@ -29,11 +29,11 @@ import type { PersonDto } from "@/lib/types";
 
 const MODES: { value: SplitMode; label: string; icon: React.ReactNode; blurb: string }[] = [
   { value: "EQUAL", label: "Equally", icon: <Equal className="size-4" />, blurb: "Split the total evenly between everyone selected." },
-  { value: "EXACT", label: "Exactly", icon: <Hash className="size-4" />, blurb: "Type each person's share. They have to add up to the total." },
-  { value: "PERCENT", label: "Percent", icon: <Percent className="size-4" />, blurb: "Divide by percentage. Has to reach 100%." },
-  { value: "SHARES", label: "Shares", icon: <SlidersHorizontal className="size-4" />, blurb: "Give people a weight — two shares for a couple, one each for the rest." },
-  { value: "ADJUSTMENT", label: "Extras", icon: <Plus className="size-4" />, blurb: "Split evenly, then add what individual people had on top." },
-  { value: "ITEMIZED", label: "By item", icon: <Receipt className="size-4" />, blurb: "Enter the receipt line by line and tick who had what." },
+  { value: "EXACT", label: "Exactly", icon: <Hash className="size-4" />, blurb: "Type in each person's amount. It has to add up to the total." },
+  { value: "PERCENT", label: "Percent", icon: <Percent className="size-4" />, blurb: "Split by percent. It has to add up to 100%." },
+  { value: "SHARES", label: "Shares", icon: <SlidersHorizontal className="size-4" />, blurb: "Give some people a bigger share. For example, 2 for a couple and 1 for everyone else." },
+  { value: "ADJUSTMENT", label: "Extras", icon: <Plus className="size-4" />, blurb: "Split evenly, then add anything extra that one person had." },
+  { value: "ITEMIZED", label: "By item", icon: <Receipt className="size-4" />, blurb: "Type in each item on the bill and tick who had it." },
 ];
 
 export interface SplitEditorProps {
@@ -488,7 +488,7 @@ function RunningTotal({
     const percent = local.reduce((sum, entry) => sum + (entry.percent ?? 0), 0);
     return (
       <p className="text-center text-body font-semibold text-positive-text">
-        {Math.round(percent * 10) / 10}% assigned across {included}{" "}
+        {Math.round(percent * 10) / 10}% split between {included}{" "}
         {included === 1 ? "person" : "people"}
       </p>
     );
@@ -670,15 +670,15 @@ function ItemEditor({
                 {currencySymbol(currency)}
                 {toDecimalString(extras, currency)}
               </span>{" "}
-              of tax and tip shared in proportion to what each person ordered
+              of tax and tip, split by how much each person ordered
             </>
           ) : extras < 0n ? (
             <span className="text-negative-text">
-              Items exceed the total by {currencySymbol(currency)}
+              Items come to more than the total by {currencySymbol(currency)}
               {toDecimalString(-extras, currency)}
             </span>
           ) : (
-            "Items account for the whole bill"
+            "Items add up to the whole bill"
           )}
         </p>
       ) : null}

@@ -261,8 +261,8 @@ function InstallPrompt() {
                 </p>
                 <p className="mt-0.5 text-body leading-snug text-muted">
                   {showIos
-                    ? "Add it to your home screen to use it offline and get it out of the browser."
-                    : "Works offline, opens instantly, no app store."}
+                    ? "Add it to your home screen. It opens like an app and works offline."
+                    : "It opens like an app and works offline. No app store needed."}
                 </p>
               </div>
             </div>
@@ -278,7 +278,7 @@ function InstallPrompt() {
                   <strong className="font-semibold">Add to Home Screen</strong>
                 </IosStep>
                 <IosStep index={3} icon={<ArrowUpFromLine className="size-4" />}>
-                  Tap <strong className="font-semibold">Add</strong> — that&rsquo;s it
+                  Tap <strong className="font-semibold">Add</strong>. That&rsquo;s it.
                 </IosStep>
               </ol>
             ) : (

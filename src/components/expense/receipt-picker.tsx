@@ -50,7 +50,7 @@ export function ReceiptPicker({
       for (const failure of failures) {
         toast({
           tone: "error",
-          title: `Could not add ${failure.name}`,
+          title: `Couldn't add ${failure.name}`,
           description: failure.reason,
         });
       }
@@ -148,8 +148,8 @@ export function ReceiptPicker({
           </ul>
         ) : (
           <p className="mt-4 rounded-[var(--radius-md)] bg-surface-2 px-4 py-6 text-center text-body leading-relaxed text-muted">
-            Photos are shrunk on your phone before they upload, so this works on
-            a bad connection.
+            Photos are made smaller before they upload, so this works even on a
+            slow connection.
           </p>
         )}
 

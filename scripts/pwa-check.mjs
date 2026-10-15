@@ -320,7 +320,7 @@ console.log("\nAn expense added offline");
 
   await off.waitForTimeout(1000);
   const told = await off.locator("body").innerText();
-  check("and says the expense is saved locally", /Saved on your device|will sync/i.test(told));
+  check("and says the expense is saved locally", /Saved on your phone|back online/i.test(told));
 
   const queued = await off.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {

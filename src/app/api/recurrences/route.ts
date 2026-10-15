@@ -90,7 +90,7 @@ export const POST = route(async (request: Request) => {
     // there is no single rate that is right for every future month anyway.
     if (input.currency !== group.currency) {
       throw new ValidationError(
-        `Repeating expenses in this group have to be in ${group.currency}, the currency it settles in.`,
+        `Repeating expenses in this group have to be in ${group.currency}, the group's currency.`,
       );
     }
   }
@@ -109,7 +109,7 @@ export const POST = route(async (request: Request) => {
     errors.push("The payers and the split both have to add up to the total.");
   }
   if (input.payers.some((p) => p.amount < 0n) || input.splits.some((s) => s.amount < 0n)) {
-    errors.push("Amounts cannot be negative.");
+    errors.push("Amounts can't be below zero.");
   }
   if (new Set(input.payers.map((p) => p.personId)).size !== input.payers.length) {
     errors.push("The same person is listed as paying twice.");
@@ -128,7 +128,7 @@ export const POST = route(async (request: Request) => {
     errors.push("A repeating expense has to start within the next five years.");
   }
   if (input.endsAt && input.endsAt < startDate) {
-    errors.push("It cannot end before it starts.");
+    errors.push("It can't end before it starts.");
   }
   if (errors.length > 0) throw new ValidationError(errors);
 
@@ -150,7 +150,7 @@ export const POST = route(async (request: Request) => {
   );
   if (backlog > MAX_CATCHUP_ON_CREATE) {
     throw new ValidationError(
-      `That start date would post more than ${MAX_CATCHUP_ON_CREATE} expenses at once. Pick a later start date.`,
+      `That start date would add more than ${MAX_CATCHUP_ON_CREATE} expenses at once. Pick a later start date.`,
     );
   }
 

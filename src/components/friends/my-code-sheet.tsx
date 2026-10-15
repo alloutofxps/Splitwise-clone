@@ -63,7 +63,7 @@ export function MyCodeSheet({
       <div className="px-5 pb-6">
         <div className="rounded-[var(--radius-lg)] border border-line bg-surface-2 px-4 py-6 text-center">
           <p className="text-caption font-bold uppercase tracking-[0.07em] text-subtle">
-            Personal code
+            Your friend code
           </p>
           <p className="mt-2 select-all break-words text-heading font-black tracking-[-0.01em] text-text">
             {me.inviteCode}
@@ -91,8 +91,8 @@ export function MyCodeSheet({
         </div>
 
         <p className="mt-5 text-center text-caption leading-relaxed text-muted">
-          Anyone with this can add you as a friend. It does not give them access
-          to your groups or any of your history.
+          Anyone with this code can add you as a friend. They can&rsquo;t see your
+          groups or anything you&rsquo;ve added.
         </p>
       </div>
     </Sheet>

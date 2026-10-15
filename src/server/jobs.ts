@@ -10,6 +10,7 @@
  *
  * Jobs:
  *  - recurring expenses, every minute;
+ *  - phone notifications for new activity, every fifteen seconds;
  *  - exchange-rate refresh, every six hours;
  *  - housekeeping (expired sign-in codes, abandoned sessions), hourly;
  *  - a database snapshot, daily, for SQLite deployments.
@@ -25,6 +26,7 @@ import { SESSION_IDLE_DAYS } from "@/lib/identity";
 import { log } from "@/lib/log";
 import { refreshAllBases } from "./rates";
 import { runDueRecurrences } from "./recurrence";
+import { sendPendingNotifications } from "./push";
 
 const holder = `${process.pid}-${randomUUID().slice(0, 8)}`;
 
@@ -134,6 +136,8 @@ interface Job {
 
 const JOBS: Job[] = [
   { name: "recurrences", everyMs: 60_000, run: () => runDueRecurrences(), atStart: true },
+  // Phone notifications for anything new, a few seconds after it happens.
+  { name: "push", everyMs: 15_000, run: () => sendPendingNotifications() },
   { name: "rates", everyMs: 6 * 60 * 60_000, run: refreshAllBases },
   { name: "housekeeping", everyMs: 60 * 60_000, run: housekeeping, atStart: true },
   // Also shortly after boot, so a fresh deploy has a snapshot straight away

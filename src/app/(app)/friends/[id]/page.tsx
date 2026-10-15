@@ -124,7 +124,7 @@ export default function FriendPage() {
                   You&rsquo;re all settled up
                 </p>
                 <p className="mt-0.5 text-body text-subtle">
-                  Nothing outstanding, in any group.
+                  Nobody owes anything, in any group.
                 </p>
               </>
             ) : (
@@ -252,7 +252,7 @@ export default function FriendPage() {
           <EmptyState
             icon={<Receipt className="size-6" />}
             title="No shared expenses yet"
-            description="Anything you split directly with them lands here."
+            description="Expenses you split with just this person show up here."
           />
         ) : (
           <div className="space-y-5">
@@ -343,8 +343,8 @@ export default function FriendPage() {
             </>
           ) : (
             <p className="px-1 text-body leading-relaxed text-muted">
-              You are not in any groups together — everything between you two is
-              split directly.
+              You&rsquo;re not in any groups together. Everything here is just between
+              the two of you.
             </p>
           )}
 
@@ -367,8 +367,8 @@ export default function FriendPage() {
               </span>
               <span className="mt-0.5 block text-caption leading-relaxed text-subtle">
                 {anythingOutstanding
-                  ? "You have to be settled up first — removing them now would hide the only record of the debt from both of you."
-                  : "Your shared history stays in any groups you are both in."}
+                  ? "You need to settle up first. Otherwise neither of you could see what's still owed."
+                  : "Anything you share in groups will stay there."}
               </span>
             </span>
           </button>
@@ -392,7 +392,7 @@ export default function FriendPage() {
                 setRemoving(false);
                 toast({
                   tone: "error",
-                  title: "Could not remove them",
+                  title: "Couldn't remove them",
                   description: error instanceof Error ? error.message : undefined,
                 });
               },
@@ -400,7 +400,7 @@ export default function FriendPage() {
           );
         }}
         title={`Remove ${data.person.displayName}?`}
-        description="They drop off your friends list. Expenses you shared in a group stay exactly as they are, and you can add them again with their code."
+        description="They'll come off your friends list. Expenses in your groups won't change, and you can add them back any time with their code."
         confirmLabel="Remove"
       />
 

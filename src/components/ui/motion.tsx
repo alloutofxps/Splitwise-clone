@@ -95,7 +95,7 @@ export function AnimatedAmount({
 // Celebration
 // ---------------------------------------------------------------------------
 
-const CONFETTI_COLOURS = ["#7c5cff", "#ff4fa3", "#ffb057", "#2fd6a6", "#5cc8ff", "#ffe066"];
+const CONFETTI_COLOURS = ["#4f46e5", "#818cf8", "#22c55e", "#0ea5e9", "#facc15", "#e0e7ff"];
 
 /**
  * A burst of confetti from a point on screen, for the moments worth marking:
