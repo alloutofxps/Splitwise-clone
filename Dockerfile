@@ -116,5 +116,5 @@ EXPOSE 3000
 
 # No Dockerfile HEALTHCHECK: Railway's builder has refused unfamiliar
 # instructions before. The app serves `/api/health` (which also checks the
-# database), and `railway.json` points Railway's own health check at it.
+# database), and `.railway/railway.ts` points Railway's own health check at it.
 ENTRYPOINT ["./docker-entrypoint.sh"]
