@@ -168,7 +168,11 @@ export function ExpenseComposer({
     setPanel(initialAttachments && initialAttachments.length > 0 ? "receipt" : null);
   });
 
-  if (!data || !me || !draft) {
+  // Closed, or closing: nothing here needs rebuilding. A panel on its way out
+  // keeps the content it left with, so this skips re-working the whole form
+  // each time the data changes under it, which right after a save is several
+  // times while the money moment is playing.
+  if (!data || !me || !draft || !open) {
     return <Sheet open={open} onClose={onClose} title="Add an expense" tall />;
   }
 

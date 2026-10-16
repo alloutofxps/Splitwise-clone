@@ -11,7 +11,7 @@ import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";
 import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
-import { FlowMap } from "../flow/flow-map";
+import { FlowMap, type Travel } from "../flow/flow-map";
 import { SwipeRow } from "../ui/swipe-row";
 
 /**
@@ -34,6 +34,7 @@ export function BalancesPanel({
   people,
   onSettle,
   travel,
+  onTravelled,
 }: {
   group: GroupDetailDto;
   meId: string;
@@ -41,7 +42,9 @@ export function BalancesPanel({
   /** Opens the settle sheet, on a specific transfer when one is named. */
   onSettle: (edge?: { fromPersonId: string; toPersonId: string; amount: string }) => void;
   /** A payment just saved, to show travelling along its line. */
-  travel?: { fromPersonId: string; toPersonId: string; nonce: number } | null;
+  travel?: Travel | null;
+  /** The payment has finished playing. */
+  onTravelled?: () => void;
 }) {
   const updateGroup = useUpdateGroup(group.id);
   const nudge = useNudge();
@@ -93,7 +96,9 @@ export function BalancesPanel({
     <div>
       {/* The map, with the one Simplify switch under it. ------------------- */}
       <section className="rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
-        {mapEdges.length > 0 && mapPeople.length > 1 ? (
+        {/* The map stays while a payment plays, even the one that settles the
+            last debt, so you see it go before "settled up" takes its place. */}
+        {(mapEdges.length > 0 || travel) && mapPeople.length > 1 ? (
           <div className="px-2 pt-4">
             <FlowMap
               people={mapPeople}
@@ -101,6 +106,7 @@ export function BalancesPanel({
               currency={group.currency}
               meId={meId}
               travel={travel}
+              onTravelled={onTravelled}
             />
           </div>
         ) : (

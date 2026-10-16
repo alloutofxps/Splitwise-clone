@@ -9,9 +9,10 @@
  */
 
 import * as React from "react";
-import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from "framer-motion";
+import { animate, useReducedMotion } from "framer-motion";
 import { formatMoney } from "@/lib/money";
 import { cn } from "./primitives";
+import { untilCount, useStage } from "./stage";
 
 // ---------------------------------------------------------------------------
 // Lists
@@ -50,13 +51,79 @@ export const listItem = {
 // ---------------------------------------------------------------------------
 
 /**
- * A money amount that counts to its value instead of jumping there.
+ * A money figure that counts to its new value instead of jumping there.
  *
  * A balance that snaps from €120 to €187 changes without explanation; one that
- * runs up to it says "this went up" before anybody reads the digits. Counted in
- * minor units, so the figure that lands is exact, and rendered with tabular
- * figures so the digits do not jostle while they move.
+ * runs up to it says "this went up" before anybody reads the digits. It waits
+ * for the stage: a change made inside a panel keeps showing the old figure
+ * until the panel has gone and the row that caused it has landed, then counts
+ * (MOTION-SPEC, money). Counted in minor units, so the figure that lands is
+ * exact. The first value shown never counts: amounts appear as they are.
+ *
+ * The digits are written straight into the text, about 30 times a second,
+ * rather than re-rendering on every frame: on a slow phone the re-render was
+ * a large part of what made the count stutter, and digits changing faster than
+ * that can't be read anyway. Give `ref` to an element with no children of its
+ * own; `rest` is the figure the count last came to rest on, for anything that
+ * should only change once it has (such as saying "settled up" at zero).
  */
+export function useCountedText(value: bigint, format: (value: bigint) => string) {
+  const reduce = useReducedMotion();
+  const stage = useStage();
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const shown = React.useRef(value);
+  const [rest, setRest] = React.useState(value);
+  const formatRef = React.useRef(format);
+  React.useLayoutEffect(() => {
+    formatRef.current = format;
+    // Keep the text in step with whatever is showing, every render.
+    if (ref.current) ref.current.textContent = format(shown.current);
+  });
+
+  React.useEffect(() => {
+    if (value === shown.current) return;
+    const write = (next: bigint) => {
+      shown.current = next;
+      if (ref.current) ref.current.textContent = formatRef.current(next);
+    };
+    const land = () => {
+      write(value);
+      setRest(value);
+    };
+    // Under Reduce Motion the new figure is simply shown.
+    if (reduce) {
+      const timer = window.setTimeout(land, 0);
+      return () => window.clearTimeout(timer);
+    }
+    // Behind a panel: hold the old figure until it has gone.
+    if (stage.covered) return;
+    const from = Number(shown.current);
+    const to = Number(value);
+    let last = 0;
+    let controls: { stop: () => void } | undefined;
+    const timer = window.setTimeout(() => {
+      controls = animate(from, to, {
+        duration: COUNT_MS / 1000,
+        ease: EASE_COUNT,
+        onUpdate: (latest) => {
+          const now = performance.now();
+          if (now - last < 32) return;
+          last = now;
+          write(BigInt(Math.round(latest)));
+        },
+        onComplete: land,
+      });
+    }, untilCount(stage));
+    return () => {
+      window.clearTimeout(timer);
+      controls?.stop();
+    };
+  }, [value, reduce, stage]);
+
+  return { ref, rest };
+}
+
+/** A money amount that counts to its value (see `useCountedText`). */
 export function AnimatedAmount({
   value,
   currency,
@@ -68,29 +135,14 @@ export function AnimatedAmount({
   className?: string;
   signed?: boolean;
 }) {
-  const target = Number(typeof value === "bigint" ? value : BigInt(value || "0"));
-  const reduce = useReducedMotion();
-  const motionValue = useMotionValue(target);
-  const [shown, setShown] = React.useState(target);
-
-  useMotionValueEvent(motionValue, "change", (latest) => setShown(Math.round(latest)));
-
-  React.useEffect(() => {
-    if (reduce) {
-      motionValue.set(target);
-      return;
-    }
-    const controls = animate(motionValue, target, { duration: 0.5, ease: EASE });
-    return () => controls.stop();
-  }, [target, reduce, motionValue]);
-
-  // Under Reduce Motion there is nothing to count: show the value as it is.
-  const magnitude = BigInt(reduce ? target : shown);
-  const display = signed ? magnitude : magnitude < 0n ? -magnitude : magnitude;
+  const target = typeof value === "bigint" ? value : BigInt(value || "0");
+  const { ref } = useCountedText(target, (shown) =>
+    formatMoney(signed ? shown : shown < 0n ? -shown : shown, currency, { signed }),
+  );
 
   return (
-    <span className={cn("display-number whitespace-nowrap", className)} aria-label={formatMoney(BigInt(signed ? target : Math.abs(target)), currency, { signed })}>
-      <span aria-hidden="true">{formatMoney(display, currency, { signed })}</span>
+    <span className={cn("display-number whitespace-nowrap", className)} aria-label={formatMoney(signed ? target : target < 0n ? -target : target, currency, { signed })}>
+      <span aria-hidden="true" ref={ref} />
     </span>
   );
 }

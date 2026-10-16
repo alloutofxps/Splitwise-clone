@@ -30,6 +30,8 @@
   --surface-3: #eae8e4;
   --elevated: #ffffff;
   --overlay: rgb(20 20 18 / 0.36);
+  /* The highlight on a row that has just landed (MOTION-SPEC, money). */
+  --wash: rgb(196 140 60 / 0.16);
 
   --text: #141412;          /* ink */
   --text-muted: #57534e;    /* ink-2 */
@@ -126,6 +128,7 @@
   /* Level 3 at night: panels sit a step above everything else. */
   --elevated: #232321;
   --overlay: rgb(0 0 0 / 0.6);
+  --wash: rgb(214 168 104 / 0.14);
 
   --text: #f3f2ee;
   --text-muted: #a8a29e;
@@ -239,6 +242,7 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+  --color-wash: var(--wash);
   --color-elevated: var(--elevated);
   --color-overlay: var(--overlay);
 

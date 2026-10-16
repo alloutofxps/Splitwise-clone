@@ -22,9 +22,15 @@ export function Amount({
   signed = false,
   className,
   arrow,
+  textRef,
 }: {
   /** Minor units, as a bigint or the decimal string the API sends. */
   value: bigint | string;
+  /**
+   * Hands the figure's text to whoever is counting it (`useCountedText`),
+   * which writes the digits itself; `value` then only sets colour and arrow.
+   */
+  textRef?: React.Ref<HTMLSpanElement>;
   /**
    * An arrow before the figure: ↙ for money coming to you, ↗ for money going
    * out. With the colour and the words beside it, the third signal.
@@ -73,7 +79,7 @@ export function Amount({
           <ArrowUpRight aria-hidden className="mr-[0.1em] inline size-[0.7em] -translate-y-[0.05em]" strokeWidth={2} />
         )
       ) : null}
-      {formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
+      {textRef ? <span ref={textRef} /> : formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
     </span>
   );
 }

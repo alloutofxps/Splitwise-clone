@@ -5,7 +5,11 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
+import { useCountedText } from "@/components/ui/motion";
+import { formatMoney } from "@/lib/money";
 import { FlowBar } from "@/components/flow/flow-bar";
+import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
+import { setBeat } from "@/components/ui/stage";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
@@ -40,7 +44,7 @@ export default function GroupPage() {
   const [invite, setInvite] = React.useState(requested === "invite");
   const [settleUp, setSettleUp] = React.useState(requested === "settle");
   // The payment just saved, shown as a dot running along its line on the map.
-  const [travel, setTravel] = React.useState<{ fromPersonId: string; toPersonId: string; nonce: number } | null>(null);
+  const [travel, setTravel] = React.useState<Travel | null>(null);
   // The transfer the sheet should open on, when it was reached by tapping a
   // specific one rather than the general "Settle up" button.
   const [settleEdge, setSettleEdge] = React.useState<
@@ -104,7 +108,14 @@ export default function GroupPage() {
   );
   const panel = (which: Tab) =>
     which === "balances" ? (
-      <BalancesPanel group={group} meId={meId} people={people} onSettle={openSettle} travel={travel} />
+      <BalancesPanel
+        group={group}
+        meId={meId}
+        people={people}
+        onSettle={openSettle}
+        travel={travel}
+        onTravelled={() => setTravel(null)}
+      />
     ) : which === "charts" ? (
       <GroupCharts groupId={groupId} people={people} />
     ) : (
@@ -163,21 +174,7 @@ export default function GroupPage() {
         <FlowBar className="mt-4" entries={barEntries} currency={group.currency} />
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-          {net === 0n ? (
-            <p className="text-display font-semibold tracking-[-0.03em] text-text">
-              {group.balances.pairwise.length === 0 ? "Everyone is settled up" : "You’re settled up"}
-            </p>
-          ) : (
-            <p className="flex flex-col">
-              <span className="text-body text-muted">{net > 0n ? "You’re owed" : "You owe"}</span>
-              <Amount
-                value={net}
-                currency={group.currency}
-                arrow
-                className="text-display font-semibold leading-tight tracking-[-0.03em]"
-              />
-            </p>
-          )}
+          <Standing net={net} currency={group.currency} everyone={group.balances.pairwise.length === 0} />
           {/* Adding an expense is the tab bar's job (it opens in this group);
               a second Add button here only made people wonder which to use. */}
           {canSettle ? (
@@ -256,6 +253,9 @@ export default function GroupPage() {
         people={people}
         initialEdge={settleEdge}
         onSaved={(payment) => {
+          // Balances wait for the money to reach the other person before
+          // they count.
+          setBeat(TRAVEL_MS);
           setTravel({ ...payment, nonce: Date.now() });
           // Show it where it happens: the map on a phone is behind a tab.
           if (!wide) setTab("balances");
@@ -267,6 +267,52 @@ export default function GroupPage() {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Where you stand in the group. Counts to each new figure once the panel that
+ * changed it has gone, and only says "settled up" when the count reaches zero,
+ * so paying off the last of it is something you watch happen.
+ */
+function Standing({ net, currency, everyone }: { net: bigint; currency: string; everyone: boolean }) {
+  const { ref, rest } = useCountedText(net, (shown) => formatMoney(shown < 0n ? -shown : shown, currency));
+  // Colour, arrow and wording follow the figure the count is at rest on, so
+  // they change once, when the count lands, not halfway through it.
+  const shown = rest;
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {shown === 0n && net === 0n ? (
+        <motion.p
+          key="settled"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="text-display font-semibold tracking-[-0.03em] text-text"
+        >
+          {everyone ? "Everyone is settled up" : "You’re settled up"}
+        </motion.p>
+      ) : (
+        <motion.p
+          key="balance"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="flex flex-col"
+        >
+          <span className="text-body text-muted">{shown > 0n ? "You’re owed" : "You owe"}</span>
+          <Amount
+            value={shown === 0n ? net : shown}
+            currency={currency}
+            arrow
+            textRef={ref}
+            className="text-display font-semibold leading-tight tracking-[-0.03em]"
+          />
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
 
 /** An icon with its word beside it on wider screens, and alone on a phone. */
 function HeaderButton({

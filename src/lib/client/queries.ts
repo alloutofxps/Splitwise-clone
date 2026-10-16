@@ -25,6 +25,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
+import { afterMoment } from "@/components/ui/stage";
 import { enqueue } from "./outbox";
 import {
   applyOptimisticWrite,
@@ -306,25 +307,61 @@ export function useSearch(query: string) {
  * every expense write moves it, and search results embed whole expense rows,
  * so a deleted one stayed visible - and openable - until the query aged out.
  */
+/**
+ * Swaps the optimistic row for what the server saved, the moment it answers.
+ *
+ * The refetch that would otherwise do it now waits until the money moment
+ * has played (see `invalidateLedger`), and until then the new row would sit
+ * greyed out as "not saved yet" when it already was.
+ */
+function confirmEntry(
+  client: QueryClient,
+  groupId: string | null | undefined,
+  saved: Pick<LedgerEntry, "id" | "kind" | "expense" | "settlement">,
+) {
+  if (!groupId) return;
+  client.setQueriesData<{ pages: Page<LedgerEntry>[]; pageParams: unknown[] }>(
+    { queryKey: keys.groupLedger(groupId) },
+    (data) =>
+      data && {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) => (item.id === saved.id ? { ...item, ...saved, pending: false } : item)),
+        })),
+      },
+  );
+}
+
 function invalidateLedger(client: QueryClient, ...scopes: (string | null | undefined)[]) {
-  void client.invalidateQueries({ queryKey: keys.dashboard });
-  void client.invalidateQueries({ queryKey: keys.activity });
-  void client.invalidateQueries({ queryKey: keys.friends });
-  void client.invalidateQueries({ queryKey: keys.budgets });
-  void client.invalidateQueries({ queryKey: ["search"] });
+  const queryKeys: unknown[][] = [
+    [...keys.dashboard],
+    [...keys.activity],
+    [...keys.friends],
+    [...keys.budgets],
+    ["search"],
+  ];
 
   const groupIds = new Set(scopes.filter((scope): scope is string => Boolean(scope)));
   for (const groupId of groupIds) {
-    void client.invalidateQueries({ queryKey: keys.group(groupId) });
-    void client.invalidateQueries({ queryKey: keys.groupLedger(groupId) });
-    void client.invalidateQueries({ queryKey: keys.groupStats(groupId) });
+    queryKeys.push([...keys.group(groupId)], [...keys.groupLedger(groupId)], [...keys.groupStats(groupId)]);
   }
 
   // A scope that is absent is a direct expense between two people, which shows
   // up on the friend screens rather than in any group.
   if (scopes.length === 0 || scopes.some((scope) => !scope)) {
-    void client.invalidateQueries({ queryKey: ["friend"] });
+    queryKeys.push(["friend"]);
   }
+
+  // Marked out of date at once, so any screen opened from here fetches fresh;
+  // fetched again, for the screens already showing, once the moment on
+  // screen has played (MOTION-SPEC, money). What's showing already has its
+  // new values from the optimistic write, so the refetch only confirms them,
+  // and confirming mid-animation re-drew the screen under the motion.
+  for (const queryKey of queryKeys) void client.invalidateQueries({ queryKey, refetchType: "none" });
+  afterMoment(() => {
+    for (const queryKey of queryKeys) void client.invalidateQueries({ queryKey });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -419,6 +456,7 @@ export function useCreateExpense(meId?: string) {
     // the screen while still queued. The flush invalidates once it lands.
     onSettled: (expense, error, input) => {
       if (expense === null && !error) return;
+      if (expense) confirmEntry(client, input.groupId, { kind: "expense", id: expense.id, expense });
       invalidateLedger(client, input.groupId);
     },
   });
@@ -690,6 +728,7 @@ export function useCreateSettlement(meId?: string) {
     // not seen it.
     onSettled: (settlement, error, input) => {
       if (settlement === null && !error) return;
+      if (settlement) confirmEntry(client, input.groupId, { kind: "settlement", id: settlement.id, settlement });
       invalidateLedger(client, input.groupId);
     },
   });

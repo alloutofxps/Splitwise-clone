@@ -8,9 +8,37 @@ import { initials } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
 import { usePersonHue } from "../ui/avatar";
 import { cn } from "../ui/primitives";
+import { EASE_ENTER } from "../ui/motion";
+import { untilClear, useStage } from "../ui/stage";
 
 const EASE = [0.2, 0, 0, 1] as const;
 const DOT = 18;
+
+/** A payment travelling along its line (MOTION-SPEC, money). */
+export const TRAVEL_MS = 700;
+/**
+ * The money speeds up away from the payer and is still moving when it reaches
+ * the payee, so the ring there reads as it landing. A curve that slows to a
+ * stop spent its last quarter covering a few pixels, and the dot looked stuck.
+ */
+const TRAVEL_EASE = [0.4, 0, 0.7, 0.6] as const;
+/** The receiver's ring, once the money has arrived. */
+const RING_MS = 400;
+/** The paid tick: drawn, held, then gone. Stands in for the Rive "paid" moment. */
+const TICK_MS = { draw: 350, hold: 500, fade: 250 };
+const TICK_TOTAL = TICK_MS.draw + TICK_MS.hold + TICK_MS.fade;
+
+/** A payment to show moving along its line. */
+export interface Travel {
+  fromPersonId: string;
+  toPersonId: string;
+  /** What was paid, to size the line it travels along. */
+  amount: bigint;
+  /** The payment cleared everything between the two, so the line is gone. */
+  cleared: boolean;
+  /** Change it to play the same payment again. */
+  nonce: number;
+}
 
 /**
  * The flow map: people round a ring, debts as lines between them, each line in
@@ -30,6 +58,7 @@ export function FlowMap({
   currency,
   meId,
   travel,
+  onTravelled,
   size = 320,
   className,
   labels = true,
@@ -42,7 +71,9 @@ export function FlowMap({
   currency: string;
   meId: string;
   /** A payment to show moving. Change `nonce` to play it again. */
-  travel?: { fromPersonId: string; toPersonId: string; nonce: number } | null;
+  travel?: Travel | null;
+  /** Called once the payment has finished playing. */
+  onTravelled?: () => void;
   size?: number;
   className?: string;
 }) {
@@ -82,21 +113,26 @@ export function FlowMap({
           })}
         </AnimatePresence>
 
-        {travel && !reduce ? (
-          <Traveller
-            key={travel.nonce}
-            from={positions.get(travel.fromPersonId)}
-            to={positions.get(travel.toPersonId)}
-            payer={byId.get(travel.fromPersonId)}
-          />
-        ) : null}
-
         {people.map((person) => {
           const at = positions.get(person.id);
           return at ? (
             <PersonNode key={person.id} person={person} at={at} centre={size / 2} isMe={person.id === meId} />
           ) : null;
         })}
+
+        {/* Over the people, so the ring and the tick land on top of the payee. */}
+        {travel ? (
+          <Traveller
+            key={travel.nonce}
+            from={positions.get(travel.fromPersonId)}
+            to={positions.get(travel.toPersonId)}
+            payer={byId.get(travel.fromPersonId)}
+            width={strokeFor(travel.amount, largest > travel.amount ? largest : travel.amount)}
+            cleared={travel.cleared}
+            reduce={Boolean(reduce)}
+            onDone={onTravelled}
+          />
+        ) : null}
       </svg>
 
       <figcaption className="sr-only">
@@ -245,30 +281,182 @@ function PersonNode({
   );
 }
 
-/** A payment on its way: a dot that runs from payer to payee, then fades. */
-function Traveller({ from, to, payer }: { from?: Point; to?: Point; payer?: PersonDto }) {
+/**
+ * A payment on its way.
+ *
+ * Waits for the panel it was saved in to leave, then a dot carries the money
+ * from payer to payee along the line, which shortens behind it: the debt
+ * shrinking by what was paid. On arrival the payee's circle sends out one ring,
+ * and if the payment cleared the line entirely, a tick covers them for a moment.
+ * The balances count while the ring plays (the stage's beat is set to the travel
+ * time).
+ *
+ * Every part is handed to the browser as one animation when it starts, rather
+ * than worked out by our code on each frame: the path is sampled once, and
+ * the dot plays those points as keyframes. On a slow phone the per-frame
+ * version was a large share of what made this moment stutter.
+ */
+function Traveller({
+  from,
+  to,
+  payer,
+  width,
+  cleared,
+  reduce,
+  onDone,
+}: {
+  from?: Point;
+  to?: Point;
+  payer?: PersonDto;
+  width: number;
+  cleared: boolean;
+  reduce: boolean;
+  onDone?: () => void;
+}) {
   const hue = usePersonHue(payer ?? { avatarColor: "cobalt" });
-  if (!from || !to || !payer) return null;
+  const stage = useStage();
+  const pathRef = React.useRef<SVGPathElement>(null);
+  const dotRef = React.useRef<SVGGElement>(null);
+  const ringRef = React.useRef<SVGCircleElement>(null);
+  const tickRef = React.useRef<SVGGElement>(null);
+  const tickPathRef = React.useRef<SVGPathElement>(null);
+  const [phase, setPhase] = React.useState<"waiting" | "travelling" | "arrived">("waiting");
+  const done = React.useRef(onDone);
+  React.useEffect(() => {
+    done.current = onDone;
+  });
+
+  // Start once the panel has gone.
+  const placed = Boolean(from && to);
+  React.useEffect(() => {
+    if (phase !== "waiting" || stage.covered) return;
+    if (reduce || !placed) {
+      done.current?.();
+      return;
+    }
+    const timer = window.setTimeout(() => setPhase("travelling"), untilClear(stage));
+    return () => window.clearTimeout(timer);
+  }, [phase, stage, reduce, placed]);
+
+  // The journey. Depends on nothing but having started: the saved payment
+  // comes back from the server mid-way and redraws the map, and that must not
+  // stop it.
+  React.useEffect(() => {
+    if (phase !== "travelling") return;
+    const path = pathRef.current;
+    const dot = dotRef.current;
+    if (!path || !dot) {
+      setPhase("arrived");
+      return;
+    }
+    const length = path.getTotalLength();
+    const points = Array.from({ length: 25 }, (_, index) => path.getPointAtLength((length * index) / 24));
+    const timing: KeyframeAnimationOptions = {
+      duration: TRAVEL_MS,
+      easing: `cubic-bezier(${TRAVEL_EASE.join(", ")})`,
+      fill: "forwards",
+    };
+    const line = path.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: -1 }], timing);
+    const journey = dot.animate(
+      points.map((point) => ({ transform: `translate(${point.x}px, ${point.y}px)` })),
+      timing,
+    );
+    journey.onfinish = () => setPhase("arrived");
+    return () => {
+      line.cancel();
+      journey.cancel();
+    };
+  }, [phase]);
+
+  // Arrival: one ring, and the tick if the debt is paid off.
+  React.useEffect(() => {
+    if (phase !== "arrived") return;
+    const animations: Animation[] = [];
+    const ring = ringRef.current;
+    if (ring) {
+      animations.push(
+        ring.animate(
+          [
+            { transform: "scale(1)", opacity: 0.6 },
+            { transform: `scale(${(DOT + 12) / DOT})`, opacity: 0 },
+          ],
+          { duration: RING_MS, easing: `cubic-bezier(${EASE_ENTER.join(", ")})`, fill: "forwards" },
+        ),
+      );
+    }
+    if (cleared && tickRef.current && tickPathRef.current) {
+      animations.push(
+        tickRef.current.animate([{ opacity: 0 }, { opacity: 1, offset: TICK_MS.draw / TICK_TOTAL }, { opacity: 1, offset: 1 - TICK_MS.fade / TICK_TOTAL }, { opacity: 0 }], {
+          duration: TICK_TOTAL,
+          fill: "forwards",
+        }),
+        tickPathRef.current.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], {
+          duration: TICK_MS.draw,
+          delay: 80,
+          easing: `cubic-bezier(${EASE_ENTER.join(", ")})`,
+          fill: "both",
+        }),
+      );
+    }
+    const timer = window.setTimeout(() => done.current?.(), cleared ? TICK_TOTAL : RING_MS);
+    return () => {
+      window.clearTimeout(timer);
+      animations.forEach((animation) => animation.cancel());
+    };
+  }, [phase, cleared]);
+
+  if (!from || !to || !payer || reduce) return null;
   const { d } = edgePath(from, to, DOT + 4);
+
   return (
-    <motion.circle
-      r={5}
-      fill={hue}
-      stroke="var(--surface)"
-      strokeWidth={2}
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 0 }}
-      transition={{ delay: 0.9, duration: 0.24 }}
-    >
-      <animateMotion
-        dur="0.9s"
-        fill="freeze"
-        path={d}
-        keyPoints="0;1"
-        keyTimes="0;1"
-        calcMode="spline"
-        keySplines="0.2 0 0 1"
+    <g>
+      {/* The line itself: still whole while the panel leaves, then erased
+          from the payer's end as the money moves along it. */}
+      <path
+        ref={pathRef}
+        d={d}
+        pathLength={1}
+        strokeDasharray="1 1"
+        fill="none"
+        stroke={hue}
+        strokeWidth={width}
+        strokeLinecap="round"
+        opacity={phase === "arrived" ? 0 : 1}
       />
-    </motion.circle>
+      <g ref={dotRef} opacity={phase === "travelling" ? 1 : 0} style={{ transform: `translate(${from.x}px, ${from.y}px)` }}>
+        <circle r={12} fill={hue} opacity={0.18} />
+        <circle r={7} fill={hue} stroke="var(--surface)" strokeWidth={2.5} />
+      </g>
+      {phase === "arrived" ? (
+        <circle
+          ref={ringRef}
+          cx={to.x}
+          cy={to.y}
+          r={DOT}
+          fill="none"
+          stroke={hue}
+          strokeWidth={2}
+          opacity={0}
+          style={{ transformBox: "fill-box", transformOrigin: "center" }}
+        />
+      ) : null}
+      {phase === "arrived" && cleared ? (
+        <g ref={tickRef} opacity={0}>
+          <circle cx={to.x} cy={to.y} r={DOT + 2} fill="var(--positive)" stroke="var(--surface)" strokeWidth={2} />
+          <path
+            ref={tickPathRef}
+            d={`M ${to.x - 7} ${to.y + 0.5} L ${to.x - 2} ${to.y + 5.5} L ${to.x + 7.5} ${to.y - 5}`}
+            pathLength={1}
+            strokeDasharray="1 1"
+            strokeDashoffset={1}
+            fill="none"
+            stroke="var(--text-inverse)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      ) : null}
+    </g>
   );
 }
