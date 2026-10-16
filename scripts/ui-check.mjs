@@ -428,10 +428,17 @@ console.log("\nUndoing a deleted expense");
   await page.getByRole("button", { name: "Delete" }).click();
   await page.waitForTimeout(800);
   await page.getByRole("button", { name: /^Delete$/ }).last().click();
-  await page.waitForTimeout(2500);
 
+  // Waited for rather than counted at a fixed moment: the toast rises once
+  // both panels have finished leaving (MOTION-SPEC 4), which on a slow CI
+  // runner can land after a fixed read.
   const undo = page.getByRole("button", { name: "Undo" });
-  check("the delete toast offers an undo", (await undo.count()) > 0);
+  const offered = await undo
+    .first()
+    .waitFor({ timeout: 6000 })
+    .then(() => true)
+    .catch(() => false);
+  check("the delete toast offers an undo", offered);
 
   const goneNet = await page.evaluate(async (g) => {
     const r = await (await fetch(`/api/groups/${g}`)).json();
