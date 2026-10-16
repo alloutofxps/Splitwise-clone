@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   AnimatePresence,
   motion,
+  useReducedMotion,
   useDragControls,
   useIsPresent,
   useMotionValue,
@@ -13,6 +14,8 @@ import {
 } from "framer-motion";
 import { X } from "lucide-react";
 import { cn, haptic, IconButton, useMounted } from "./primitives";
+import { EASE_ENTER, EASE_EXIT } from "./motion";
+import { coverStage, PANEL_EXIT_MS } from "./stage";
 
 /**
  * Bottom sheet / centred dialog.
@@ -27,8 +30,10 @@ import { cn, haptic, IconButton, useMounted } from "./primitives";
  * and what makes a web one feel wrong when it is missing.
  */
 
-// Sheets slide: 320ms, quick out and a soft landing, no overshoot (DESIGN-PLAN 1.5).
-const SPRING = { type: "tween" as const, duration: 0.32, ease: [0.2, 0, 0, 1] as const };
+// Sheets arrive in 400ms, fast then settling, and leave in 250ms, gently then
+// fast: leaving is always quicker than arriving (MOTION-SPEC 3). No overshoot.
+const ENTER = { duration: 0.4, ease: EASE_ENTER };
+const EXIT = { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT };
 
 /**
  * Open sheets, oldest first. Panels open on top of one another - the split
@@ -37,6 +42,28 @@ const SPRING = { type: "tween" as const, duration: 0.32, ease: [0.2, 0, 0, 1] as
  * and threw away the expense being typed underneath.
  */
 const sheetStack: object[] = [];
+
+// Who is listening for the stack to change, so a panel knows when another
+// has opened on top of it.
+const stackListeners = new Set<() => void>();
+const stackChanged = () => stackListeners.forEach((listener) => listener());
+function subscribeStack(listener: () => void) {
+  stackListeners.add(listener);
+  return () => stackListeners.delete(listener);
+}
+
+/**
+ * Whether another panel is open on top of this one. A panel that opened from
+ * a panel (the split editor over the expense) makes the first one step back,
+ * so it reads as belonging to it rather than as a second, unrelated page.
+ */
+function useCoveredBySheet(token: object, open: boolean): boolean {
+  return React.useSyncExternalStore(
+    subscribeStack,
+    () => open && sheetStack.includes(token) && sheetStack[sheetStack.length - 1] !== token,
+    () => false,
+  );
+}
 
 export interface SheetProps {
   open: boolean;
@@ -91,15 +118,17 @@ export function Sheet({
 
   // Place in the stack depends only on when this sheet opened, so a parent
   // re-rendering (say, as someone types) can never jump above its child.
-  const token = React.useRef({});
+  const [token] = React.useState(() => ({}));
   const close = React.useRef({ onClose, dismissible });
   React.useEffect(() => {
     close.current = { onClose, dismissible };
   });
   React.useEffect(() => {
     if (!open) return;
-    const me = token.current;
+    const me = token;
     sheetStack.push(me);
+    stackChanged();
+    const uncover = coverStage();
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !close.current.dismissible) return;
       if (sheetStack[sheetStack.length - 1] !== me) return;
@@ -108,10 +137,14 @@ export function Sheet({
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      uncover();
       const index = sheetStack.lastIndexOf(me);
       if (index !== -1) sheetStack.splice(index, 1);
+      stackChanged();
     };
-  }, [open]);
+  }, [open, token]);
+
+  const covered = useCoveredBySheet(token, open);
 
   if (!mounted) return null;
 
@@ -127,6 +160,7 @@ export function Sheet({
           tall={tall}
           className={className}
           ariaLabel={ariaLabel}
+          covered={covered}
         >
           {children}
         </SheetBody>
@@ -228,8 +262,10 @@ function SheetBody({
   tall,
   className,
   ariaLabel,
-}: Omit<SheetProps, "open">) {
+  covered,
+}: Omit<SheetProps, "open"> & { covered: boolean }) {
   const y = useMotionValue(0);
+  const reduce = useReducedMotion();
   // The backdrop fades as the sheet is dragged down, so the gesture feels
   // connected to the page behind it rather than to the sheet alone.
   const backdropOpacity = useTransform(y, [0, 400], [1, 0]);
@@ -315,24 +351,34 @@ function SheetBody({
       }}
       aria-hidden={present ? undefined : true}
     >
+      {/*
+        The dim behind the panel, in two layers: the outer fades in and out
+        with the panel, the inner follows a drag. As one element the two
+        fought over its opacity and the drag won, freezing the fade a few
+        percent in, so the page behind barely darkened at all and the tab bar
+        seemed to pop back when a panel closed.
+      */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        style={{ opacity: backdropOpacity }}
+        exit={{ opacity: 0, transition: EXIT }}
+        transition={ENTER}
         onClick={() => dismissible && onClose()}
-        className="absolute inset-0 bg-overlay"
-      />
+        className="absolute inset-0"
+      >
+        <motion.div style={{ opacity: backdropOpacity }} className="absolute inset-0 bg-overlay" />
+      </motion.div>
 
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : (ariaLabel ?? "Dialog")}
         initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={SPRING}
+        // With a panel open on top, this one steps back a little: smaller,
+        // and dimmed by the other's backdrop (MOTION-SPEC 1).
+        animate={{ y: 0, scale: covered && !reduce ? 0.95 : 1 }}
+        exit={{ y: "100%", transition: EXIT }}
+        transition={ENTER}
         drag="y"
         dragControls={dragControls}
         // The handle starts the gesture; the body never does.

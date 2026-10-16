@@ -199,12 +199,33 @@ export function usePrefetch() {
 }
 
 export function useExpense(id: string | undefined) {
-  return useQuery({
+  const client = useQueryClient();
+  return useQuery<ExpenseDto>({
     queryKey: keys.expense(id ?? ""),
     enabled: Boolean(id),
     queryFn: ({ signal }) =>
       api.get<{ expense: ExpenseDto }>(`/api/expenses/${id}`, signal).then((r) => r.expense),
+    // The row you tapped already holds the expense, so the details open
+    // complete and at their full height, then refresh quietly. Opening empty
+    // and growing when the fetch landed made the whole panel jump up partway
+    // through rising (MOTION-SPEC 4, panels).
+    placeholderData: () => (id ? cachedExpense(client, id) : undefined),
   });
+}
+
+/** An expense already on screen somewhere: a group's list or a friend's history. */
+function cachedExpense(client: QueryClient, id: string): ExpenseDto | undefined {
+  for (const [, data] of client.getQueriesData<{ pages?: Page<LedgerEntry>[] }>({ queryKey: ["group"] })) {
+    for (const page of data?.pages ?? []) {
+      const found = page.items.find((item) => item.expense?.id === id)?.expense;
+      if (found) return found;
+    }
+  }
+  for (const [, data] of client.getQueriesData<{ items?: LedgerEntry[] }>({ queryKey: ["friend"] })) {
+    const found = data?.items?.find((item) => item.expense?.id === id)?.expense;
+    if (found) return found;
+  }
+  return undefined;
 }
 
 export function useComments(expenseId: string | undefined) {

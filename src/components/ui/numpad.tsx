@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Delete } from "lucide-react";
 import { cn, haptic } from "./primitives";
 import { maskAmount, useAmountText } from "./money";
@@ -69,6 +70,7 @@ export function AmountPad({
   // starts out of the way; a new one opens with it ready.
   const [ownOpen, setOwnOpen] = React.useState(() => value === null);
   const open = openProp ?? ownOpen;
+  const reduce = useReducedMotion();
   const setOpen = (next: boolean) => {
     setOwnOpen(next);
     onOpenChange?.(next);
@@ -125,9 +127,21 @@ export function AmountPad({
         </span>
       </div>
 
+      {/* Folds away when typing starts elsewhere, and back when the amount is
+          tapped, instead of vanishing in one frame and making everything below
+          jump (MOTION-SPEC 4). 250ms, on the curve for things that stay. */}
+      <AnimatePresence initial={false}>
       {open ? (
-        // A calculator grid: hairlines between the keys rather than twelve
-        // floating buttons, so the pad is a compact block under the amount.
+        <motion.div
+          key="pad"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={reduce ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
+          className="overflow-hidden"
+        >
+        {/* A calculator grid: hairlines between the keys rather than twelve
+            floating buttons, so the pad is a compact block under the amount. */}
         <div
           className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
           role="group"
@@ -167,7 +181,9 @@ export function AmountPad({
             Done
           </button>
         </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }
