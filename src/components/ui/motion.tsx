@@ -9,9 +9,10 @@
  */
 
 import * as React from "react";
-import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from "framer-motion";
+import { animate, useReducedMotion } from "framer-motion";
 import { formatMoney } from "@/lib/money";
 import { cn } from "./primitives";
+import { untilCount, useStage } from "./stage";
 
 // ---------------------------------------------------------------------------
 // Lists
@@ -50,13 +51,58 @@ export const listItem = {
 // ---------------------------------------------------------------------------
 
 /**
- * A money amount that counts to its value instead of jumping there.
+ * A money value that counts to its new figure instead of jumping there.
  *
  * A balance that snaps from €120 to €187 changes without explanation; one that
- * runs up to it says "this went up" before anybody reads the digits. Counted in
- * minor units, so the figure that lands is exact, and rendered with tabular
- * figures so the digits do not jostle while they move.
+ * runs up to it says "this went up" before anybody reads the digits. It waits
+ * for the stage: a change made inside a panel keeps showing the old figure
+ * until the panel has gone and the row that caused it has landed, then counts
+ * (MOTION-SPEC, money). Counted in minor units, so the figure that lands is
+ * exact. The first value shown never counts: amounts appear as they are.
  */
+export function useCountedValue(value: bigint): bigint {
+  const reduce = useReducedMotion();
+  const stage = useStage();
+  const [shown, setShown] = React.useState(value);
+  const shownRef = React.useRef(value);
+
+  React.useEffect(() => {
+    if (value === shownRef.current) return;
+    // Under Reduce Motion the value is shown as it is (see the return below).
+    if (reduce) {
+      shownRef.current = value;
+      return;
+    }
+    // Behind a panel: hold the old figure until it has gone.
+    if (stage.covered) return;
+    const from = Number(shownRef.current);
+    const to = Number(value);
+    let controls: { stop: () => void } | undefined;
+    const timer = window.setTimeout(() => {
+      controls = animate(from, to, {
+        duration: COUNT_MS / 1000,
+        ease: EASE_COUNT,
+        onUpdate: (latest) => {
+          const next = BigInt(Math.round(latest));
+          shownRef.current = next;
+          setShown(next);
+        },
+        onComplete: () => {
+          shownRef.current = value;
+          setShown(value);
+        },
+      });
+    }, untilCount(stage));
+    return () => {
+      window.clearTimeout(timer);
+      controls?.stop();
+    };
+  }, [value, reduce, stage]);
+
+  return reduce ? value : shown;
+}
+
+/** A money amount that counts to its value (see `useCountedValue`). */
 export function AnimatedAmount({
   value,
   currency,
@@ -68,28 +114,12 @@ export function AnimatedAmount({
   className?: string;
   signed?: boolean;
 }) {
-  const target = Number(typeof value === "bigint" ? value : BigInt(value || "0"));
-  const reduce = useReducedMotion();
-  const motionValue = useMotionValue(target);
-  const [shown, setShown] = React.useState(target);
-
-  useMotionValueEvent(motionValue, "change", (latest) => setShown(Math.round(latest)));
-
-  React.useEffect(() => {
-    if (reduce) {
-      motionValue.set(target);
-      return;
-    }
-    const controls = animate(motionValue, target, { duration: 0.5, ease: EASE });
-    return () => controls.stop();
-  }, [target, reduce, motionValue]);
-
-  // Under Reduce Motion there is nothing to count: show the value as it is.
-  const magnitude = BigInt(reduce ? target : shown);
-  const display = signed ? magnitude : magnitude < 0n ? -magnitude : magnitude;
+  const target = typeof value === "bigint" ? value : BigInt(value || "0");
+  const shown = useCountedValue(target);
+  const display = signed ? shown : shown < 0n ? -shown : shown;
 
   return (
-    <span className={cn("display-number whitespace-nowrap", className)} aria-label={formatMoney(BigInt(signed ? target : Math.abs(target)), currency, { signed })}>
+    <span className={cn("display-number whitespace-nowrap", className)} aria-label={formatMoney(signed ? target : target < 0n ? -target : target, currency, { signed })}>
       <span aria-hidden="true">{formatMoney(display, currency, { signed })}</span>
     </span>
   );

@@ -8,6 +8,7 @@ import { useComposer } from "../expense/composer-context";
 import { Amount } from "../ui/money";
 import { EmptyState, Skeleton, cn, haptic } from "../ui/primitives";
 import { LoadMore } from "../ui/load-more";
+import { Arrival, useArrivals } from "../ui/arrival";
 import { Button } from "../ui/primitives";
 import { Avatar, usePersonHue } from "../ui/avatar";
 import { CategoryGlyph } from "../expense/category-glyph";
@@ -42,18 +43,6 @@ import type { PersonDto } from "@/lib/types";
  * entered in, because a trip can hold a euro dinner and a rupee taxi, and
  * relabelling either with the group's settlement currency would be a lie.
  */
-/**
- * Rows rise into place, and slide rather than jump when a new expense is
- * inserted above them - which is what makes a just-added dinner read as
- * "arrived" rather than as the list redrawing.
- */
-const ROW_MOTION = {
-  layout: "position" as const,
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.24, ease: [0.2, 0, 0, 1] as const },
-};
-
 export function GroupLedger({
   groupId,
   meId,
@@ -104,6 +93,11 @@ export function GroupLedger({
     setCategory(null);
   };
 
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
+  // A just-added expense lands in its place once the panel has gone, so it
+  // reads as "arrived" rather than as the list redrawing.
+  const isArriving = useArrivals(items, `${debounced}|${person}|${category}`, !isLoading);
+
   if (isLoading) {
     return (
       <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
@@ -120,7 +114,6 @@ export function GroupLedger({
     );
   }
 
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
   const groups = groupByDay(items, (item) => item.date);
 
   return (
@@ -283,9 +276,10 @@ export function GroupLedger({
             <section key={label}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
               <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+                <AnimatePresence initial={false}>
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
-                    <motion.li key={entry.expense.id} {...ROW_MOTION}>
+                    <Arrival key={entry.expense.id} arriving={isArriving(entry)}>
                       <ExpenseRow
                         expense={entry.expense}
                         meId={meId}
@@ -301,9 +295,9 @@ export function GroupLedger({
                           setOpenExpenseId(entry.expense!.id);
                         }}
                       />
-                    </motion.li>
+                    </Arrival>
                   ) : entry.settlement ? (
-                    <motion.li key={entry.settlement.id} {...ROW_MOTION}>
+                    <Arrival key={entry.settlement.id} arriving={isArriving(entry)}>
                       <SettlementRow
                         settlement={entry.settlement}
                         meId={meId}
@@ -312,9 +306,10 @@ export function GroupLedger({
                         groupId={groupId}
                         showDate={!precise}
                       />
-                    </motion.li>
+                    </Arrival>
                   ) : null,
                 )}
+                </AnimatePresence>
               </ul>
             </section>
           ))}

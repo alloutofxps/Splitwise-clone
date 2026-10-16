@@ -53,7 +53,11 @@ export function SettleUpSheet({
   directCurrency?: string;
   initialEdge?: { fromPersonId: string; toPersonId: string; amount: string };
   /** Told who paid whom once it is saved, so the screen can show it moving. */
-  onSaved?: (payment: { fromPersonId: string; toPersonId: string }) => void;
+  /**
+   * A payment was saved: who paid whom, the debt it was paid against (in the
+   * group's currency), and whether it paid that debt off.
+   */
+  onSaved?: (payment: { fromPersonId: string; toPersonId: string; amount: bigint; cleared: boolean }) => void;
 }) {
   const toast = useToast();
   const settle = useCreateSettlement(meId);
@@ -210,7 +214,12 @@ export function SettleUpSheet({
             }
           : undefined,
       });
-      onSaved?.({ fromPersonId: selected.fromPersonId, toPersonId: selected.toPersonId });
+      onSaved?.({
+        fromPersonId: selected.fromPersonId,
+        toPersonId: selected.toPersonId,
+        amount: selected.amount,
+        cleared: fullAmount !== null && amount === fullAmount,
+      });
       onClose();
     } catch (error) {
       toast({
@@ -270,7 +279,12 @@ export function SettleUpSheet({
                       }
                       haptic([8, 30, 8]);
                       toast({ tone: "success", title: `Saved ${edges.length} payments` });
-                      onSaved?.({ fromPersonId: edges[0].fromPersonId, toPersonId: edges[0].toPersonId });
+                      onSaved?.({
+                        fromPersonId: edges[0].fromPersonId,
+                        toPersonId: edges[0].toPersonId,
+                        amount: BigInt(edges[0].amount),
+                        cleared: true,
+                      });
                       onClose();
                     } catch (error) {
                       toast({
