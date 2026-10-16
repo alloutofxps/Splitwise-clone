@@ -10,7 +10,8 @@ import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
 import { PullToRefresh } from "./pull-to-refresh";
 import { AppMark } from "./app-mark";
-import { EASE_ENTER } from "./ui/motion";
+import { EASE_ENTER, EASE_EXIT } from "./ui/motion";
+import { PANEL_EXIT_MS, useStage } from "./ui/stage";
 
 /**
  * The frame every screen sits in.
@@ -97,6 +98,19 @@ export function AppShell({
   const { data } = useDashboard();
   const direction = useDirection(pathname);
   const reduce = Boolean(useReducedMotion());
+
+  // While a panel is open the page steps back a little (MOTION-SPEC 1): it is
+  // still there, underneath, and you'll come back to it. It shrinks about the
+  // middle of what's on screen, measured as the panel opens; the page can't
+  // scroll while a panel is up, so that stays true until it closes.
+  const { covered } = useStage();
+  const page = React.useRef<HTMLElement>(null);
+  React.useLayoutEffect(() => {
+    if (covered && page.current) {
+      page.current.style.transformOrigin = `50% ${window.scrollY + window.innerHeight / 2}px`;
+    }
+  }, [covered]);
+  const stepBack = covered && !reduce;
   const enter = arrival(direction, reduce);
 
   const destinations: Destination[] = [
@@ -115,7 +129,19 @@ export function AppShell({
           enabled={pathname === "/" || pathname.startsWith("/groups/") || pathname === "/friends" || pathname === "/activity"}
         />
         <OfflineBanner />
-        <main
+        <motion.main
+          ref={page}
+          initial={false}
+          // A transform string, so the browser runs it on the compositor. The
+          // page keeps scale(1) at rest rather than no transform at all:
+          // blending from none to scale(0.97) starts at scale 0 and shrinks
+          // the page to a dot. Nothing inside the page is pinned to the
+          // screen, so a resting transform changes nothing else.
+          animate={
+            stepBack
+              ? { transform: "scale(0.97)", transition: { duration: 0.4, ease: EASE_ENTER } }
+              : { transform: "scale(1)", transition: { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT } }
+          }
           className={cn(
             "mx-auto w-full max-w-[560px] flex-1 px-4 lg:px-8",
             // Home and a group use two columns on a desktop; everything else
@@ -136,7 +162,7 @@ export function AppShell({
           >
             {children}
           </motion.div>
-        </main>
+        </motion.main>
       </div>
 
       <TabBar destinations={destinations} pathname={pathname} onAddExpense={onAddExpense} />

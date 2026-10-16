@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CloudOff, Info, TriangleAlert, Undo2 } from "lucide-react";
 import { cn, haptic, useMounted } from "./primitives";
+import { EASE_ENTER, EASE_EXIT } from "./motion";
+import { PANEL_EXIT_MS, stageNow, untilClear, useStage } from "./stage";
 
 export type ToastTone = "success" | "error" | "info" | "offline";
 
@@ -31,6 +33,13 @@ export interface ToastOptions {
 
 interface ToastRecord extends ToastOptions {
   id: number;
+  /**
+   * Raised while a panel was open. "Added Tapas" is the panel's way of saying
+   * it is done, so it waits for the panel to leave instead of rising through
+   * it (MOTION-SPEC 4, toasts). Errors never wait: the panel stays open for
+   * them, and they are about what is on it.
+   */
+  afterPanel: boolean;
 }
 
 const ToastContext = React.createContext<((options: ToastOptions) => void) | null>(null);
@@ -54,9 +63,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const id = nextId.current++;
       // An undo needs longer than an acknowledgement - the user has to read it,
       // decide, and reach for it.
-      const duration = options.duration ?? (options.action ? 7000 : 3600);
+      const afterPanel = options.tone !== "error" && stageNow().covered;
+      const duration = (options.duration ?? (options.action ? 7000 : 3600)) + (afterPanel ? PANEL_EXIT_MS : 0);
 
-      setToasts((current) => [...current.slice(-2), { ...options, id }]);
+      setToasts((current) => [...current.slice(-2), { ...options, id, afterPanel }]);
       haptic(options.tone === "error" ? [12, 40, 12] : 8);
 
       timers.current.set(
@@ -104,7 +114,19 @@ function ToastViewport({
   onDismiss: (id: number) => void;
 }) {
   const mounted = useMounted();
+  const stage = useStage();
+  // Re-render once the panel has finished leaving, to let held toasts rise.
+  const [, setCleared] = React.useState(0);
+  React.useEffect(() => {
+    if (stage.covered) return;
+    const wait = untilClear(stage);
+    if (wait === 0) return;
+    const timer = window.setTimeout(() => setCleared((n) => n + 1), wait);
+    return () => window.clearTimeout(timer);
+  }, [stage]);
+  const panelGone = !stage.covered && untilClear(stage) === 0;
   if (!mounted) return null;
+  const visible = toasts.filter((toast) => !toast.afterPanel || panelGone);
 
   return createPortal(
     <div
@@ -115,15 +137,16 @@ function ToastViewport({
       aria-live="polite"
     >
       <AnimatePresence initial={false}>
-        {toasts.map((toast) => (
+        {visible.map((toast) => (
           <motion.div
             key={toast.id}
-            layout
+            // No \`layout\`: it had the page measured on every frame while a
+            // toast was up, which is exactly when money is counting.
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             // Taps pass through as soon as it starts leaving, not when it is gone.
-            exit={{ opacity: 0, y: 8, pointerEvents: "none" }}
-            transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
+            exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.15, ease: EASE_EXIT } }}
+            transition={{ duration: 0.2, ease: EASE_ENTER }}
             // A toast sits above everything, sheets included, so for the few
             // seconds it is up it covers whatever is beneath it. Tapping it
             // dismisses it, rather than the tap simply being swallowed - and the
