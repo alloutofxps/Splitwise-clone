@@ -5,7 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
-import { useCountedValue } from "@/components/ui/motion";
+import { useCountedText } from "@/components/ui/motion";
+import { formatMoney } from "@/lib/money";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
 import { setBeat } from "@/components/ui/stage";
@@ -273,10 +274,13 @@ export default function GroupPage() {
  * so paying off the last of it is something you watch happen.
  */
 function Standing({ net, currency, everyone }: { net: bigint; currency: string; everyone: boolean }) {
-  const shown = useCountedValue(net);
+  const { ref, rest } = useCountedText(net, (shown) => formatMoney(shown < 0n ? -shown : shown, currency));
+  // Colour, arrow and wording follow the figure the count is at rest on, so
+  // they change once, when the count lands, not halfway through it.
+  const shown = rest;
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {shown === 0n ? (
+      {shown === 0n && net === 0n ? (
         <motion.p
           key="settled"
           initial={{ opacity: 0 }}
@@ -298,9 +302,10 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
         >
           <span className="text-body text-muted">{shown > 0n ? "You’re owed" : "You owe"}</span>
           <Amount
-            value={shown}
+            value={shown === 0n ? net : shown}
             currency={currency}
             arrow
+            textRef={ref}
             className="text-display font-semibold leading-tight tracking-[-0.03em]"
           />
         </motion.p>

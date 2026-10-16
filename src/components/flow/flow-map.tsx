@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { edgeKey, edgePath, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
 import { formatMoney } from "@/lib/money";
 import { initials } from "@/lib/avatar";
@@ -287,8 +287,14 @@ function PersonNode({
  * Waits for the panel it was saved in to leave, then a dot carries the money
  * from payer to payee along the line, which shortens behind it: the debt
  * shrinking by what was paid. On arrival the payee's circle sends out one ring,
- * and if the payment cleared the line entirely, a tick covers them for a moment. The balances
- * count while the ring plays (the stage's beat is set to the travel time).
+ * and if the payment cleared the line entirely, a tick covers them for a moment.
+ * The balances count while the ring plays (the stage's beat is set to the travel
+ * time).
+ *
+ * Every part is handed to the browser as one animation when it starts, rather
+ * than worked out by our code on each frame: the path is sampled once, and
+ * the dot plays those points as keyframes. On a slow phone the per-frame
+ * version was a large share of what made this moment stutter.
  */
 function Traveller({
   from,
@@ -309,23 +315,16 @@ function Traveller({
 }) {
   const hue = usePersonHue(payer ?? { avatarColor: "cobalt" });
   const stage = useStage();
-  const progress = useMotionValue(0);
   const pathRef = React.useRef<SVGPathElement>(null);
+  const dotRef = React.useRef<SVGGElement>(null);
+  const ringRef = React.useRef<SVGCircleElement>(null);
+  const tickRef = React.useRef<SVGGElement>(null);
+  const tickPathRef = React.useRef<SVGPathElement>(null);
   const [phase, setPhase] = React.useState<"waiting" | "travelling" | "arrived">("waiting");
   const done = React.useRef(onDone);
   React.useEffect(() => {
     done.current = onDone;
   });
-
-  // The erased part of the line runs from the payer's end; the dot rides the
-  // front of what is left.
-  const remaining = useTransform(progress, (p) => 1 - p);
-  // One position per frame, shared by both coordinates: measuring a curve is
-  // the costly part, and doing it twice a frame showed up on a slow phone.
-  const lengthRef = React.useRef(0);
-  const point = useTransform(progress, (p) => pointAt(pathRef.current, lengthRef, p) ?? from ?? { x: 0, y: 0 });
-  const dotX = useTransform(point, (at) => at.x);
-  const dotY = useTransform(point, (at) => at.y);
 
   // Start once the panel has gone.
   const placed = Boolean(from && to);
@@ -339,23 +338,71 @@ function Traveller({
     return () => window.clearTimeout(timer);
   }, [phase, stage, reduce, placed]);
 
-  // The journey itself depends on nothing but having started: the saved
-  // payment comes back from the server while the dot is moving and redraws
-  // the map, and that must not stop it halfway.
+  // The journey. Depends on nothing but having started: the saved payment
+  // comes back from the server mid-way and redraws the map, and that must not
+  // stop it.
   React.useEffect(() => {
     if (phase !== "travelling") return;
-    const controls = animate(progress, 1, {
-      duration: TRAVEL_MS / 1000,
-      ease: TRAVEL_EASE,
-      onComplete: () => setPhase("arrived"),
-    });
-    return () => controls.stop();
-  }, [phase, progress]);
+    const path = pathRef.current;
+    const dot = dotRef.current;
+    if (!path || !dot) {
+      setPhase("arrived");
+      return;
+    }
+    const length = path.getTotalLength();
+    const points = Array.from({ length: 25 }, (_, index) => path.getPointAtLength((length * index) / 24));
+    const timing: KeyframeAnimationOptions = {
+      duration: TRAVEL_MS,
+      easing: `cubic-bezier(${TRAVEL_EASE.join(", ")})`,
+      fill: "forwards",
+    };
+    const line = path.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: -1 }], timing);
+    const journey = dot.animate(
+      points.map((point) => ({ transform: `translate(${point.x}px, ${point.y}px)` })),
+      timing,
+    );
+    journey.onfinish = () => setPhase("arrived");
+    return () => {
+      line.cancel();
+      journey.cancel();
+    };
+  }, [phase]);
 
+  // Arrival: one ring, and the tick if the debt is paid off.
   React.useEffect(() => {
     if (phase !== "arrived") return;
+    const animations: Animation[] = [];
+    const ring = ringRef.current;
+    if (ring) {
+      animations.push(
+        ring.animate(
+          [
+            { transform: "scale(1)", opacity: 0.6 },
+            { transform: `scale(${(DOT + 12) / DOT})`, opacity: 0 },
+          ],
+          { duration: RING_MS, easing: `cubic-bezier(${EASE_ENTER.join(", ")})`, fill: "forwards" },
+        ),
+      );
+    }
+    if (cleared && tickRef.current && tickPathRef.current) {
+      animations.push(
+        tickRef.current.animate([{ opacity: 0 }, { opacity: 1, offset: TICK_MS.draw / TICK_TOTAL }, { opacity: 1, offset: 1 - TICK_MS.fade / TICK_TOTAL }, { opacity: 0 }], {
+          duration: TICK_TOTAL,
+          fill: "forwards",
+        }),
+        tickPathRef.current.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], {
+          duration: TICK_MS.draw,
+          delay: 80,
+          easing: `cubic-bezier(${EASE_ENTER.join(", ")})`,
+          fill: "both",
+        }),
+      );
+    }
     const timer = window.setTimeout(() => done.current?.(), cleared ? TICK_TOTAL : RING_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      animations.forEach((animation) => animation.cancel());
+    };
   }, [phase, cleared]);
 
   if (!from || !to || !payer || reduce) return null;
@@ -365,70 +412,51 @@ function Traveller({
     <g>
       {/* The line itself: still whole while the panel leaves, then erased
           from the payer's end as the money moves along it. */}
-      <motion.path
+      <path
         ref={pathRef}
         d={d}
+        pathLength={1}
+        strokeDasharray="1 1"
         fill="none"
         stroke={hue}
         strokeWidth={width}
         strokeLinecap="round"
-        style={{ pathLength: remaining, pathOffset: progress }}
         opacity={phase === "arrived" ? 0 : 1}
       />
-      {phase === "travelling" ? (
-        <>
-          <motion.circle cx={dotX} cy={dotY} r={12} fill={hue} opacity={0.18} />
-          <motion.circle cx={dotX} cy={dotY} r={7} fill={hue} stroke="var(--surface)" strokeWidth={2.5} />
-        </>
-      ) : null}
+      <g ref={dotRef} opacity={phase === "travelling" ? 1 : 0} style={{ transform: `translate(${from.x}px, ${from.y}px)` }}>
+        <circle r={12} fill={hue} opacity={0.18} />
+        <circle r={7} fill={hue} stroke="var(--surface)" strokeWidth={2.5} />
+      </g>
       {phase === "arrived" ? (
-        <motion.circle
+        <circle
+          ref={ringRef}
           cx={to.x}
           cy={to.y}
+          r={DOT}
           fill="none"
           stroke={hue}
           strokeWidth={2}
-          initial={{ r: DOT, opacity: 0.6 }}
-          animate={{ r: DOT + 12, opacity: 0 }}
-          transition={{ duration: RING_MS / 1000, ease: EASE_ENTER }}
+          opacity={0}
+          style={{ transformBox: "fill-box", transformOrigin: "center" }}
         />
       ) : null}
       {phase === "arrived" && cleared ? (
-        <motion.g
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 1, 0] }}
-          transition={{
-            duration: TICK_TOTAL / 1000,
-            times: [0, TICK_MS.draw / TICK_TOTAL, 1 - TICK_MS.fade / TICK_TOTAL, 1],
-            ease: EASE_ENTER,
-          }}
-        >
+        <g ref={tickRef} opacity={0}>
           <circle cx={to.x} cy={to.y} r={DOT + 2} fill="var(--positive)" stroke="var(--surface)" strokeWidth={2} />
-          <motion.path
+          <path
+            ref={tickPathRef}
             d={`M ${to.x - 7} ${to.y + 0.5} L ${to.x - 2} ${to.y + 5.5} L ${to.x + 7.5} ${to.y - 5}`}
+            pathLength={1}
+            strokeDasharray="1 1"
+            strokeDashoffset={1}
             fill="none"
             stroke="var(--text-inverse)"
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: TICK_MS.draw / 1000, ease: EASE_ENTER, delay: 0.08 }}
           />
-        </motion.g>
+        </g>
       ) : null}
     </g>
   );
-}
-
-/** The point a share of the way along a drawn path, by length. */
-function pointAt(path: SVGPathElement | null, length: { current: number }, share: number): Point | null {
-  if (!path) return null;
-  try {
-    // The line never changes shape while it plays, so its length is measured once.
-    if (!length.current) length.current = path.getTotalLength();
-    return path.getPointAtLength(length.current * share);
-  } catch {
-    return null;
-  }
 }

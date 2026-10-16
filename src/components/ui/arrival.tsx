@@ -37,10 +37,15 @@ export function useArrivals(items: { id: string; date: string }[], listKey: stri
 /**
  * A list row that lands rather than appears.
  *
- * An arriving row waits, folded away, while a panel covers the screen, then
- * opens into its place once the panel has gone - the rows below moving down to
- * make room - lit by a soft wash that fades. A row that leaves folds away.
- * Under Reduce Motion it simply fades in and out.
+ * An arriving row takes its place while a panel still covers the list, so the
+ * rows below have already made room out of sight; once the panel has gone it
+ * fades in there, lit by a soft wash that fades after it. A row that leaves
+ * folds away. Under Reduce Motion it simply fades in and out.
+ *
+ * It used to open into its place with the rows below moving down. Growing its
+ * height re-laid-out the whole page every frame, and gliding the rows instead
+ * had every row on the page re-measured; on a phone with the processor slowed
+ * down, either one doubled this moment's stutter. A fade costs nothing to draw.
  */
 export function Arrival({
   arriving,
@@ -72,15 +77,19 @@ export function Arrival({
   return (
     <motion.li
       initial={false}
-      animate={reduce ? { opacity: held ? 0 : 1 } : held ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
+      animate={{ opacity: held ? 0 : 1 }}
       exit={
         reduce
           ? { opacity: 0, transition: { duration: 0.15 } }
           : { height: 0, opacity: 0, transition: { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT } }
       }
-      transition={reduce ? { duration: 0.15 } : { duration: LAND_MS / 1000, ease: EASE_ENTER }}
+      transition={
+        reduce
+          ? { duration: 0.15 }
+          : { duration: LAND_MS / 1000, ease: EASE_ENTER }
+      }
       className={className}
-      style={held || phase === "landing" ? { overflow: "hidden", position: "relative" } : undefined}
+      style={phase === "landing" ? { position: "relative" } : undefined}
     >
       {phase === "landing" && !reduce ? (
         <motion.span

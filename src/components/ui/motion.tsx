@@ -51,7 +51,7 @@ export const listItem = {
 // ---------------------------------------------------------------------------
 
 /**
- * A money value that counts to its new figure instead of jumping there.
+ * A money figure that counts to its new value instead of jumping there.
  *
  * A balance that snaps from €120 to €187 changes without explanation; one that
  * runs up to it says "this went up" before anybody reads the digits. It waits
@@ -59,38 +59,59 @@ export const listItem = {
  * until the panel has gone and the row that caused it has landed, then counts
  * (MOTION-SPEC, money). Counted in minor units, so the figure that lands is
  * exact. The first value shown never counts: amounts appear as they are.
+ *
+ * The digits are written straight into the text, about 30 times a second,
+ * rather than re-rendering on every frame: on a slow phone the re-render was
+ * a large part of what made the count stutter, and digits changing faster than
+ * that can't be read anyway. Give `ref` to an element with no children of its
+ * own; `rest` is the figure the count last came to rest on, for anything that
+ * should only change once it has (such as saying "settled up" at zero).
  */
-export function useCountedValue(value: bigint): bigint {
+export function useCountedText(value: bigint, format: (value: bigint) => string) {
   const reduce = useReducedMotion();
   const stage = useStage();
-  const [shown, setShown] = React.useState(value);
-  const shownRef = React.useRef(value);
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const shown = React.useRef(value);
+  const [rest, setRest] = React.useState(value);
+  const formatRef = React.useRef(format);
+  React.useLayoutEffect(() => {
+    formatRef.current = format;
+    // Keep the text in step with whatever is showing, every render.
+    if (ref.current) ref.current.textContent = format(shown.current);
+  });
 
   React.useEffect(() => {
-    if (value === shownRef.current) return;
-    // Under Reduce Motion the value is shown as it is (see the return below).
+    if (value === shown.current) return;
+    const write = (next: bigint) => {
+      shown.current = next;
+      if (ref.current) ref.current.textContent = formatRef.current(next);
+    };
+    const land = () => {
+      write(value);
+      setRest(value);
+    };
+    // Under Reduce Motion the new figure is simply shown.
     if (reduce) {
-      shownRef.current = value;
-      return;
+      const timer = window.setTimeout(land, 0);
+      return () => window.clearTimeout(timer);
     }
     // Behind a panel: hold the old figure until it has gone.
     if (stage.covered) return;
-    const from = Number(shownRef.current);
+    const from = Number(shown.current);
     const to = Number(value);
+    let last = 0;
     let controls: { stop: () => void } | undefined;
     const timer = window.setTimeout(() => {
       controls = animate(from, to, {
         duration: COUNT_MS / 1000,
         ease: EASE_COUNT,
         onUpdate: (latest) => {
-          const next = BigInt(Math.round(latest));
-          shownRef.current = next;
-          setShown(next);
+          const now = performance.now();
+          if (now - last < 32) return;
+          last = now;
+          write(BigInt(Math.round(latest)));
         },
-        onComplete: () => {
-          shownRef.current = value;
-          setShown(value);
-        },
+        onComplete: land,
       });
     }, untilCount(stage));
     return () => {
@@ -99,10 +120,10 @@ export function useCountedValue(value: bigint): bigint {
     };
   }, [value, reduce, stage]);
 
-  return reduce ? value : shown;
+  return { ref, rest };
 }
 
-/** A money amount that counts to its value (see `useCountedValue`). */
+/** A money amount that counts to its value (see `useCountedText`). */
 export function AnimatedAmount({
   value,
   currency,
@@ -115,12 +136,13 @@ export function AnimatedAmount({
   signed?: boolean;
 }) {
   const target = typeof value === "bigint" ? value : BigInt(value || "0");
-  const shown = useCountedValue(target);
-  const display = signed ? shown : shown < 0n ? -shown : shown;
+  const { ref } = useCountedText(target, (shown) =>
+    formatMoney(signed ? shown : shown < 0n ? -shown : shown, currency, { signed }),
+  );
 
   return (
     <span className={cn("display-number whitespace-nowrap", className)} aria-label={formatMoney(signed ? target : target < 0n ? -target : target, currency, { signed })}>
-      <span aria-hidden="true">{formatMoney(display, currency, { signed })}</span>
+      <span aria-hidden="true" ref={ref} />
     </span>
   );
 }

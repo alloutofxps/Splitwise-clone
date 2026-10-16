@@ -67,6 +67,38 @@ export function setBeat(ms: number) {
   set({ beat: ms });
 }
 
+/**
+ * How long after the money starts counting the moment is over: the count
+ * itself (600ms) and a little room after it.
+ */
+const MOMENT_TAIL_MS = 700;
+
+/**
+ * Runs `work` once the moment on screen has finished playing: after any open
+ * panel has gone, the change has landed and the money has counted.
+ *
+ * For work the moment doesn't need, such as fetching fresh copies of data
+ * that is already showing its new values. Done straight after a save, that
+ * work re-drew the screen several times mid-animation, and on a slow phone it
+ * was most of what made the money moments stutter.
+ */
+export function afterMoment(work: () => void) {
+  const whenUncovered = () => {
+    if (state.covered) {
+      const stop = subscribe(() => {
+        if (state.covered) return;
+        stop();
+        whenUncovered();
+      });
+      return;
+    }
+    const wait = state.clearAt + state.beat + MOMENT_TAIL_MS - performance.now();
+    if (wait <= 0) work();
+    else window.setTimeout(work, wait);
+  };
+  whenUncovered();
+}
+
 /** The stage as it is right now, for code outside React's render. */
 export function stageNow(): StageState {
   return state;

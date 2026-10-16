@@ -173,6 +173,10 @@ export function SettleUpSheet({
     if (fullAmount !== null && (amount === null || amount === lastFull)) setAmount(fullAmount);
   }
 
+  // Closed, or closing: the panel on its way out keeps the content it left
+  // with, so there is nothing to rebuild while the payment plays out behind it.
+  if (!open) return <Sheet open={false} onClose={onClose} title="Settle up" />;
+
   const submit = async () => {
     if (!selected || !amount || amount <= 0n) return;
     try {
