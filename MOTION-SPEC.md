@@ -1,0 +1,183 @@
+# Motion and depth spec
+
+Approved 16 October 2026. Evidence and the review pages:
+
+- Spec with slow-motion recordings of the app before this work: https://claude.ai/artifact/KaxPtwkdT5GzXYKTnPuBNo
+- The three money moments, prototyped: https://claude.ai/artifact/KfprVZukkHJeiiBGLRQLgu
+
+The yardstick is Apple's Human Interface Guidelines (Motion) and Google's
+Material 3 (Motion, Elevation). Where this document gives a number, it came
+from one of them unless it says otherwise.
+
+The one rule: **motion explains a change, or it doesn't happen.**
+
+---
+
+## 1. Where each screen sits
+
+Three layers, and every movement agrees with them.
+
+| Layer | What | How you move |
+|---|---|---|
+| Tabs | Home, Friends, Activity, You | Side by side, no direction. Switch with a fade (old out, new in growing 98% to 100%, 200ms). Nothing slides. |
+| One step in | A group, a friend | Slides in 32px from the right with a fade (300ms). Back reverses it (250ms). The row you tapped carries its icon, name and amount into the new header (400ms). |
+| Panels | Add expense, Settle up, an expense's details, Split | Rise from the bottom over everything (400ms) and leave downwards (250ms). The screen underneath dims and steps back. A panel opened from a panel makes the first one step back too. |
+
+- The bottom tab bar and the top bar never move during navigation.
+- No blank screens between screens. The old screen stays until the new one is
+  ready; past 300ms, a still outline shaped like the coming screen, then a
+  150ms fade into it.
+- Going back returns you to the same scroll position, with nothing reshuffling.
+
+## 2. Depth
+
+Four levels, matching Material's 0 to 3. Used by role, not on every box.
+Tokens live in `src/app/globals.css`.
+
+| Level | Used for | Day | Night |
+|---|---|---|---|
+| 0 Paper | The page | no shadow, `#fafaf8` | no shadow, `#0b0b0a` |
+| 1 Card | Groups, friends, lists on the page (`shadow-card`) | white, `0 1px 2px / .05, 0 1px 1px / .03` + hairline | `#141413`, lit top edge `.03`, `0 1px 2px / .5` |
+| 2 Raised | Tab bar, a sticky bar once scrolled, a swiped row, toasts, menus (`shadow-raised`, `bg-raised`) | white, `0 2px 4px / .04, 0 6px 16px / .08` | `#1c1c1a`, lit top edge `.05`, `0 6px 16px / .55` |
+| 3 Floating | Panels, dialogs, the + button (`shadow-float`, `shadow-sheet`, `bg-elevated`) | white, `0 4px 8px / .06, 0 16px 40px / .14` | `#232321`, lit top edge `.07`, `0 16px 40px / .65` |
+
+At night a shadow barely shows on a dark page, so height is mostly told by the
+surface getting a step lighter per level.
+
+Touch moves something exactly one level: a pressed card sinks (loses its
+shadow), a dragged row lifts to level 2. Behind a panel the page dims (36% Day,
+60% Night).
+
+## 3. Timing and easing
+
+| Curve | Value | For |
+|---|---|---|
+| Arriving | `cubic-bezier(0.05, 0.7, 0.1, 1)` (Material emphasized decelerate) | Things entering |
+| Leaving | `cubic-bezier(0.3, 0, 0.8, 0.15)` (emphasized accelerate) | Things exiting |
+| In place | `cubic-bezier(0.2, 0, 0, 1)` (standard) | Things that stay on screen |
+| Counting | `cubic-bezier(0, 0, 0, 1)` | Money counting |
+| Journey | `cubic-bezier(0.4, 0, 0.7, 0.6)` | A payment travelling between two people; still moving when it lands |
+| Finger | spring, no bounce, starting at the finger's speed | Anything released from a drag |
+
+| Duration | Used for |
+|---|---|
+| 0ms | Typing a digit, ticking a box in a list |
+| 100ms | Press going down |
+| 150ms | Fades, press release, a bar gaining its shadow, the Reduce Motion fallback |
+| 200ms | Tab switch, toggles, menus, toasts arriving, a screen leaving |
+| 250ms | Panels closing, heights changing, rows collapsing, the group's three tabs sliding |
+| 300ms | A screen arriving, a new row landing |
+| 400ms | Panels opening, the tapped row becoming the new header |
+| 600ms | A balance counting |
+| 700ms | A payment travelling |
+| up to 1.2s | Rive moments. Never blocks a tap. |
+
+Ceiling: anything you trigger more than once a session finishes within 400ms
+and can be tapped through. Departures are always shorter than arrivals. No
+bounce in the app's own motion; the Rive pieces may have a little.
+
+Values: `src/app/globals.css` (`--ease-*`) and `src/components/ui/motion.tsx`.
+
+## 4. Every moment that moves
+
+### Getting around
+| Moment | What moves | ms | What it explains |
+|---|---|---|---|
+| Switching tabs | Fade through, new tab grows 98% to 100% | 200 | Equals; you haven't gone deeper |
+| Opening a group or friend | Slide in from the right; the row's icon, name, amount travel into the header | 300 / 400 | You went into the thing you tapped |
+| Going back | The same, reversed | 250 | You're back where you were |
+| Expenses / Balances / Insights | Content slides with the underline | 250 | They sit side by side |
+| Slow load (over 300ms) | Still outline shaped like the screen, then a fade | 150 | Something's coming, and this is its shape |
+| Scrolling under a sticky bar | Bar gains a level 2 shadow | 150 | Content is passing underneath |
+
+### Touch
+| Moment | What moves | ms | What it explains |
+|---|---|---|---|
+| Pressing a button or a standalone card | Shrinks to 96% (buttons) or 98% (cards), sinks one level (`press-firm`, `press`) | 100 / 150 | The app felt your tap |
+| Pressing a row in a list | Darkens a step (`active:bg-surface-2`). Rows don't shrink: one row shrinking inside its card leaves gaps, and system lists don't do it either | 100 | The app felt your tap |
+| Swiping a row | Follows the finger, lifted to level 2, lets go at the finger's speed | finger | You're holding this row |
+| Pull to refresh (Rive) | Follows the pull, plays while loading, settles | finger | How far to pull, and that it's working |
+
+### Panels
+| Moment | What moves | ms | What it explains |
+|---|---|---|---|
+| A panel opens | Rises with its button bar attached; page dims and steps back to 97% | 400 | It sits on top of where you were |
+| A panel closes | Drops away; after a swipe, at the finger's speed | 250 | Gone, and you're back |
+| A panel on a panel | The first steps back and dims | 400 | This belongs to the one underneath |
+| Keypad makes way for the keyboard | Folds away instead of vanishing | 250 | The pad stepped aside for typing |
+| Menus and pickers | Grow from the button that opened them | 200 | This came from that button |
+| Toasts | Rise once the panel has gone; fade away | 200 / 150 | Confirmation, once the action is complete |
+
+### Money
+Changes made inside a panel wait for it to leave (`components/ui/stage.ts`),
+then play in order: the panel leaves, the change lands, the money counts.
+
+| Moment | What moves | ms | What it explains |
+|---|---|---|---|
+| Saving an expense | Panel leaves; the new row opens into its place, lit by a wash that fades over 1.2s; balances count, starting halfway through the landing | 250 + 300 + 600 | Here's your expense and exactly what it changed |
+| Saving a payment | Panel leaves; a dot in the payer's colour carries the money along the line, which shortens behind it; one ring on the payee; balances count | 700 + 600 | Money went from them to them, and the debt shrank |
+| Paying a debt off | As above, then the "paid" moment on the payee (Rive) | up to 1.2s | You're square. Only when a debt reaches zero |
+| Deleting, and undo | Row folds away; undo folds it back into the same place | 250 | It left from here and came back here |
+| Someone else changes a balance | The amount counts; the row tints briefly | 600 | This changed while you were looking |
+
+### Illustrated (Rive)
+Each is a small set of named states; the app only ever says which state to be in.
+
+| Piece | States | The app sends |
+|---|---|---|
+| Welcome untangle | tangled, untangling, untangled | Progress through the welcome, 0 to 1 |
+| Empty states (3) | arriving, still; tapped | A tap |
+| Paid | hidden, paying, paid, done | "paid" when a debt reaches zero |
+| Pull to refresh | resting, pulling, loading, done | Pull distance 0 to 1, then "loading", "done" |
+| App opening | drawing, waiting, ready | "ready" the moment data arrives |
+
+The app opening is drawn in Rive with the others but shipped as a small code
+version of the same art, because Rive's player (about 340 KB) on the opening
+path would make the app slower to open.
+
+## 5. What never moves
+
+- Digits while you type an amount.
+- Amounts on first load. They show their real value; counting only happens when a value changes in front of you.
+- Lists arriving one row after another. Lists appear all at once.
+- Anything on scroll except a sticky bar's shadow. No parallax, no reveal-on-scroll.
+- The tab bar and top bar during navigation.
+- Anything that loops, bobs or pulses forever. The only loops are the opening and pull-to-refresh, and only while work is actually happening.
+- Error messages shaking. They fade in with a short buzz on the phone.
+- Motion as the only signal. Every change also shows in text or colour.
+- Waiting for an animation before you can tap.
+- Blurred backgrounds behind panels (too costly on Android; a dim does the job).
+- Settings, Activity entries and anything you read rather than act on.
+
+## 6. With motion turned off
+
+With Reduce Motion (iPhone) or Remove animations (Android) on, every slide,
+scale, travel and count becomes a 150ms fade or simply the end result. Rive
+pieces show their final still frame. Depth stays: shadows aren't motion.
+
+## 7. Download size
+
+Compressed scripts the phone downloads, measured from the build.
+
+| | Today | Limit |
+|---|---|---|
+| Home, first load | 195 KB | 210 KB |
+| A group, first load | 225 KB | 240 KB |
+| Rive player (loaded after the first screen, kept offline) | | 340 KB |
+| All Rive drawings together | | 120 KB, 30 KB each |
+
+## 8. Proof
+
+- Smoothness: under 2% of frames over 25ms with the processor slowed 4x
+  (`node scripts/motion-record.mjs <url> <out> timing`), and on a real
+  Android phone.
+- Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
+- Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
+  frame-exact (`scripts/motion-video.mjs`).
+- A five-person test script with questions and pass marks.
+
+## 9. References
+
+21st.dev is a reference only. A component worth borrowing is rebuilt with
+Divvy's colours and the depth levels above, with its licence and size checked
+first.

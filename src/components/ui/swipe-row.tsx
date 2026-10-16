@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
+import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import { Sheet } from "./sheet";
 import { cn, haptic } from "./primitives";
 
 const REVEAL = 96;
-const EASE = [0.2, 0, 0, 1] as const;
 
 /**
  * A list row you can swipe left to reveal one action behind it (DESIGN-PLAN
@@ -28,9 +27,15 @@ export function SwipeRow({
   const x = useMotionValue(0);
   const reduce = useReducedMotion();
   const [open, setOpen] = React.useState(false);
+  // Lifted one level while it is off its resting place (MOTION-SPEC 2):
+  // you're holding this row, and the action sits underneath it.
+  const [lifted, setLifted] = React.useState(false);
+  useMotionValueEvent(x, "change", (latest) => setLifted(latest < -1));
 
-  const settle = (to: number) => {
-    void animate(x, to, reduce ? { duration: 0 } : { duration: 0.24, ease: EASE });
+  // Lets go at the speed the finger was moving, with no bounce, so a flick
+  // and a slow drag both finish the way they started.
+  const settle = (to: number, velocity = 0) => {
+    void animate(x, to, reduce ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.3, velocity });
     setOpen(to !== 0);
   };
 
@@ -60,9 +65,11 @@ export function SwipeRow({
         dragConstraints={{ left: -REVEAL, right: 0 }}
         dragElastic={0.08}
         dragMomentum={false}
-        onDragEnd={(_event, info) => settle(info.offset.x < -REVEAL / 2 || info.velocity.x < -400 ? -REVEAL : 0)}
+        onDragEnd={(_event, info) =>
+          settle(info.offset.x < -REVEAL / 2 || info.velocity.x < -400 ? -REVEAL : 0, info.velocity.x)
+        }
         style={{ x, touchAction: "pan-y" }}
-        className="relative bg-surface"
+        className={cn("relative bg-surface transition-shadow duration-150", lifted && "shadow-raised")}
       >
         {children({ open, close: () => settle(0) })}
       </motion.div>

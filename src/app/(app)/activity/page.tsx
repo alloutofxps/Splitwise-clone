@@ -54,7 +54,7 @@ export default function ActivityPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
           {[0, 1, 2, 3, 4].map((index) => (
             <div key={index} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
               <Skeleton className="size-9 shrink-0 rounded-full" />
@@ -123,7 +123,7 @@ export default function ActivityPage() {
           {days.map(({ label, entries }) => (
             <section key={label}>
               <h2 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h2>
-              <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+              <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {entries.map((item) => (
                   <li key={item.id} className="border-b border-line last:border-b-0">
                     <ActivityRow

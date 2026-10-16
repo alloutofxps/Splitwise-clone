@@ -117,7 +117,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         className={cn(
           "relative inline-flex select-none items-center justify-center font-semibold",
-          "overflow-hidden transition-[background-color,color,opacity] duration-150",
+          // Gives under the finger before anything else happens (MOTION-SPEC 4).
+          "overflow-hidden press-firm",
           "disabled:pointer-events-none",
           !loading && "disabled:opacity-50",
           VARIANTS[variant],
@@ -191,7 +192,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface",
+        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card",
         className,
       )}
       {...props}
@@ -214,8 +215,8 @@ export const PressableCard = React.forwardRef<
         onClick?.(event);
       }}
       className={cn(
-        "block w-full text-left transition duration-150",
-        "active:opacity-70 active:bg-surface-2",
+        "block w-full text-left press",
+        "active:bg-surface-2",
         className,
       )}
       {...props}

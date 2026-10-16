@@ -7,6 +7,7 @@ import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { useWide } from "@/components/ui/use-wide";
+import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
 import { Button, Segmented, Skeleton, haptic } from "@/components/ui/primitives";
 import { GroupLedger } from "@/components/group/ledger";
@@ -207,7 +208,7 @@ export default function GroupPage() {
       ) : (
         <>
           {/* Tabs ---------------------------------------------------------- */}
-          <div className="sticky top-0 z-20 -mx-4 mt-6 bg-bg px-4 lg:-mx-8 lg:px-8">
+          <StickyBar spacing="mt-6" className="-mx-4 bg-bg px-4 lg:-mx-8 lg:px-8">
             <Segmented
               value={tab}
               onChange={setTab}
@@ -217,7 +218,7 @@ export default function GroupPage() {
                 { value: "charts", label: "Insights" },
               ]}
             />
-          </div>
+          </StickyBar>
 
           <AnimatePresence mode="wait">
             <motion.div

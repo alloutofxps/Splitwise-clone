@@ -90,13 +90,23 @@
   --on-person: #ffffff;
 
   /*
-   * Flat. A single soft shadow is kept for things that really float (sheets,
-   * menus, toasts); cards and rows are hairlines on paper.
+   * Depth (MOTION-SPEC 2). Four levels, matching Material's 0 to 3, used by
+   * role rather than on every box:
+   *   0 paper     the page itself, no shadow
+   *   1 card      groups, friends, lists on the page
+   *   2 raised    tab bar, header once scrolled, a row being swiped, toasts
+   *   3 floating  panels, dialogs, the + button
+   * Touch moves something exactly one level. In Day the surfaces are all
+   * white and the shadow carries the height.
    */
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: 0 8px 24px rgb(20 20 18 / 0.1), 0 2px 6px rgb(20 20 18 / 0.06);
-  --shadow-xl: 0 -4px 32px rgb(20 20 18 / 0.12);
+  --shadow-sm: 0 1px 2px rgb(20 20 18 / 0.05), 0 1px 1px rgb(20 20 18 / 0.03);
+  --shadow-md: 0 2px 4px rgb(20 20 18 / 0.04), 0 6px 16px rgb(20 20 18 / 0.08);
+  --shadow-lg: 0 4px 8px rgb(20 20 18 / 0.06), 0 16px 40px rgb(20 20 18 / 0.14);
+  /* Level 3 for a panel at the bottom edge: the same height, cast upwards. */
+  --shadow-xl: 0 -2px 8px rgb(20 20 18 / 0.06), 0 -12px 40px rgb(20 20 18 / 0.14);
+  /* Level 2 for a bar along the bottom edge, cast upwards. */
+  --shadow-bar-up: 0 -1px 3px rgb(20 20 18 / 0.04), 0 -6px 16px rgb(20 20 18 / 0.06);
+  --raised: #ffffff;
 
   --highlight: 0 0 0 0 transparent;
   --card-border: var(--border);
@@ -113,7 +123,8 @@
   --surface: #141413;
   --surface-2: #1c1c1a;
   --surface-3: #252522;
-  --elevated: #1c1c1a;
+  /* Level 3 at night: panels sit a step above everything else. */
+  --elevated: #232321;
   --overlay: rgb(0 0 0 / 0.6);
 
   --text: #f3f2ee;
@@ -163,10 +174,17 @@
   --person-sand: oklch(0.74 0.063 55);
   --on-person: #0b0b0a;
 
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.5);
-  --shadow-xl: 0 -4px 32px rgb(0 0 0 / 0.6);
+  /*
+   * At night a shadow barely shows on a dark page, so height is mostly told by
+   * the surface getting lighter a step per level, with a faint lit top edge
+   * (how Material and Apple both do dark mode). The shadows stay, deeper.
+   */
+  --shadow-sm: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 6px 16px rgb(0 0 0 / 0.55);
+  --shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 16px 40px rgb(0 0 0 / 0.65);
+  --shadow-xl: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 -12px 40px rgb(0 0 0 / 0.65);
+  --shadow-bar-up: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 -6px 16px rgb(0 0 0 / 0.55);
+  --raised: #1c1c1a;
 
   --highlight: 0 0 0 0 transparent;
   --card-border: var(--border);
@@ -256,10 +274,13 @@
   --color-chart-grid: var(--chart-grid);
   --color-chart-track: var(--chart-track);
 
+  --color-raised: var(--raised);
+
   --shadow-card: var(--shadow-sm);
   --shadow-raised: var(--shadow-md);
   --shadow-float: var(--shadow-lg);
   --shadow-sheet: var(--shadow-xl);
+  --shadow-bar: var(--shadow-bar-up);
 
   /* 12 for fields, 14 for cards and lists, 28 for the top of sheets. */
   --radius-xs: 6px;
@@ -432,6 +453,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 /* --------------------------------------------------------------------------
@@ -454,6 +476,47 @@
 /* --------------------------------------------------------------------------
    Motion
    -------------------------------------------------------------------------- */
+
+/*
+ * Timing (MOTION-SPEC 3), from Material 3. Arrivals start fast and settle,
+ * departures start gently and leave fast, things that stay on screen change
+ * on the standard curve. The same values live in components/ui/motion.tsx.
+ */
+:root {
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+/*
+ * Press feedback (MOTION-SPEC 4, touch). A row, card or button gives under
+ * your finger straight away, before anything else happens: it shrinks a
+ * little and sinks one level. Down in 100ms, back in 150ms. Small text links
+ * keep their fade; things pressed constantly shouldn't bounce.
+ */
+@layer components {
+  .press,
+  .press-firm {
+    transition-property: transform, box-shadow, background-color, color, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-standard);
+  }
+  .press:active:not(:disabled):not([aria-disabled="true"]),
+  .press-firm:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.98);
+    box-shadow: none;
+    transition-duration: 100ms;
+  }
+  .press-firm:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .press:active,
+  .press-firm:active {
+    transform: none !important;
+  }
+}
 
 /* A button that is working: a short ink line sweeping its bottom edge. */
 @keyframes divvy-progress {

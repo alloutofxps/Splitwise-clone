@@ -541,7 +541,7 @@ function TableCard({
   rows: string[][];
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card">
       {/* The table scrolls inside its own box; the page never scrolls sideways. */}
       <div className="scroll-area overflow-x-auto">
         <table className="w-full text-left text-body">
@@ -601,7 +601,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-4">
+    <section className="rounded-[var(--radius-lg)] border border-line bg-surface shadow-card p-4">
       <h3 className="text-title font-semibold tracking-[-0.01em] text-text">{title}</h3>
       {subtitle ? (
         <p className="mb-3.5 mt-0.5 text-caption leading-snug text-muted">{subtitle}</p>

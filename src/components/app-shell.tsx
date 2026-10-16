@@ -102,9 +102,10 @@ function TabBar({
 
   return (
     // Docked to the bottom edge with a hairline above it, like the system's
-    // own tab bars: it is part of the frame, not something floating over it.
+    // own tab bars, and raised one level (MOTION-SPEC 2) so the page reads as
+    // passing underneath it.
     <nav
-      className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised shadow-bar pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Main"
     >
       <div className="mx-auto flex h-16 max-w-[560px] items-stretch justify-around px-1.5">
@@ -119,7 +120,8 @@ function TabBar({
               onAddExpense();
             }}
             aria-label="Add an expense"
-            className="flex size-12 items-center justify-center rounded-full bg-brand text-inverse transition hover:bg-brand-hover active:opacity-70"
+            // Floating, the one level-3 thing on the page: it opens a panel.
+            className="press-firm flex size-12 items-center justify-center rounded-full bg-brand text-inverse shadow-float hover:bg-brand-hover"
           >
             <Plus className="size-6" strokeWidth={2.4} />
           </button>

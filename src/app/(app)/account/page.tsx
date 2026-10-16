@@ -448,7 +448,7 @@ function StorageRow() {
   if (!status?.supported || status.persisted) return null;
 
   return (
-    <div className="mt-3 flex items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-3">
+    <div className="mt-3 flex items-start gap-3 rounded-[var(--radius-lg)] border border-line bg-surface shadow-card px-4 py-3">
       <span className="shrink-0 pt-0.5 text-muted">
         <Database className="size-[18px]" />
       </span>
@@ -477,7 +477,7 @@ function Group({ title, caption, children }: { title: string; caption?: string; 
   return (
     <section className="mt-8">
       <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {children}
       </div>
       {caption ? <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">{caption}</p> : null}
@@ -739,7 +739,7 @@ function PaymentMethodsSheet({
           </ul>
         ) : null}
 
-        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-3.5">
+        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Add a way to pay</p>
 
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">

@@ -171,7 +171,7 @@ export default function FriendPage() {
       {ledgers.length > 1 || ledgers.some((ledger) => ledger.planned !== null) ? (
         <section className="mt-8">
           <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Where it comes from</h2>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {ledgers.map((ledger) => {
               const net = BigInt(ledger.net);
               const note =
@@ -253,7 +253,7 @@ export default function FriendPage() {
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
                 <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-                <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+                <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                   {entries.map((entry) =>
                     entry.kind === "expense" && entry.expense ? (
                       <li key={entry.expense.id}>
@@ -313,7 +313,7 @@ export default function FriendPage() {
               <p className="mb-2 px-1 text-caption font-medium text-subtle">
                 Shared groups
               </p>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {data.sharedGroups.map((group) => (
                   <li key={group.id}>
                     <Link
@@ -348,7 +348,7 @@ export default function FriendPage() {
               setRemoving(true);
             }}
             disabled={anythingOutstanding}
-            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 disabled:opacity-50"
+            className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card px-3.5 py-3 text-left press disabled:opacity-50"
           >
             <UserMinus className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
             <span className="min-w-0 flex-1">
