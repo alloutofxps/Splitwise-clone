@@ -9,7 +9,8 @@ import { FlowBar } from "@/components/flow/flow-bar";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
-import { Button, Segmented, Skeleton, haptic } from "@/components/ui/primitives";
+import { Button, Segmented, haptic } from "@/components/ui/primitives";
+import { GroupSkeleton } from "@/components/screen-skeletons";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
 import { GroupCharts } from "@/components/group/charts";
@@ -266,21 +267,6 @@ export default function GroupPage() {
 }
 
 // ---------------------------------------------------------------------------
-
-function GroupSkeleton() {
-  return (
-    <div className="pt-6">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="mt-5 h-[148px] w-full rounded-[var(--radius-xl)]" />
-      <Skeleton className="mt-5 h-11 w-full rounded-[var(--radius-md)]" />
-      <div className="mt-5 space-y-2.5">
-        {[0, 1, 2, 3].map((index) => (
-          <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** An icon with its word beside it on wider screens, and alone on a phone. */
 function HeaderButton({

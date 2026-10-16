@@ -3,13 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
 import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
 import { PullToRefresh } from "./pull-to-refresh";
 import { AppMark } from "./app-mark";
+import { EASE_ENTER } from "./ui/motion";
 
 /**
  * The frame every screen sits in.
@@ -19,6 +20,64 @@ import { AppMark } from "./app-mark";
  * tab bar where a thumb naturally rests - the single most-used action in the
  * app should not be a corner button.
  */
+
+// ---------------------------------------------------------------------------
+// Where each screen sits (MOTION-SPEC 1)
+
+/** The tabs: side by side, so moving between them has no direction. */
+const TOP_LEVEL = new Set(["/", "/friends", "/activity", "/account", "/search"]);
+
+/** How deep a screen is: 0 for a tab, 1 for a group or a friend, and so on. */
+function depthOf(path: string): number {
+  if (TOP_LEVEL.has(path)) return 0;
+  return Math.max(1, path.split("/").filter(Boolean).length - 1);
+}
+
+type Direction = "first" | "forward" | "back" | "across";
+
+/**
+ * Which way you just moved, worked out from where you were: deeper slides in
+ * from the right, back out slides in from the left, and between equals
+ * (two tabs, or one group to another) there is no direction to show.
+ */
+function useDirection(pathname: string): Direction {
+  const [nav, setNav] = React.useState<{ path: string; direction: Direction }>({ path: pathname, direction: "first" });
+  if (nav.path !== pathname) {
+    const from = depthOf(nav.path);
+    const to = depthOf(pathname);
+    setNav({ path: pathname, direction: to > from ? "forward" : to < from ? "back" : "across" });
+  }
+  return nav.direction;
+}
+
+/**
+ * How a screen arrives. Only the arrival moves: the screen you left is
+ * replaced at once, so the two never fight over the frame, and the tab bar
+ * and top bar around them never move at all.
+ *
+ * It starts partly visible, never at nothing. With the old screen gone in one
+ * frame, a fade from zero made that first frame empty paper: the blank flash
+ * this was meant to remove.
+ */
+const STILL = "translateX(0px) scale(1)";
+
+function arrival(direction: Direction, reduce: boolean): { initial: TargetAndTransition; transition: Transition } {
+  // Every start states its transform, even when it is "none at all": blending
+  // from no transform to one starts at scale 0, and the screen grows from a
+  // dot. With motion off, that is the last thing anyone should see.
+  if (reduce) return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: 0.15 } };
+  switch (direction) {
+    case "forward":
+      return { initial: { opacity: 0.3, transform: "translateX(32px) scale(1)" }, transition: { duration: 0.3, ease: EASE_ENTER } };
+    case "back":
+      return { initial: { opacity: 0.3, transform: "translateX(-32px) scale(1)" }, transition: { duration: 0.25, ease: EASE_ENTER } };
+    case "across":
+      return { initial: { opacity: 0.4, transform: "translateX(0px) scale(0.98)" }, transition: { duration: 0.2, ease: EASE_ENTER } };
+    default:
+      // The first screen after the app opens takes over from its placeholder.
+      return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: 0.15 } };
+  }
+}
 
 interface Destination {
   href: string;
@@ -36,6 +95,9 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const { data } = useDashboard();
+  const direction = useDirection(pathname);
+  const reduce = Boolean(useReducedMotion());
+  const enter = arrival(direction, reduce);
 
   const destinations: Destination[] = [
     { href: "/", label: "Home", icon: Home },
@@ -65,9 +127,12 @@ export function AppShell({
         >
           <motion.div
             key={pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+            initial={enter.initial}
+            // Whole transform strings rather than x and scale, so the browser
+            // runs the movement on the compositor: it stays smooth while the
+            // new screen is still being drawn on the main thread.
+            animate={{ opacity: 1, transform: STILL, transitionEnd: { transform: "none" } }}
+            transition={enter.transition}
           >
             {children}
           </motion.div>
