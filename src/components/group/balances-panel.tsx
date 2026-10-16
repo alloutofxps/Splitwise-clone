@@ -92,7 +92,7 @@ export function BalancesPanel({
   return (
     <div>
       {/* The map, with the one Simplify switch under it. ------------------- */}
-      <section className="rounded-[var(--radius-lg)] border border-line bg-surface">
+      <section className="rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {mapEdges.length > 0 && mapPeople.length > 1 ? (
           <div className="px-2 pt-4">
             <FlowMap
@@ -144,7 +144,7 @@ export function BalancesPanel({
               Who pays who here can differ from what two people owe each other.
             </p>
           ) : null}
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {edges.map((edge, index) => {
               const from = people.get(edge.fromPersonId);
               const to = people.get(edge.toPersonId);
@@ -302,7 +302,7 @@ export function BalancesPanel({
           <ChevronRight className={cn("size-4 transition-transform", showEveryone && "rotate-90")} />
         </button>
         {showEveryone ? (
-          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {members.map((member) => {
               const net = BigInt(netById[member.id] ?? "0");
               return (

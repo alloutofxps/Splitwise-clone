@@ -135,7 +135,7 @@ function ToastViewport({
             className={cn(
               // An ink bar: one line, and one action when there is something to undo.
               "pointer-events-auto flex w-full max-w-[420px] cursor-pointer items-center gap-3 rounded-[var(--radius-md)]",
-              "bg-text px-4 py-3 text-inverse shadow-float",
+              "bg-text px-4 py-3 text-inverse shadow-raised",
             )}
           >
             <span className="shrink-0 opacity-80">{ICONS[toast.tone ?? "info"]}</span>

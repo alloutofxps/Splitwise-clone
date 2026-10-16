@@ -106,7 +106,7 @@ export function GroupLedger({
 
   if (isLoading) {
     return (
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {[0, 1, 2, 3, 4].map((index) => (
           <div key={index} className="flex items-center gap-3 px-4 py-3">
             <Skeleton className="size-10 shrink-0 rounded-[var(--radius-md)]" />
@@ -282,7 +282,7 @@ export function GroupLedger({
           {groups.map(({ label, precise, entries }) => (
             <section key={label}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
                     <motion.li key={entry.expense.id} {...ROW_MOTION}>

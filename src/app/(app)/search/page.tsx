@@ -8,6 +8,7 @@ import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { useDashboard, useSearch } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
 import { CATEGORIES } from "@/lib/categories";
+import { StickyBar } from "@/components/ui/sticky";
 
 /**
  * Search across everything.
@@ -57,7 +58,7 @@ export default function SearchPage() {
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
       <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Search</h1>
 
-      <div className="sticky top-0 z-20 -mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">
+      <StickyBar className="-mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">
         <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface [&:not(:focus-within)]: px-3.5 py-3 focus-within:border-brand focus-within:ring-[1.5px] focus-within:ring-text">
           <Search className="size-[18px] shrink-0 text-subtle" />
           <input
@@ -81,7 +82,7 @@ export default function SearchPage() {
             </button>
           ) : null}
         </label>
-      </div>
+      </StickyBar>
 
       {debounced.trim().length < 2 ? (
         <div className="mt-2">
@@ -136,7 +137,7 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {items.map((expense) => (
               <li key={expense.id}>
                 <ExpenseRow

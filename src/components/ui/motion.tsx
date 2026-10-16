@@ -26,6 +26,17 @@ export const EASE = [0.2, 0, 0, 1] as const;
 export const DURATION = { small: 0.15, move: 0.24, sheet: 0.32 } as const;
 
 /**
+ * MOTION-SPEC 3, from Material 3's emphasized curves. Arrivals start fast and
+ * settle gently; departures start gently and leave fast; money counts quickly
+ * at first and eases onto its final figure.
+ */
+export const EASE_ENTER = [0.05, 0.7, 0.1, 1] as const;
+export const EASE_EXIT = [0.3, 0, 0.8, 0.15] as const;
+export const EASE_COUNT = [0, 0, 0, 1] as const;
+/** A balance counting to its new value. */
+export const COUNT_MS = 600;
+
+/**
  * Lists appear with a short fade, all at once. Rows used to rise in one after
  * another, which is a load animation, and nothing on load moves any more.
  */

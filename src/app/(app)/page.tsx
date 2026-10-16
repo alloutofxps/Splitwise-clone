@@ -119,7 +119,7 @@ export default function HomePage() {
               }
             >
               {active.length === 0 ? (
-                <p className="rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-4 text-body text-muted">
+                <p className="rounded-[var(--radius-lg)] border border-line bg-surface shadow-card px-4 py-4 text-body text-muted">
                   No groups yet.{" "}
                   <button
                     onClick={() => setNewGroup(true)}
@@ -254,7 +254,7 @@ function ThisMonth() {
   return (
     <Link
       href="/account"
-      className="mb-8 block rounded-[var(--radius-lg)] border border-line bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
+      className="mb-8 block rounded-[var(--radius-lg)] border border-line bg-surface shadow-card px-4 py-3 press hover:bg-surface-2"
     >
       <span className="flex items-baseline justify-between gap-3">
         <span className="text-body text-muted">This month</span>
@@ -600,7 +600,7 @@ function Section({
 /** A grouped inset list: one card, rows separated by hairlines. */
 function Rows({ children }: { children: React.ReactNode }) {
   return (
-    <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface">
+    <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {children}
     </div>
   );

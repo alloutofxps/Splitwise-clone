@@ -13,6 +13,7 @@
 // Seeds its own data: four people, two groups, a direct expense.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { renderVideo } from "./motion-video.mjs";
 
 const BASE = process.argv[2] ?? "http://localhost:3100";
 const OUT = process.argv[3] ?? "motion-out";
@@ -90,7 +91,7 @@ const FLOWS = {
     await page.goBack();
     await page.waitForTimeout(1600);
   },
-  "03-add-expense": async (page, seedData) => {
+  "03-add-expense": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await page.getByRole("button", { name: "Add an expense" }).first().click();
@@ -102,10 +103,11 @@ const FLOWS = {
       await page.waitForTimeout(120);
     }
     await page.waitForTimeout(300);
+    mark("save");
     await page.getByRole("button", { name: "Add expense" }).last().click();
     await page.waitForTimeout(2400);
   },
-  "04-settle-up": async (page, seedData) => {
+  "04-settle-up": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
     await page.getByRole("button", { name: "Settle up" }).first().click();
@@ -115,6 +117,25 @@ const FLOWS = {
       await pick.click();
       await page.waitForTimeout(800);
     }
+    mark("save");
+    await page.getByRole("button", { name: "Save payment" }).click();
+    await page.waitForTimeout(3000);
+  },
+  // Paying part of a debt: the line stays, shorter.
+  "07-payment": async (page, seedData, mark) => {
+    await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+    await page.getByRole("button", { name: "Settle up" }).first().click();
+    await page.waitForTimeout(900);
+    const pick = page.locator('[role="dialog"] button').filter({ hasText: /pays you|^Pay / }).first();
+    if (await pick.count()) {
+      await pick.click();
+      await page.waitForTimeout(800);
+    }
+    const field = page.locator('[role="dialog"] input[inputmode="decimal"]').first();
+    await field.fill("3");
+    await page.waitForTimeout(400);
+    mark("save");
     await page.getByRole("button", { name: "Save payment" }).click();
     await page.waitForTimeout(3000);
   },
@@ -157,6 +178,8 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   const context = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: 2,
+    // REDUCE=1 records with the phone's Reduce Motion setting on.
+    reducedMotion: process.env.REDUCE ? "reduce" : "no-preference",
   });
   await context.addCookies([{ name: "divvy_id", value: seedData.cookie, url: BASE }]);
   const page = await context.newPage();
@@ -164,7 +187,9 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   await page.addInitScript(() => {
     try {
       localStorage.setItem("divvy-install-dismissed", String(Date.now()));
-    } catch {}
+    } catch {
+      // Storage can be blocked; the prompt then simply shows.
+    }
   });
   // Every frame the page draws, kept across full page loads: the page
   // reports its frame times out in small batches so a navigation loses at
@@ -204,16 +229,24 @@ for (const [name, flow] of Object.entries(FLOWS)) {
 
   const frames = [];
   const started = Date.now();
+  // Moments worth lining up across recordings, such as the tap on Save.
+  const marks = {};
+  const mark = (label) => {
+    marks[label] = Date.now() - started;
+  };
   if (MODE === "frames") {
     cdp.on("Page.screencastFrame", async (frame) => {
-      frames.push({ data: frame.data, at: Date.now() - started });
+      // When the browser drew it, not when it reached us: frames can arrive
+      // in bunches on a busy machine, and arrival time would squash them.
+      const drawn = frame.metadata?.timestamp ? frame.metadata.timestamp * 1000 : Date.now();
+      frames.push({ data: frame.data, at: Math.round(drawn - started) });
       await cdp.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {});
     });
     await cdp.send("Page.startScreencast", { format: "jpeg", quality: 70, maxWidth: 390, maxHeight: 844, everyNthFrame: 1 });
   }
 
   try {
-    await flow(page, seedData);
+    await flow(page, seedData, mark);
   } catch (error) {
     console.error(`${name}: ${error.message.split("\n")[0]}`);
   }
@@ -225,6 +258,7 @@ for (const [name, flow] of Object.entries(FLOWS)) {
     frames.forEach((frame, index) =>
       writeFileSync(`${dir}/${String(index).padStart(3, "0")}-${String(frame.at).padStart(5, "0")}ms.jpg`, Buffer.from(frame.data, "base64")),
     );
+    writeFileSync(`${dir}/marks.json`, JSON.stringify(marks));
     console.log(`${name}: ${frames.length} frames`);
     await sheet(name, frames);
     await video(name, frames, 1);
@@ -232,66 +266,46 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   } else {
     await page.evaluate(() => new Promise((r) => setTimeout(r, 250))).catch(() => {});
     const times = [...frameTimes].sort((a, b) => a - b);
-    const gaps = times.slice(1).map((t, i) => t - times[i]).filter((g) => g < 1000);
-    const sorted = [...gaps].sort((a, b) => a - b);
-    timing[name] = {
-      frames: gaps.length,
-      medianMs: sorted.length ? +sorted[Math.floor(sorted.length / 2)].toFixed(1) : null,
-      p95Ms: sorted.length ? +sorted[Math.floor(sorted.length * 0.95)].toFixed(1) : null,
-      worstMs: sorted.length ? +sorted[sorted.length - 1].toFixed(1) : null,
-      droppedOver25ms: gaps.filter((g) => g > 25).length,
-      droppedShare: gaps.length ? +(gaps.filter((g) => g > 25).length / gaps.length).toFixed(3) : null,
-    };
+    timing[name] = summarise(times);
+    // The moment itself, apart from the page loading before it: the 2.5s
+    // after Save, when the panel leaves and the money moves.
+    if (marks.save !== undefined) {
+      const saveAt = started + marks.save;
+      timing[name].afterSave = summarise(times.filter((t) => t >= saveAt && t <= saveAt + 2500));
+    }
     console.log(name, JSON.stringify(timing[name]));
   }
   await context.close();
+}
+
+/** Frame gaps in a list of frame times: how many ran long, and how long. */
+function summarise(times) {
+  const gaps = times.slice(1).map((t, i) => t - times[i]).filter((g) => g < 1000);
+  const sorted = [...gaps].sort((a, b) => a - b);
+  return {
+    frames: gaps.length,
+    medianMs: sorted.length ? +sorted[Math.floor(sorted.length / 2)].toFixed(1) : null,
+    p95Ms: sorted.length ? +sorted[Math.floor(sorted.length * 0.95)].toFixed(1) : null,
+    worstMs: sorted.length ? +sorted[sorted.length - 1].toFixed(1) : null,
+    droppedOver25ms: gaps.filter((g) => g > 25).length,
+    droppedShare: gaps.length ? +(gaps.filter((g) => g > 25).length / gaps.length).toFixed(3) : null,
+  };
 }
 
 if (MODE === "timing") writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 2));
 await browser.close();
 
 // A video made from the captured frames, each held for as long as it was on
-// screen, encoded by the browser itself (no ffmpeg). `speed` 0.25 gives the
-// slow-motion copy used for review.
+// screen, rendered frame by frame (see motion-video.mjs). `speed` 0.25 gives
+// the slow-motion copy used for review.
 async function video(name, frames, speed) {
   if (frames.length < 2) return;
   mkdirSync(`${OUT}/videos`, { recursive: true });
-  const tab = await browser.newPage();
-  const webm = await tab.evaluate(
-    async ({ items, speed }) => {
-      const first = new Image();
-      first.src = `data:image/jpeg;base64,${items[0].data}`;
-      await first.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width = first.naturalWidth;
-      canvas.height = first.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      const recorder = new MediaRecorder(canvas.captureStream(60), { mimeType: "video/webm;codecs=vp9", videoBitsPerSecond: 4_000_000 });
-      const chunks = [];
-      recorder.ondataavailable = (event) => chunks.push(event.data);
-      const done = new Promise((resolve) => (recorder.onstop = resolve));
-      recorder.start();
-      for (const [i, item] of items.entries()) {
-        const img = new Image();
-        img.src = `data:image/jpeg;base64,${item.data}`;
-        await img.decode();
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const next = items[i + 1];
-        const hold = next ? (next.at - item.at) / speed : 600;
-        await new Promise((r) => setTimeout(r, Math.max(16, hold)));
-      }
-      recorder.stop();
-      await done;
-      const blob = new Blob(chunks, { type: "video/webm" });
-      const buffer = new Uint8Array(await blob.arrayBuffer());
-      let binary = "";
-      for (let i = 0; i < buffer.length; i += 0x8000) binary += String.fromCharCode(...buffer.subarray(i, i + 0x8000));
-      return btoa(binary);
-    },
-    { items: frames, speed },
+  await renderVideo(
+    browser,
+    { tracks: [{ label: null, frames }], from: frames[0].at, to: frames[frames.length - 1].at, speed },
+    `${OUT}/videos/${name}${speed === 1 ? "" : "-slow"}.webm`,
   );
-  writeFileSync(`${OUT}/videos/${name}${speed === 1 ? "" : "-slow"}.webm`, Buffer.from(webm, "base64"));
-  await tab.close();
 }
 
 // A contact sheet: frames in order, each labelled with its time, so a
