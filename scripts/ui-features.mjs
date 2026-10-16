@@ -232,9 +232,14 @@ await page.waitForTimeout(900);
 await page.getByPlaceholder("What was it for?").fill("Undo me");
 await page.getByLabel("Amount").first().fill("12");
 await page.getByRole("button", { name: "Add expense" }).last().click();
-await page.waitForTimeout(1500);
+// Waited for: the toast rises once the panel has finished leaving.
 const undo = page.getByRole("button", { name: "Undo", exact: true });
-check("adding an expense offers Undo", (await undo.count()) > 0);
+const offered = await undo
+  .first()
+  .waitFor({ timeout: 6000 })
+  .then(() => true)
+  .catch(() => false);
+check("adding an expense offers Undo", offered);
 await undo.first().click().catch(() => {});
 await page.waitForTimeout(2000);
 const afterUndo = await page.evaluate(async (id) => {
