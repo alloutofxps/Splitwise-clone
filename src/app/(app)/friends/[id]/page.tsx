@@ -12,14 +12,17 @@ import {
 } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
-import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
+import { Button, EmptyState, cn, haptic } from "@/components/ui/primitives";
+import { FriendSkeleton } from "@/components/screen-skeletons";
 import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleAcrossSheet } from "@/components/friends/settle-across-sheet";
 import { useComposer } from "@/components/expense/composer-context";
 import { ConfirmSheet, Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { useDashboard, useFriend, useRemoveFriend } from "@/lib/client/queries";
+import { useDashboard, useFriend, usePrefetch, useRemoveFriend } from "@/lib/client/queries";
+import { useOpenScreen } from "@/components/ui/open-screen";
+
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
 
@@ -43,6 +46,8 @@ export default function FriendPage() {
   const composer = useComposer();
 
   const { data, isLoading } = useFriend(params.id);
+  const prefetch = usePrefetch();
+  const open = useOpenScreen();
   const { data: dashboard } = useDashboard();
 
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
@@ -59,16 +64,7 @@ export default function FriendPage() {
   );
 
   if (isLoading || !data || !dashboard) {
-    return (
-      <div className="pt-8">
-        <Skeleton className="h-20 w-full rounded-[var(--radius-xl)]" />
-        <div className="mt-4 space-y-2.5">
-          {[0, 1, 2].map((index) => (
-            <Skeleton key={index} className="h-[62px] w-full rounded-[var(--radius-lg)]" />
-          ))}
-        </div>
-      </div>
-    );
+    return <FriendSkeleton name={people.get(params.id)?.displayName} />;
   }
 
   const meId = dashboard.me.id;
@@ -196,7 +192,7 @@ export default function FriendPage() {
               return (
                 <li key={ledger.groupId ?? "direct"}>
                   {ledger.groupId ? (
-                    <Link href={`/groups/${ledger.groupId}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+                    <Link href={`/groups/${ledger.groupId}`} prefetch onPointerDown={() => void prefetch.group(ledger.groupId!)} onClick={(event) => open(event, `/groups/${ledger.groupId}`, prefetch.group(ledger.groupId!))} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
                       {body}
                     </Link>
                   ) : (
@@ -318,7 +314,12 @@ export default function FriendPage() {
                   <li key={group.id}>
                     <Link
                       href={`/groups/${group.id}`}
-                      onClick={() => setSettings(false)}
+                      prefetch
+                      onPointerDown={() => void prefetch.group(group.id)}
+                      onClick={(event) => {
+                        setSettings(false);
+                        open(event, `/groups/${group.id}`, prefetch.group(group.id));
+                      }}
                       className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                     >
                       <span className="text-input">{group.emoji}</span>

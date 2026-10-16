@@ -12,7 +12,9 @@ import { ApiError } from "@/lib/client/api";
 import { formatMoney } from "@/lib/money";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
-import { useAddFriend, useDashboard } from "@/lib/client/queries";
+import { useAddFriend, useDashboard, usePrefetch } from "@/lib/client/queries";
+import { useOpenScreen } from "@/components/ui/open-screen";
+
 import type { FriendDto } from "@/lib/types";
 
 /**
@@ -67,7 +69,7 @@ export default function FriendsPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
-        <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+        <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2].map((index) => (
             <div key={index} className="flex items-center gap-3 px-4 py-3">
               <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -289,6 +291,8 @@ function PeopleSection({
 }
 
 function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: bigint; offerAdd?: boolean }) {
+  const prefetch = usePrefetch();
+  const open = useOpenScreen();
   const entries = Object.entries(friend.net);
   const hue = usePersonHue(friend.person);
   const biggest = entries.reduce((max, [, value]) => {
@@ -307,7 +311,13 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <Link href={`/friends/${friend.person.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+      <Link
+        href={`/friends/${friend.person.id}`}
+        prefetch
+        onPointerDown={() => void prefetch.friend(friend.person.id)}
+        onClick={(event) => open(event, `/friends/${friend.person.id}`, prefetch.friend(friend.person.id))}
+        className="flex min-w-0 flex-1 items-center gap-3"
+      >
         <Avatar person={friend.person} size="md" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body-lg font-medium text-text">{friend.person.displayName}</span>

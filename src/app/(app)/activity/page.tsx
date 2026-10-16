@@ -9,10 +9,13 @@ import {
   useActivity,
   useDashboard,
   useMarkActivitySeen,
+  usePrefetch,
   useRestoreExpense,
   useRestoreSettlement,
 } from "@/lib/client/queries";
 import { useToast } from "@/components/ui/toast";
+import { useOpenScreen } from "@/components/ui/open-screen";
+
 import { ApiError } from "@/lib/client/api";
 import { groupByDay } from "@/lib/day-groups";
 import { Avatar } from "@/components/ui/avatar";
@@ -54,7 +57,7 @@ export default function ActivityPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2, 3, 4].map((index) => (
             <div key={index} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
               <Skeleton className="size-9 shrink-0 rounded-full" />
@@ -201,6 +204,8 @@ function ActivityRow({
   people: Map<string, PersonDto>;
   onOpenExpense: (id: string) => void;
 }) {
+  const prefetch = usePrefetch();
+  const open = useOpenScreen();
   const actor = people.get(activity.actorPersonId);
   const isMe = activity.actorPersonId === meId;
   const actorName = isMe ? "You" : (actor?.displayName ?? "Someone");
@@ -281,7 +286,7 @@ function ActivityRow({
   }
   if (activity.groupId) {
     return (
-      <Link href={`/groups/${activity.groupId}`} className="block">
+      <Link href={`/groups/${activity.groupId}`} prefetch onPointerDown={() => void prefetch.group(activity.groupId!)} onClick={(event) => open(event, `/groups/${activity.groupId}`, prefetch.group(activity.groupId!))} className="block">
         {body}
       </Link>
     );

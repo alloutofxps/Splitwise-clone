@@ -14,7 +14,9 @@ import {
   Target,
   Ticket,
 } from "lucide-react";
-import { useActivity, useBudgets, useDashboard, useUpdateGroup } from "@/lib/client/queries";
+import { useActivity, useBudgets, useDashboard, usePrefetch, useUpdateGroup } from "@/lib/client/queries";
+import { useOpenScreen } from "@/components/ui/open-screen";
+
 import { ActionSheet, useLongPress } from "@/components/ui/swipe-row";
 import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/client/api";
@@ -45,6 +47,25 @@ export default function HomePage() {
   const [newGroup, setNewGroup] = React.useState(false);
   const [joining, setJoining] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
+
+  // The groups on Home load in spare moments, so opening one slides in a
+  // screen that is already complete (MOTION-SPEC 1).
+  const prefetch = usePrefetch();
+  const groupIds = (data?.groups ?? [])
+    .filter((group) => !group.archivedAt)
+    .slice(0, 6)
+    .map((group) => group.id)
+    .join(",");
+  React.useEffect(() => {
+    if (!groupIds) return;
+    const load = () => groupIds.split(",").forEach((id) => void prefetch.group(id));
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(load, { timeout: 2000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const timer = window.setTimeout(load, 300);
+    return () => window.clearTimeout(timer);
+  }, [groupIds, prefetch]);
 
   if (!data) return null;
 
@@ -352,14 +373,22 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
     );
   }
 
-  if (isLoading && rows.length === 0) {
+  // Until the activity is in, an outline the size of the finished section:
+  // showing the settle-up row alone and then growing to three pushed
+  // everything below it down a moment after Home appeared.
+  if (isLoading) {
     return (
       <Section title="Needs you">
         <Rows>
-          <div className="flex items-center gap-3 px-4 py-3">
-            <Skeleton className="size-8 rounded-full" />
-            <Skeleton className="h-4 flex-1" />
-          </div>
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="flex items-center gap-3 px-4 py-3">
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <span className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-3/5" />
+                <Skeleton className="h-3 w-2/5" />
+              </span>
+            </div>
+          ))}
         </Rows>
       </Section>
     );
@@ -451,6 +480,8 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
   // Long-press (or right-click) for the things you'd otherwise open the group
   // to do (DESIGN-PLAN Part 4).
   const press = useLongPress(() => setMenu(true));
+  const prefetch = usePrefetch();
+  const open = useOpenScreen();
   const archive = (archived: boolean) =>
     update.mutate(
       { archived },
@@ -488,9 +519,16 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
     />
     <Link
       href={`/groups/${group.id}`}
+      prefetch
       {...press.handlers}
+      // The touch that starts a tap is the moment to fetch what's behind it.
+      onPointerDown={(event) => {
+        void prefetch.group(group.id);
+        press.handlers.onPointerDown(event);
+      }}
       onClick={(event) => {
         if (press.consumed()) event.preventDefault();
+        else open(event, `/groups/${group.id}`, prefetch.group(group.id));
       }}
       className="flex select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
     >
@@ -632,8 +670,22 @@ function LinkRow({
   caption?: string;
   tone?: "owe";
 }) {
+  const prefetch = usePrefetch();
+  const open = useOpenScreen();
+  // The screen behind the row starts loading as the finger lands on it.
+  const load = () => {
+    const friend = /^\/friends\/([^/?]+)/.exec(href)?.[1];
+    const group = /^\/groups\/([^/?]+)/.exec(href)?.[1];
+    return friend ? prefetch.friend(friend) : group ? prefetch.group(group) : Promise.resolve();
+  };
   return (
-    <Link href={href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+    <Link
+      href={href}
+      prefetch
+      onPointerDown={() => void load()}
+      onClick={(event) => open(event, href, load())}
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
+    >
       {avatar ? (
         <Avatar person={avatar} size="sm" />
       ) : (

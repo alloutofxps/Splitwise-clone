@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Onboarding } from "@/components/onboarding";
 import { ExpenseComposer } from "@/components/expense/composer";
-import { useDashboard } from "@/lib/client/queries";
+import { useDashboard, usePrefetch } from "@/lib/client/queries";
+import { SkeletonFor, TabBarFrame } from "@/components/screen-skeletons";
 import { ApiError } from "@/lib/client/api";
-import { Skeleton, useMounted } from "@/components/ui/primitives";
+import { useMounted } from "@/components/ui/primitives";
 import { ComposerContext } from "@/components/expense/composer-context";
 import { useLaunchIntent } from "@/components/launch-intent";
 import { useToast } from "@/components/ui/toast";
@@ -30,6 +31,13 @@ import type { ExpenseDto } from "@/lib/types";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data, isLoading, error } = useDashboard();
   const pathname = usePathname();
+
+  // Activity is fetched alongside the dashboard rather than after it, so Home
+  // opens with "Needs you" complete instead of growing a moment later.
+  const prefetch = usePrefetch();
+  React.useEffect(() => {
+    void prefetch.activity();
+  }, [prefetch]);
   const toast = useToast();
   // Gated on having an identity: the share relay is one-shot, so reading it on
   // a device that is about to be shown onboarding would consume the receipt to
@@ -115,7 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     [pathname],
   );
 
-  if (isLoading) return <BootSkeleton />;
+  if (isLoading) return <BootSkeleton pathname={pathname} />;
 
   /*
    * A setup interrupted on the recovery step resumes there, even though the
@@ -173,20 +181,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Matches the shape of the home screen rather than showing a spinner, so the
- * first paint settles into the real content instead of replacing it.
+ * While the app opens: the outline of the screen it is opening on, inside the
+ * same frame and with the tab bar already in place, so the first paint settles
+ * into the real content instead of being replaced by a different shape.
  */
-function BootSkeleton() {
+function BootSkeleton({ pathname }: { pathname: string }) {
   return (
-    <div className="mx-auto w-full max-w-[560px] px-4 pt-8 lg:max-w-[720px] lg:px-8">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="mt-3 h-11 w-52" />
-      <Skeleton className="mt-8 h-4 w-16" />
-      <div className="mt-3 space-y-3">
-        {[0, 1, 2].map((index) => (
-          <Skeleton key={index} className="h-[76px] w-full rounded-[var(--radius-lg)]" />
-        ))}
-      </div>
+    <div className="relative flex min-h-[100dvh] flex-col">
+      <main className="mx-auto w-full max-w-[560px] flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:max-w-[720px] lg:px-8">
+        <SkeletonFor pathname={pathname} />
+      </main>
+      <TabBarFrame />
     </div>
   );
 }

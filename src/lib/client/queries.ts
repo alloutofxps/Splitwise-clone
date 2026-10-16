@@ -14,7 +14,10 @@
  *    the network. The optimistic state stays on screen and the outbox retries.
  */
 
+import * as React from "react";
 import {
+  infiniteQueryOptions,
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -76,14 +79,16 @@ export function useDashboard() {
   });
 }
 
-export function useGroup(id: string | undefined) {
-  return useQuery({
-    queryKey: keys.group(id ?? ""),
-    enabled: Boolean(id),
+const groupQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.group(id),
     queryFn: ({ signal }) =>
       api.get<{ group: GroupDetailDto }>(`/api/groups/${id}`, signal).then((r) => r.group),
     staleTime: 5_000,
   });
+
+export function useGroup(id: string | undefined) {
+  return useQuery({ ...groupQuery(id ?? ""), enabled: Boolean(id) });
 }
 
 
@@ -94,19 +99,9 @@ export function useGroup(id: string | undefined) {
  * page: without this the app silently showed the first forty entries and
  * nothing else, which on an active group looks exactly like data loss.
  */
-export function useGroupLedger(
-  id: string | undefined,
-  filters?: { q?: string; category?: string; person?: string },
-) {
-  const params = new URLSearchParams();
-  if (filters?.q) params.set("q", filters.q);
-  if (filters?.category) params.set("category", filters.category);
-  if (filters?.person) params.set("person", filters.person);
-  const base = params.toString();
-
-  return useInfiniteQuery({
-    queryKey: [...keys.groupLedger(id ?? ""), base],
-    enabled: Boolean(id),
+const groupLedgerQuery = (id: string, base: string) =>
+  infiniteQueryOptions({
+    queryKey: [...keys.groupLedger(id), base],
     initialPageParam: null as string | null,
     queryFn: ({ signal, pageParam }) => {
       const next = new URLSearchParams(base);
@@ -117,6 +112,17 @@ export function useGroupLedger(
     getNextPageParam: (last) => last.nextCursor,
     staleTime: 5_000,
   });
+
+export function useGroupLedger(
+  id: string | undefined,
+  filters?: { q?: string; category?: string; person?: string },
+) {
+  const params = new URLSearchParams();
+  if (filters?.q) params.set("q", filters.q);
+  if (filters?.category) params.set("category", filters.category);
+  if (filters?.person) params.set("person", filters.person);
+
+  return useInfiniteQuery({ ...groupLedgerQuery(id ?? "", params.toString()), enabled: Boolean(id) });
 }
 
 export function useGroupStats(id: string | undefined) {
@@ -129,18 +135,20 @@ export function useGroupStats(id: string | undefined) {
   });
 }
 
+const activityQuery = infiniteQueryOptions({
+  queryKey: keys.activity,
+  initialPageParam: null as string | null,
+  queryFn: ({ signal, pageParam }) =>
+    api.get<Page<ActivityDto>>(
+      pageParam ? `/api/activity?before=${encodeURIComponent(pageParam)}` : "/api/activity",
+      signal,
+    ),
+  getNextPageParam: (last) => last.nextCursor,
+  staleTime: 10_000,
+});
+
 export function useActivity() {
-  return useInfiniteQuery({
-    queryKey: keys.activity,
-    initialPageParam: null as string | null,
-    queryFn: ({ signal, pageParam }) =>
-      api.get<Page<ActivityDto>>(
-        pageParam ? `/api/activity?before=${encodeURIComponent(pageParam)}` : "/api/activity",
-        signal,
-      ),
-    getNextPageParam: (last) => last.nextCursor,
-    staleTime: 10_000,
-  });
+  return useInfiniteQuery(activityQuery);
 }
 
 export interface FriendDetail {
@@ -155,13 +163,39 @@ export interface FriendDetail {
   sharedGroups: { id: string; name: string; emoji: string; currency: string; color: string }[];
 }
 
-export function useFriend(id: string | undefined) {
-  return useQuery({
-    queryKey: keys.friend(id ?? ""),
-    enabled: Boolean(id),
+const friendQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.friend(id),
     queryFn: ({ signal }) => api.get<FriendDetail>(`/api/friends/${id}`, signal),
     staleTime: 5_000,
   });
+
+export function useFriend(id: string | undefined) {
+  return useQuery({ ...friendQuery(id ?? ""), enabled: Boolean(id) });
+}
+
+/**
+ * Loads a screen's data before it is opened (MOTION-SPEC 1: no blank screens).
+ *
+ * Opening a group used to show blank paper, then grey shapes, then the header,
+ * then the list arriving on its own: four different screens in a quarter of a
+ * second. With the data already here, the screen slides in complete. Each call
+ * is a no-op while what's cached is still fresh, so calling it on every touch
+ * costs nothing.
+ */
+export function usePrefetch() {
+  const client = useQueryClient();
+  return React.useMemo(
+    () => ({
+      // Each resolves when the screen's data is in (or failed), so a tap can
+      // wait for it briefly before moving.
+      group: (id: string) =>
+        Promise.all([client.prefetchQuery(groupQuery(id)), client.prefetchInfiniteQuery(groupLedgerQuery(id, ""))]),
+      friend: (id: string) => client.prefetchQuery(friendQuery(id)),
+      activity: () => client.prefetchInfiniteQuery(activityQuery),
+    }),
+    [client],
+  );
 }
 
 export function useExpense(id: string | undefined) {
