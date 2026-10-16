@@ -322,9 +322,16 @@ console.log("\nAn expense added offline");
     .catch(() => false);
   check("the composer closes instead of waiting on the network", closed, `${Date.now() - startedAt}ms`);
 
-  await off.waitForTimeout(1000);
-  const told = await off.locator("body").innerText();
-  check("and says the expense is saved locally", /Saved on your phone|back online/i.test(told));
+  // Waited for rather than read at a fixed moment: confirmations rise once the
+  // panel has finished leaving (MOTION-SPEC 4), which on a slow CI runner can
+  // land after a fixed one-second read.
+  const told = await off
+    .getByText(/Saved on your phone|back online/i)
+    .first()
+    .waitFor({ timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check("and says the expense is saved locally", told);
 
   const queued = await off.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
