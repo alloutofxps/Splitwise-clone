@@ -439,6 +439,15 @@ console.log("\nUndoing a deleted expense");
     .then(() => true)
     .catch(() => false);
   check("the delete toast offers an undo", offered);
+  if (!offered) {
+    // What was on screen instead, so a failure on CI can be understood.
+    const scene = await page.evaluate(() => ({
+      dialogs: [...document.querySelectorAll('[role="dialog"]')].map((d) => d.textContent.slice(0, 80)),
+      status: [...document.querySelectorAll('[role="status"]')].map((s) => s.textContent.slice(0, 120)),
+      url: location.pathname,
+    }));
+    console.log("    on screen:", JSON.stringify(scene));
+  }
 
   const goneNet = await page.evaluate(async (g) => {
     const r = await (await fetch(`/api/groups/${g}`)).json();
