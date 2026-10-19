@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CloudOff, Info, TriangleAlert, Undo2 } from "lucide-react";
 import { cn, haptic, useMounted } from "./primitives";
 import { EASE_ENTER, EASE_EXIT } from "./motion";
-import { PANEL_EXIT_MS, stageNow, untilClear, useStage } from "./stage";
+import { PANEL_EXIT_MS, stageNow, untilClear, useStage, type StageState } from "./stage";
 
 export type ToastTone = "success" | "error" | "info" | "offline";
 
@@ -115,16 +115,19 @@ function ToastViewport({
 }) {
   const mounted = useMounted();
   const stage = useStage();
-  // Re-render once the panel has finished leaving, to let held toasts rise.
-  const [, setCleared] = React.useState(0);
+  // Let held toasts rise once the panel has finished leaving. The timer
+  // firing is the signal, not a second look at the clock: timers can fire a
+  // fraction of a millisecond early, and a toast held on that re-check had
+  // nothing left to wake it, so it never appeared.
+  const [clearedStage, setClearedStage] = React.useState<StageState | null>(null);
   React.useEffect(() => {
     if (stage.covered) return;
     const wait = untilClear(stage);
     if (wait === 0) return;
-    const timer = window.setTimeout(() => setCleared((n) => n + 1), wait);
+    const timer = window.setTimeout(() => setClearedStage(stage), wait);
     return () => window.clearTimeout(timer);
   }, [stage]);
-  const panelGone = !stage.covered && untilClear(stage) === 0;
+  const panelGone = !stage.covered && (clearedStage === stage || untilClear(stage) === 0);
   if (!mounted) return null;
   const visible = toasts.filter((toast) => !toast.afterPanel || panelGone);
 
