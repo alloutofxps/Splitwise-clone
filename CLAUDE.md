@@ -1,0 +1,94 @@
+# Divvy: notes for Claude sessions
+
+Divvy is a Splitwise-style app: Next.js 15 (app router), React 19, TanStack
+Query 5, framer-motion, Tailwind v4, Prisma on SQLite, hosted on Railway
+(deploys automatically from `main`).
+
+## Read first, in this order
+
+1. `HANDOFF.md`, if it exists: where the last session stopped. It is a local
+   working note, not committed, and is the source of truth for current state
+   and what's left.
+2. `MOTION-SPEC.md`: the approved motion contract. Its rules are binding:
+   - "Motion explains a change, or it doesn't happen."
+   - Section 5, "What never moves".
+   - Section 6, Reduce Motion: every slide, scale, travel and count becomes
+     a 150ms fade or the end result.
+   - Section 7, download limits: Home 210 KB, a group 240 KB, first load,
+     compressed.
+   - Section 8, smoothness: under 2% of frames over 25ms with the processor
+     slowed 4x (`node scripts/motion-record.mjs <url> <out> timing`).
+   A change to motion that the spec doesn't describe updates the spec in the
+   same PR.
+3. `DESIGN-PLAN.md` (the Flow x Quiet redesign), then the audits:
+   `UX-AUDIT.md`, `DESIGN-AUDIT.md`, `FEATURE-AUDIT.md`, `PRODUCTION-AUDIT.md`.
+
+## Working with the person
+
+- They are not a developer. Use plain language, no em dashes.
+- Plan first and wait for their OK before changing code.
+- Fix everything found, in phases. Never offer a "top N" shortlist.
+- One small PR per item, with recordings or numbers as proof. Merge only
+  when CI (`verify` and `image`) is green, then confirm main's run on the
+  merge commit.
+- Ask before installing any new package, skill or tool.
+
+## Standing rules
+
+- Commit as `Pratik Parashar <123747164+alloutofxps@users.noreply.github.com>`
+  with a `Co-Authored-By` trailer. PR bodies end with the Claude Code line.
+- Never show secrets. Print Railway variable names only, never values.
+- Never touch the R2 bucket `coherence-audio`; it belongs to another project.
+- Never sign in to the person's own accounts.
+- Never commit anything in `recordings/` (their screen recordings of other
+  apps).
+
+## Don'ts (already researched; don't spend time on them)
+
+- iPhone haptics on the web: the hidden-switch trick was patched in iOS 26.5,
+  and the Vibration API covers Android only. Leave the haptics in
+  `src/components/ui/primitives.tsx` as they are.
+- Vaul (unmaintained), Lenis smooth scroll and React Bits: they break
+  "What never moves".
+- Rive and Lottie: rejected for watermarks and size. The drawn moments are
+  SVG moved by CSS or the browser's own animations (WAAPI).
+- The Taste Skill (`design-taste-frontend`) is for websites. Use it only for
+  a Divvy landing page, never for app screens.
+- Animate UI and 21st.dev are reference only. Rebuild anything borrowed with
+  Divvy's tokens and depth levels, with its licence and size checked first
+  (MOTION-SPEC section 9).
+
+## Checking work
+
+Run from the repo root in Git Bash. `HANDOFF.md` section 6 has the full
+detail.
+
+- `npx tsc --noEmit -p .`, `npx eslint src scripts`, `npx vitest run`
+- Build with `npm run build:app`, not `npm run build` (that one also
+  migrates `.env`'s database).
+- Serve on the test database: `DATABASE_URL=file:./design.db npx next start --port 3100`.
+  `prisma/dev.db` is behind on migrations; don't migrate it without asking.
+- No Playwright Chromium on this machine. Use Edge:
+  `export CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"`.
+  Never run `msedge.exe --version`; it opens a window on the person's screen.
+- Browser suites: `node scripts/ui-check.mjs <url>`,
+  `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
+  Many sign-ups from localhost hit a rate limit (429); restarting the server
+  clears it.
+- Stopping a background shell doesn't stop the server. In PowerShell:
+  `Get-NetTCPConnection -LocalPort 3100 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`.
+- Motion videos are made frame by frame (`scripts/motion-record.mjs`,
+  `motion-compare.mjs`, `motion-video.mjs`), never by recording the screen
+  live.
+
+## Animation rules learned the hard way
+
+- Never let framer-motion blend a transform from `none`: it starts at scale 0.
+  Give every `initial` an explicit transform.
+- Use WAAPI or CSS for anything that runs while React is busy.
+- Count numbers by writing text directly (`useCountedText`), not through
+  React state.
+- Never re-check the clock after a timer without a fallback wake-up (timers
+  can fire slightly early on CI).
+- Before removing a worktree with a `node_modules` junction, delete the
+  junction first: `(Get-Item <dir>\node_modules).Delete()` in PowerShell.
