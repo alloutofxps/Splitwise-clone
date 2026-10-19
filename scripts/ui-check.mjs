@@ -423,10 +423,27 @@ console.log("\nUndoing a deleted expense");
 {
   await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1500);
+  // A timeline of panels and messages from here on, printed if this fails.
+  await page.evaluate(() => {
+    const t0 = performance.now();
+    window.__timeline = [];
+    let last = "";
+    const note = () => {
+      const now = JSON.stringify({
+        dialogs: [...document.querySelectorAll('[role="dialog"]')].map((d) => d.getAttribute("aria-label") ?? d.textContent.slice(0, 40)),
+        status: [...document.querySelectorAll('[role="status"]')].map((el) => el.textContent.slice(0, 80)).filter(Boolean),
+      });
+      if (now !== last) window.__timeline.push(`${Math.round(performance.now() - t0)}ms ${now}`);
+      last = now;
+    };
+    new MutationObserver(note).observe(document.body, { subtree: true, childList: true, characterData: true });
+    note();
+  });
   await page.getByText("Dinner").first().click();
   await page.waitForTimeout(1200);
   await page.getByRole("button", { name: "Delete" }).click();
   await page.waitForTimeout(800);
+  await page.evaluate(() => window.__timeline.push("-- confirming"));
   await page.getByRole("button", { name: /^Delete$/ }).last().click();
 
   // Waited for rather than counted at a fixed moment: the toast rises once
@@ -447,6 +464,7 @@ console.log("\nUndoing a deleted expense");
       url: location.pathname,
     }));
     console.log("    on screen:", JSON.stringify(scene));
+    console.log((await page.evaluate(() => window.__timeline)).map((line) => `    ${line}`).join("\n"));
   }
 
   const goneNet = await page.evaluate(async (g) => {
