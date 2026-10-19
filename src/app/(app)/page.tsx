@@ -22,7 +22,7 @@ import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/client/api";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
-import { Skeleton, cn } from "@/components/ui/primitives";
+import { FlowDoodle, Skeleton, cn } from "@/components/ui/primitives";
 import { NewGroupSheet } from "@/components/group/new-group-sheet";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { ImportSheet } from "@/components/group/import-sheet";
@@ -102,6 +102,7 @@ export default function HomePage() {
           {firstRun ? (
             <>
             <BackupNotice />
+            <FlowDoodle play="start" className="-ml-2 mb-2 mt-6" />
             <Section title="Get started">
               <Rows>
                 <ActionRow

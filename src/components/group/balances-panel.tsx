@@ -111,7 +111,7 @@ export function BalancesPanel({
           </div>
         ) : (
           <div className="flex flex-col items-center px-6 py-8 text-center">
-            <FlowDoodle className="mb-3" />
+            <FlowDoodle className="mb-3" play="settled" />
             <p className="text-title font-semibold text-text">Everyone is settled up</p>
             <p className="mt-1 text-body text-muted">Nobody in this group owes anything.</p>
           </div>

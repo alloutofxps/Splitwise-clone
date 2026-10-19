@@ -121,6 +121,41 @@ const FLOWS = {
     await page.getByRole("button", { name: "Save payment" }).click();
     await page.waitForTimeout(3000);
   },
+  // A brand new account: Home's "start" drawing.
+  "08-first-run": async (page) => {
+    const fresh = client();
+    await fresh.call("/api/identity", { displayName: "Noor Ali", avatarColor: "teal", defaultCurrency: "EUR" });
+    await page.context().addCookies([{ name: "divvy_id", value: fresh.cookie, url: BASE }]);
+    await page.goto(BASE, { waitUntil: "commit" });
+    await page.waitForTimeout(2600);
+  },
+  // Pull to refresh, as in the installed app: pulled, held, let go.
+  "09-pull-refresh": async (page) => {
+    await page.addInitScript(() => {
+      const real = window.matchMedia.bind(window);
+      window.matchMedia = (query) =>
+        query === "(display-mode: standalone)" ? { ...real(query), matches: true } : real(query);
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForTimeout(800);
+    const touch = (type, y) =>
+      page.evaluate(
+        ([type, y]) => {
+          const event = new Event(type, { bubbles: true });
+          Object.defineProperty(event, "touches", { value: type === "touchend" ? [] : [{ clientY: y }] });
+          window.dispatchEvent(event);
+        },
+        [type, y],
+      );
+    await touch("touchstart", 100);
+    for (let y = 100; y <= 220; y += 6) {
+      await touch("touchmove", y);
+      await page.waitForTimeout(16);
+    }
+    await page.waitForTimeout(500);
+    await touch("touchend", 220);
+    await page.waitForTimeout(2200);
+  },
   // Paying part of a debt: the line stays, shorter.
   "07-payment": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });

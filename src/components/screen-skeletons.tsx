@@ -1,4 +1,5 @@
 import { ChevronLeft } from "lucide-react";
+import { AppMark } from "./app-mark";
 import { Skeleton, cn } from "./ui/primitives";
 
 /**
@@ -12,6 +13,9 @@ import { Skeleton, cn } from "./ui/primitives";
  *
  * `late` holds the outline back for 300ms, for screens reached from inside the
  * app: most arrive before that, and should never flash an outline first.
+ *
+ * `opening` is the app opening on Home: the real logo sits where it will be,
+ * drawing itself while the first screen loads.
  */
 
 function Rows({ count, avatar = "square" }: { count: number; avatar?: "square" | "round" }) {
@@ -31,11 +35,18 @@ function Rows({ count, avatar = "square" }: { count: number; avatar?: "square" |
   );
 }
 
-export function HomeSkeleton({ late }: { late?: boolean }) {
+export function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) {
   return (
     <div aria-hidden className={cn("pt-[max(1rem,env(safe-area-inset-top))]", late && "appear-late")}>
       <div className="mb-5 flex h-10 items-center justify-between">
-        <Skeleton className="h-7 w-24" />
+        {opening ? (
+          <span className="flex items-center gap-2 lg:invisible">
+            <AppMark draw />
+            <span className="text-title-lg font-semibold tracking-[-0.03em] text-text">Divvy</span>
+          </span>
+        ) : (
+          <Skeleton className="h-7 w-24" />
+        )}
         <Skeleton className="size-9 rounded-full" />
       </div>
       <div className="space-y-3">
@@ -123,8 +134,16 @@ export function ListSkeleton({ late, title = true }: { late?: boolean; title?: b
 }
 
 /** The outline for whichever screen a path leads to. */
-export function SkeletonFor({ pathname, late }: { pathname: string; late?: boolean }) {
-  if (pathname === "/") return <HomeSkeleton late={late} />;
+export function SkeletonFor({
+  pathname,
+  late,
+  opening,
+}: {
+  pathname: string;
+  late?: boolean;
+  opening?: boolean;
+}) {
+  if (pathname === "/") return <HomeSkeleton late={late} opening={opening} />;
   if (pathname.startsWith("/groups/")) return <GroupSkeleton late={late} />;
   if (/^\/friends\/[^/]+/.test(pathname)) return <FriendSkeleton late={late} />;
   return <ListSkeleton late={late} />;

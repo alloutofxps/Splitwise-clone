@@ -189,7 +189,7 @@ function BootSkeleton({ pathname }: { pathname: string }) {
   return (
     <div className="relative flex min-h-[100dvh] flex-col">
       <main className="mx-auto w-full max-w-[560px] flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:max-w-[720px] lg:px-8">
-        <SkeletonFor pathname={pathname} />
+        <SkeletonFor pathname={pathname} opening />
       </main>
       <TabBarFrame />
     </div>

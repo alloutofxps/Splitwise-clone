@@ -349,18 +349,64 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("shimmer rounded-[var(--radius-sm)]", className)} />;
 }
 
+/** How the doodle moves when it appears (MOTION-SPEC 4, illustrated). */
+export type DoodlePlay = "arrive" | "start" | "settled" | "wait";
+
 /**
  * The small drawing on an empty screen: three people, two lines between them.
  * The app's one picture, in the same language as the flow map.
+ *
+ * With `play` it moves once as it appears (the steps are in globals.css):
+ * "arrive" for an empty list, "start" for a brand new account, "settled" when
+ * nobody owes anything, "wait" while pull to refresh works. `progress` (0 to 1)
+ * instead draws it as far as a pull has got. A tap makes the three hop.
  */
-export function FlowDoodle({ className }: { className?: string }) {
+export function FlowDoodle({
+  className,
+  play,
+  progress,
+}: {
+  className?: string;
+  play?: DoodlePlay;
+  progress?: number;
+}) {
+  const ref = React.useRef<SVGSVGElement>(null);
+  const moving = play !== undefined || progress !== undefined;
+  const line =
+    moving
+      ? {
+          pathLength: 1,
+          strokeDasharray: "1 1",
+          style: progress === undefined ? undefined : { strokeDashoffset: 1 - progress },
+        }
+      : {};
+  const person =
+    progress === undefined ? undefined : { transform: `scale(${0.5 + 0.5 * progress})` };
+
+  const hop = () => {
+    if (!play || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    ref.current?.querySelectorAll("circle").forEach((circle, index) => {
+      circle.animate(
+        [{ transform: "translateY(0)" }, { transform: "translateY(-5px)", offset: 0.4 }, { transform: "translateY(0)" }],
+        { duration: 420, delay: index * 70, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+      );
+    });
+  };
+
   return (
-    <svg viewBox="0 0 96 40" className={cn("h-10 w-24", className)} aria-hidden="true">
-      <path d="M 18 26 Q 33 6 48 20" fill="none" stroke="var(--person-azure)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M 48 20 Q 63 34 78 14" fill="none" stroke="var(--person-coral)" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="14" cy="27" r="6" fill="var(--person-azure)" />
-      <circle cx="48" cy="20" r="6" fill="var(--person-teal)" />
-      <circle cx="82" cy="13" r="6" fill="var(--person-coral)" />
+    <svg
+      ref={ref}
+      viewBox="0 0 96 40"
+      className={cn("h-10 w-24 overflow-visible", moving && "doodle", className)}
+      data-play={play}
+      onPointerDown={play ? hop : undefined}
+      aria-hidden="true"
+    >
+      <path d="M 18 26 Q 33 6 48 20" fill="none" stroke="var(--person-azure)" strokeWidth="2" strokeLinecap="round" {...line} />
+      <path d="M 48 20 Q 63 34 78 14" fill="none" stroke="var(--person-coral)" strokeWidth="2" strokeLinecap="round" {...line} />
+      <circle cx="14" cy="27" r="6" fill="var(--person-azure)" style={person} />
+      <circle cx="48" cy="20" r="6" fill="var(--person-teal)" style={person} />
+      <circle cx="82" cy="13" r="6" fill="var(--person-coral)" style={person} />
     </svg>
   );
 }
@@ -370,6 +416,7 @@ export function EmptyState({
   description,
   action,
   className,
+  play = "arrive",
 }: {
   /** No longer drawn: every empty state shows the same small flow drawing. */
   icon?: React.ReactNode;
@@ -377,6 +424,8 @@ export function EmptyState({
   description?: string;
   action?: React.ReactNode;
   className?: string;
+  /** How the drawing moves as it appears. */
+  play?: DoodlePlay;
 }) {
   return (
     <div
@@ -385,7 +434,7 @@ export function EmptyState({
         className,
       )}
     >
-      <FlowDoodle className="mb-5" />
+      <FlowDoodle className="mb-5" play={play} />
       <p className="text-title font-semibold tracking-[-0.01em] text-text">{title}</p>
       {description ? (
         <p className="mt-1.5 max-w-[34ch] text-body leading-relaxed text-muted">
