@@ -160,13 +160,23 @@ drawings show their final still frame. Depth stays: shadows aren't motion.
 
 ## 7. Download size
 
-Compressed scripts the phone downloads, measured from the build.
+Compressed scripts the phone downloads on a cold first visit, over the wire:
+`node scripts/size-report.mjs <base-url>` against a production build. Method
+and full numbers in `PERF-BASELINE.md`.
 
-| | Today | Limit |
-|---|---|---|
-| Home, first load | 195 KB | 210 KB |
-| A group, first load | 225 KB | 240 KB |
-| All five drawings, in code (phase 5) | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
+| | Before the motion work (ceebc95) | Today (bb5e664) | Limit |
+|---|---|---|---|
+| Home, scripts to show it | 296.7 KB | 303.0 KB | 210 KB, to be restated (below) |
+| A group, scripts | 318.2 KB | 323.7 KB | 240 KB, to be restated (below) |
+| All five drawings, in code (phase 5) | | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
+
+The limits were set as "today plus 15 KB" from figures of 195 KB and 225 KB
+whose method wasn't recorded and can't be reproduced. Measured as above,
+"before the motion work plus 15 KB" is 311.7 KB for Home and 333.2 KB for a
+group. Until the limits are restated, treat that as the bar: 8.7 KB left on
+Home, 9.5 KB on a group. Home also fetches the group screen's code (44 KB)
+once it has loaded, so opening a group doesn't wait; that doesn't delay Home
+and sits outside the limit.
 
 Rive would have cost about 460 KB: a 340 KB player plus around 120 KB of
 drawings.
@@ -175,7 +185,8 @@ drawings.
 
 - Smoothness: under 2% of frames over 25ms with the processor slowed 4x
   (`node scripts/motion-record.mjs <url> <out> timing`), and on a real
-  Android phone.
+  Android phone. Read `lateShareAt60Hz`: it counts against the frames a 60Hz
+  phone would draw, so a fast desktop screen doesn't flatter the result.
 - Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
 - Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
   frame-exact (`scripts/motion-video.mjs`).

@@ -20,7 +20,9 @@ Query 5, framer-motion, Tailwind v4, Prisma on SQLite, hosted on Railway
      slowed 4x (`node scripts/motion-record.mjs <url> <out> timing`).
    A change to motion that the spec doesn't describe updates the spec in the
    same PR.
-3. `DESIGN-PLAN.md` (the Flow x Quiet redesign), then the audits:
+3. `PERF-BASELINE.md`: the size, smoothness, Lighthouse and trace numbers
+   every change is compared against, and how to measure them fairly.
+4. `DESIGN-PLAN.md` (the Flow x Quiet redesign), then the audits:
    `UX-AUDIT.md`, `DESIGN-AUDIT.md`, `FEATURE-AUDIT.md`, `PRODUCTION-AUDIT.md`.
 
 ## Working with the person

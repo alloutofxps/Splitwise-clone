@@ -22,3 +22,6 @@ public/ocr/
 
 # The person's screen recordings of other apps, for reference only
 recordings/
+
+# Raw performance runs (traces, Lighthouse reports, timing files)
+perf-runs/
