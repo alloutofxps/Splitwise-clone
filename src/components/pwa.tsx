@@ -102,9 +102,15 @@ function ServiceWorkerManager() {
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    // Only a new version replacing an old one needs a reload. On the very
+    // first visit the worker claims the page as it installs, which also fires
+    // this, and reloading then just restarts the opening for nothing.
+    let controller = navigator.serviceWorker.controller;
     let reloading = false;
     const onControllerChange = () => {
-      if (reloading) return;
+      const replaced = controller !== null;
+      controller = navigator.serviceWorker.controller;
+      if (reloading || !replaced) return;
       reloading = true;
       window.location.reload();
     };

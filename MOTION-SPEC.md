@@ -70,11 +70,11 @@ shadow), a dragged row lifts to level 2. Behind a panel the page dims (36% Day,
 | 400ms | Panels opening, the tapped row becoming the new header |
 | 600ms | A balance counting |
 | 700ms | A payment travelling |
-| up to 1.2s | Rive moments. Never blocks a tap. |
+| up to 1.2s | The drawn moments. Never blocks a tap. |
 
 Ceiling: anything you trigger more than once a session finishes within 400ms
 and can be tapped through. Departures are always shorter than arrivals. No
-bounce in the app's own motion; the Rive pieces may have a little.
+bounce in the app's own motion; the drawn moments may have a little.
 
 Values: `src/app/globals.css` (`--ease-*`) and `src/components/ui/motion.tsx`.
 
@@ -96,7 +96,7 @@ Values: `src/app/globals.css` (`--ease-*`) and `src/components/ui/motion.tsx`.
 | Pressing a button or a standalone card | Shrinks to 96% (buttons) or 98% (cards), sinks one level (`press-firm`, `press`) | 100 / 150 | The app felt your tap |
 | Pressing a row in a list | Darkens a step (`active:bg-surface-2`). Rows don't shrink: one row shrinking inside its card leaves gaps, and system lists don't do it either | 100 | The app felt your tap |
 | Swiping a row | Follows the finger, lifted to level 2, lets go at the finger's speed | finger | You're holding this row |
-| Pull to refresh (Rive) | Follows the pull, plays while loading, settles | finger | How far to pull, and that it's working |
+| Pull to refresh (drawn) | Follows the pull, plays while loading, settles | finger | How far to pull, and that it's working |
 
 ### Panels
 | Moment | What moves | ms | What it explains |
@@ -116,24 +116,27 @@ then play in order: the panel leaves, the change lands, the money counts.
 |---|---|---|---|
 | Saving an expense | Panel leaves; the new row opens into its place, lit by a wash that fades over 1.2s; balances count, starting halfway through the landing | 250 + 300 + 600 | Here's your expense and exactly what it changed |
 | Saving a payment | Panel leaves; a dot in the payer's colour carries the money along the line, which shortens behind it; one ring on the payee; balances count | 700 + 600 | Money went from them to them, and the debt shrank |
-| Paying a debt off | As above, then the "paid" moment on the payee (Rive) | up to 1.2s | You're square. Only when a debt reaches zero |
+| Paying a debt off | As above, then the "paid" moment on the payee (drawn) | up to 1.2s | You're square. Only when a debt reaches zero |
 | Deleting, and undo | Row folds away; undo folds it back into the same place | 250 | It left from here and came back here |
 | Someone else changes a balance | The amount counts; the row tints briefly | 600 | This changed while you were looking |
 
-### Illustrated (Rive)
+### Illustrated (drawn in code)
 Each is a small set of named states; the app only ever says which state to be in.
+They were first drawn in Rive, but Rive's free plan stamps a watermark on
+anything with states and its terms put shipping files behind a paid plan, so
+all five are drawn in code instead: SVG moved by CSS or the browser's own
+animation engine, no player to download.
 
 | Piece | States | The app sends |
 |---|---|---|
 | Welcome untangle | tangled, untangling, untangled | Progress through the welcome, 0 to 1 |
-| Empty states (3) | arriving, still; tapped | A tap |
-| Paid | hidden, paying, paid, done | "paid" when a debt reaches zero |
-| Pull to refresh | resting, pulling, loading, done | Pull distance 0 to 1, then "loading", "done" |
-| App opening | drawing, waiting, ready | "ready" the moment data arrives |
+| Empty states (3) | arrive (an empty list), start (a new account), settled (nobody owes); a tap makes the three hop | Which one, and a tap |
+| Paid | hidden, paying, paid, done: a jade disc pops over the payee, a tick draws, six sparks fly, then it fades (1.2s) | "paid" when a debt reaches zero |
+| Pull to refresh | resting, pulling (the doodle draws as far as you've pulled), loading (the three take turns to hop), done ("Up to date") | Pull distance 0 to 1, then "loading", "done" |
+| App opening | drawing (the logo draws its line from one person to the other), waiting (the two breathe), ready (Home replaces it) | "ready" the moment data arrives |
 
-The app opening is drawn in Rive with the others but shipped as a small code
-version of the same art, because Rive's player (about 340 KB) on the opening
-path would make the app slower to open.
+The opening needs no script at all, so it moves from the very first frame,
+before the app has even started.
 
 ## 5. What never moves
 
@@ -152,8 +155,8 @@ path would make the app slower to open.
 ## 6. With motion turned off
 
 With Reduce Motion (iPhone) or Remove animations (Android) on, every slide,
-scale, travel and count becomes a 150ms fade or simply the end result. Rive
-pieces show their final still frame. Depth stays: shadows aren't motion.
+scale, travel and count becomes a 150ms fade or simply the end result. The
+drawings show their final still frame. Depth stays: shadows aren't motion.
 
 ## 7. Download size
 
@@ -163,8 +166,10 @@ Compressed scripts the phone downloads, measured from the build.
 |---|---|---|
 | Home, first load | 195 KB | 210 KB |
 | A group, first load | 225 KB | 240 KB |
-| Rive player (loaded after the first screen, kept offline) | | 340 KB |
-| All Rive drawings together | | 120 KB, 30 KB each |
+| All five drawings, in code (phase 5) | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
+
+Rive would have cost about 460 KB: a 340 KB player plus around 120 KB of
+drawings.
 
 ## 8. Proof
 

@@ -24,9 +24,14 @@ export const TRAVEL_MS = 700;
 const TRAVEL_EASE = [0.4, 0, 0.7, 0.6] as const;
 /** The receiver's ring, once the money has arrived. */
 const RING_MS = 400;
-/** The paid tick: drawn, held, then gone. Stands in for the Rive "paid" moment. */
-const TICK_MS = { draw: 350, hold: 500, fade: 250 };
-const TICK_TOTAL = TICK_MS.draw + TICK_MS.hold + TICK_MS.fade;
+/**
+ * The "paid" moment, when a payment clears a debt: a jade disc pops over the
+ * payee with a little overshoot, a tick draws across it, six sparks fly out,
+ * and after a moment it all fades. About 1.2s, and never in the way of a tap.
+ */
+const PAID_MS = 1170;
+const PAID_FADE_MS = 250;
+const SPARKS = 6;
 
 /** A payment to show moving along its line. */
 export interface Travel {
@@ -287,7 +292,7 @@ function PersonNode({
  * Waits for the panel it was saved in to leave, then a dot carries the money
  * from payer to payee along the line, which shortens behind it: the debt
  * shrinking by what was paid. On arrival the payee's circle sends out one ring,
- * and if the payment cleared the line entirely, a tick covers them for a moment.
+ * and if the payment cleared the line entirely, the paid moment plays over them.
  * The balances count while the ring plays (the stage's beat is set to the travel
  * time).
  *
@@ -318,8 +323,7 @@ function Traveller({
   const pathRef = React.useRef<SVGPathElement>(null);
   const dotRef = React.useRef<SVGGElement>(null);
   const ringRef = React.useRef<SVGCircleElement>(null);
-  const tickRef = React.useRef<SVGGElement>(null);
-  const tickPathRef = React.useRef<SVGPathElement>(null);
+  const paidRef = React.useRef<SVGGElement>(null);
   const [phase, setPhase] = React.useState<"waiting" | "travelling" | "arrived">("waiting");
   const done = React.useRef(onDone);
   React.useEffect(() => {
@@ -368,7 +372,7 @@ function Traveller({
     };
   }, [phase]);
 
-  // Arrival: one ring, and the tick if the debt is paid off.
+  // Arrival: one ring, and the paid moment if the debt is paid off.
   React.useEffect(() => {
     if (phase !== "arrived") return;
     const animations: Animation[] = [];
@@ -384,21 +388,8 @@ function Traveller({
         ),
       );
     }
-    if (cleared && tickRef.current && tickPathRef.current) {
-      animations.push(
-        tickRef.current.animate([{ opacity: 0 }, { opacity: 1, offset: TICK_MS.draw / TICK_TOTAL }, { opacity: 1, offset: 1 - TICK_MS.fade / TICK_TOTAL }, { opacity: 0 }], {
-          duration: TICK_TOTAL,
-          fill: "forwards",
-        }),
-        tickPathRef.current.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], {
-          duration: TICK_MS.draw,
-          delay: 80,
-          easing: `cubic-bezier(${EASE_ENTER.join(", ")})`,
-          fill: "both",
-        }),
-      );
-    }
-    const timer = window.setTimeout(() => done.current?.(), cleared ? TICK_TOTAL : RING_MS);
+    if (cleared && paidRef.current) animations.push(...playPaid(paidRef.current));
+    const timer = window.setTimeout(() => done.current?.(), cleared ? PAID_MS : RING_MS);
     return () => {
       window.clearTimeout(timer);
       animations.forEach((animation) => animation.cancel());
@@ -440,12 +431,35 @@ function Traveller({
           style={{ transformBox: "fill-box", transformOrigin: "center" }}
         />
       ) : null}
-      {phase === "arrived" && cleared ? (
-        <g ref={tickRef} opacity={0}>
-          <circle cx={to.x} cy={to.y} r={DOT + 2} fill="var(--positive)" stroke="var(--surface)" strokeWidth={2} />
+      {phase === "arrived" && cleared ? <Paid ref={paidRef} at={to} /> : null}
+    </g>
+  );
+}
+
+/**
+ * The paid drawing, centred on the payee. Everything inside is placed around
+ * (0, 0), so the pop and the sparks scale and fly from the person's centre
+ * without needing a transform origin.
+ */
+function Paid({ ref, at }: { ref: React.Ref<SVGGElement>; at: Point }) {
+  return (
+    <g transform={`translate(${at.x} ${at.y})`}>
+      <g ref={ref} opacity={0}>
+        {Array.from({ length: SPARKS }, (_, index) => (
+          <g key={index} transform={`rotate(${(360 / SPARKS) * index + 30})`}>
+            <circle
+              data-spark
+              r={2.5}
+              fill={index % 2 === 0 ? "var(--positive)" : "var(--person-sand)"}
+              opacity={0}
+            />
+          </g>
+        ))}
+        <g data-disc>
+          <circle r={DOT + 2} fill="var(--positive)" stroke="var(--surface)" strokeWidth={2} />
           <path
-            ref={tickPathRef}
-            d={`M ${to.x - 7} ${to.y + 0.5} L ${to.x - 2} ${to.y + 5.5} L ${to.x + 7.5} ${to.y - 5}`}
+            data-tick
+            d="M -7 0.5 L -2 5.5 L 7.5 -5"
             pathLength={1}
             strokeDasharray="1 1"
             strokeDashoffset={1}
@@ -456,7 +470,60 @@ function Traveller({
             strokeLinejoin="round"
           />
         </g>
-      ) : null}
+      </g>
     </g>
   );
+}
+
+/** Plays the paid drawing once, as browser animations, and returns them. */
+function playPaid(root: SVGGElement): Animation[] {
+  const enter = `cubic-bezier(${EASE_ENTER.join(", ")})`;
+  const animations = [
+    root.animate(
+      [
+        { opacity: 0 },
+        { opacity: 1, offset: 100 / PAID_MS },
+        { opacity: 1, offset: 1 - PAID_FADE_MS / PAID_MS },
+        { opacity: 0 },
+      ],
+      { duration: PAID_MS, fill: "forwards" },
+    ),
+  ];
+  const disc = root.querySelector<SVGGElement>("[data-disc]");
+  if (disc) {
+    animations.push(
+      disc.animate(
+        [
+          { transform: "scale(0.5)", easing: enter },
+          { transform: "scale(1.12)", offset: 0.65, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+          { transform: "scale(1)" },
+        ],
+        { duration: 400, fill: "both" },
+      ),
+    );
+  }
+  const tick = root.querySelector<SVGPathElement>("[data-tick]");
+  if (tick) {
+    animations.push(
+      tick.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], {
+        duration: 300,
+        delay: 180,
+        easing: enter,
+        fill: "both",
+      }),
+    );
+  }
+  root.querySelectorAll<SVGCircleElement>("[data-spark]").forEach((spark, index) => {
+    animations.push(
+      spark.animate(
+        [
+          { transform: `translateY(-${DOT + 4}px) scale(1)`, opacity: 0 },
+          { transform: `translateY(-${DOT + 8}px) scale(1)`, opacity: 1, offset: 0.25 },
+          { transform: `translateY(-${DOT + 16}px) scale(0.4)`, opacity: 0 },
+        ],
+        { duration: 520, delay: 220 + (index % 2) * 50, easing: enter, fill: "both" },
+      ),
+    );
+  });
+  return animations;
 }

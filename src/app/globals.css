@@ -563,6 +563,87 @@
 }
 
 /*
+ * The drawings (MOTION-SPEC 4, illustrated). The small three-person doodle and
+ * the app's mark, drawn in code rather than shipped as animation files. Each
+ * plays once when it appears; only the opening and pull to refresh loop, and
+ * only while work is happening. Lines draw with a dash the length of the line
+ * (pathLength 1). With Reduce Motion on they show their last frame at once.
+ */
+@keyframes divvy-pop {
+  0% { transform: scale(0); opacity: 0; }
+  55% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes divvy-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes divvy-erase {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1; }
+}
+@keyframes divvy-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+}
+@keyframes divvy-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.82); }
+}
+.doodle circle,
+.mark-draw circle {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.doodle[data-play] circle,
+.doodle[data-play] path,
+.mark-draw circle,
+.mark-draw path {
+  animation-fill-mode: both;
+}
+
+/* Arriving: the three pop in, then the lines join them. About 0.7s. */
+.doodle[data-play="arrive"] circle { animation: divvy-pop 360ms var(--ease-standard) both; }
+.doodle[data-play="arrive"] circle:nth-of-type(2) { animation-delay: 80ms; }
+.doodle[data-play="arrive"] circle:nth-of-type(3) { animation-delay: 160ms; }
+.doodle[data-play="arrive"] path { animation: divvy-draw 360ms var(--ease-enter) 220ms both; }
+.doodle[data-play="arrive"] path:nth-of-type(2) { animation-delay: 320ms; }
+
+/* Starting out: one person, a line, the next, a line, the last. About 1.2s. */
+.doodle[data-play="start"] circle { animation: divvy-pop 380ms var(--ease-standard) both; }
+.doodle[data-play="start"] circle:nth-of-type(2) { animation-delay: 420ms; }
+.doodle[data-play="start"] circle:nth-of-type(3) { animation-delay: 840ms; }
+.doodle[data-play="start"] path { animation: divvy-draw 320ms var(--ease-enter) 180ms both; }
+.doodle[data-play="start"] path:nth-of-type(2) { animation-delay: 600ms; }
+
+/* Settled: the lines between them go, and the three are left free. About 1.2s. */
+.doodle[data-play="settled"] path { animation: divvy-erase 420ms var(--ease-standard) 150ms both; }
+.doodle[data-play="settled"] path:nth-of-type(2) { animation-delay: 260ms; }
+.doodle[data-play="settled"] circle { animation: divvy-hop 420ms var(--ease-standard) 680ms both; }
+.doodle[data-play="settled"] circle:nth-of-type(2) { animation-delay: 750ms; }
+.doodle[data-play="settled"] circle:nth-of-type(3) { animation-delay: 820ms; }
+
+/* Pull to refresh, while it works: the three take turns to hop. */
+.doodle[data-play="wait"] circle { animation: divvy-hop 900ms var(--ease-standard) infinite; }
+.doodle[data-play="wait"] circle:nth-of-type(2) { animation-delay: 150ms; }
+.doodle[data-play="wait"] circle:nth-of-type(3) { animation-delay: 300ms; }
+
+/*
+ * The app opening: the mark draws itself, its line from one person to the
+ * other, then breathes until the first screen is ready.
+ */
+.mark-draw path { animation: divvy-draw 520ms var(--ease-enter) 120ms both; }
+.mark-draw circle { animation: divvy-pop 380ms var(--ease-standard) both, divvy-breathe 1400ms var(--ease-standard) 900ms infinite; }
+.mark-draw circle:nth-of-type(2) { animation-delay: 420ms, 1100ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doodle *,
+  .mark-draw * {
+    animation-delay: 0s !important;
+  }
+}
+
+/*
  * Respect the OS setting. Animation here is decoration - every transition is a
  * fade or a slide that carries no information on its own - so removing it costs
  * the user nothing.
