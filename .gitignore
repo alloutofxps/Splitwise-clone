@@ -19,3 +19,6 @@ prisma/backups/
 
 # Receipt reader engine, copied from node_modules at build time
 public/ocr/
+
+# The person's screen recordings of other apps, for reference only
+recordings/
