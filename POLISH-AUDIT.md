@@ -2,7 +2,15 @@
 
 One list from five read-only reviews, checked against the code and the real
 screens, with anything that conflicts with MOTION-SPEC.md or DESIGN-PLAN.md
-dropped (see the end). Nothing here has been changed yet.
+dropped (see the end).
+
+**Status:**
+
+- **Fixed in the accessibility and wording PR:** items 1, 2, 11 to 18, 20
+  and 21. Every text element on Home, a group (all three tabs), Activity, You
+  and Friends now passes 4.5:1 in both themes, checked in the browser.
+- **Item 19:** waits for the phone test.
+- **Everything else:** still open.
 
 **Where each finding came from:**
 
