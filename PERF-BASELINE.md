@@ -323,3 +323,13 @@ The longest freezes are the same either way (about 100ms). With masks off,
 the spinning digits are clipped at the line instead of fading. Rolling sits
 at the 2% bar on this laptop, which draws without a real graphics chip; the
 person chose to adopt it and judge smoothness on the Android phone.
+
+---
+
+## 12. iPhone and iPad launch screens (20 October 2026)
+
+Upgrade 4c. 60 images (12 iPhone and 9 iPad screens, iPads both ways up,
+Day and Night), 2.6 MB in `public/launch/`. iOS downloads only the one that
+fits, when the app is added to the home screen. Scripts are unchanged; every
+page's HTML grows from 8.9 to 13.1 KB compressed, because the 60 links are
+in each page's head (Next writes them twice: in the HTML and the page data).

@@ -174,6 +174,13 @@ animation engine, no player to download.
 The opening needs no script at all, so it moves from the very first frame,
 before the app has even started.
 
+On iPhone and iPad, opening from the home screen, iOS first shows a launch
+image (`public/launch/`, made by `node scripts/launch-screens.mjs`). Each is
+the app's own first frame on that device, Day or Night: Home's outline below
+the notch, the logo not yet drawn. So the app appears over an identical
+picture instead of a white flash, and the drawing starts from there. Re-run
+the script after changing Home's outline, the tab bar or the colours.
+
 ## 5. What never moves
 
 - Digits while you type an amount.

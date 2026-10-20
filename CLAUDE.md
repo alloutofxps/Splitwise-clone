@@ -88,6 +88,9 @@ detail.
   clears it.
 - Stopping a background shell doesn't stop the server. In PowerShell:
   `Get-NetTCPConnection -LocalPort 3100 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`.
+- iPhone launch screens: after changing Home's outline, the tab bar or the
+  colours, run `node scripts/launch-screens.mjs <url>` against a production
+  build and commit `public/launch/` and `src/app/launch-screens.ts`.
 - Motion videos are made frame by frame (`scripts/motion-record.mjs`,
   `motion-compare.mjs`, `motion-video.mjs`), never by recording the screen
   live.
