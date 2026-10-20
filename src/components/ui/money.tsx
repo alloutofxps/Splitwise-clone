@@ -3,7 +3,6 @@
 import * as React from "react";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "./primitives";
-import { AnimatedAmount } from "./motion";
 import { currencySymbol, decimalsFor, formatMoney, parseAmount, toDecimalString } from "@/lib/money";
 
 /**
@@ -22,15 +21,15 @@ export function Amount({
   signed = false,
   className,
   arrow,
-  textRef,
+  figure,
 }: {
   /** Minor units, as a bigint or the decimal string the API sends. */
   value: bigint | string;
   /**
-   * Hands the figure's text to whoever is counting it (`useCountedText`),
-   * which writes the digits itself; `value` then only sets colour and arrow.
+   * Shown in place of the written figure, such as a `RollingFigure`;
+   * `value` then only sets the colour and arrow.
    */
-  textRef?: React.Ref<HTMLSpanElement>;
+  figure?: React.ReactNode;
   /**
    * An arrow before the figure: ↙ for money coming to you, ↗ for money going
    * out. With the colour and the words beside it, the third signal.
@@ -79,7 +78,7 @@ export function Amount({
           <ArrowUpRight aria-hidden className="mr-[0.1em] inline size-[0.7em] -translate-y-[0.05em]" strokeWidth={2} />
         )
       ) : null}
-      {textRef ? <span ref={textRef} /> : formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
+      {figure ?? formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
     </span>
   );
 }
@@ -361,51 +360,4 @@ export function maskAmount(input: string, decimals: number): string {
   if (whole.length > 15) return cleaned.slice(0, 15 + (cleaned.length - whole.length));
 
   return cleaned;
-}
-
-// ---------------------------------------------------------------------------
-
-/**
- * The headline "you are owed / you owe" line.
- *
- * Reads as a sentence, because the number alone is ambiguous: is 40 what you
- * owe or what you are owed? Every balance in the app is stated in words first.
- */
-export function BalanceHeadline({
-  net,
-  currency,
-  size = "hero",
-  settledLabel = "You're all settled up",
-}: {
-  net: bigint;
-  currency: string;
-  size?: "lg" | "xl" | "hero";
-  settledLabel?: string;
-}) {
-  if (net === 0n) {
-    return (
-      <div>
-        <p className="font-display text-display font-semibold leading-none tracking-[-0.03em] text-text">{settledLabel}</p>
-      </div>
-    );
-  }
-
-  const owed = net > 0n;
-  return (
-    <div>
-      <p className="text-subhead font-semibold text-muted">
-        {owed ? "You are owed" : "You owe"}
-      </p>
-      {/* Counts to its value, so a change reads as a change. */}
-      <AnimatedAmount
-        value={net}
-        currency={currency}
-        className={cn(
-          "mt-1 block font-display font-semibold leading-none tracking-[-0.04em]",
-          size === "hero" ? "text-display-lg" : size === "xl" ? "text-display" : "text-title-lg",
-          owed ? "text-positive-text" : "text-negative-text",
-        )}
-      />
-    </div>
-  );
 }

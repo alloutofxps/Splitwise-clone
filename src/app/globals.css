@@ -650,6 +650,16 @@
 }
 
 /*
+ * A balance whose digits roll (components/ui/rolling-figure.tsx). NumberFlow
+ * leaves room above and below its line for spinning digits to fade through;
+ * the matching negative margin keeps the line exactly as tall as the plain
+ * figure it takes over from, so nothing below it moves when it does.
+ */
+number-flow-react {
+  --number-flow-mask-height: 0em;
+}
+
+/*
  * Respect the OS setting. Animation here is decoration - every transition is a
  * fade or a slide that carries no information on its own - so removing it costs
  * the user nothing.
