@@ -182,6 +182,18 @@ const FLOWS = {
     await page.goBack();
     await page.waitForTimeout(1400);
   },
+  // The group's own row in Home's Groups list (02 taps whichever link names
+  // the group first, which is usually a "Needs you" row): its icon, name and
+  // amount travel into the group's header, and back.
+  "11-group-row": async (page, seedData, mark) => {
+    const row = page.locator(`a[href="/groups/${seedData.trip}"]`).filter({ hasText: /you're owed|you owe|settled/ });
+    mark("save");
+    await row.first().click();
+    await page.waitForURL(`**/groups/${seedData.trip}`);
+    await page.waitForTimeout(1600);
+    await page.goBack();
+    await page.waitForTimeout(1600);
+  },
   // Expenses, Balances, Insights and back: the tabs sit side by side.
   "10-group-tabs": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });

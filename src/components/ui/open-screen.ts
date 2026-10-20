@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { leaveFrom } from "./travel";
 
 /** How long a tap holds the current screen while the next one loads. */
 const HOLD_MS = 300;
@@ -25,6 +26,9 @@ export function useOpenScreen() {
       if (event.defaultPrevented || event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
+      // Where the row's icon, name and amount are, for the screen to carry
+      // them into its header (travel.ts). Rows without them note nothing.
+      leaveFrom(event.currentTarget, href);
       let moved = false;
       const go = () => {
         if (moved) return;

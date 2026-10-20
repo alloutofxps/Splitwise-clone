@@ -22,6 +22,7 @@ import { ConfirmSheet, Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { useDashboard, useFriend, usePrefetch, useRemoveFriend } from "@/lib/client/queries";
 import { useOpenScreen } from "@/components/ui/open-screen";
+import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
@@ -63,6 +64,17 @@ export default function FriendPage() {
     [dashboard?.people],
   );
 
+  // The row you tapped in Friends flies into this header; leaving, the header
+  // hands its pieces back to the row (components/ui/travel.ts).
+  const screen = React.useRef<HTMLDivElement>(null);
+  const ready = Boolean(!isLoading && data && dashboard);
+  useArrival(screen, `/friends/${params.id}`, ready, TRAVEL_IN_MS);
+  React.useLayoutEffect(() => {
+    const node = screen.current;
+    if (!ready || !node) return;
+    return () => leaveFrom(node, `back:/friends/${params.id}`);
+  }, [ready, params.id]);
+
   if (isLoading || !data || !dashboard) {
     return <FriendSkeleton name={people.get(params.id)?.displayName} />;
   }
@@ -88,7 +100,7 @@ export default function FriendPage() {
   const settleLedgers = ledgers.filter((ledger) => ledger.currency === settleCurrency);
 
   return (
-    <div className="pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div ref={screen} className="pt-[max(0.5rem,env(safe-area-inset-top))]">
       <header className="-mx-1 flex items-center gap-1 py-2">
         <button
           onClick={() => {
@@ -100,7 +112,7 @@ export default function FriendPage() {
         >
           <ChevronLeft className="size-6" />
         </button>
-        <h1 className="min-w-0 flex-1 truncate px-1 text-title font-semibold tracking-[-0.02em] text-text">
+        <h1 data-travel="name" className="min-w-0 flex-1 truncate px-1 text-title font-semibold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
         <button
@@ -118,7 +130,9 @@ export default function FriendPage() {
       {/* Who, and where you stand ---------------------------------------- */}
       <section className="mt-3">
         <div className="flex items-center gap-4">
-          <Avatar person={data.person} size="lg" />
+          <span data-travel="icon" className="shrink-0">
+            <Avatar person={data.person} size="lg" />
+          </span>
           <div className="min-w-0 flex-1">
             {!anythingOutstanding ? (
               <>
@@ -133,12 +147,15 @@ export default function FriendPage() {
                     <span className="text-body text-muted">
                       {net > 0n ? `${data.person.displayName.split(" ")[0]} owes you` : `You owe ${data.person.displayName.split(" ")[0]}`}
                     </span>
-                    <Amount
-                      value={net}
-                      currency={code}
-                      arrow
-                      className="text-display font-semibold leading-tight tracking-[-0.03em]"
-                    />
+                    {/* Travels only when it is the one balance, so it lands on the same figure. */}
+                    <span data-travel={combined.length === 1 ? "amount" : undefined} className="self-start">
+                      <Amount
+                        value={net}
+                        currency={code}
+                        arrow
+                        className="text-display font-semibold leading-tight tracking-[-0.03em]"
+                      />
+                    </span>
                   </p>
                 );
               })

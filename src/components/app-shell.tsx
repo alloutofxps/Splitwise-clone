@@ -155,6 +155,7 @@ export function AppShell({
         >
           <motion.div
             key={pathname}
+            data-screen
             initial={enter.initial}
             // Whole transform strings rather than x and scale, so the browser
             // runs the movement on the compositor: it stays smooth while the

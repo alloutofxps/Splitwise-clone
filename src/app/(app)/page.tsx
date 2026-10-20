@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useActivity, useBudgets, useDashboard, usePrefetch, useUpdateGroup } from "@/lib/client/queries";
 import { useOpenScreen } from "@/components/ui/open-screen";
+import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
 
 import { ActionSheet, useLongPress } from "@/components/ui/swipe-row";
 import { useToast } from "@/components/ui/toast";
@@ -486,6 +487,9 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
   const press = useLongPress(() => setMenu(true));
   const prefetch = usePrefetch();
   const open = useOpenScreen();
+  // Back from the group: its header's pieces fly home into this row.
+  const row = React.useRef<HTMLAnchorElement>(null);
+  useArrival(row, `back:/groups/${group.id}`, true, TRAVEL_BACK_MS);
   const archive = (archived: boolean) =>
     update.mutate(
       { archived },
@@ -522,6 +526,7 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
       ]}
     />
     <Link
+      ref={row}
       href={`/groups/${group.id}`}
       prefetch
       {...press.handlers}
@@ -536,10 +541,14 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
       }}
       className="flex select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
     >
-      <GroupMark group={group} />
+      <span data-travel="icon" className="shrink-0 text-title">
+        <GroupMark group={group} />
+      </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate text-title font-semibold tracking-[-0.01em] text-text">{group.name}</span>
+          <span data-travel="name" className="truncate text-title font-semibold tracking-[-0.01em] text-text">
+            {group.name}
+          </span>
           {group.unreadCount > 0 ? (
             <span className="size-2 shrink-0 rounded-full bg-text" aria-label="New activity" />
           ) : null}
@@ -551,7 +560,9 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
           <span className="text-caption text-subtle">settled</span>
         ) : (
           <>
-            <Amount value={net} currency={group.currency} size="md" className="block" />
+            <span data-travel="amount" className="block">
+              <Amount value={net} currency={group.currency} size="md" className="block" />
+            </span>
             <span className="block text-caption text-subtle">{net > 0n ? "you're owed" : "you owe"}</span>
           </>
         )}
