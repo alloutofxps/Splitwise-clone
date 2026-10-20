@@ -55,7 +55,7 @@ shadow), a dragged row lifts to level 2. Behind a panel the page dims (36% Day,
 | Arriving | `cubic-bezier(0.05, 0.7, 0.1, 1)` (Material emphasized decelerate) | Things entering |
 | Leaving | `cubic-bezier(0.3, 0, 0.8, 0.15)` (emphasized accelerate) | Things exiting |
 | In place | `cubic-bezier(0.2, 0, 0, 1)` (standard) | Things that stay on screen |
-| Counting | `cubic-bezier(0, 0, 0, 1)` | Money counting |
+| Rolling | `cubic-bezier(0, 0, 0, 1)` | A balance's digits rolling to a new figure |
 | Journey | `cubic-bezier(0.4, 0, 0.7, 0.6)` | A payment travelling between two people; still moving when it lands |
 | Finger | spring, no bounce, starting at the finger's speed | Anything released from a drag |
 
@@ -68,7 +68,7 @@ shadow), a dragged row lifts to level 2. Behind a panel the page dims (36% Day,
 | 250ms | Panels closing, heights changing, rows collapsing, the group's three tabs sliding |
 | 300ms | A screen arriving, a new row landing |
 | 400ms | Panels opening, the tapped row becoming the new header |
-| 600ms | A balance counting |
+| 600ms | A balance rolling its digits |
 | 700ms | A payment travelling |
 | up to 1.2s | The drawn moments. Never blocks a tap. |
 
@@ -139,15 +139,22 @@ are written where they are used.
 
 ### Money
 Changes made inside a panel wait for it to leave (`components/ui/stage.ts`),
-then play in order: the panel leaves, the change lands, the money counts.
+then play in order: the panel leaves, the change lands, the money rolls.
 
 | Moment | What moves | ms | What it explains |
 |---|---|---|---|
-| Saving an expense | Panel leaves; the new row opens into its place, lit by a wash that fades over 1.2s; balances count, starting halfway through the landing | 250 + 300 + 600 | Here's your expense and exactly what it changed |
-| Saving a payment | Panel leaves; a dot in the payer's colour carries the money along the line, which shortens behind it; one ring on the payee; balances count | 700 + 600 | Money went from them to them, and the debt shrank |
+| Saving an expense | Panel leaves; the new row opens into its place, lit by a wash that fades over 1.2s; balances roll, starting halfway through the landing | 250 + 300 + 600 | Here's your expense and exactly what it changed |
+| Saving a payment | Panel leaves; a dot in the payer's colour carries the money along the line, which shortens behind it; one ring on the payee; balances roll | 700 + 600 | Money went from them to them, and the debt shrank |
 | Paying a debt off | As above, then the "paid" moment on the payee (drawn) | up to 1.2s | You're square. Only when a debt reaches zero |
 | Deleting, and undo | Row folds away; undo folds it back into the same place | 250 | It left from here and came back here |
-| Someone else changes a balance | The amount counts; the row tints briefly | 600 | This changed while you were looking |
+| Someone else changes a balance | The amount rolls; the row tints briefly | 600 | This changed while you were looking |
+
+**A balance rolling its digits** (`src/components/ui/rolling-figure.tsx`, the group's balance at the top of the screen):
+
+- **What moves:** each digit that changes spins to its new value, like an odometer; the digits that don't change stay still. The colour, arrow and "You're owed" wording change once the roll lands.
+- **How:** NumberFlow (`@number-flow/react`, MIT). It is 6 KB, more than the download limit has room for, so the figure starts as plain text and NumberFlow is fetched once the page has loaded, then takes over showing the same figure. The hand-over is checked to be invisible: the same size and place, with only a fraction of a pixel of letter spacing in the cents.
+- **Nothing rolls when:** Reduce Motion is on, NumberFlow hasn't arrived yet, or the browser can't format the currency. The new figure simply appears.
+- It replaced counting through the numbers on 20 October 2026.
 
 ### Illustrated (drawn in code)
 Each is a small set of named states; the app only ever says which state to be in.
@@ -170,7 +177,7 @@ before the app has even started.
 ## 5. What never moves
 
 - Digits while you type an amount.
-- Amounts on first load. They show their real value; counting only happens when a value changes in front of you.
+- Amounts on first load. They show their real value; rolling only happens when a value changes in front of you.
 - Lists arriving one row after another. Lists appear all at once.
 - Anything on scroll except a sticky bar's shadow. No parallax, no reveal-on-scroll.
 - The tab bar and top bar during navigation.
@@ -184,7 +191,7 @@ before the app has even started.
 ## 6. With motion turned off
 
 With Reduce Motion (iPhone) or Remove animations (Android) on, every slide,
-scale, travel and count becomes a 150ms fade or simply the end result. The
+scale, travel and roll becomes a 150ms fade or simply the end result. The
 drawings show their final still frame. Depth stays: shadows aren't motion.
 
 ## 7. Download size
@@ -193,18 +200,19 @@ Compressed scripts the phone downloads on a cold first visit, over the wire:
 `node scripts/size-report.mjs <base-url>` against a production build. Method
 and full numbers in `PERF-BASELINE.md`.
 
-| | Before the motion work (ceebc95) | Today (framer-motion 14.4) | Limit |
+| | Before the motion work (ceebc95) | Today (20 October 2026) | Limit |
 |---|---|---|---|
-| Home, scripts to show it | 296.7 KB | 305.6 KB | 312 KB |
-| A group, scripts | 318.2 KB | 328.3 KB | 333 KB |
+| Home, scripts to show it | 296.7 KB | 309.6 KB | 312 KB |
+| A group, scripts | 318.2 KB | 332.3 KB | 333 KB |
 | All five drawings, in code (phase 5) | | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
 
 The limits are "before the motion work plus 15 KB", which was always the
 intent. They were first written as 210 KB and 240 KB, from "today" figures
 of 195 KB and 225 KB whose method wasn't recorded and can't be reproduced;
 restated in this method on 20 October 2026. Moving framer-motion from 14.1
-to 14.4 added 2.6 KB to Home and 4.6 KB to a group, which leaves 6.4 KB on
-Home and 4.7 KB on a group. Home also fetches the group screen's code (44 KB) once it
+to 14.4 added 2.6 KB to Home and 4.6 KB to a group; the row travel and the
+rolling digits about 1 KB each. That leaves 2.4 KB on Home and 0.7 KB on a
+group. NumberFlow itself (6 KB) is fetched once the group page has loaded. Home also fetches the group screen's code (44 KB) once it
 has loaded, so opening a group doesn't wait; that doesn't delay Home and
 sits outside the limit.
 

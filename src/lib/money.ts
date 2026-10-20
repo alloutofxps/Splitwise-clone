@@ -263,6 +263,28 @@ export function toDecimalString(minor: bigint, code: string): string {
   return negative ? `-${body}` : body;
 }
 
+/**
+ * The Intl options every amount is written with: the currency's narrow
+ * symbol and its full minor units. Shared by formatMoney and the rolling
+ * figure (components/ui/rolling-figure.tsx), so the two can never differ.
+ */
+export function currencyFormat(code: string): {
+  style: "currency";
+  currency: string;
+  currencyDisplay: "narrowSymbol";
+  minimumFractionDigits: number;
+  maximumFractionDigits: number;
+} {
+  const info = currency(code);
+  return {
+    style: "currency",
+    currency: info.code,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: info.decimals,
+    maximumFractionDigits: info.decimals,
+  };
+}
+
 export interface FormatOptions {
   /** Drop the currency symbol entirely. */
   bare?: boolean;
@@ -292,13 +314,7 @@ export function formatMoney(
 
   let body: string;
   try {
-    body = new Intl.NumberFormat(locale, {
-      style: options.bare ? "decimal" : "currency",
-      currency: info.code,
-      currencyDisplay: "narrowSymbol",
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(asNumber);
+    body = new Intl.NumberFormat(locale, options.bare ? { ...currencyFormat(info.code), style: "decimal" } : currencyFormat(info.code)).format(asNumber);
   } catch {
     const digits = new Intl.NumberFormat(locale, {
       minimumFractionDigits: fractionDigits,

@@ -30,6 +30,9 @@ const EASE = `cubic-bezier(${EASE_STANDARD.join(", ")})`;
 
 /** The type size of the text a piece shows, from the element that holds it. */
 function typeSize(element: Element): number {
+  // A rolling figure draws its digits in a shadow root, out of the walker's reach.
+  const figure = element.querySelector("[data-figure-text]");
+  if (figure) return parseFloat(getComputedStyle(figure).fontSize);
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.textContent?.trim() && node.parentElement) return parseFloat(getComputedStyle(node.parentElement).fontSize);
@@ -68,6 +71,11 @@ function ghostOf(element: HTMLElement, at: DOMRect): HTMLElement {
   const style = getComputedStyle(element);
   const ghost = element.cloneNode(true) as HTMLElement;
   ghost.removeAttribute("data-travel");
+  // A rolling figure's digits live in a shadow root, which a copy doesn't
+  // carry: the copy writes the figure as text instead.
+  ghost.querySelectorAll("[data-figure-text]").forEach((figure) => {
+    figure.textContent = figure.getAttribute("data-figure-text");
+  });
   ghost.setAttribute("aria-hidden", "true");
   Object.assign(ghost.style, {
     position: "fixed",

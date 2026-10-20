@@ -5,8 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
-import { DURATION, EASE_STANDARD, useCountedText } from "@/components/ui/motion";
-import { formatMoney } from "@/lib/money";
+import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
+import { RollingFigure } from "@/components/ui/rolling-figure";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
 import { setBeat } from "@/components/ui/stage";
@@ -307,14 +307,14 @@ export default function GroupPage() {
 // ---------------------------------------------------------------------------
 
 /**
- * Where you stand in the group. Counts to each new figure once the panel that
- * changed it has gone, and only says "settled up" when the count reaches zero,
+ * Where you stand in the group. Rolls to each new figure once the panel that
+ * changed it has gone, and only says "settled up" when the roll reaches zero,
  * so paying off the last of it is something you watch happen.
  */
 function Standing({ net, currency, everyone }: { net: bigint; currency: string; everyone: boolean }) {
-  const { ref, rest } = useCountedText(net, (shown) => formatMoney(shown < 0n ? -shown : shown, currency));
-  // Colour, arrow and wording follow the figure the count is at rest on, so
-  // they change once, when the count lands, not halfway through it.
+  const [rest, setRest] = React.useState(net);
+  // Colour, arrow and wording follow the figure the roll is at rest on, so
+  // they change once, when it lands, not halfway through it.
   const shown = rest;
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -344,7 +344,7 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
               value={shown === 0n ? net : shown}
               currency={currency}
               arrow
-              textRef={ref}
+              figure={<RollingFigure value={net} currency={currency} onRest={setRest} />}
               className="text-display font-semibold leading-tight tracking-[-0.03em]"
             />
           </span>
