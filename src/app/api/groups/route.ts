@@ -16,7 +16,9 @@ const createSchema = z.object({
   name: text(60, "The group name").refine((v) => v.length > 0, "Give the group a name."),
   kind: z.enum(GROUP_KINDS).default("other"),
   emoji: z.string().trim().max(8).default("🧾"),
-  color: z.enum(ACCEPTED_COLORS).default("cobalt").transform(normalizeColor),
+  // Optional: without one the group gets the colour its name gives it, as the
+  // New group screen does, rather than every such group sharing one colour.
+  color: z.enum(ACCEPTED_COLORS).optional().transform((color) => (color ? normalizeColor(color) : undefined)),
   currency: currencyCode,
   simplifyDebts: z.boolean().default(true),
   /** Names to seed as placeholder members, for people not on the app yet. */
@@ -78,7 +80,7 @@ export const POST = route(async (request: Request) => {
         name: input.name,
         kind: input.kind,
         emoji: input.emoji || "🧾",
-        color: input.color,
+        color: input.color ?? colorForName(input.name),
         currency: input.currency,
         simplifyDebts: input.simplifyDebts,
         inviteCode,

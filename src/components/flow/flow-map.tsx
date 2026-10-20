@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { edgeKey, edgePath, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
+import { edgeKey, edgePath, placeLabels, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
 import { formatMoney } from "@/lib/money";
 import { initials } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
@@ -12,6 +12,8 @@ import { DURATION, EASE_ENTER, EASE_STANDARD } from "../ui/motion";
 import { untilClear, useStage } from "../ui/stage";
 
 const DOT = 18;
+/** The width of an amount's pill: about 7px a character at 11.5px, plus padding. */
+const labelWidthFor = (label: string) => label.length * 7 + 12;
 
 /** A payment travelling along its line (MOTION-SPEC, money). */
 export const TRAVEL_MS = 700;
@@ -88,6 +90,17 @@ export function FlowMap({
   );
   const byId = React.useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
   const largest = edges.reduce((max, edge) => (edge.amount > max ? edge.amount : max), 0n);
+  // Each amount sits at the middle of its line unless that would cover another
+  // amount; then it slides along its own line until it is clear.
+  const labelSpots = React.useMemo(() => {
+    const drawn = edges.flatMap((edge) => {
+      const from = positions.get(edge.fromPersonId);
+      const to = positions.get(edge.toPersonId);
+      return from && to ? [{ key: edgeKey(edge), from, to, width: labelWidthFor(formatMoney(edge.amount, currency)) }] : [];
+    });
+    const spots = placeLabels(drawn, DOT + 4);
+    return new Map(drawn.map((line, index) => [line.key, spots[index]]));
+  }, [edges, positions, currency]);
   const nameOf = (id: string) => (id === meId ? "You" : (byId.get(id)?.displayName ?? "Someone"));
 
   return (
@@ -111,6 +124,7 @@ export function FlowMap({
                 to={to}
                 width={strokeFor(edge.amount, largest)}
                 label={labels ? formatMoney(edge.amount, currency) : null}
+                labelAt={labelSpots.get(edgeKey(edge))}
                 reduce={Boolean(reduce)}
               />
             );
@@ -163,6 +177,7 @@ function EdgeLine({
   to,
   width,
   label,
+  labelAt,
   reduce,
 }: {
   payer: PersonDto;
@@ -170,6 +185,8 @@ function EdgeLine({
   to: Point;
   width: number;
   label: string | null;
+  /** Where the amount goes; the middle of the line unless that is taken. */
+  labelAt?: Point;
   reduce: boolean;
 }) {
   const hue = usePersonHue(payer);
@@ -177,7 +194,8 @@ function EdgeLine({
   const draw = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : { initial: { pathLength: 0, opacity: 0 }, animate: { pathLength: 1, opacity: 1 }, exit: { pathLength: 0, opacity: 0 } };
-  const labelWidth = (label?.length ?? 0) * 7 + 12;
+  const labelWidth = labelWidthFor(label ?? "");
+  const spot = labelAt ?? mid;
 
   return (
     <motion.g>
@@ -210,8 +228,8 @@ function EdgeLine({
         {label ? (
         <>
         <rect
-          x={mid.x - labelWidth / 2}
-          y={mid.y - 10}
+          x={spot.x - labelWidth / 2}
+          y={spot.y - 10}
           width={labelWidth}
           height={20}
           rx={10}
@@ -219,8 +237,8 @@ function EdgeLine({
           stroke="var(--border)"
         />
         <text
-          x={mid.x}
-          y={mid.y + 4}
+          x={spot.x}
+          y={spot.y + 4}
           textAnchor="middle"
           className="tabular"
           fill="var(--text)"

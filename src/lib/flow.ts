@@ -88,6 +88,70 @@ export function edgePath(
   };
 }
 
+/** The point `t` of the way (0 to 1) along the curve that `edgePath` draws. */
+export function pointOnEdge(from: Point, to: Point, inset: number, t: number, bend = 0.18): Point {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const start = { x: from.x + ux * inset, y: from.y + uy * inset };
+  const end = { x: to.x - ux * inset, y: to.y - uy * inset };
+  const offset = length * bend;
+  const control = { x: (start.x + end.x) / 2 - uy * offset, y: (start.y + end.y) / 2 + ux * offset };
+  const a = (1 - t) * (1 - t);
+  const b = 2 * (1 - t) * t;
+  const c = t * t;
+  return {
+    x: round(a * start.x + b * control.x + c * end.x),
+    y: round(a * start.y + b * control.y + c * end.y),
+  };
+}
+
+/** How far along its line a label may slide to get clear, nearest first. */
+const LABEL_STOPS = [0.5, 0.4, 0.6, 0.32, 0.68, 0.25, 0.75];
+
+/**
+ * Where each line's amount label goes, so that no two sit on top of each other.
+ *
+ * Every label starts at the middle of its line. Then, in a few passes, a label
+ * that covers another slides along its own line, a little each way, to the
+ * first spot that is clear of all the others. Either label of a pair may be
+ * the one that moves: a short line often has nowhere to go, while the line
+ * crossing it does. A label with no clear spot keeps the middle.
+ */
+export function placeLabels(
+  lines: { from: Point; to: Point; width: number }[],
+  inset: number,
+  height = 20,
+  gap = 4,
+): Point[] {
+  const spots = lines.map(({ from, to }) => pointOnEdge(from, to, inset, 0.5));
+  const covers = (index: number, at: Point) =>
+    lines.some(
+      (other, otherIndex) =>
+        otherIndex !== index &&
+        Math.abs(at.x - spots[otherIndex].x) * 2 < lines[index].width + other.width + gap * 2 &&
+        Math.abs(at.y - spots[otherIndex].y) < height + gap,
+    );
+  for (let pass = 0; pass < 3; pass++) {
+    let moved = false;
+    lines.forEach(({ from, to }, index) => {
+      if (!covers(index, spots[index])) return;
+      for (const t of LABEL_STOPS.slice(1)) {
+        const candidate = pointOnEdge(from, to, inset, t);
+        if (!covers(index, candidate)) {
+          spots[index] = candidate;
+          moved = true;
+          return;
+        }
+      }
+    });
+    if (!moved) break;
+  }
+  return spots;
+}
+
 /**
  * Line thickness for an amount, relative to the biggest on screen. Square-root
  * scaled, because a debt ten times bigger drawn ten times thicker swamps

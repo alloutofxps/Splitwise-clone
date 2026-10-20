@@ -35,6 +35,42 @@ function Rows({ count, avatar = "square" }: { count: number; avatar?: "square" |
   );
 }
 
+/**
+ * The app opening for someone who hasn't got an account yet: the welcome
+ * screen's shape rather than Home's, in the welcome's own frame, with the
+ * logo drawing itself where the welcome's logo will be. A newcomer used to see
+ * Home's lists and tab bar first, then the welcome replacing them.
+ */
+export function WelcomeSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
+    >
+      <div className="flex flex-1 flex-col justify-center py-4">
+        <span className="mb-2 flex items-center gap-2">
+          <AppMark draw />
+          <span className="text-title-lg font-semibold tracking-[-0.03em] text-text">Divvy</span>
+        </span>
+        {/* Where the drawing of the four friends goes: left empty, not outlined. */}
+        <div className="mx-auto -my-2 aspect-square w-full max-w-[360px]" />
+        <Skeleton className="mt-2 h-10 w-4/5" />
+        <Skeleton className="mt-4 h-5 w-full" />
+        <Skeleton className="mt-2 h-5 w-3/5" />
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Skeleton className="h-8 w-44 rounded-full" />
+          <Skeleton className="h-8 w-32 rounded-full" />
+          <Skeleton className="h-8 w-32 rounded-full" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-[52px] w-full rounded-[var(--radius-lg)]" />
+        <div className="h-11" />
+      </div>
+    </div>
+  );
+}
+
 export function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) {
   return (
     <div aria-hidden className={cn("pt-[max(1rem,env(safe-area-inset-top))]", late && "appear-late")}>

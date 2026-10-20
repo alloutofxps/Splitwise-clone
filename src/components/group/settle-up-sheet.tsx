@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, ChevronDown, Copy, ExternalLink, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Copy, ExternalLink, Wallet } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountInput } from "../ui/money";
 import { Avatar, usePersonHue } from "../ui/avatar";
@@ -497,7 +497,18 @@ function SuggestionList({
                           ? `Pay ${to.displayName.split(" ")[0]}`
                           : `${from.displayName.split(" ")[0]} pays you`}
                       </span>
-                      <span className="tabular mt-0.5 block text-caption text-subtle">
+                      {/* Coloured and pointed the way Balances shows the same debt. */}
+                      <span
+                        className={cn(
+                          "tabular mt-0.5 block text-caption",
+                          iAmPaying ? "text-negative-text" : "text-positive-text",
+                        )}
+                      >
+                        {iAmPaying ? (
+                          <ArrowUpRight aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                        ) : (
+                          <ArrowDownLeft aria-hidden className="mr-0.5 inline size-3.5 -translate-y-px" strokeWidth={2.25} />
+                        )}
                         {formatMoney(BigInt(edge.amount), currency)}
                       </span>
                     </span>

@@ -86,6 +86,9 @@ export const POST = route(async (request: Request) => {
         name: input.name,
         kind: "other",
         emoji: input.emoji || "🧾",
+        // The colour its name gives it, as the New group screen does; without
+        // one every imported group got the same legacy default.
+        color: colorForName(input.name),
         currency: input.currency,
         inviteCode,
         memberships: { create: { personId: session.person.id, role: "owner" } },

@@ -250,3 +250,12 @@ The longest freeze switching tabs went from up to 275ms to about 185ms. In
 two of the eight settle-up runs the longest single freeze after Save was
 longer (192 and 242ms against at most 142ms before); the share of late
 frames was no worse.
+
+---
+
+## 9. Small design fixes (20 October 2026)
+
+POLISH-AUDIT items 9, 10, 25 and 28. Download size after them: Home 306.6 KB
+of scripts to show it (5.4 KB under the limit), a group 329.4 KB (3.6 KB
+under). The welcome-shaped opening outline and the label placement cost
+about 0.9 KB and 0.7 KB. The room left matters for NumberFlow (4b).
