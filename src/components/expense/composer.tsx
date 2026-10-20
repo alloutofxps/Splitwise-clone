@@ -411,7 +411,7 @@ export function ExpenseComposer({
           />
 
           {/* Description: what it was for comes first, the way people say it. */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 has-[input:focus]:ring-[1.5px] has-[input:focus]:ring-text">
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}

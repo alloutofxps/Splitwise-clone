@@ -33,7 +33,7 @@ paper rather than a cold screen.
 | `rule` | #E7E5E1 | #2A2926 | Hairlines (1px), dividers |
 | `ink` | #141412 | #F3F2EE | Text, primary buttons, icons |
 | `ink-2` | #57534E | #A8A29E | Secondary text |
-| `ink-3` | #8A857E | #77726B | Hints, placeholders, timestamps |
+| `ink-3` | #6F6A63 | #918C85 | Hints, placeholders, timestamps (darkened / lightened on 20 Oct 2026 to reach 4.5:1) |
 
 **Primary actions are ink, not purple.** A black button on paper (white on
 night) is the quietest strong signal there is. The indigo gradient and the
@@ -51,7 +51,7 @@ Every owed/owe amount also carries words ("owes you", "you owe") **and** an
 arrow glyph (↙ in, ↗ out). Colour is the third signal, never the only one.
 
 **People colours: the Flow palette.** Ten hues, tuned to the same perceived
-lightness (OKLCH L≈0.62 light, ≈0.74 dark) so no person looks more important
+lightness (OKLCH L≈0.545 light, so white initials reach 4.5:1, deepened from 0.62 on 20 Oct 2026; ≈0.74 dark) so no person looks more important
 than another, and each distinct from its neighbours and from jade and
 vermilion:
 

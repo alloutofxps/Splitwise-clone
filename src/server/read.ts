@@ -402,7 +402,7 @@ export function activityDto(
     data: string;
     createdAt: Date;
     group?: { name: string; emoji: string } | null;
-    expense?: { deletedAt: Date | null } | null;
+    expense?: { deletedAt: Date | null; groupId?: string | null; splits?: { personId: string }[] } | null;
     settlement?: { deletedAt: Date | null } | null;
   },
   lastReadAt: Date | null,
@@ -426,6 +426,12 @@ export function activityDto(
     expenseId: row.expenseId,
     settlementId: row.settlementId,
     targetPersonId: row.targetPersonId ?? null,
+    // For an expense between friends rather than in a group: everyone on it
+    // but the viewer, so the feed can say who it was with.
+    withPersonIds:
+      row.expense && !row.expense.groupId && row.expense.splits
+        ? [...new Set(row.expense.splits.map((split) => split.personId))].filter((id) => id !== viewer.id)
+        : null,
     data,
     createdAt: row.createdAt.toISOString(),
     isUnread: isUnread(row, lastReadAt, viewer),

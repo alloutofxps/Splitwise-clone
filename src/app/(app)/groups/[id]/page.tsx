@@ -25,6 +25,7 @@ import { useComposer } from "@/components/expense/composer-context";
 import { useDashboard, useGroup, useMarkGroupRead } from "@/lib/client/queries";
 
 type Tab = "expenses" | "balances" | "charts";
+const TAB_NAMES: Record<Tab, string> = { expenses: "Expenses", balances: "Balances", charts: "Insights" };
 
 export default function GroupPage() {
   const params = useParams<{ id: string }>();
@@ -227,6 +228,8 @@ export default function GroupPage() {
               transition={{ duration: 0.15 }}
               className="mt-4"
             >
+              {/* The tabs stand in for this heading on screen; speech still needs it. */}
+              <h2 className="sr-only">{TAB_NAMES[tab]}</h2>
               {panel(tab)}
             </motion.div>
           </AnimatePresence>

@@ -87,7 +87,10 @@ export default function HomePage() {
             <Search className="size-5" strokeWidth={1.75} />
           </Link>
           <Link href="/account" aria-label="You" className="rounded-full p-1 transition-opacity active:opacity-70">
-            <Avatar person={data.me} size="sm" />
+            {/* The initials are a picture of you here, not the button's name. */}
+            <span aria-hidden>
+              <Avatar person={data.me} size="sm" />
+            </span>
           </Link>
         </div>
       </header>

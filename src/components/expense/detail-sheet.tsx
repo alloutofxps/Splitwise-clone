@@ -189,7 +189,7 @@ export function ExpenseDetailSheet({
 
             {/* Who paid and who owes, each person once ------------------- */}
             <div className="mt-5">
-              <SectionLabel>{`Who paid · ${splitLabel(expense.splitMode).toLowerCase()}`}</SectionLabel>
+              <SectionLabel>{`Who paid and who owes · ${splitLabel(expense.splitMode).toLowerCase()}`}</SectionLabel>
               <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
                 {[...new Set([...expense.payers.map((payer) => payer.personId), ...expense.splits.filter((split) => split.included || BigInt(split.amount) !== 0n).map((split) => split.personId)])].map((personId) => {
                   const person = people.get(personId);

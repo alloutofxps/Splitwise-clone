@@ -35,7 +35,7 @@
 
   --text: #141412;          /* ink */
   --text-muted: #57534e;    /* ink-2 */
-  --text-subtle: #8a857e;   /* ink-3 */
+  --text-subtle: #6f6a63;   /* ink-3: 4.8 to 1 on the darkest surface it sits on */
   --text-inverse: #fafaf8;
 
   --border: #e7e5e1;        /* rule */
@@ -77,17 +77,21 @@
   /*
    * People. Ten hues at the same perceived lightness, so nobody looks more
    * important than anybody else. A person keeps theirs everywhere.
+   *
+   * Dark enough for white initials to read (4.7 to 5.3 to 1; at 0.62 they
+   * were 3.5 to 3.9). Four hues give up a little colour so they stay within
+   * what a screen can show at this lightness.
    */
-  --person-azure: oklch(0.62 0.14 245);
-  --person-violet: oklch(0.62 0.14 290);
-  --person-orchid: oklch(0.62 0.14 330);
-  --person-coral: oklch(0.62 0.14 20);
-  --person-amber: oklch(0.62 0.13 70);
-  --person-olive: oklch(0.62 0.12 110);
-  --person-teal: oklch(0.62 0.11 185);
-  --person-cobalt: oklch(0.62 0.15 265);
-  --person-plum: oklch(0.62 0.12 310);
-  --person-sand: oklch(0.62 0.07 55);
+  --person-azure: oklch(0.545 0.136 245);
+  --person-violet: oklch(0.545 0.14 290);
+  --person-orchid: oklch(0.545 0.14 330);
+  --person-coral: oklch(0.545 0.14 20);
+  --person-amber: oklch(0.545 0.118 70);
+  --person-olive: oklch(0.545 0.118 110);
+  --person-teal: oklch(0.545 0.096 185);
+  --person-cobalt: oklch(0.545 0.15 265);
+  --person-plum: oklch(0.545 0.12 310);
+  --person-sand: oklch(0.545 0.07 55);
   /* Initials on a person's disc. */
   --on-person: #ffffff;
 
@@ -132,7 +136,8 @@
 
   --text: #f3f2ee;
   --text-muted: #a8a29e;
-  --text-subtle: #77726b;
+  /* 4.7 to 1 on the lightest surface it sits on (a panel). */
+  --text-subtle: #918c85;
   --text-inverse: #0b0b0a;
 
   --border: #2a2926;
