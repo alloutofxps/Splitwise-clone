@@ -333,3 +333,51 @@ Day and Night), 2.6 MB in `public/launch/`. iOS downloads only the one that
 fits, when the app is added to the home screen. Scripts are unchanged; every
 page's HTML grows from 8.9 to 13.1 KB compressed, because the 60 links are
 in each page's head (Next writes them twice: in the HTML and the page data).
+
+---
+
+## 13. Closed panels stop redrawing (20 October 2026)
+
+Upgrade 4e, fix 1 of 5. Every row of a ledger carried its own hidden menu
+panel, and the group's settings, invite and confirm panels sat hidden on the
+page too. Hidden, they still redrew each time the screen behind them did.
+Now a panel exists from the moment it opens until its closing slide ends
+(`WhileOpen` in `src/components/ui/sheet.tsx`). Settle up and the expense
+detail panel stay on the page, because the Undo in their messages needs
+them after they close. Raw runs in `perf-runs/2026-10-20-closed-panels/`,
+against main `4b70149` in one sitting.
+
+**Redraws, counted with React's profiler (three runs each, same every time
+but for a few):**
+
+| Moment | Panels redrawn, before | After | Everything redrawn, before | After |
+|---|---|---|---|---|
+| Opening a group | 79 | 11 | 148 | 80 |
+| Adding an expense | 113 to 121 | 30 to 31 | 231 to 250 | 159 to 171 |
+| Settling up a debt | 90 | 15 | 206 | 131 |
+| A part payment | 90 | 15 | 214 | 139 |
+| Delete, then Undo | 87 to 94 | 18 to 19 | 170 to 185 | 98 to 108 |
+
+**Longest freeze, CPU slowed 4x (six alternating runs, median):**
+
+| Moment | Before | After |
+|---|---|---|
+| Opening a group | 95 ms | 88 ms |
+| Settling up a debt | 87 ms | 80 ms |
+| A part payment | 87.5 ms | 87.5 ms |
+| Adding an expense, delete and Undo | none over 50 ms | none over 50 ms |
+
+**Smoothness:** late frames at 60Hz are the same within the noise in all
+five recorded flows (add, settle up, payment, group row, panels): for
+example 3.6% to 3.9% over the whole settle-up flow either way. The freeze
+after Save is mostly the whole screen updating and the Balances tab
+appearing; that is fixes 2 to 4.
+
+**Closing still slides:** sampled frame by frame, the settings panel and a
+row's menu travel all the way off the bottom before they leave the page.
+
+**Download size:** Home 309.7 KB, a group 332.4 KB of scripts (0.1 KB more
+each), under the 312 and 333 KB limits.
+
+**Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
+pwa-check 36, all passing.
