@@ -94,6 +94,31 @@ are written where they are used.
 | Slow load (over 300ms) | Still outline shaped like the screen, then a fade | 150 | Something's coming, and this is its shape |
 | Scrolling under a sticky bar | Bar gains a level 2 shadow | 150 | Content is passing underneath |
 
+**The row travelling into the header** (`src/components/ui/travel.ts`):
+
+- **Which rows:** a group's row in Home's Groups list, and a friend's row in
+  Friends.
+  - The icon (a group's emoji, a friend's avatar), the name and the amount
+    fly from the row to the same pieces in the new screen's header.
+  - They grow on the way, on the in-place curve, in 400ms.
+  - Going back, the header's pieces fly into the row in 250ms.
+  - "Needs you" and Activity rows are about an event, not the group, so they
+    keep the plain slide.
+- **How:** what flies is a copy of each piece laid over the page, so nothing
+  clips it and the page's slide doesn't bend its path. The real piece is
+  hidden underneath until the copy lands.
+- **Smooth while the app is busy:** the copies move by the browser's own animation
+  engine, so they keep moving while the new screen is still being drawn.
+- **An amount travels only when there is one balance,** so it always lands on
+  the same figure.
+- **Nothing travels when:**
+  - Reduce Motion is on;
+  - the new screen took over a second (it showed its outline instead);
+  - either end is off screen.
+- **Native view transitions were tried first and ruled out** (20 October
+  2026). On Next.js 15 they need the experimental React build, which adds
+  12.6 KB on its own, over both download limits.
+
 ### Touch
 | Moment | What moves | ms | What it explains |
 |---|---|---|---|

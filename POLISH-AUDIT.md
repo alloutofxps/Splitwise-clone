@@ -11,6 +11,7 @@ dropped (see the end).
   and Friends now passes 4.5:1 in both themes, checked in the browser.
 - **Fixed in the motion consistency PR:** items 4, 5, 22 and 23.
 - **Fixed in the small design PR:** items 9, 10, 25 and 28.
+- **Done in upgrade 4a:** item 6 (the row travelling into the header).
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 
