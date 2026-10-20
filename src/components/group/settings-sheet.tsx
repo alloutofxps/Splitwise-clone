@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Archive, ChevronRight, Download, LogOut, Merge, PieChart, Repeat, Trash2, UserPlus, X } from "lucide-react";
-import { Sheet, ConfirmSheet } from "../ui/sheet";
+import { Sheet, ConfirmSheet, WhileOpen } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -391,25 +391,31 @@ export function GroupSettingsSheet({
         </div>
       </Sheet>
 
-      <RecurringSheet
-        open={recurring}
-        onClose={() => setRecurring(false)}
-        group={group}
-        meId={meId}
-      />
-      <DefaultSplitSheet
-        open={usualSplit}
-        onClose={() => setUsualSplit(false)}
-        group={group}
-        meId={meId}
-      />
+      <WhileOpen open={recurring}>
+        <RecurringSheet
+          open={recurring}
+          onClose={() => setRecurring(false)}
+          group={group}
+          meId={meId}
+        />
+      </WhileOpen>
+      <WhileOpen open={usualSplit}>
+        <DefaultSplitSheet
+          open={usualSplit}
+          onClose={() => setUsualSplit(false)}
+          group={group}
+          meId={meId}
+        />
+      </WhileOpen>
 
-      <MergePersonSheet
-        open={merging !== null}
-        onClose={() => setMerging(null)}
-        ghost={merging}
-        candidates={mergeCandidates}
-      />
+      <WhileOpen open={merging !== null}>
+        <MergePersonSheet
+          open={merging !== null}
+          onClose={() => setMerging(null)}
+          ghost={merging}
+          candidates={mergeCandidates}
+        />
+      </WhileOpen>
 
       <ConfirmSheet
         open={confirmLeave}

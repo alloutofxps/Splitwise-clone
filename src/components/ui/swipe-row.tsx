@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "framer-motion";
-import { Sheet } from "./sheet";
+import { Sheet, WhileOpen } from "./sheet";
 import { cn, haptic } from "./primitives";
 
 const REVEAL = 96;
@@ -139,6 +139,7 @@ export function ActionSheet({
   actions: { label: string; icon?: React.ReactNode; tone?: "danger"; onPress: () => void }[];
 }) {
   return (
+    <WhileOpen open={open}>
     <Sheet open={open} onClose={onClose} title={title}>
       <ul className="mx-5 mb-6 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
         {actions.map((action) => (
@@ -162,5 +163,6 @@ export function ActionSheet({
         ))}
       </ul>
     </Sheet>
+    </WhileOpen>
   );
 }

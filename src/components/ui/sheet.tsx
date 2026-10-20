@@ -171,6 +171,28 @@ export function Sheet({
 }
 
 /**
+ * Keeps a panel out of the page while it is shut.
+ *
+ * A closed Sheet draws nothing, but it is still there: its hooks run and its
+ * contents are worked out every time the screen behind it redraws. With a
+ * menu behind every row of a long ledger, that was a hundred hidden panels
+ * redrawing each time a payment was saved, on the same beat as the panel
+ * sliding away. Wrapped in this, a panel exists from the moment it opens until
+ * its closing slide has finished, and not at all otherwise.
+ */
+export function WhileOpen({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const [shown, setShown] = React.useState(open);
+  if (open && !shown) setShown(true);
+  React.useEffect(() => {
+    if (open || !shown) return;
+    // A little longer than the closing slide, so it is never cut short.
+    const timer = window.setTimeout(() => setShown(false), PANEL_EXIT_MS + 100);
+    return () => window.clearTimeout(timer);
+  }, [open, shown]);
+  return shown ? children : null;
+}
+
+/**
  * Whether this element is the reason a keyboard would be on screen.
  *
  * The viewport being short is not on its own evidence of a keyboard, and
@@ -470,6 +492,7 @@ export function ConfirmSheet({
   loading?: boolean;
 }) {
   return (
+    <WhileOpen open={open}>
     <Sheet open={open} onClose={onClose} title={title}>
       <div className="px-5 pb-5">
         {description ? (
@@ -495,5 +518,6 @@ export function ConfirmSheet({
         </div>
       </div>
     </Sheet>
+    </WhileOpen>
   );
 }
