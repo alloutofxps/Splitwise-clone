@@ -313,11 +313,21 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   await context.close();
 }
 
-/** Frame gaps in a list of frame times: how many ran long, and how long. */
+/**
+ * Frame gaps in a list of frame times: how many ran long, and how long.
+ *
+ * droppedShare depends on the screen: at 240 frames a second there are four
+ * times as many frames for the same late ones to hide among. lateShareAt60Hz
+ * divides by the frames a 60Hz phone would draw in the same time instead, so
+ * runs on different screens can be compared.
+ */
 function summarise(times) {
   const gaps = times.slice(1).map((t, i) => t - times[i]).filter((g) => g < 1000);
   const sorted = [...gaps].sort((a, b) => a - b);
+  const late = gaps.filter((g) => g > 25).length;
+  const seconds = gaps.reduce((sum, g) => sum + g, 0) / 1000;
   return {
+    lateShareAt60Hz: seconds ? +(late / (seconds * 60)).toFixed(3) : null,
     frames: gaps.length,
     medianMs: sorted.length ? +sorted[Math.floor(sorted.length / 2)].toFixed(1) : null,
     p95Ms: sorted.length ? +sorted[Math.floor(sorted.length * 0.95)].toFixed(1) : null,
