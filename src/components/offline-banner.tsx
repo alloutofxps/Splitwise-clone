@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { DURATION, EASE_STANDARD } from "./ui/motion";
 import { CloudOff, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { cn } from "./ui/primitives";
 import {
@@ -82,7 +83,7 @@ export function OfflineBanner() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          transition={{ duration: DURATION.change, ease: EASE_STANDARD }}
           className="no-print overflow-hidden"
         >
           {/* A slim bar under the header, not a floating pill (DESIGN-PLAN 3.12). */}

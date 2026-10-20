@@ -8,10 +8,9 @@ import { initials } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
 import { usePersonHue } from "../ui/avatar";
 import { cn } from "../ui/primitives";
-import { EASE_ENTER } from "../ui/motion";
+import { DURATION, EASE_ENTER, EASE_STANDARD } from "../ui/motion";
 import { untilClear, useStage } from "../ui/stage";
 
-const EASE = [0.2, 0, 0, 1] as const;
 const DOT = 18;
 
 /** A payment travelling along its line (MOTION-SPEC, money). */
@@ -189,13 +188,14 @@ function EdgeLine({
         strokeWidth={width}
         strokeLinecap="round"
         {...draw}
-        transition={{ duration: 0.32, ease: EASE }}
+        // A line changing in place (Simplify, a payment): it lands like a new row.
+        transition={{ duration: DURATION.arrive, ease: EASE_STANDARD }}
       />
       <motion.g
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.24, ease: EASE, delay: reduce ? 0 : 0.18 }}
+        transition={{ duration: DURATION.fade, ease: EASE_STANDARD, delay: reduce ? 0 : 0.18 }}
       >
         {/* Arrowhead at the payee's end. */}
         <path

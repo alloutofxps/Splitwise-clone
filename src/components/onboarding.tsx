@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { DURATION, EASE_ENTER, EASE_EXIT } from "./ui/motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -125,8 +126,8 @@ function StepShell({ children }: { children: React.ReactNode }) {
     <motion.div
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -24, pointerEvents: "none" }}
-      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, x: -24, pointerEvents: "none", transition: { duration: DURATION.quick, ease: EASE_EXIT } }}
+      transition={{ duration: DURATION.arrive, ease: EASE_ENTER }}
       className="flex flex-1 flex-col"
     >
       {children}

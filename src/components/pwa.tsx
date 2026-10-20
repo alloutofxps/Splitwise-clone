@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { DURATION, EASE_ENTER, EASE_EXIT } from "./ui/motion";
 import { ArrowUpFromLine, Download, Plus, RefreshCw, Share, X } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
 import { readStored, writeStored } from "@/lib/client/storage";
@@ -129,6 +130,8 @@ function ServiceWorkerManager() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
+        // Without a transition framer-motion uses a spring, which can bounce.
+        transition={{ duration: DURATION.quick, ease: EASE_ENTER }}
         className="pointer-events-auto flex w-full max-w-[420px] items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-elevated px-4 py-3 shadow-float"
       >
         <RefreshCw className="size-[18px] shrink-0 text-brand" />
@@ -249,8 +252,8 @@ function InstallPrompt() {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24, pointerEvents: "none" }}
-          transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
+          exit={{ opacity: 0, y: 24, pointerEvents: "none", transition: { duration: DURATION.fade, ease: EASE_EXIT } }}
+          transition={{ duration: DURATION.quick, ease: EASE_ENTER }}
           className="no-print fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-[55] px-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[380px] sm:px-0"
         >
           <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-line bg-elevated p-4 shadow-float">

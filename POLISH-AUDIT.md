@@ -9,6 +9,7 @@ dropped (see the end).
 - **Fixed in the accessibility and wording PR:** items 1, 2, 11 to 18, 20
   and 21. Every text element on Home, a group (all three tabs), Activity, You
   and Friends now passes 4.5:1 in both themes, checked in the browser.
+- **Fixed in the motion consistency PR:** items 4, 5, 22 and 23.
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { DURATION, EASE_STANDARD } from "./motion";
 import { Check, Delete } from "lucide-react";
 import { cn, haptic } from "./primitives";
 import { maskAmount, useAmountText } from "./money";
@@ -137,7 +138,7 @@ export function AmountPad({
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={reduce ? { duration: 0 } : { duration: 0.25, ease: [0.2, 0, 0, 1] }}
+          transition={reduce ? { duration: 0 } : { duration: DURATION.change, ease: EASE_STANDARD }}
           className="overflow-hidden"
         >
         {/* A calculator grid: hairlines between the keys rather than twelve

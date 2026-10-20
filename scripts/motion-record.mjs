@@ -182,6 +182,16 @@ const FLOWS = {
     await page.goBack();
     await page.waitForTimeout(1400);
   },
+  // Expenses, Balances, Insights and back: the tabs sit side by side.
+  "10-group-tabs": async (page, seedData, mark) => {
+    await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+    mark("save");
+    for (const name of ["Balances", "Insights", "Expenses"]) {
+      await page.getByRole("tab", { name }).click();
+      await page.waitForTimeout(900);
+    }
+  },
   "06-panels": async (page, seedData) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);

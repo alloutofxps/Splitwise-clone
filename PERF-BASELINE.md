@@ -224,3 +224,29 @@ Smoothness after a save is to be judged on the real Android phone in
 phase 6; if it stutters there too, going back to 14.1 is a one-line change.
 The numbers in sections 1 to 4 above are from 14.1; compare future changes
 against a fresh 14.4 run in the same sitting.
+
+---
+
+## 8. Motion consistency (20 October 2026)
+
+POLISH-AUDIT items 4, 5, 22 and 23, measured against main at `8a8b25b`
+(port 3103) in one sitting, runs alternating, processor slowed 4x. Raw runs
+and side-by-side videos in `perf-runs/2026-10-20-motion-consistency/`. The
+recorder gained a `10-group-tabs` flow (Expenses, Balances, Insights and
+back).
+
+**Download size:** Home 305.6 to 305.7 KB, a group 328.4 to 328.7 KB, styles
+12.3 to 12.2 KB. No real change.
+
+**Late frames at 60Hz:**
+
+| Moment | Before | After |
+|---|---|---|
+| Group tabs, 2.5s after the first tap (three runs) | 2.7 / 5.3 / 3.3% | 2.7 / 2.7 / 4.7% |
+| Panels, whole flow (three runs) | 3.7 / 3.0 / 3.5% | 3.3 / 3.4 / 3.1% |
+| Settling up, after Save (eight runs) | typical 3.3%, average 3.2% | typical 2.7%, average 2.9% |
+
+The longest freeze switching tabs went from up to 275ms to about 185ms. In
+two of the eight settle-up runs the longest single freeze after Save was
+longer (192 and 242ms against at most 142ms before); the share of late
+frames was no worse.
