@@ -170,8 +170,57 @@ which git ignores.
 Restated on 20 October 2026 (the person's decision) as before the motion
 work plus 15 KB, in this method, rounded:
 
-- Home, scripts to show it: 312 KB (now 303.0, so 9.0 KB left)
-- A group: 333 KB (now 323.7, so 9.3 KB left)
+- Home, scripts to show it: 312 KB (303.0 at the baseline, 305.6 with
+  framer-motion 14.4, so 6.4 KB left)
+- A group: 333 KB (323.7 at the baseline, 328.3 with framer-motion 14.4,
+  so 4.7 KB left)
 
 The early fetch on Home sits outside the limit because it doesn't delay
 Home. MOTION-SPEC section 7 carries the same numbers.
+
+---
+
+## 7. Trial: framer-motion 14.1.0 to 14.4.0 (20 October 2026)
+
+Upgrade 4d. Both builds served side by side in one sitting (14.1 on port
+3102, 14.4 on port 3100), runs alternating, processor slowed 4x. Raw runs
+and a side-by-side video in `perf-runs/2026-10-20-framer-14-4/`.
+
+What changed in the library (its changelog): 14.2 runs `x`, `y` and `scale`
+animations on the browser's fast lane (the compositor); 14.3.1 fixes a bug
+in that and a drag jump; 14.4 adds a feature Divvy doesn't use. Nothing is
+marked as breaking. 14.3.1 and 14.4.0 were both published on 19 October.
+
+**Checks:** type check, lint, 341 unit tests, ui-check (81), ui-features (32)
+and pwa-check (36) all pass on 14.4. Frame-by-frame, the motion looks the
+same: panels, rows, toasts, nothing growing from a dot.
+
+**Download size:**
+
+| | 14.1 | 14.4 | Room left under the limit with 14.4 |
+|---|---|---|---|
+| Home, scripts to show it | 303.0 KB | 305.6 KB | 6.4 KB |
+| A group | 323.7 KB | 328.3 KB | 4.7 KB |
+
+**Smoothness, late frames at 60Hz, after Save (eight runs each):**
+
+| Moment | 14.1 typical / average | 14.4 typical / average |
+|---|---|---|
+| Adding an expense | 2.0 / 2.4% | 4.7 / 3.5% |
+| A part payment | 2.0 / 1.9% | 3.3 / 3.4% |
+
+Whole flows over three runs each were within noise of each other, slightly
+better on 14.4 for opening the app, Home to a group, first run and pull to
+refresh.
+
+**Reading:** on this laptop 14.4 adds frequent small hitches after a save
+(the single worst freezes are no worse). The likely reason is that the
+fast lane hands more to the graphics side, which on this machine is done in
+software. On a phone with a real graphics chip it may be the other way
+round, so the phone test is the fair judge.
+
+**Decision (the person, 20 October 2026):** adopted for the bug fixes.
+Smoothness after a save is to be judged on the real Android phone in
+phase 6; if it stutters there too, going back to 14.1 is a one-line change.
+The numbers in sections 1 to 4 above are from 14.1; compare future changes
+against a fresh 14.4 run in the same sitting.
