@@ -259,3 +259,31 @@ POLISH-AUDIT items 9, 10, 25 and 28. Download size after them: Home 306.6 KB
 of scripts to show it (5.4 KB under the limit), a group 329.4 KB (3.6 KB
 under). The welcome-shaped opening outline and the label placement cost
 about 0.9 KB and 0.7 KB. The room left matters for NumberFlow (4b).
+
+---
+
+## 10. The row travelling into the header (20 October 2026)
+
+Upgrade 4a (POLISH-AUDIT item 6). Raw runs and side-by-side videos in
+`perf-runs/2026-10-20-row-travel/`. The recorder gained an `11-group-row`
+flow, which taps the group's own row in Home's Groups list (`02` taps the
+first link naming the group, usually a "Needs you" row, which doesn't
+travel).
+
+**Native view transitions, measured first:** Next.js 15.5's
+`experimental.viewTransition` switches the app to React's experimental
+build. On its own, before any animation, that took Home to 319.3 KB and a
+group to 342.0 KB (+12.7 and +12.6 KB), over both limits, so it was dropped.
+
+**The hand-built travel, against main `36753ff` in one sitting:**
+
+| | Before | After |
+|---|---|---|
+| Home, scripts to show it | 307.1 KB | 308.0 KB (4.0 KB under the limit) |
+| A group | 329.6 KB | 330.7 KB (2.3 KB under) |
+| Opening a group and back, whole flow at 60Hz (five runs) | typical 3.1% | typical 3.2% |
+| The 2.5s after the tap (five runs) | typical 4.7% | typical 4.7% |
+| Longest freeze after the tap | 96 to 104ms | 96 to 108ms |
+
+With Reduce Motion on, nothing travels. The friend version was checked
+frame by frame; it uses the same code.

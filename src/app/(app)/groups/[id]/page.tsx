@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/money";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
 import { setBeat } from "@/components/ui/stage";
+import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
@@ -48,6 +49,7 @@ export default function GroupPage() {
   };
   const reduce = useReducedMotion();
   const wide = useWide();
+  const screen = React.useRef<HTMLDivElement>(null);
   // ?open=settle or ?open=invite: arriving from a long-press on Home.
   const requested = useSearchParams().get("open");
   const [settings, setSettings] = React.useState(false);
@@ -82,6 +84,16 @@ export default function GroupPage() {
     () => new Map((dashboard?.people ?? []).map((person) => [person.id, person])),
     [dashboard?.people],
   );
+
+  // The row you tapped on Home flies into this header; leaving, the header
+  // hands its pieces back to the row (components/ui/travel.ts).
+  const ready = Boolean(group && dashboard);
+  useArrival(screen, `/groups/${groupId}`, ready, TRAVEL_IN_MS);
+  React.useLayoutEffect(() => {
+    const node = screen.current;
+    if (!ready || !node) return;
+    return () => leaveFrom(node, `back:/groups/${groupId}`);
+  }, [ready, groupId]);
 
   if (isLoading) return <GroupSkeleton />;
   if (!group || !dashboard) return null;
@@ -134,7 +146,7 @@ export default function GroupPage() {
 
   return (
     <GroupHues members={group.members}>
-    <div className="pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div ref={screen} className="pt-[max(0.5rem,env(safe-area-inset-top))]">
       {/* Header ---------------------------------------------------------- */}
       <header className="-mx-1 flex items-center gap-1 py-2">
         <button
@@ -149,8 +161,12 @@ export default function GroupPage() {
         </button>
 
         <h1 className="flex min-w-0 flex-1 items-center gap-2 px-1 text-title-lg font-semibold tracking-[-0.02em] text-text">
-          <span aria-hidden>{group.emoji}</span>
-          <span className="truncate">{group.name}</span>
+          <span aria-hidden data-travel="icon">
+            {group.emoji}
+          </span>
+          <span data-travel="name" className="truncate">
+            {group.name}
+          </span>
         </h1>
 
         <HeaderButton
@@ -323,13 +339,15 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
           className="flex flex-col"
         >
           <span className="text-body text-muted">{shown > 0n ? "You’re owed" : "You owe"}</span>
-          <Amount
-            value={shown === 0n ? net : shown}
-            currency={currency}
-            arrow
-            textRef={ref}
-            className="text-display font-semibold leading-tight tracking-[-0.03em]"
-          />
+          <span data-travel="amount" className="self-start">
+            <Amount
+              value={shown === 0n ? net : shown}
+              currency={currency}
+              arrow
+              textRef={ref}
+              className="text-display font-semibold leading-tight tracking-[-0.03em]"
+            />
+          </span>
         </motion.p>
       )}
     </AnimatePresence>

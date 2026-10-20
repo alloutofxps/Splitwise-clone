@@ -14,6 +14,7 @@ import { JoinSheet } from "@/components/group/join-sheet";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { useAddFriend, useDashboard, usePrefetch } from "@/lib/client/queries";
 import { useOpenScreen } from "@/components/ui/open-screen";
+import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
 
 import type { FriendDto } from "@/lib/types";
 
@@ -293,6 +294,9 @@ function PeopleSection({
 function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: bigint; offerAdd?: boolean }) {
   const prefetch = usePrefetch();
   const open = useOpenScreen();
+  // Back from their page: its header's pieces fly home into this row.
+  const row = React.useRef<HTMLAnchorElement>(null);
+  useArrival(row, `back:/friends/${friend.person.id}`, true, TRAVEL_BACK_MS);
   const entries = Object.entries(friend.net);
   const hue = usePersonHue(friend.person);
   const biggest = entries.reduce((max, [, value]) => {
@@ -312,15 +316,20 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <Link
+        ref={row}
         href={`/friends/${friend.person.id}`}
         prefetch
         onPointerDown={() => void prefetch.friend(friend.person.id)}
         onClick={(event) => open(event, `/friends/${friend.person.id}`, prefetch.friend(friend.person.id))}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <Avatar person={friend.person} size="md" />
+        <span data-travel="icon" className="shrink-0">
+          <Avatar person={friend.person} size="md" />
+        </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-body-lg font-medium text-text">{friend.person.displayName}</span>
+          <span data-travel="name" className="block truncate text-body-lg font-medium text-text">
+            {friend.person.displayName}
+          </span>
           <span className="block truncate text-caption text-subtle">
             {friend.person.isGhost ? "not on Divvy yet" : (where ?? "settled up")}
           </span>
@@ -348,7 +357,10 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
               const amount = BigInt(value);
               return (
                 <span key={currency} className="block">
-                  <Amount value={amount} currency={currency} size="md" />
+                  {/* Travels only when it is the one balance, so it lands on the same figure. */}
+                  <span data-travel={entries.length === 1 ? "amount" : undefined} className="inline-block">
+                    <Amount value={amount} currency={currency} size="md" />
+                  </span>
                   <span className="block text-caption text-subtle">{amount > 0n ? "owes you" : "you owe"}</span>
                 </span>
               );
