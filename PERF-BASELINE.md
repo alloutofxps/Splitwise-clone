@@ -44,7 +44,7 @@ time.
 - MOTION-SPEC section 7 gave "today" as 195 KB and 225 KB with limits of
   210 KB and 240 KB, i.e. today plus 15 KB. Those figures can't be
   reproduced by any method tried here (the build's column, the build files
-  compressed, or the bytes over the wire), so the limits need restating in
+  compressed, or the bytes over the wire), so the limits were restated in
   this method. See section 6.
 
 ## 2. Smoothness
@@ -165,13 +165,13 @@ Raw recordings, traces (`.json.gz`, open in the browser's Performance
 panel) and Lighthouse reports are in `perf-runs/2026-10-20-baseline/`,
 which git ignores.
 
-## 6. Waiting on a decision
+## 6. Download limits
 
-The download limits in MOTION-SPEC section 7. They were meant as "today
-plus 15 KB". Measured this way, before the motion work plus 15 KB is:
+Restated on 20 October 2026 (the person's decision) as before the motion
+work plus 15 KB, in this method, rounded:
 
-- Home, scripts to show it: 311.7 KB (now 303.0, so 8.7 KB left)
-- A group: 333.2 KB (now 323.7, so 9.5 KB left)
+- Home, scripts to show it: 312 KB (now 303.0, so 9.0 KB left)
+- A group: 333 KB (now 323.7, so 9.3 KB left)
 
-The early fetch on Home sits outside that limit because it doesn't delay
-Home.
+The early fetch on Home sits outside the limit because it doesn't delay
+Home. MOTION-SPEC section 7 carries the same numbers.

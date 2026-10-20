@@ -14,8 +14,8 @@ Query 5, framer-motion, Tailwind v4, Prisma on SQLite, hosted on Railway
    - Section 5, "What never moves".
    - Section 6, Reduce Motion: every slide, scale, travel and count becomes
      a 150ms fade or the end result.
-   - Section 7, download limits: Home 210 KB, a group 240 KB, first load,
-     compressed.
+   - Section 7, download limits: Home 312 KB, a group 333 KB of scripts,
+     compressed, measured with `node scripts/size-report.mjs <url>`.
    - Section 8, smoothness: under 2% of frames over 25ms with the processor
      slowed 4x (`node scripts/motion-record.mjs <url> <out> timing`).
    A change to motion that the spec doesn't describe updates the spec in the

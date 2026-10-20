@@ -166,17 +166,17 @@ and full numbers in `PERF-BASELINE.md`.
 
 | | Before the motion work (ceebc95) | Today (bb5e664) | Limit |
 |---|---|---|---|
-| Home, scripts to show it | 296.7 KB | 303.0 KB | 210 KB, to be restated (below) |
-| A group, scripts | 318.2 KB | 323.7 KB | 240 KB, to be restated (below) |
+| Home, scripts to show it | 296.7 KB | 303.0 KB | 312 KB |
+| A group, scripts | 318.2 KB | 323.7 KB | 333 KB |
 | All five drawings, in code (phase 5) | | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
 
-The limits were set as "today plus 15 KB" from figures of 195 KB and 225 KB
-whose method wasn't recorded and can't be reproduced. Measured as above,
-"before the motion work plus 15 KB" is 311.7 KB for Home and 333.2 KB for a
-group. Until the limits are restated, treat that as the bar: 8.7 KB left on
-Home, 9.5 KB on a group. Home also fetches the group screen's code (44 KB)
-once it has loaded, so opening a group doesn't wait; that doesn't delay Home
-and sits outside the limit.
+The limits are "before the motion work plus 15 KB", which was always the
+intent. They were first written as 210 KB and 240 KB, from "today" figures
+of 195 KB and 225 KB whose method wasn't recorded and can't be reproduced;
+restated in this method on 20 October 2026. That leaves 9.0 KB on Home and
+9.3 KB on a group. Home also fetches the group screen's code (44 KB) once it
+has loaded, so opening a group doesn't wait; that doesn't delay Home and
+sits outside the limit.
 
 Rive would have cost about 460 KB: a 340 KB player plus around 120 KB of
 drawings.
