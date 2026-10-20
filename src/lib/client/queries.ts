@@ -25,7 +25,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
-import { afterMoment } from "@/components/ui/stage";
+import { afterMoment, whenPanelLeaving } from "@/components/ui/stage";
 import { enqueue } from "./outbox";
 import {
   applyOptimisticWrite,
@@ -313,6 +313,10 @@ export function useSearch(query: string) {
  * The refetch that would otherwise do it now waits until the money moment
  * has played (see `invalidateLedger`), and until then the new row would sit
  * greyed out as "not saved yet" when it already was.
+ *
+ * Once the panel has started leaving, though, not in the same instant: the
+ * swap redraws the whole screen, and done first it held the panel still
+ * (`whenPanelLeaving`).
  */
 function confirmEntry(
   client: QueryClient,
@@ -320,16 +324,18 @@ function confirmEntry(
   saved: Pick<LedgerEntry, "id" | "kind" | "expense" | "settlement">,
 ) {
   if (!groupId) return;
-  client.setQueriesData<{ pages: Page<LedgerEntry>[]; pageParams: unknown[] }>(
-    { queryKey: keys.groupLedger(groupId) },
-    (data) =>
-      data && {
-        ...data,
-        pages: data.pages.map((page) => ({
-          ...page,
-          items: page.items.map((item) => (item.id === saved.id ? { ...item, ...saved, pending: false } : item)),
-        })),
-      },
+  whenPanelLeaving(() =>
+    client.setQueriesData<{ pages: Page<LedgerEntry>[]; pageParams: unknown[] }>(
+      { queryKey: keys.groupLedger(groupId) },
+      (data) =>
+        data && {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) => (item.id === saved.id ? { ...item, ...saved, pending: false } : item)),
+          })),
+        },
+    ),
   );
 }
 
