@@ -131,11 +131,15 @@ are written where they are used.
 | Moment | What moves | ms | What it explains |
 |---|---|---|---|
 | A panel opens | Rises with its button bar attached; page dims and steps back to 97% | 400 | It sits on top of where you were |
-| A panel closes | Drops away; after a swipe, at the finger's speed | 250 | Gone, and you're back |
+| A panel closes | Drops away; after a swipe, from where the finger let go | 250 | Gone, and you're back |
 | A panel on a panel | The first steps back and dims | 400 | This belongs to the one underneath |
 | Keypad makes way for the keyboard | Folds away instead of vanishing | 250 | The pad stepped aside for typing |
 | Menus and pickers | Grow from the button that opened them | 200 | This came from that button |
 | Toasts | Rise once the panel has gone; fade away | 200 / 150 | Confirmation, once the action is complete |
+
+A panel's rise and drop are run by the browser itself, not by the app's
+scripts, so they stay smooth while the app is busy saving
+(`components/ui/sheet.tsx`). A panel exists only while it's open or leaving.
 
 ### Money
 Changes made inside a panel wait for it to leave (`components/ui/stage.ts`),
@@ -200,6 +204,7 @@ the script after changing Home's outline, the tab bar or the colours.
 With Reduce Motion (iPhone) or Remove animations (Android) on, every slide,
 scale, travel and roll becomes a 150ms fade or simply the end result. The
 drawings show their final still frame. Depth stays: shadows aren't motion.
+Panels fade in and out where they sit instead of rising and dropping.
 
 ## 7. Download size
 
