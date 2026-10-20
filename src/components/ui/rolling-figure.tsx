@@ -106,10 +106,14 @@ export function RollingFigure({
   const text = formatMoney(abs, currency);
   if (!flowReady || !format) return <span data-figure-text={text}>{text}</span>;
   return (
-    // `data-figure-text` lets copies of this figure (the row travel) show it
-    // as text: NumberFlow draws its digits inside its own shadow root, which
-    // a copy can't carry.
+    // NumberFlow draws its digits inside its own shadow root, out of the
+    // page's text. So the figure is also here as real text, read once by
+    // speech software and found by search, with the rolling digits hidden
+    // from both; and `data-figure-text` lets copies of it (the row travel)
+    // write it as text, since a copy can't carry a shadow root.
     <span data-figure-text={text}>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden>
       <React.Suspense fallback={text}>
       <NumberFlow
         // A number, as formatMoney itself uses: exact for any real balance,
@@ -124,6 +128,7 @@ export function RollingFigure({
         onAnimationsFinish={() => restRef.current?.(shown)}
       />
       </React.Suspense>
+      </span>
     </span>
   );
 }

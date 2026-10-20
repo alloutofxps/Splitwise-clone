@@ -287,3 +287,39 @@ group to 342.0 KB (+12.7 and +12.6 KB), over both limits, so it was dropped.
 
 With Reduce Motion on, nothing travels. The friend version was checked
 frame by frame; it uses the same code.
+
+---
+
+## 11. Rolling digits for the group balance (20 October 2026)
+
+Upgrade 4b. The group's balance rolls its digits (NumberFlow,
+`@number-flow/react` 0.6.2, MIT) instead of counting through the numbers.
+Raw runs and side-by-side videos in `perf-runs/2026-10-20-rolling-digits/`,
+against main `6512053` in one sitting.
+
+**Download size:** NumberFlow is 6.1 KB compressed (7.0 KB with its request),
+fetched after the page has loaded, so it sits outside the limit.
+
+| Scripts to show it | Before | After | Limit | Room left |
+|---|---|---|---|---|
+| Home | 308.3 KB | 309.6 KB | 312 KB | 2.4 KB |
+| A group | 330.9 KB | 332.3 KB | 333 KB | 0.7 KB |
+
+**Hand-over:** checked frame by frame, in Day and Night. Plain text to
+NumberFlow keeps the same size and place (122.8 by 37.5 px). Pixels that
+differ are confined to the cents, where NumberFlow sets each digit on its
+own (about 0.1% of the header).
+
+**Smoothness, late frames at 60Hz in the 2.5s after Save (five alternating
+runs each):**
+
+| Moment | Counting | Rolling, with fade masks | Rolling, masks off (adopted) |
+|---|---|---|---|
+| Adding an expense | typical 2.7% | typical 2.0% | not re-run |
+| Settling up a debt | typical 1.3% | typical 2.0% | typical 2.0% |
+| A part payment | typical 1.3% | typical 4.0% | typical 2.0% |
+
+The longest freezes are the same either way (about 100ms). With masks off,
+the spinning digits are clipped at the line instead of fading. Rolling sits
+at the 2% bar on this laptop, which draws without a real graphics chip; the
+person chose to adopt it and judge smoothness on the Android phone.

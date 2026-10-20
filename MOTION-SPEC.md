@@ -200,18 +200,19 @@ Compressed scripts the phone downloads on a cold first visit, over the wire:
 `node scripts/size-report.mjs <base-url>` against a production build. Method
 and full numbers in `PERF-BASELINE.md`.
 
-| | Before the motion work (ceebc95) | Today (framer-motion 14.4) | Limit |
+| | Before the motion work (ceebc95) | Today (20 October 2026) | Limit |
 |---|---|---|---|
-| Home, scripts to show it | 296.7 KB | 305.6 KB | 312 KB |
-| A group, scripts | 318.2 KB | 328.3 KB | 333 KB |
+| Home, scripts to show it | 296.7 KB | 309.6 KB | 312 KB |
+| A group, scripts | 318.2 KB | 332.3 KB | 333 KB |
 | All five drawings, in code (phase 5) | | 1.4 KB (1 KB script, 0.4 KB styles) | 5 KB |
 
 The limits are "before the motion work plus 15 KB", which was always the
 intent. They were first written as 210 KB and 240 KB, from "today" figures
 of 195 KB and 225 KB whose method wasn't recorded and can't be reproduced;
 restated in this method on 20 October 2026. Moving framer-motion from 14.1
-to 14.4 added 2.6 KB to Home and 4.6 KB to a group, which leaves 6.4 KB on
-Home and 4.7 KB on a group. Home also fetches the group screen's code (44 KB) once it
+to 14.4 added 2.6 KB to Home and 4.6 KB to a group; the row travel and the
+rolling digits about 1 KB each. That leaves 2.4 KB on Home and 0.7 KB on a
+group. NumberFlow itself (6 KB) is fetched once the group page has loaded. Home also fetches the group screen's code (44 KB) once it
 has loaded, so opening a group doesn't wait; that doesn't delay Home and
 sits outside the limit.
 
