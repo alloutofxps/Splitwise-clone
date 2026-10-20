@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { LAUNCH_SCREENS } from "./launch-screens";
 
 /**
  * Self-hosted via next/font, which inlines the font files into the build. A
@@ -37,6 +38,10 @@ export const metadata: Metadata = {
     // Lets the app's own header sit under the status bar instead of beside it.
     statusBarStyle: "black-translucent",
     title: "Divvy",
+    // Shown by iOS while the app starts from the home screen: the app's own
+    // first frame, so it appears over an identical picture rather than a
+    // white flash (scripts/launch-screens.mjs).
+    startupImage: LAUNCH_SCREENS,
   },
   formatDetection: {
     // Stops iOS turning every amount and date into a phone number link.
