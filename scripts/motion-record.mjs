@@ -10,6 +10,9 @@
 //   measuring every frame the browser draws during each interaction:
 //   out/timing.json. A frame over 25ms is a dropped frame at 60fps.
 //
+// SLOW=1 slows the CPU 4x for frames too, to see what a mid-range phone
+// shows: a slide the browser runs itself keeps moving while the app is busy.
+//
 // Seeds its own data: four people, two groups, a direct expense.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -279,7 +282,7 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   }
 
   const cdp = await context.newCDPSession(page);
-  if (MODE === "timing") {
+  if (MODE === "timing" || process.env.SLOW) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     frameTimes.length = 0;
   }

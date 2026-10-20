@@ -34,6 +34,7 @@ import { coverStage, PANEL_EXIT_MS } from "./stage";
 // fast: leaving is always quicker than arriving (MOTION-SPEC 3). No overshoot.
 const ENTER = { duration: DURATION.panel, ease: EASE_ENTER };
 const EXIT = { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT };
+const FADE = { duration: DURATION.fade, ease: EASE_EXIT };
 
 /**
  * Open sheets, oldest first. Panels open on top of one another - the split
@@ -296,6 +297,10 @@ function SheetBody({
     const thrown = info.velocity.y > 520;
     const dragged = info.offset.y > 140;
     if (dismissible && (thrown || dragged)) {
+      // Letting go has already started the spring back to the top. Stop it,
+      // so the panel leaves from where the finger let go of it rather than
+      // first rising back towards it.
+      y.stop();
       haptic(6);
       onClose();
     }
@@ -391,15 +396,38 @@ function SheetBody({
         <motion.div style={{ opacity: backdropOpacity }} className="absolute inset-0 bg-overlay" />
       </motion.div>
 
+      {/*
+        The slide in and out, on a wrapper of its own. The panel inside is
+        also moved by a finger (its `y`), and a value moved by hand has to be
+        animated by script, frame by frame, on the same thread that is busy
+        saving. A plain `transform` here is handed to the browser, which runs
+        it on its own (POLISH-AUDIT 3). With Reduce Motion it fades instead
+        (MOTION-SPEC 6): framer's own setting doesn't cover a plain transform.
+      */}
+      <motion.div
+        initial={reduce ? { opacity: 0, transform: "translateY(0%)" } : { transform: "translateY(100%)" }}
+        animate={reduce ? { opacity: 1, transform: "translateY(0%)" } : { transform: "translateY(0%)" }}
+        exit={
+          reduce
+            ? { opacity: 0, transition: FADE }
+            : { transform: "translateY(100%)", transition: EXIT }
+        }
+        transition={reduce ? FADE : ENTER}
+        className={cn(
+          "relative flex w-full flex-col sm:max-w-[440px]",
+          // Percentages, not `dvh`: they resolve against the container above,
+          // which has already had the keyboard subtracted from it.
+          tall ? "h-[92%] sm:h-[min(86dvh,760px)]" : "max-h-[90%]",
+        )}
+      >
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : (ariaLabel ?? "Dialog")}
-        initial={{ y: "100%" }}
+        initial={{ y: 0, scale: 1 }}
         // With a panel open on top, this one steps back a little: smaller,
         // and dimmed by the other's backdrop (MOTION-SPEC 1).
-        animate={{ y: 0, scale: covered && !reduce ? 0.95 : 1 }}
-        exit={{ y: "100%", transition: EXIT }}
+        animate={{ scale: covered && !reduce ? 0.95 : 1 }}
         transition={ENTER}
         drag="y"
         dragControls={dragControls}
@@ -412,12 +440,11 @@ function SheetBody({
         onDragEnd={handleDragEnd}
         style={{ y }}
         className={cn(
-          "relative flex w-full flex-col overflow-hidden bg-elevated shadow-sheet",
+          "relative flex min-h-0 w-full flex-col overflow-hidden bg-elevated shadow-sheet",
           "rounded-t-[var(--radius-2xl)] sm:rounded-[var(--radius-xl)]",
-          "sm:max-w-[440px]",
-          // Percentages, not `dvh`: they resolve against the container above,
-          // which has already had the keyboard subtracted from it.
-          tall ? "h-[92%] sm:h-[min(86dvh,760px)]" : "max-h-[90%]",
+          // Sized by the wrapper: all of it when tall, otherwise as much as
+          // the content needs, up to the wrapper's limit.
+          tall && "flex-1",
           className,
         )}
       >
@@ -463,6 +490,7 @@ function SheetBody({
         ) : (
           <div className="h-safe-bottom shrink-0" />
         )}
+      </motion.div>
       </motion.div>
     </div>
   );

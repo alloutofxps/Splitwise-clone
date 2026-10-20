@@ -381,3 +381,52 @@ each), under the 312 and 333 KB limits.
 
 **Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
 pwa-check 36, all passing.
+
+---
+
+## 14. Panels slide on the browser's own thread (20 October 2026)
+
+Upgrade 4e, fix 2 of 5, and POLISH-AUDIT item 3. A panel's position was
+also the value a finger drags, so framer-motion slid it by script, one
+frame at a time, on the same thread that is busy saving. The slide is now
+on a wrapper of its own as a plain `transform`, which framer-motion hands
+to the browser to run by itself; the finger still drags the panel inside.
+Raw runs in `perf-runs/2026-10-20-panel-fast-lane/` and
+`perf-runs/2026-10-20-closed-panels/` (the checking scripts), against main
+`5854549` in one sitting.
+
+**Which thread runs the slide** (`lane-check.mjs`, the settings panel):
+
+| | Before | After |
+|---|---|---|
+| Script writes to the panel's position, opening | 77 | 3 |
+| Script writes to the panel's position, closing | 61 | 3 |
+| The slide is a browser animation | no | yes |
+
+**Nothing else changed** (`panel-check.mjs`, phone and desktop sizes):
+the settings, expense, add, settle-up and menu panels, and a panel on a
+panel, are pixel-identical to before, at the same size and place, and slide
+along the same path. Dragging a panel down and letting go now leaves from
+where the finger let go; before, it went straight down too, and an early
+version of this change had it rise about 18px first, which is fixed.
+
+**Reduce Motion:** panels used to jump in and out with only the backdrop
+fading. They now fade in and out in 150ms where they sit, as MOTION-SPEC
+section 6 asks.
+
+**Smoothness and freezes** (six alternating runs, CPU slowed 4x): the same
+within noise. The recorder times the app's own thread, which the slide no
+longer uses, so it can't show the gain. Longest freeze after saving a
+payment 105.5 to 92.5 ms, settling up 91.5 to 86 ms, opening a group 100
+to 99 ms; delete and Undo has a few pauses of 50 to 59 ms on both sides.
+Frame-by-frame videos with the CPU slowed (`SLOW=1`, new in
+`motion-record.mjs`) paint the same 45 frames in the half second after
+saving a payment either way: on this laptop the old slide wasn't visibly
+held up, and the difference is for slower phones, where saving and the
+slide meet.
+
+**Download size:** Home 309.8 KB, a group 332.5 KB of scripts (0.1 KB more
+each), under the 312 and 333 KB limits.
+
+**Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
+pwa-check 36, all passing.
