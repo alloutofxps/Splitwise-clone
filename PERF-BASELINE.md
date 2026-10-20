@@ -430,3 +430,52 @@ each), under the 312 and 333 KB limits.
 
 **Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
 pwa-check 36, all passing.
+
+---
+
+## 15. Only the ledger rows that changed redraw (20 October 2026)
+
+Upgrade 4e, fix 3 of 5. Saving anything redrew the ledger, and every row in
+it redrew too, even the ones that hadn't changed: each was handed new "open
+me" instructions every time, and the add-expense helper every row reads was
+a new object whenever the app's outer frame redrew (the add panel opening
+or closing). Rows are now kept as they are unless their own entry changes
+(`LedgerExpenseRow` and `LedgerSettlementRow` in
+`src/components/group/ledger.tsx`), and the helper stays the same object
+(`src/components/app-gate.tsx`). Raw runs in
+`perf-runs/2026-10-20-unchanged-rows/`, against main `90be37d` in one
+sitting.
+
+**Redraws, counted with React's profiler (three runs each):**
+
+| Moment | Rows redrawn, before | After | Everything redrawn, before | After | Drawing the open tab, before | After |
+|---|---|---|---|---|---|---|
+| Opening a group | 20 | 4 | 80 | 64 | 74 ms | 55 ms |
+| Adding an expense | 35 to 40 | 6 | 159 to 171 | 111 to 118 | 82 ms | 38 ms |
+| Settling up a debt | 12 | 3 | 131 | 106 | 70 ms | 65 ms |
+| A part payment | 12 | 3 | 139 | 114 | 78 ms | 59 ms |
+| Delete, then Undo | 19 to 26 | 7 | 101 to 118 | 80 to 90 | 69 ms | 37 ms |
+
+The test group has a handful of expenses; a real group with dozens saves
+proportionally more. Drawing times are from the profiling build with the CPU
+slowed 4x, one run each.
+
+**Smoothness, late frames at 60Hz in the 2.5s after Save (six alternating
+runs, median):**
+
+| Moment | Before | After |
+|---|---|---|
+| Adding an expense | 2.0% | 1.3% |
+| Settling up a debt | 2.4% | 2.0% |
+| A part payment | 2.4% | 1.3% |
+
+All three are now at or under the 2% bar. The longest freeze is about the
+same (settling up 87 to 81.5 ms, a part payment 90 to 89.5 ms, opening a
+group 98 to 99 ms): that one is the Balances tab appearing and the whole
+screen updating after Save, which is fix 4.
+
+**Download size:** Home 309.7 KB, a group 332.6 KB of scripts, under the
+312 and 333 KB limits (a group has 0.4 KB of room left).
+
+**Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
+pwa-check 36, all passing. Tapping each row still opens that expense.

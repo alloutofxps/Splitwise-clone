@@ -126,6 +126,10 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
     },
     [pathname],
   );
+  // The same object until the route changes: a new one each time this
+  // redraws (the composer opening or closing) redrew every expense row in
+  // the app, since each one reads it.
+  const composerContext = React.useMemo(() => ({ open: openComposer }), [openComposer]);
 
   if (isLoading) return signedIn ? <BootSkeleton pathname={pathname} /> : <WelcomeSkeleton />;
 
@@ -169,7 +173,7 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
   }
 
   return (
-    <ComposerContext.Provider value={{ open: openComposer }}>
+    <ComposerContext.Provider value={composerContext}>
       <AppShell onAddExpense={() => openComposer()}>{children}</AppShell>
 
       <ExpenseComposer
