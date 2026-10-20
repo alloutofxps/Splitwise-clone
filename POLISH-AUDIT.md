@@ -142,6 +142,11 @@ something the spec promises.
       second "new" dot beside the real unread dot on Home.
 26. **About 14.6 KB of script is support for old browsers that phones don't
     need.** [Trace]
+    - **Checked on 20 October 2026, and not worth doing.** Telling Next.js
+      to build only for the browsers Divvy's styling already needs (Safari
+      16.4, Chrome 111, Firefox 128) saved 0.4 KB on Home and 0.3 KB on a
+      group. The add-on file Next.js always includes is 0.6 KB compressed.
+      Lighthouse's 14.6 KB was an estimate before compression.
     - **Why:** trimming it would free room under the size limit, which
       matters for NumberFlow (4b).
 27. **A "Needs you" row on Home swaps abruptly after you've visited a group**

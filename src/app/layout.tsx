@@ -86,6 +86,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Applied before first paint, inline and synchronous. A theme resolved
           in an effect flashes white on every cold start of a dark-mode PWA,
           which is the most visible way to look unfinished.
+
+          The second part checks whether Divvy can be drawn properly here, and
+          only if not fetches public/unsupported.js, an "update your browser"
+          notice. Modern phones never download it. Its styling needs what arrived with Safari
+          16.4, Chrome 111 and Firefox 128 (OKLCH colours, color-mix and
+          registered properties); below that the colours and layout break.
+          The check is written in old JavaScript so old browsers can run it,
+          and kept tiny because its text travels twice in every page.
         */}
         <script
           nonce={nonce}
@@ -98,6 +106,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     var dark = stored === 'dark' || (stored !== 'light' && system);
     if (dark) document.documentElement.classList.add('dark');
   } catch (e) {}
+})();
+(function () {
+  var c = window.CSS, ok = false;
+  try { ok = !!c && typeof c.registerProperty === 'function' && c.supports('color', 'oklch(0.5 0.1 200)') && c.supports('color', 'color-mix(in srgb, red, blue)'); } catch (e) {}
+  if (ok) return;
+  var s = document.createElement('script');
+  s.src = '/unsupported.js';
+  document.head.appendChild(s);
 })();
             `.trim(),
           }}
