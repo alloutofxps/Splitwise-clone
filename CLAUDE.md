@@ -25,6 +25,15 @@ Query 5, framer-motion, Tailwind v4, Prisma on SQLite, hosted on Railway
 4. `DESIGN-PLAN.md` (the Flow x Quiet redesign), then the audits:
    `UX-AUDIT.md`, `DESIGN-AUDIT.md`, `FEATURE-AUDIT.md`, `PRODUCTION-AUDIT.md`.
 
+## Browsers
+
+Divvy's styling (Tailwind 4: OKLCH colours, color-mix, registered
+properties) needs Safari 16.4, Chrome 111 or Firefox 128. Older browsers see
+"Divvy needs a newer browser" (a tiny check in `src/app/layout.tsx`, which
+fetches `public/unsupported.js` only when needed). Don't add a
+`browserslist` to save size: it was measured, and saves 0.4 KB
+(POLISH-AUDIT item 26).
+
 ## Working with the person
 
 - They are not a developer. Use plain language, no em dashes.
