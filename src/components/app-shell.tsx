@@ -172,8 +172,13 @@ export function AppShell({
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Which tab you are under. A group is opened from Home, so Home stays lit
+ * inside one, the way a friend's page keeps Friends lit: with nothing lit,
+ * the tab bar no longer says where you are.
+ */
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+  if (href === "/") return pathname === "/" || pathname.startsWith("/groups/");
   return pathname.startsWith(href);
 }
 
@@ -201,7 +206,7 @@ function TabBar({
     >
       <div className="mx-auto flex h-16 max-w-[560px] items-stretch justify-around px-1.5">
         {left.map((destination) => (
-          <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} />
+          <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} exact={pathname === destination.href} />
         ))}
 
         <div className="flex w-[4.5rem] shrink-0 items-center justify-center">
@@ -219,21 +224,23 @@ function TabBar({
         </div>
 
         {right.map((destination) => (
-          <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} />
+          <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} exact={pathname === destination.href} />
         ))}
       </div>
     </nav>
   );
 }
 
-function TabLink({ destination, active }: { destination: Destination; active: boolean }) {
+function TabLink({ destination, active, exact }: { destination: Destination; active: boolean; exact: boolean }) {
   const Icon = destination.icon;
 
   return (
     <Link
       href={destination.href}
       onClick={() => haptic()}
-      aria-current={active ? "page" : undefined}
+      // "page" only on the tab's own screen; under it (a group, a friend) it
+      // is the current section rather than the current page.
+      aria-current={active ? (exact ? "page" : "true") : undefined}
       className={cn(
         "relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors duration-150",
         active ? "text-text" : "text-subtle hover:text-muted",
@@ -291,7 +298,7 @@ function Sidebar({
             <Link
               key={destination.href}
               href={destination.href}
-              aria-current={active ? "page" : undefined}
+              aria-current={active ? (pathname === destination.href ? "page" : "true") : undefined}
               className={cn(
                 "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-medium transition-colors",
                 active ? "bg-surface-2 text-text" : "text-muted hover:bg-surface-2 hover:text-text",

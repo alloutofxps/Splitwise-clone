@@ -80,15 +80,18 @@ function Segment({
       : `repeating-linear-gradient(135deg, ${hue} 0 3px, color-mix(in oklch, ${hue} 35%, var(--surface)) 3px 6px)`,
   };
 
+  // A tappable segment is a button inside a list item, not a button calling
+  // itself one: speech software then says both "list item" and "button".
   return onSelect ? (
-    <button
-      role="listitem"
-      aria-label={label}
-      title={label}
-      onClick={() => onSelect(person.id)}
-      className="h-full shrink-0 transition-opacity hover:opacity-80"
-      style={style}
-    />
+    <span role="listitem" className="h-full shrink-0" style={{ width: style.width }}>
+      <button
+        aria-label={label}
+        title={label}
+        onClick={() => onSelect(person.id)}
+        className="block size-full transition-opacity hover:opacity-80"
+        style={{ background: style.background }}
+      />
+    </span>
   ) : (
     <span role="listitem" aria-label={label} title={label} className="h-full shrink-0" style={style} />
   );

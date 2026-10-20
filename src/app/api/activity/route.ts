@@ -46,7 +46,9 @@ export const GET = route(async (request: Request) => {
       // Whether the thing a deletion entry points at is *still* deleted. An
       // Undo on a row somebody already undid would do nothing and say nothing,
       // which is worse than no button at all.
-      expense: { select: { deletedAt: true } },
+      // Who shared it, for an expense outside any group: the row has no group
+      // name to give it context, so it says who it was with instead.
+      expense: { select: { deletedAt: true, groupId: true, splits: { select: { personId: true } } } },
       settlement: { select: { deletedAt: true } },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],

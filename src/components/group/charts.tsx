@@ -120,13 +120,14 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
 
   return (
     <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body text-muted">
+      {/* The dot trails each figure, so a wrapped line never starts with one. */}
       {figures.map((figure, index) => (
         <span key={figure.label} className="whitespace-nowrap">
-          {index > 0 ? <span aria-hidden className="mr-2">·</span> : null}
           {figure.label}{" "}
           <span className="tabular font-medium text-text">
             {formatMoney(BigInt(figure.value), stats.currency)}
           </span>
+          {index < figures.length - 1 ? <span aria-hidden className="ml-2">·</span> : null}
         </span>
       ))}
     </p>
@@ -298,7 +299,7 @@ function CategoryChart({ stats, lens }: { stats: GroupStatsDto; lens: "group" | 
   const restTotal = rest.reduce((sum, row) => sum + row.value, 0n);
 
   return (
-    <ChartCard title="Where it went" subtitle={`${rows.length} categories`}>
+    <ChartCard title="Where it went" subtitle={`${rows.length} ${rows.length === 1 ? "category" : "categories"}`}>
       <ul className="space-y-2.5">
         {shown.map((row, rank) => {
           const category = categoryById(row.categoryId);

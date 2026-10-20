@@ -211,6 +211,11 @@ function ActivityRow({
   const actorName = isMe ? "You" : (actor?.displayName ?? "Someone");
 
   const { sentence } = describeActivity(activity, actorName, meId, people);
+  // A group entry names its group; one between friends says who it was with.
+  const withNames = (activity.withPersonIds ?? [])
+    .map((id) => people.get(id)?.displayName)
+    .filter(Boolean)
+    .join(", ");
   const effect = activityEffect(activity);
 
   /**
@@ -246,6 +251,11 @@ function ActivityRow({
               <span className="truncate">
                 {activity.groupEmoji} {activity.groupName}
               </span>
+              <span aria-hidden>·</span>
+            </>
+          ) : withNames ? (
+            <>
+              <span className="truncate">With {withNames}</span>
               <span aria-hidden>·</span>
             </>
           ) : null}

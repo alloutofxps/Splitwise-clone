@@ -179,6 +179,11 @@ export interface ActivityDto {
   settlementId: string | null;
   /** Set only for entries addressed to one person, such as a nudge. */
   targetPersonId: string | null;
+  /**
+   * For an expense outside any group: the other people on it, so the entry
+   * can say who it was with where a group entry names its group.
+   */
+  withPersonIds?: string[] | null;
   data: ActivityData;
   createdAt: string;
   isUnread: boolean;
