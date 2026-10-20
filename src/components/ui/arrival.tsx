@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { EASE_ENTER, EASE_EXIT } from "./motion";
+import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
 import { LAND_MS, PANEL_EXIT_MS, untilClear, useStage } from "./stage";
 
 /** How long the highlight on a row that has just landed takes to fade. */
@@ -80,12 +80,12 @@ export function Arrival({
       animate={{ opacity: held ? 0 : 1 }}
       exit={
         reduce
-          ? { opacity: 0, transition: { duration: 0.15 } }
+          ? { opacity: 0, transition: { duration: DURATION.fade } }
           : { height: 0, opacity: 0, transition: { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT } }
       }
       transition={
         reduce
-          ? { duration: 0.15 }
+          ? { duration: DURATION.fade }
           : { duration: LAND_MS / 1000, ease: EASE_ENTER }
       }
       className={className}

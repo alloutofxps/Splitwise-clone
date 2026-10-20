@@ -574,8 +574,9 @@
  * only while work is happening. Lines draw with a dash the length of the line
  * (pathLength 1). With Reduce Motion on they show their last frame at once.
  */
+/* From half size, not nothing: a dot that grows from a point reads as appearing out of thin air. */
 @keyframes divvy-pop {
-  0% { transform: scale(0); opacity: 0; }
+  0% { transform: scale(0.5); opacity: 0; }
   55% { transform: scale(1.18); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }

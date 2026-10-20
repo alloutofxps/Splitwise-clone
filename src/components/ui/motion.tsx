@@ -19,32 +19,35 @@ import { untilCount, useStage } from "./stage";
 // ---------------------------------------------------------------------------
 
 /**
- * The redesign's timing (DESIGN-PLAN 1.5): 150ms for small changes, 240ms for
- * movement, 320ms for sheets, all on one curve that leaves quickly and lands
- * softly. Motion explains a change, or it doesn't happen.
- */
-export const EASE = [0.2, 0, 0, 1] as const;
-export const DURATION = { small: 0.15, move: 0.24, sheet: 0.32 } as const;
-
-/**
- * MOTION-SPEC 3, from Material 3's emphasized curves. Arrivals start fast and
- * settle gently; departures start gently and leave fast; money counts quickly
- * at first and eases onto its final figure.
+ * MOTION-SPEC 3, from Material 3. Arrivals start fast and settle gently;
+ * departures start gently and leave fast; things that stay on screen change
+ * on the standard curve; money counts quickly at first and eases onto its
+ * final figure. The same curves live in globals.css as --ease-*.
  */
 export const EASE_ENTER = [0.05, 0.7, 0.1, 1] as const;
 export const EASE_EXIT = [0.3, 0, 0.8, 0.15] as const;
+export const EASE_STANDARD = [0.2, 0, 0, 1] as const;
 export const EASE_COUNT = [0, 0, 0, 1] as const;
-/** A balance counting to its new value. */
-export const COUNT_MS = 600;
 
 /**
- * Lists appear with a short fade, all at once. Rows used to rise in one after
- * another, which is a load animation, and nothing on load moves any more.
+ * MOTION-SPEC 3's durations, in seconds for framer-motion. Every animation
+ * picks one of these rather than typing its own, so the app keeps one rhythm.
  */
-export const listItem = {
-  hidden: { opacity: 0 },
-  shown: () => ({ opacity: 1, transition: { duration: DURATION.small, ease: EASE } }),
-};
+export const DURATION = {
+  /** Fades, press release, a bar gaining its shadow, the Reduce Motion fallback. */
+  fade: 0.15,
+  /** Tab switches, toggles, menus, toasts arriving, a screen leaving. */
+  quick: 0.2,
+  /** Panels closing, heights changing, the group's tabs sliding. */
+  change: 0.25,
+  /** A screen arriving, a new row landing. */
+  arrive: 0.3,
+  /** Panels opening. */
+  panel: 0.4,
+} as const;
+
+/** A balance counting to its new value. */
+export const COUNT_MS = 600;
 
 // ---------------------------------------------------------------------------
 // Counting money

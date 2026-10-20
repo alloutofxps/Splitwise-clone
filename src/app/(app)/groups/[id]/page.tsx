@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
-import { useCountedText } from "@/components/ui/motion";
+import { DURATION, EASE_STANDARD, useCountedText } from "@/components/ui/motion";
 import { formatMoney } from "@/lib/money";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
@@ -26,6 +26,7 @@ import { useDashboard, useGroup, useMarkGroupRead } from "@/lib/client/queries";
 
 type Tab = "expenses" | "balances" | "charts";
 const TAB_NAMES: Record<Tab, string> = { expenses: "Expenses", balances: "Balances", charts: "Insights" };
+const TAB_ORDER: Tab[] = ["expenses", "balances", "charts"];
 
 export default function GroupPage() {
   const params = useParams<{ id: string }>();
@@ -37,7 +38,15 @@ export default function GroupPage() {
   const markRead = useMarkGroupRead(groupId);
   const composer = useComposer();
 
-  const [tab, setTab] = React.useState<Tab>("expenses");
+  const [tab, setTabState] = React.useState<Tab>("expenses");
+  // Which way the tab content slides in: from the side its tab sits on, or
+  // not at all when the switch happens behind a closing panel.
+  const [slide, setSlide] = React.useState<-1 | 0 | 1>(0);
+  const setTab = (next: Tab, moving = true) => {
+    setSlide(!moving || next === tab ? 0 : TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(tab) ? 1 : -1);
+    setTabState(next);
+  };
+  const reduce = useReducedMotion();
   const wide = useWide();
   // ?open=settle or ?open=invite: arriving from a long-press on Home.
   const requested = useSearchParams().get("open");
@@ -219,20 +228,30 @@ export default function GroupPage() {
             />
           </StickyBar>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, pointerEvents: "none" }}
-              transition={{ duration: 0.15 }}
-              className="mt-4"
-            >
-              {/* The tabs stand in for this heading on screen; speech still needs it. */}
-              <h2 className="sr-only">{TAB_NAMES[tab]}</h2>
-              {panel(tab)}
-            </motion.div>
-          </AnimatePresence>
+          {/*
+            The three sit side by side, so the content slides in from the side
+            its tab is on, with the underline (MOTION-SPEC 4). Only the arrival
+            moves: the old tab is replaced at once, so there is never a blank
+            moment between the two. Whole transform strings, so the browser can
+            run it on the compositor.
+          */}
+          <motion.div
+            key={tab}
+            initial={
+              slide === 0
+                ? false
+                : reduce
+                  ? { opacity: 0.4, transform: "translateX(0px)" }
+                  : { opacity: 0.4, transform: `translateX(${slide * 32}px)` }
+            }
+            animate={{ opacity: 1, transform: "translateX(0px)", transitionEnd: { transform: "none" } }}
+            transition={reduce ? { duration: DURATION.fade } : { duration: DURATION.change, ease: EASE_STANDARD }}
+            className="mt-4"
+          >
+            {/* The tabs stand in for this heading on screen; speech still needs it. */}
+            <h2 className="sr-only">{TAB_NAMES[tab]}</h2>
+            {panel(tab)}
+          </motion.div>
         </>
       )}
 
@@ -244,7 +263,7 @@ export default function GroupPage() {
         meId={meId}
         onOpenBalances={() => {
           setSettings(false);
-          setTab("balances");
+          setTab("balances", false);
         }}
       />
       <InviteSheet open={invite} onClose={() => setInvite(false)} group={group} />
@@ -261,7 +280,7 @@ export default function GroupPage() {
           setBeat(TRAVEL_MS);
           setTravel({ ...payment, nonce: Date.now() });
           // Show it where it happens: the map on a phone is behind a tab.
-          if (!wide) setTab("balances");
+          if (!wide) setTab("balances", false);
         }}
       />
     </div>
@@ -289,7 +308,7 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: DURATION.fade }}
           className="text-display font-semibold tracking-[-0.03em] text-text"
         >
           {everyone ? "Everyone is settled up" : "You’re settled up"}
@@ -300,7 +319,7 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: DURATION.fade }}
           className="flex flex-col"
         >
           <span className="text-body text-muted">{shown > 0n ? "You’re owed" : "You owe"}</span>

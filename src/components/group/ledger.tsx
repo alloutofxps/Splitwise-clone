@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
 import { Copy, Paperclip, MessageSquare, Pencil, Receipt, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { ActionSheet, SwipeRow, useLongPress } from "../ui/swipe-row";
 import { useComposer } from "../expense/composer-context";
@@ -189,7 +190,7 @@ export function GroupLedger({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: DURATION.change, ease: EASE_STANDARD }}
             className="overflow-hidden"
           >
             <div className="mb-3 space-y-2.5 rounded-[var(--radius-lg)] bg-surface-2 px-3 py-3">

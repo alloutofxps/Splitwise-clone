@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CloudOff, Info, TriangleAlert, Undo2 } from "lucide-react";
 import { cn, haptic, useMounted } from "./primitives";
-import { EASE_ENTER, EASE_EXIT } from "./motion";
+import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
 import { PANEL_EXIT_MS, stageNow, untilClear, useStage, type StageState } from "./stage";
 
 export type ToastTone = "success" | "error" | "info" | "offline";
@@ -148,8 +148,8 @@ function ToastViewport({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             // Taps pass through as soon as it starts leaving, not when it is gone.
-            exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.15, ease: EASE_EXIT } }}
-            transition={{ duration: 0.2, ease: EASE_ENTER }}
+            exit={{ opacity: 0, pointerEvents: "none", transition: { duration: DURATION.fade, ease: EASE_EXIT } }}
+            transition={{ duration: DURATION.quick, ease: EASE_ENTER }}
             // A toast sits above everything, sheets included, so for the few
             // seconds it is up it covers whatever is beneath it. Tapping it
             // dismisses it, rather than the tap simply being swallowed - and the

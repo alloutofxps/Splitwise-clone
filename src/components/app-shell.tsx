@@ -10,7 +10,7 @@ import { useDashboard } from "@/lib/client/queries";
 import { OfflineBanner } from "./offline-banner";
 import { PullToRefresh } from "./pull-to-refresh";
 import { AppMark } from "./app-mark";
-import { EASE_ENTER, EASE_EXIT } from "./ui/motion";
+import { DURATION, EASE_ENTER, EASE_STANDARD } from "./ui/motion";
 import { PANEL_EXIT_MS, useStage } from "./ui/stage";
 
 /**
@@ -66,17 +66,17 @@ function arrival(direction: Direction, reduce: boolean): { initial: TargetAndTra
   // Every start states its transform, even when it is "none at all": blending
   // from no transform to one starts at scale 0, and the screen grows from a
   // dot. With motion off, that is the last thing anyone should see.
-  if (reduce) return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: 0.15 } };
+  if (reduce) return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: DURATION.fade } };
   switch (direction) {
     case "forward":
-      return { initial: { opacity: 0.3, transform: "translateX(32px) scale(1)" }, transition: { duration: 0.3, ease: EASE_ENTER } };
+      return { initial: { opacity: 0.3, transform: "translateX(32px) scale(1)" }, transition: { duration: DURATION.arrive, ease: EASE_ENTER } };
     case "back":
-      return { initial: { opacity: 0.3, transform: "translateX(-32px) scale(1)" }, transition: { duration: 0.25, ease: EASE_ENTER } };
+      return { initial: { opacity: 0.3, transform: "translateX(-32px) scale(1)" }, transition: { duration: DURATION.change, ease: EASE_ENTER } };
     case "across":
-      return { initial: { opacity: 0.4, transform: "translateX(0px) scale(0.98)" }, transition: { duration: 0.2, ease: EASE_ENTER } };
+      return { initial: { opacity: 0.4, transform: "translateX(0px) scale(0.98)" }, transition: { duration: DURATION.quick, ease: EASE_ENTER } };
     default:
       // The first screen after the app opens takes over from its placeholder.
-      return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: 0.15 } };
+      return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: DURATION.fade } };
   }
 }
 
@@ -139,8 +139,10 @@ export function AppShell({
           // screen, so a resting transform changes nothing else.
           animate={
             stepBack
-              ? { transform: "scale(0.97)", transition: { duration: 0.4, ease: EASE_ENTER } }
-              : { transform: "scale(1)", transition: { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT } }
+              ? { transform: "scale(0.97)", transition: { duration: DURATION.panel, ease: EASE_ENTER } }
+              : // Coming back forward: it stays on screen, so the in-place curve.
+                // The leaving curve stops abruptly, which read as a snap.
+                { transform: "scale(1)", transition: { duration: PANEL_EXIT_MS / 1000, ease: EASE_STANDARD } }
           }
           className={cn(
             "mx-auto w-full max-w-[560px] flex-1 px-4 lg:px-8",

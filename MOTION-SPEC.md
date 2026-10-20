@@ -76,7 +76,11 @@ Ceiling: anything you trigger more than once a session finishes within 400ms
 and can be tapped through. Departures are always shorter than arrivals. No
 bounce in the app's own motion; the drawn moments may have a little.
 
-Values: `src/app/globals.css` (`--ease-*`) and `src/components/ui/motion.tsx`.
+Values: `src/app/globals.css` (`--ease-*`) and `src/components/ui/motion.tsx`
+(`EASE_ENTER`, `EASE_EXIT`, `EASE_STANDARD`, `EASE_COUNT` and `DURATION`).
+Every animation picks from these rather than typing its own numbers. Only
+the finger spring, the payment's journey curve and the drawings' keyframes
+are written where they are used.
 
 ## 4. Every moment that moves
 

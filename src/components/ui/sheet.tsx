@@ -14,7 +14,7 @@ import {
 } from "framer-motion";
 import { X } from "lucide-react";
 import { cn, haptic, IconButton, useMounted } from "./primitives";
-import { EASE_ENTER, EASE_EXIT } from "./motion";
+import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
 import { coverStage, PANEL_EXIT_MS } from "./stage";
 
 /**
@@ -32,7 +32,7 @@ import { coverStage, PANEL_EXIT_MS } from "./stage";
 
 // Sheets arrive in 400ms, fast then settling, and leave in 250ms, gently then
 // fast: leaving is always quicker than arriving (MOTION-SPEC 3). No overshoot.
-const ENTER = { duration: 0.4, ease: EASE_ENTER };
+const ENTER = { duration: DURATION.panel, ease: EASE_ENTER };
 const EXIT = { duration: PANEL_EXIT_MS / 1000, ease: EASE_EXIT };
 
 /**

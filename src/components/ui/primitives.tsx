@@ -270,7 +270,7 @@ export function Segmented<T extends string>({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-px left-0 h-[2px] bg-text transition-transform duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)]"
+        className="pointer-events-none absolute -bottom-px left-0 h-[2px] bg-text transition-transform duration-[250ms] ease-[var(--ease-standard)]"
         style={{
           width: `calc(100% / ${options.length})`,
           transform: `translateX(${index * 100}%)`,
@@ -333,7 +333,7 @@ export function Switch({
         className={cn(
           "absolute left-0 top-[3px] size-6 rounded-full",
           checked ? "bg-inverse" : "bg-white dark:bg-muted",
-          "transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "transition-transform duration-200 ease-[var(--ease-standard)]",
           checked ? "translate-x-[23px]" : "translate-x-[3px]",
         )}
       />
