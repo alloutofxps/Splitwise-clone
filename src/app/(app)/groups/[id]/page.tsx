@@ -9,6 +9,7 @@ import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
 import { RollingFigure } from "@/components/ui/rolling-figure";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
+import { WhileOpen } from "@/components/ui/sheet";
 import { setBeat } from "@/components/ui/stage";
 import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 import { useWide } from "@/components/ui/use-wide";
@@ -272,17 +273,25 @@ export default function GroupPage() {
       )}
 
       {/* Sheets ------------------------------------------------------------ */}
-      <GroupSettingsSheet
-        open={settings}
-        onClose={() => setSettings(false)}
-        group={group}
-        meId={meId}
-        onOpenBalances={() => {
-          setSettings(false);
-          setTab("balances", false);
-        }}
-      />
-      <InviteSheet open={invite} onClose={() => setInvite(false)} group={group} />
+      {/*
+        Out of the page while shut (WhileOpen), so they don't redraw with it.
+        Settle up stays: its Undo outlives the panel.
+      */}
+      <WhileOpen open={settings}>
+        <GroupSettingsSheet
+          open={settings}
+          onClose={() => setSettings(false)}
+          group={group}
+          meId={meId}
+          onOpenBalances={() => {
+            setSettings(false);
+            setTab("balances", false);
+          }}
+        />
+      </WhileOpen>
+      <WhileOpen open={invite}>
+        <InviteSheet open={invite} onClose={() => setInvite(false)} group={group} />
+      </WhileOpen>
       <SettleUpSheet
         open={settleUp}
         onClose={() => setSettleUp(false)}
