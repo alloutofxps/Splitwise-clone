@@ -370,13 +370,18 @@ export function ExpenseDetailSheet({
         )}
       </Sheet>
 
-      {expense ? (
-        <ExpenseComposer
-          open={editing}
-          expense={expense}
-          onClose={() => setEditing(false)}
-        />
-      ) : null}
+      {/*
+        Always there, and open only once the expense has loaded. Edit from a
+        row's menu asks for editing before the expense arrives; mounted only
+        then, the composer started out already open, never filled its form
+        in from the expense (that happens as it opens), and showed an empty
+        "Add an expense" panel.
+      */}
+      <ExpenseComposer
+        open={editing && Boolean(expense)}
+        expense={expense}
+        onClose={() => setEditing(false)}
+      />
 
       <ConfirmSheet
         open={confirmDelete}
