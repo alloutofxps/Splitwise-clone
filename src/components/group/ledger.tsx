@@ -66,6 +66,12 @@ export function GroupLedger({
   const [category, setCategory] = React.useState<string | null>(null);
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
   const [editOnOpen, setEditOnOpen] = React.useState(false);
+  // One function for every row, so a row's props only change when its entry
+  // does (LedgerExpenseRow).
+  const openExpense = React.useCallback((id: string, edit: boolean) => {
+    setEditOnOpen(edit);
+    setOpenExpenseId(id);
+  }, []);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 250);
@@ -281,25 +287,18 @@ export function GroupLedger({
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
                     <Arrival key={entry.expense.id} arriving={isArriving(entry)}>
-                      <ExpenseRow
+                      <LedgerExpenseRow
                         expense={entry.expense}
                         meId={meId}
                         people={people}
                         pending={entry.pending}
                         showDate={!precise}
-                        onOpen={() => {
-                          setEditOnOpen(false);
-                          setOpenExpenseId(entry.expense!.id);
-                        }}
-                        onEdit={() => {
-                          setEditOnOpen(true);
-                          setOpenExpenseId(entry.expense!.id);
-                        }}
+                        onOpenExpense={openExpense}
                       />
                     </Arrival>
                   ) : entry.settlement ? (
                     <Arrival key={entry.settlement.id} arriving={isArriving(entry)}>
-                      <SettlementRow
+                      <LedgerSettlementRow
                         settlement={entry.settlement}
                         meId={meId}
                         people={people}
@@ -335,6 +334,22 @@ export function GroupLedger({
 }
 
 // ---------------------------------------------------------------------------
+
+/*
+ * The ledger's rows, redrawn only when their own entry changes. Saving a
+ * payment or an expense redraws the ledger, and every row used to redraw
+ * with it, on the same beat as the panel leaving. The query keeps an
+ * unchanged entry as the same object, so comparing props is enough.
+ */
+const LedgerExpenseRow = React.memo(function LedgerExpenseRow({
+  onOpenExpense,
+  ...props
+}: Omit<ExpenseRowProps, "onOpen" | "onEdit"> & { onOpenExpense: (id: string, edit: boolean) => void }) {
+  const id = props.expense.id;
+  return <ExpenseRow {...props} onOpen={() => onOpenExpense(id, false)} onEdit={() => onOpenExpense(id, true)} />;
+});
+
+const LedgerSettlementRow = React.memo(SettlementRow);
 
 type ExpenseRowProps = {
   expense: NonNullable<LedgerEntry["expense"]>;
