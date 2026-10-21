@@ -1250,25 +1250,10 @@ console.log("\nMerging a placeholder from the group screen");
  */
 console.log("\nPanels by keyboard");
 {
-  const ctx6 = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  const p6 = await ctx6.newPage();
-  await p6.goto(BASE, { waitUntil: "networkidle" });
-  const groupId = await p6.evaluate(async () => {
-    const post = (path, body) => fetch(path, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-    }).then(r => r.json());
-    const me = (await post("/api/identity", { displayName: "Keys", defaultCurrency: "EUR" })).me;
-    const group = (await post("/api/groups", { name: "Keyboard", currency: "EUR", placeholderNames: ["Sam"] })).group;
-    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
-    const sam = detail.group.members.find(m => m.displayName === "Sam").id;
-    await post("/api/expenses", {
-      groupId: group.id, description: "Lunch", amount: "2000", currency: "EUR", splitMode: "EQUAL",
-      payers: [{ personId: me.id, amount: "2000" }],
-      splits: [{ personId: me.id, amount: "1000" }, { personId: sam, amount: "1000" }],
-    });
-    return group.id;
-  });
-  await p6.goto(`${BASE}/groups/${groupId}`, { waitUntil: "networkidle" });
+  // The first account and group, so this makes no new sign-up: the suites
+  // share one address and its limit of ten an hour (pwa-check runs next).
+  const p6 = page;
+  await p6.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
   await p6.waitForTimeout(800);
 
   // Where focus is: "panel" (the top one), "lower" (one underneath), "page" or "body".
@@ -1320,7 +1305,6 @@ console.log("\nPanels by keyboard");
   check("closing the top one returns focus to its button in the panel below", backOnSplit);
   check("and the panel below is still open", await p6.locator('[role="dialog"]').count() === 1);
   await p6.keyboard.press("Escape");
-  await ctx6.close();
 }
 
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
