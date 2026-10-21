@@ -12,10 +12,9 @@
  * "I already have a recovery key" to sign in as her.
  */
 
-import { PrismaClient } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
-
-const prisma = new PrismaClient();
+// The app's own client, so demo data is stored exactly as the app stores it.
+import { prisma } from "../src/lib/db";
 
 const DAY = 24 * 60 * 60 * 1000;
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY);

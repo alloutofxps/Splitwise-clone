@@ -1,44 +1,58 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "@/generated/prisma/client";
+import { databaseFile } from "../../prisma/database-url";
+import { oneAtATime } from "@/lib/one-at-a-time";
 
 /**
  * A single Prisma client per process. Next.js hot-reloads modules in
- * development, which would otherwise open a new connection pool on every edit
+ * development, which would otherwise open a new connection on every edit
  * until SQLite starts refusing them.
  *
  * ### SQLite under load
  *
- * SQLite allows one writer at a time. With Prisma's default pool of several
+ * SQLite allows one writer at a time. With Prisma 6's default pool of several
  * connections, simultaneous saves each took a connection and then fought over
  * the file lock: measured, 31 of 50 concurrent "save expense" requests failed
  * with socket and transaction timeouts.
  *
- * So for a `file:` database the pool is pinned to **one** connection. Writes
- * then queue inside Prisma - in order, without lock contention - rather than
- * colliding inside SQLite, and each finishes in milliseconds. WAL mode (set in
- * `configureDatabase`) lets backups and the migration runner read while the
- * app writes. A Postgres `DATABASE_URL` is left exactly as given.
+ * So there is **one** connection, and everything takes turns on it
+ * (`oneAtATime`). Writes queue in order, without lock contention, and each
+ * finishes in milliseconds. WAL mode (set in `configureDatabase`) lets backups
+ * and the migration runner read while the app writes.
+ *
+ * ### Dates
+ *
+ * Prisma 6 stored every date as a number of milliseconds. The SQLite driver
+ * Prisma 7 uses would store new ones as text, leaving one table with two
+ * formats that sort and compare wrongly against each other, and a database an
+ * older build could no longer read. `unixepoch-ms` keeps the existing format.
  */
-function databaseUrl(): string | undefined {
-  const url = process.env.DATABASE_URL;
-  if (!url || !url.startsWith("file:")) return url;
-
-  const [base, query = ""] = url.split("?");
-  const params = new URLSearchParams(query);
-  if (!params.has("connection_limit")) params.set("connection_limit", "1");
-  // How long a queued query may wait for the one connection. Generous: under
-  // a burst the queue is the point, and giving up early just turns a slow save
-  // into a failed one.
-  if (!params.has("pool_timeout")) params.set("pool_timeout", "30");
-  if (!params.has("socket_timeout")) params.set("socket_timeout", "30");
-  return `${base}?${params.toString()}`;
-}
+const sqlite = {
+  provider: "sqlite" as const,
+  adapterName: "@prisma/adapter-better-sqlite3",
+  // Opened on the first query rather than at import, so building the app
+  // (the Docker image's build stage has no database) never needs one.
+  async connect() {
+    const url = process.env.DATABASE_URL;
+    if (!url?.startsWith("file:")) {
+      throw new Error("DATABASE_URL must be a SQLite file: address, such as file:./dev.db");
+    }
+    const driver = new PrismaBetterSqlite3(
+      // How long to wait if something outside this process (the migration
+      // runner, litestream's checkpoint) holds the file's lock.
+      { url: databaseFile(url), timeout: 10_000 },
+      { timestampFormat: "unixepoch-ms" },
+    );
+    return oneAtATime(await driver.connect());
+  },
+};
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasourceUrl: databaseUrl(),
+    adapter: sqlite,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     transactionOptions: {
       // With one connection, a transaction waits its turn behind other
