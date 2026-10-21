@@ -99,6 +99,40 @@ export function afterMoment(work: () => void) {
   whenUncovered();
 }
 
+/**
+ * Runs `work` once the panel has started leaving: two frames after the last
+ * one is told to close, by when its slide is running in the browser, which
+ * keeps it moving however long `work` holds the app up. With no panel open,
+ * on the next frame but one.
+ *
+ * For the work a save sets off that must happen before the moment plays but
+ * not before the panel goes: putting the saved row in place, building the tab
+ * the moment plays on. Done in the same instant as Save, all of it ran before
+ * the panel could even start to leave, and the panel sat still for a tenth
+ * of a second on a slow phone.
+ */
+export function whenPanelLeaving(work: () => void) {
+  let done = false;
+  let stop: (() => void) | undefined;
+  const run = () => {
+    if (done) return;
+    done = true;
+    stop?.();
+    window.clearTimeout(fallback);
+    work();
+  };
+  // Even if no frame comes (a hidden tab) or a panel stays open, it happens.
+  const fallback = window.setTimeout(run, 1000);
+  const soon = () => requestAnimationFrame(() => requestAnimationFrame(run));
+  if (!state.covered) return soon();
+  stop = subscribe(() => {
+    if (state.covered) return;
+    stop?.();
+    stop = undefined;
+    soon();
+  });
+}
+
 /** The stage as it is right now, for code outside React's render. */
 export function stageNow(): StageState {
   return state;

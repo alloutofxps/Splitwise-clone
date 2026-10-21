@@ -10,7 +10,7 @@ import { RollingFigure } from "@/components/ui/rolling-figure";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { TRAVEL_MS, type Travel } from "@/components/flow/flow-map";
 import { WhileOpen } from "@/components/ui/sheet";
-import { setBeat } from "@/components/ui/stage";
+import { setBeat, whenPanelLeaving } from "@/components/ui/stage";
 import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
@@ -29,6 +29,13 @@ import { useDashboard, useGroup, useMarkGroupRead } from "@/lib/client/queries";
 type Tab = "expenses" | "balances" | "charts";
 const TAB_NAMES: Record<Tab, string> = { expenses: "Expenses", balances: "Balances", charts: "Insights" };
 const TAB_ORDER: Tab[] = ["expenses", "balances", "charts"];
+
+// The tabs redraw only when what they show changes. Opening or closing a
+// panel changes this screen's state, and redrew the whole open tab with it,
+// in the instant a saved panel was trying to start leaving.
+const Ledger = React.memo(GroupLedger);
+const Balances = React.memo(BalancesPanel);
+const Charts = React.memo(GroupCharts);
 
 export default function GroupPage() {
   const params = useParams<{ id: string }>();
@@ -71,6 +78,12 @@ export default function GroupPage() {
     },
     [],
   );
+
+  // Stable, so the tabs (memoised below) keep the same props when a panel
+  // opens or closes.
+  const openComposer = composer.open;
+  const addHere = React.useCallback(() => openComposer(groupId), [openComposer, groupId]);
+  const travelled = React.useCallback(() => setTravel(null), []);
 
   // Opening the group clears its unread badge. Fired once per mount rather than
   // on every render, and deliberately not awaited - it must never delay paint.
@@ -121,26 +134,26 @@ export default function GroupPage() {
   const sideTab: Tab = tab === "expenses" ? "balances" : tab;
 
   const ledger = (
-    <GroupLedger
+    <Ledger
       groupId={groupId}
       meId={meId}
       members={group.members}
       people={people}
-      onAdd={() => composer.open(groupId)}
+      onAdd={addHere}
     />
   );
   const panel = (which: Tab) =>
     which === "balances" ? (
-      <BalancesPanel
+      <Balances
         group={group}
         meId={meId}
         people={people}
         onSettle={openSettle}
         travel={travel}
-        onTravelled={() => setTravel(null)}
+        onTravelled={travelled}
       />
     ) : which === "charts" ? (
-      <GroupCharts groupId={groupId} people={people} />
+      <Charts groupId={groupId} people={people} />
     ) : (
       ledger
     );
@@ -303,9 +316,13 @@ export default function GroupPage() {
           // Balances wait for the money to reach the other person before
           // they count.
           setBeat(TRAVEL_MS);
-          setTravel({ ...payment, nonce: Date.now() });
-          // Show it where it happens: the map on a phone is behind a tab.
-          if (!wide) setTab("balances", false);
+          // Built once the panel is on its way out, so it can leave at once;
+          // the travel itself waits for the panel to be gone either way.
+          whenPanelLeaving(() => {
+            setTravel({ ...payment, nonce: Date.now() });
+            // Show it where it happens: the map on a phone is behind a tab.
+            if (!wide) setTab("balances", false);
+          });
         }}
       />
     </div>

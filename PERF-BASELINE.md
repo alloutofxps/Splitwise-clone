@@ -479,3 +479,57 @@ screen updating after Save, which is fix 4.
 
 **Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
 pwa-check 36, all passing. Tapping each row still opens that expense.
+
+---
+
+## 16. A saved panel starts leaving before the work its save sets off (20 October 2026)
+
+Upgrade 4e, fix 4 of 5. When the server answered a save, three things ran
+in one go before the panel could even start to leave: marking the saved row
+as confirmed (the whole screen redrew), building the Balances tab, and the
+close itself, which redrew the open tab because the group screen holds
+which panels are open. Now the first two wait until the panel has started
+leaving (`whenPanelLeaving` in `src/components/ui/stage.ts`, two frames
+after the close), and the group's three tabs only redraw when what they
+show changes. The beat the money waits for is still set at once, so the
+order on screen is unchanged. Raw runs in `perf-runs/2026-10-20-after-save/`,
+against main `c79bfb2` in one sitting.
+
+**From the server's answer to the panel starting to leave**, CPU slowed 4x
+(`leave-check.mjs`, six alternating runs, median and range):
+
+| Moment | Before | After | Runs with a long task first, before | After |
+|---|---|---|---|---|
+| A part payment | 174 ms (118 to 236) | 99 ms (84 to 131) | 6 of 6 | 0 of 6 |
+| Adding an expense | 114 ms (94 to 147) | 88 ms (84 to 100) | 0 of 6 | 0 of 6 |
+| Settling a whole debt | 245 ms (122 to 354) | 163 ms (96 to 241) | 6 of 6 (up to 241 ms) | 4 of 6 (up to 70 ms) |
+
+What's left in settling a whole debt is two things, for fix 5: the instant
+update made when Save is tapped (the debt leaving the screen) sometimes
+still running when this laptop's very quick server answers, and, in the
+same task that starts the slide, everything that watches whether a panel
+is open being told it has closed.
+
+**Smoothness, late frames at 60Hz in the 2.5s after Save** (six alternating
+runs; this sitting ran higher than earlier ones on both sides):
+
+| Moment | Before | After |
+|---|---|---|
+| Adding an expense | 3.7% | 4.0% |
+| Settling up a debt | 5.0% | 7.0% |
+| A part payment | 4.0% | 4.0% |
+
+The work after Save now comes in more, smaller pieces while the panel
+slides on the browser's own thread; the recorder times the app's thread, so
+it counts each piece. The longest freeze is shorter: settling up 89.5 to
+70 ms, a part payment 95 to 78.5 ms.
+
+**Order on screen** (`payment-strip.png`, frames at set times after Save,
+CPU slowed 4x): the same before and after. The panel leaves, Balances
+shows, the dot travels, the balance rolls from €31.40 to €28.40.
+
+**Download size:** Home 310.0 KB, a group 332.7 KB of scripts, under the
+312 and 333 KB limits (a group has 0.3 KB of room left).
+
+**Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
+pwa-check 36, all passing.
