@@ -687,3 +687,38 @@ branch, phone width, Day and Night): "Nothing here", Offline, the error
 screen and a settled group's doodle are identical, 0.00% of pixels. The
 pull-to-refresh doodle ends up with the same four classes as before. ui-check
 (81), ui-features (32) and pwa-check (36) pass.
+
+## 21. The sign-up screens only when needed (21 October 2026)
+
+CODE-HEALTH-AUDIT item 2. Before: main at `ced5932`. After: the same plus
+the change. Measured as in section 19.
+
+| | Before | After | Change |
+|---|---|---|---|
+| A group, scripts to show it | 321.9 KB | 313.2 KB | -8.7 KB |
+| A group, after load | 16.5 KB | 16.5 KB | 0 |
+| Home, scripts to show it | 308.7 KB | 293.1 KB | -15.6 KB |
+| Home, after load | 45.4 KB | 52.3 KB | +6.9 KB |
+
+Home gains more than the sign-up screens themselves because the welcome
+screen draws a money map too: the map, the travel and the rolling-digit code
+used to load with every screen for its sake, and now come only with the group
+screen's code, which Home fetches early once it has loaded. That is the 6.9 KB
+moving to after load.
+
+Checked in the browser (`perf-runs/2026-10-21-signup/signup-check.mjs`): a
+first visit shows the welcome (407ms locally) and fetches the sign-up screens
+once; the opening's outline is taken off the screen once, by the welcome, so
+its drawing never restarts; Home, a group, Friends and Account never fetch
+them when signed in; an expired sign-in lands on the welcome; if they can't be
+fetched, "Couldn't reach Divvy" shows. ui-check (81, including a reload on
+the recovery key step), ui-features (32) and pwa-check (36, the whole sign-up)
+pass.
+
+Smoothness (`motion-record.mjs` timing, CPU slowed 4x, main and the change
+served side by side, three alternating runs, late frames at 60Hz):
+
+| Flow | Main | Change |
+|---|---|---|
+| Opening the app | 3.1, 3.7, 3.7% (median 3.7%) | 3.7, 3.7, 3.1% (median 3.7%) |
+| Home to a group | 3.2, 2.8, 3.7% (median 3.2%) | 2.6, 2.8, 2.8% (median 2.8%) |
