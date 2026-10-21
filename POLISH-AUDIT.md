@@ -20,7 +20,9 @@ dropped (see the end).
   and dropped), and after Save on an expense, nothing over 50ms
   (PERF-BASELINE sections 13 to 17).
 - **Done after 4e:** item 24 (the busy button's line is in the spec, and is
-  a still line with Reduce Motion).
+  a still line with Reduce Motion); item 27 (a "Needs you" row that's done with
+  cross-fades with the one taking its place; folding it away was tried
+  first, and moved the Groups list under the row flying back into it).
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 
