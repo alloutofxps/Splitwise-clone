@@ -90,6 +90,7 @@ are written where they are used.
 | Switching tabs | Fade through, new tab grows 98% to 100% | 200 | Equals; you haven't gone deeper |
 | Opening a group or friend | Slide in from the right; the row's icon, name, amount travel into the header | 300 / 400 | You went into the thing you tapped |
 | Going back | The same, reversed | 250 | You're back where you were |
+| A "Needs you" row is done with | It and the row taking its place cross-fade in the same spot | 150 | That's dealt with; this is next |
 | Expenses / Balances / Insights | Content slides with the underline | 250 | They sit side by side |
 | Slow load (over 300ms) | Still outline shaped like the screen, then a fade | 150 | Something's coming, and this is its shape |
 | Scrolling under a sticky bar | Bar gains a level 2 shadow | 150 | Content is passing underneath |

@@ -17,6 +17,8 @@ import {
 import { useActivity, useBudgets, useDashboard, usePrefetch, useUpdateGroup } from "@/lib/client/queries";
 import { useOpenScreen } from "@/components/ui/open-screen";
 import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
+import { AnimatePresence, motion } from "framer-motion";
+import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
 
 import { ActionSheet, useLongPress } from "@/components/ui/swipe-row";
 import { useToast } from "@/components/ui/toast";
@@ -316,18 +318,20 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
     [data.people],
   );
 
-  const rows: React.ReactNode[] = [];
+  const rows: { id: string; node: React.ReactNode }[] = [];
 
   if (backup) {
-    rows.push(
-      <LinkRow
-        key="backup"
-        href="/account"
-        icon={<ShieldCheck className="size-5" strokeWidth={1.75} />}
-        title="Back up your account"
-        caption="So you can get back in on a new phone · 1 minute"
-      />,
-    );
+    rows.push({
+      id: "backup",
+      node: (
+        <LinkRow
+          href="/account"
+          icon={<ShieldCheck className="size-5" strokeWidth={1.75} />}
+          title="Back up your account"
+          caption="So you can get back in on a new phone · 1 minute"
+        />
+      ),
+    });
   }
 
   // Money you can pay, biggest first.
@@ -340,16 +344,18 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
     .sort((a, b) => (b.amount > a.amount ? 1 : -1))
     .slice(0, 2);
   for (const item of toPay) {
-    rows.push(
-      <LinkRow
-        key={`pay-${item.person.id}-${item.currency}`}
-        href={`/friends/${item.person.id}`}
-        avatar={item.person}
-        title={`Pay ${item.person.displayName.split(" ")[0]} ${formatMoney(item.amount, item.currency)}`}
-        caption="Settle up"
-        tone="owe"
-      />,
-    );
+    rows.push({
+      id: `pay-${item.person.id}-${item.currency}`,
+      node: (
+        <LinkRow
+          href={`/friends/${item.person.id}`}
+          avatar={item.person}
+          title={`Pay ${item.person.displayName.split(" ")[0]} ${formatMoney(item.amount, item.currency)}`}
+          caption="Settle up"
+          tone="owe"
+        />
+      ),
+    });
   }
 
   // Changes by other people you haven't seen yet.
@@ -357,7 +363,7 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
     .filter((item) => item.isUnread && item.actorPersonId !== data.me.id)
     .slice(0, 2);
   for (const item of unread) {
-    rows.push(<UnreadRow key={item.id} activity={item} meId={data.me.id} people={people} />);
+    rows.push({ id: item.id, node: <UnreadRow activity={item} meId={data.me.id} people={people} /> });
   }
 
   const nearLimit = (budgets ?? []).find((budget) => {
@@ -365,18 +371,22 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
     return limit > 0n && Number(BigInt(budget.spent)) / Number(limit) >= 0.8;
   });
   if (nearLimit) {
-    rows.push(
-      <LinkRow
-        key="budget"
-        href="/account"
-        icon={<Target className="size-5" strokeWidth={1.75} />}
-        title={`${formatMoney(BigInt(nearLimit.spent), nearLimit.currency)} of ${formatMoney(BigInt(nearLimit.amount), nearLimit.currency)} budget used`}
-        caption={
-          nearLimit.period === "WEEKLY" ? "This week" : nearLimit.period === "YEARLY" ? "This year" : "This month"
-        }
-      />,
-    );
+    rows.push({
+      id: "budget",
+      node: (
+        <LinkRow
+          href="/account"
+          icon={<Target className="size-5" strokeWidth={1.75} />}
+          title={`${formatMoney(BigInt(nearLimit.spent), nearLimit.currency)} of ${formatMoney(BigInt(nearLimit.amount), nearLimit.currency)} budget used`}
+          caption={
+            nearLimit.period === "WEEKLY" ? "This week" : nearLimit.period === "YEARLY" ? "This year" : "This month"
+          }
+        />
+      ),
+    });
   }
+
+  const shown = rows.slice(0, 4);
 
   // Until the activity is in, an outline the size of the finished section:
   // showing the settle-up row alone and then growing to three pushed
@@ -412,7 +422,28 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
         ) : undefined
       }
     >
-      <Rows>{rows.slice(0, 4)}</Rows>
+      {/*
+        A row that goes (news you've now seen, a debt you've paid) and the one
+        that takes its place cross-fade in the same spot (POLISH-AUDIT 27).
+        They used to swap in one frame as Home came back from a group you had
+        just read. Nothing below moves unless the number of rows changes: the
+        group's name and balance are flying back into their row just then.
+      */}
+      <Rows as="ul">
+        <AnimatePresence initial={false} mode="popLayout">
+          {shown.map((row) => (
+            <motion.li
+              key={row.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: DURATION.fade, ease: EASE_STANDARD }}
+            >
+              {row.node}
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </Rows>
     </Section>
   );
 }
@@ -651,11 +682,11 @@ function Section({
 }
 
 /** A grouped inset list: one card, rows separated by hairlines. */
-function Rows({ children }: { children: React.ReactNode }) {
+function Rows({ children, as: Tag = "div" }: { children: React.ReactNode; as?: "div" | "ul" }) {
   return (
-    <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+    <Tag className="relative divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {children}
-    </div>
+    </Tag>
   );
 }
 

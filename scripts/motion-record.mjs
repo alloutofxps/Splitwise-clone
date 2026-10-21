@@ -194,6 +194,8 @@ const FLOWS = {
     await row.first().click();
     await page.waitForURL(`**/groups/${seedData.trip}`);
     await page.waitForTimeout(1600);
+    // Home again: the group's news is read now, so "Needs you" changes.
+    mark("back");
     await page.goBack();
     await page.waitForTimeout(1600);
   },
