@@ -39,6 +39,10 @@ time.
 - The 44.1 KB on Home is the group screen's own code, fetched once Home has
   finished loading so that opening a group doesn't wait for it. It costs
   data, not time to first see Home.
+- The compressed figures can move by about 0.6 KB with no code change, so
+  compare before and after built in the same folder, and check the
+  uncompressed figure (`ScriptRaw`) when a result is close to a limit. See
+  section 20.
 - The "First Load JS" column `next build` prints is a different measure
   (it leaves some shared pieces out): Home 225 KB, a group 263 KB today.
 - MOTION-SPEC section 7 gave "today" as 195 KB and 225 KB with limits of
@@ -662,3 +666,49 @@ before the page has finished loading, and offline after one visit; My code on
 Friends and Add another device on Account still show theirs. ui-check (81),
 ui-features (32) and pwa-check (36) all pass. No recorded flow opens a QR
 panel, so smoothness isn't affected.
+
+## 20. Why the same code can measure 0.6 KB apart (21 October 2026)
+
+Main at `08b9669` measured 333.6 KB for a group page, over the 333 KB limit,
+where section 18 had recorded 333.0 KB for the same app code. No code or
+package had changed. The difference is where the app was built: section 18's
+build was made in the main folder, the 333.6 one in a worktree. Measured in
+one sitting, the two builds alternating, three runs each, identical every
+run:
+
+| Same code (`08b9669`) | Main folder | Worktree | Difference |
+|---|---|---|---|
+| A group, scripts to show it, compressed | 333.0 KB | 333.6 KB | +0.6 KB |
+| The same, uncompressed (`ScriptRaw` minus `ScriptRawAfterLoad`) | 982.9 KB | 982.8 KB | -0.1 KB |
+| Home, scripts to show it, compressed | 310.4 KB | 310.9 KB | +0.5 KB |
+| The same, uncompressed | 910.0 KB | 909.9 KB | -0.1 KB |
+
+**Why:** the build gives every piece of code an internal number, worked out
+from the names of the files involved, including where the build tool itself
+sits. In another folder, or after unrelated changes to the server's code,
+those numbers come out different, and the files compress a little better or
+worse. The app's biggest shared file is 174,444 bytes in one build and
+174,446 in the other, yet 46,368 and 46,734 bytes compressed. The Prisma
+session saw the same wobble between two fresh installs whose only
+difference was server code, so it isn't the worktree's linked
+`node_modules` (section 19's guess); turning off link-following in the
+build changed nothing either.
+
+**What was ruled out:** the move to `motion` (#62). The commit before it,
+`ca63855`, measures 333.6 KB in the worktree and 333.0 KB in the main
+folder too, and its shared files have the same fingerprints as main's in
+each folder.
+
+**Which figure counts:** production is built in Docker, in its own folder
+with its own installed packages, like the main folder. But the wobble can
+go either way after any change, so treat a compressed result within about
+0.6 KB of a limit as a tie and look at the uncompressed figure: it only
+moves when code really does.
+
+**Change:** `size-report.mjs` now also reports `ScriptRaw` and
+`ScriptRawAfterLoad`, the same scripts uncompressed (and both sizes per
+script with `DETAIL=1`). The compressed figures it prints are unchanged.
+
+**Today,** main at `998ac1a` (with section 19's change), built in the
+worktree: a group 324.0 KB compressed (959.4 KB uncompressed), Home 310.8 KB
+(909.9 KB), three runs, identical.

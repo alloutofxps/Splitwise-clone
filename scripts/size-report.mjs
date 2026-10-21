@@ -11,6 +11,13 @@
 // (needed to show the screen) and those after (fetched early for the next one).
 // DETAIL=1 also lists every script with its size, on stderr.
 //
+// ScriptRaw and ScriptRawAfterLoad are the same scripts uncompressed. The
+// compressed figures can move by about 0.6 KB with no code change: the build
+// numbers its pieces differently in another folder, or after unrelated server
+// code changes, and the numbers compress a little better or worse. The
+// uncompressed figures only move when code really changes, so check them
+// whenever a result is that close to a limit (PERF-BASELINE 20).
+//
 // Seeds its own data: two people, one group, one expense.
 import { chromium } from "playwright";
 
@@ -77,26 +84,38 @@ for (const [name, path] of [
   await cdp.send("Network.enable");
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
   const seen = new Map();
+  const raw = new Map();
   const totals = {};
   const scripts = [];
   let loaded = false;
   let scriptsAfterLoad = 0;
+  let scriptsRaw = 0;
+  let scriptsRawAfterLoad = 0;
   page.on("load", () => (loaded = true));
   cdp.on("Network.responseReceived", (e) => seen.set(e.requestId, { type: e.type, url: e.response.url.replace(BASE, "") }));
+  cdp.on("Network.dataReceived", (e) => raw.set(e.requestId, (raw.get(e.requestId) ?? 0) + e.dataLength));
   cdp.on("Network.loadingFinished", (e) => {
     const { type, url } = seen.get(e.requestId) ?? { type: "Other", url: "?" };
     totals[type] = (totals[type] ?? 0) + e.encodedDataLength;
     if (type !== "Script") return;
-    scripts.push([kb(e.encodedDataLength), url + (loaded ? "  (after load)" : "")]);
-    if (loaded) scriptsAfterLoad += e.encodedDataLength;
+    const rawBytes = raw.get(e.requestId) ?? 0;
+    scripts.push([kb(e.encodedDataLength), kb(rawBytes), url + (loaded ? "  (after load)" : "")]);
+    scriptsRaw += rawBytes;
+    if (loaded) {
+      scriptsAfterLoad += e.encodedDataLength;
+      scriptsRawAfterLoad += rawBytes;
+    }
   });
   await page.goto(BASE + path, { waitUntil: "networkidle" });
   await page.waitForTimeout(1500);
   report[name] = Object.fromEntries(Object.entries(totals).map(([type, bytes]) => [type, kb(bytes)]));
   report[name].ScriptAfterLoad = kb(scriptsAfterLoad);
+  report[name].ScriptRaw = kb(scriptsRaw);
+  report[name].ScriptRawAfterLoad = kb(scriptsRawAfterLoad);
   if (process.env.DETAIL) {
     console.error(`${name}:`);
-    for (const [size, url] of scripts.sort((a, b) => b[0] - a[0])) console.error(`  ${String(size).padStart(6)} kB  ${url}`);
+    for (const [size, rawSize, url] of scripts.sort((a, b) => b[0] - a[0]))
+      console.error(`  ${String(size).padStart(6)} kB  ${String(rawSize).padStart(6)} kB raw  ${url}`);
   }
   await context.close();
 }
