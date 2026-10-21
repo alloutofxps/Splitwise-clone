@@ -586,3 +586,53 @@ was measured with a slow network too, so the two aren't like for like.
 
 **Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
 pwa-check 36, all passing.
+
+---
+
+## 18. Before and after the motion work (21 October 2026)
+
+Phase 6. Before: main at `ceebc95`, served from the `divvy-before` copy.
+After: main at `9dabd1d`, with every change since. Raw recordings, timings
+and videos in `perf-runs/2026-10-21-phase6/`; the evidence page puts them
+side by side.
+
+**Smoothness, every flow** (`motion-record.mjs` timing, CPU slowed 4x,
+three alternating runs, median late frames at 60Hz):
+
+| Flow | Whole flow, before | After | 2.5s after Save, before | After |
+|---|---|---|---|---|
+| Opening the app | 5.8% | 3.1% | | |
+| Home to a group | 4.0% | 3.1% | | |
+| Adding an expense | 5.2% | 4.8% | 4.7% | 3.3% |
+| Paying a debt off | 3.9% | 3.8% | 4.7% | 4.0% |
+| A friend's page | 1.7% | 1.4% | | |
+| Panels | 2.8% | 2.6% | | |
+| A payment | 3.7% | 3.2% | 4.7% | 2.0% |
+| First run | 2.4% | 2.7% | | |
+| Pull to refresh | 1.5% | 1.2% | | |
+| The three tabs | 3.7% | 3.9% | 3.3% | 2.7% |
+| A group row and back | 2.3% | 2.2% | 3.3% | 3.3% |
+
+Two flows are under the 2% bar on this laptop; the phone test
+(`PHONE-TEST.md`) gives the verdict.
+
+**Download size** (`size-report.mjs`):
+
+| | Before | After | Limit |
+|---|---|---|---|
+| Home, scripts to show it | 296.7 KB | 310.4 KB | 312 KB |
+| A group, scripts to show it | 318.2 KB | 333.0 KB | 333 KB |
+| A group, after load | 0 KB | 7.0 KB | |
+| Styles | 11.4 KB | 12.3 KB | |
+| Home's page itself (HTML) | 7.7 KB | 13.7 KB | |
+
+A group page is exactly at its limit. Home's HTML grew with the launch
+screens (section 12) and the link previews.
+
+**Reduce Motion:** every flow re-recorded with `REDUCE=1` on both sides.
+Nothing slides, travels or rolls. Panels fade in 150ms where they sit
+(before, they vanished in one frame); new rows fade into place once the
+panel has gone; balances show their new value.
+
+**Videos:** a before/after pair for each of the 11 flows, at quarter and
+real speed, made frame by frame (`motion-compare.mjs`).
