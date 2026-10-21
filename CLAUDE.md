@@ -86,6 +86,14 @@ detail.
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server
   clears it.
+- Accessibility and long-text reports (each takes `<url> <out-dir>`; compare
+  before and after a change): `scripts/keyboard-check.mjs` (every panel by
+  keyboard; `WIDTH=390` for the phone layout), `scripts/a11y-tree.mjs` (what a
+  screen reader is told), `scripts/focus-rings.mjs` (Day and Night close-ups),
+  `scripts/long-text.mjs` (40-letter names, 9,999,999.99 in five currencies,
+  Arabic and Hebrew).
+- A server started from a worktree needs `DIVVY_SECRET` (it has no `.env`);
+  any 64 hex characters will do for a test database.
 - Stopping a background shell doesn't stop the server. In PowerShell:
   `Get-NetTCPConnection -LocalPort 3100 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`.
 - iPhone launch screens: after changing Home's outline, the tab bar or the
@@ -93,7 +101,8 @@ detail.
   build and commit `public/launch/` and `src/app/launch-screens.ts`.
 - Motion videos are made frame by frame (`scripts/motion-record.mjs`,
   `motion-compare.mjs`, `motion-video.mjs`), never by recording the screen
-  live.
+  live. `SCHEME=dark` records at Night; flows `12-paid`, `13-arrive-hop` and
+  `14-settled-hop` cover the drawings.
 
 ## Animation rules learned the hard way
 

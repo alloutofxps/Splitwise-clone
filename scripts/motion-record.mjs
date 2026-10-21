@@ -13,6 +13,8 @@
 // SLOW=1 slows the CPU 4x for frames too, to see what a mid-range phone
 // shows: a slide the browser runs itself keeps moving while the app is busy.
 //
+// SCHEME=dark records at Night (the phone's dark setting); Day otherwise.
+//
 // Seeds its own data: four people, two groups, a direct expense.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -225,6 +227,49 @@ const FLOWS = {
     await page.keyboard.press("Escape");
     await page.waitForTimeout(900);
   },
+  // The drawings (MOTION-SPEC 4, illustrated). The paid moment: settling a
+  // whole debt from Balances, so its line clears on the map.
+  "12-paid": async (page, seedData, mark) => {
+    await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(800);
+    await page.getByRole("tab", { name: "Balances" }).click();
+    await page.waitForTimeout(1000);
+    await page.getByRole("button", { name: /^Add Sam Lee paying you/ }).click();
+    await page.waitForTimeout(900);
+    mark("save");
+    await page.getByRole("button", { name: "Save payment" }).click();
+    await page.waitForTimeout(3500);
+  },
+  // An empty list's drawing arriving (a new account's Friends), then a tap
+  // to make the three hop.
+  "13-arrive-hop": async (page, seedData, mark) => {
+    const fresh = client();
+    await fresh.call("/api/identity", { displayName: "Noor Ali", avatarColor: "teal", defaultCurrency: "EUR" });
+    await page.context().addCookies([{ name: "divvy_id", value: fresh.cookie, url: BASE }]);
+    await page.goto(`${BASE}/friends`, { waitUntil: "commit" });
+    await page.waitForTimeout(2200);
+    mark("save");
+    await page.locator("svg.doodle").first().click();
+    await page.waitForTimeout(1200);
+  },
+  // A group where everyone is settled: the drawing's lines erase. Then a hop.
+  "14-settled-hop": async (page, seedData, mark) => {
+    const [a, b] = [client(), client()];
+    a.id = (await a.call("/api/identity", { displayName: "Noor Ali", avatarColor: "teal", defaultCurrency: "EUR" })).me.id;
+    b.id = (await b.call("/api/identity", { displayName: "Leo Park", avatarColor: "coral", defaultCurrency: "EUR" })).me.id;
+    const group = (await a.call("/api/groups", { name: "Book club", currency: "EUR", emoji: "📚" })).group;
+    await b.call(`/api/invite/${group.inviteCode}/join`, {});
+    await a.call("/api/expenses", { groupId: group.id, description: "Snacks", amount: "1000", currency: "EUR", splitMode: "EQUAL", payers: [{ personId: a.id, amount: "1000" }], splits: eq(1000, [a.id, b.id]) });
+    await b.call("/api/settlements", { groupId: group.id, fromPersonId: b.id, toPersonId: a.id, amount: "500", currency: "EUR" });
+    await page.context().addCookies([{ name: "divvy_id", value: a.cookie, url: BASE }]);
+    await page.goto(`${BASE}/groups/${group.id}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(600);
+    await page.getByRole("tab", { name: "Balances" }).click();
+    await page.waitForTimeout(2200);
+    mark("save");
+    await page.locator("svg.doodle").first().click();
+    await page.waitForTimeout(1200);
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -240,6 +285,7 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   const context = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: 2,
+    colorScheme: process.env.SCHEME === "dark" ? "dark" : "light",
     // REDUCE=1 records with the phone's Reduce Motion setting on.
     reducedMotion: process.env.REDUCE ? "reduce" : "no-preference",
   });
