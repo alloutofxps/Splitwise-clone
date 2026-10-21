@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
-import type { Group, Membership } from "@prisma/client";
+import type { Group, Membership } from "@/generated/prisma/client";
 
 /**
  * Access control, such as it is.

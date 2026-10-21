@@ -1,4 +1,4 @@
-import type { Recurrence } from "@prisma/client";
+import type { Recurrence } from "@/generated/prisma/client";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import type {
   ExpensePayerDto,

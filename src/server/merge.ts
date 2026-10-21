@@ -38,7 +38,7 @@ import { prisma } from "@/lib/db";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { sharesAGroup } from "@/server/access";
 import { bumpLedger } from "@/server/ledger";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 /** One entry of a recurrence's stored payer or split template. */
 interface TemplateEntry {

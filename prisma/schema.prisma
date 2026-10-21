@@ -2,17 +2,22 @@
 //
 // Portability note: SQLite is the default so the app runs with zero external
 // services. To move to Postgres, change `provider` to "postgresql", point
-// DATABASE_URL at your instance, and re-run `prisma migrate dev`. Nothing in
+// DATABASE_URL at your instance, swap the SQLite adapter in `src/lib/db.ts`
+// for `@prisma/adapter-pg`, and re-run `prisma migrate dev`. Nothing in
 // the schema below uses SQLite-only features — enums are modelled as strings
 // and structured payloads as JSON-encoded text so both engines accept it.
 
+// Generated into the source tree (and git-ignored) rather than node_modules,
+// which Prisma 7 no longer does. `npm install` regenerates it.
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
+// The address comes from `prisma.config.ts` for the CLI and from
+// `src/lib/db.ts` for the app.
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------
