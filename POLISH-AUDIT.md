@@ -19,6 +19,8 @@ dropped (see the end).
   (the screen's first draw and layout; drawing the list later was tried
   and dropped), and after Save on an expense, nothing over 50ms
   (PERF-BASELINE sections 13 to 17).
+- **Done after 4e:** item 24 (the busy button's line is in the spec, and is
+  a still line with Reduce Motion).
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 
