@@ -281,20 +281,26 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [expired, setExpired] = React.useState(false);
 
   const create = useMutation({
-    mutationFn: () => api.post<{ path: string; expiresInSeconds: number }>("/api/identity/link"),
-    onSuccess: async (data) => {
+    // The QR library is fetched alongside the code, so neither waits for the
+    // other and a library that can't arrive fails here, with the request.
+    mutationFn: async () => {
+      const [data, QRCode] = await Promise.all([
+        api.post<{ path: string; expiresInSeconds: number }>("/api/identity/link"),
+        loadQrLibrary(),
+      ]);
       const absolute = `${window.location.origin}${data.path}`;
+      const png = await QRCode.toDataURL(absolute, {
+        width: 512,
+        margin: 1,
+        errorCorrectionLevel: "M",
+      });
+      return { absolute, png, expiresInSeconds: data.expiresInSeconds };
+    },
+    onSuccess: ({ absolute, png, expiresInSeconds }) => {
       setUrl(absolute);
       setExpired(false);
-      const QRCode = await loadQrLibrary();
-      setPng(
-        await QRCode.toDataURL(absolute, {
-          width: 512,
-          margin: 1,
-          errorCorrectionLevel: "M",
-        }),
-      );
-      window.setTimeout(() => setExpired(true), data.expiresInSeconds * 1000);
+      setPng(png);
+      window.setTimeout(() => setExpired(true), expiresInSeconds * 1000);
     },
     onError: (error) =>
       toast({
