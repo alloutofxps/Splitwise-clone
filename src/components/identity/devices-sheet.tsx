@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import QRCode from "qrcode";
 import { KeyRound, Laptop, Loader2, MonitorSmartphone, Smartphone, Tablet, Trash2, TriangleAlert } from "lucide-react";
+import { loadQrLibrary } from "@/components/ui/qr-code";
 import { Sheet } from "@/components/ui/sheet";
 import { useResetOnOpen } from "@/components/ui/use-reset-on-open";
 import { Button, cn, haptic } from "@/components/ui/primitives";
@@ -286,6 +286,7 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
       const absolute = `${window.location.origin}${data.path}`;
       setUrl(absolute);
       setExpired(false);
+      const QRCode = await loadQrLibrary();
       setPng(
         await QRCode.toDataURL(absolute, {
           width: 512,
