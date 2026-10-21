@@ -85,15 +85,6 @@ export default function GroupPage() {
   const addHere = React.useCallback(() => openComposer(groupId), [openComposer, groupId]);
   const travelled = React.useCallback(() => setTravel(null), []);
 
-  /*
-   * The tab's content is drawn just after the rest of the screen, in slices
-   * that give way to the browser. Drawn with it, the list and the page's
-   * layout were one tenth-of-a-second task on a slow phone, and the header
-   * couldn't start its travel in from Home until it was done. False on the
-   * first draw only; true from then on.
-   */
-  const showTabs = React.useDeferredValue(true, false);
-
   // Opening the group clears its unread badge. Fired once per mount rather than
   // on every render, and deliberately not awaited - it must never delay paint.
   const marked = React.useRef(false);
@@ -238,7 +229,7 @@ export default function GroupPage() {
         <div className="mt-8 grid grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] items-start gap-10">
           <div className="min-w-0">
             <h2 className="mb-3 text-title font-semibold tracking-[-0.01em] text-text">Expenses</h2>
-            {showTabs ? ledger : null}
+            {ledger}
           </div>
           <div className="min-w-0">
             <Segmented
@@ -249,7 +240,7 @@ export default function GroupPage() {
                 { value: "charts", label: "Insights" },
               ]}
             />
-            <div className="mt-4">{showTabs ? panel(sideTab) : null}</div>
+            <div className="mt-4">{panel(sideTab)}</div>
           </div>
         </div>
       ) : (
@@ -289,7 +280,7 @@ export default function GroupPage() {
           >
             {/* The tabs stand in for this heading on screen; speech still needs it. */}
             <h2 className="sr-only">{TAB_NAMES[tab]}</h2>
-            {showTabs ? panel(tab) : null}
+            {panel(tab)}
           </motion.div>
         </>
       )}
