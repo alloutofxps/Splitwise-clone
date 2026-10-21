@@ -4,7 +4,7 @@ import * as React from "react";
 import { useReducedMotion } from "framer-motion";
 import { currencyFormat, formatMoney, toDecimalString } from "@/lib/money";
 import { COUNT_MS, EASE_COUNT } from "./motion";
-import { untilCount, useStage } from "./stage";
+import { untilCount, useStageWhile } from "./stage";
 
 /**
  * A balance whose digits roll to each new figure (MOTION-SPEC 4, money).
@@ -71,10 +71,11 @@ export function RollingFigure({
   onRest?: (value: bigint) => void;
 }) {
   const reduce = useReducedMotion();
-  const stage = useStage();
   const flowReady = useNumberFlowReady();
   const format = React.useMemo(() => formatFor(currency), [currency]);
   const [shown, setShown] = React.useState(value);
+  // Panels only matter while there's a new figure waiting to be shown.
+  const stage = useStageWhile(value !== shown);
   const restRef = React.useRef(onRest);
   React.useLayoutEffect(() => {
     restRef.current = onRest;
@@ -84,7 +85,7 @@ export function RollingFigure({
   React.useEffect(() => {
     if (value === shown) return;
     // Under Reduce Motion the new figure is simply shown.
-    const wait = reduce ? 0 : stage.covered ? null : untilCount(stage);
+    const wait = reduce ? 0 : !stage || stage.covered ? null : untilCount(stage);
     if (wait === null) return;
     const timer = window.setTimeout(() => setShown(value), wait);
     return () => window.clearTimeout(timer);

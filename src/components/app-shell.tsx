@@ -11,7 +11,7 @@ import { OfflineBanner } from "./offline-banner";
 import { PullToRefresh } from "./pull-to-refresh";
 import { AppMark } from "./app-mark";
 import { DURATION, EASE_ENTER, EASE_STANDARD } from "./ui/motion";
-import { PANEL_EXIT_MS, useStage } from "./ui/stage";
+import { PANEL_EXIT_MS, useStageCovered } from "./ui/stage";
 
 /**
  * The frame every screen sits in.
@@ -103,7 +103,7 @@ export function AppShell({
   // still there, underneath, and you'll come back to it. It shrinks about the
   // middle of what's on screen, measured as the panel opens; the page can't
   // scroll while a panel is up, so that stays true until it closes.
-  const { covered } = useStage();
+  const covered = useStageCovered();
   const page = React.useRef<HTMLElement>(null);
   React.useLayoutEffect(() => {
     if (covered && page.current) {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
-import { LAND_MS, PANEL_EXIT_MS, untilClear, useStage } from "./stage";
+import { LAND_MS, PANEL_EXIT_MS, untilClear, useStageWhile } from "./stage";
 
 /** How long the highlight on a row that has just landed takes to fade. */
 const WASH_MS = 1200;
@@ -56,12 +56,13 @@ export function Arrival({
   children: React.ReactNode;
   className?: string;
 }) {
-  const stage = useStage();
   const reduce = useReducedMotion();
   const [phase, setPhase] = React.useState<"held" | "landing" | "landed">(arriving ? "held" : "landed");
+  // Only a row waiting to land listens to panels opening and closing.
+  const stage = useStageWhile(phase === "held");
 
   React.useEffect(() => {
-    if (phase !== "held" || stage.covered) return;
+    if (phase !== "held" || !stage || stage.covered) return;
     const timer = window.setTimeout(() => setPhase("landing"), untilClear(stage));
     return () => window.clearTimeout(timer);
   }, [phase, stage]);
