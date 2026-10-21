@@ -23,6 +23,10 @@ dropped (see the end).
   a still line with Reduce Motion); item 27 (a "Needs you" row that's done with
   cross-fades with the one taking its place; folding it away was tried
   first, and moved the Groups list under the row flying back into it).
+- **Also done after 4e:** item 29 (shared links now carry a preview: name,
+  description and icon. The description was already there; Lighthouse
+  missed it because Next.js puts it in the page body for ordinary
+  browsers, and in the head for link-preview fetchers).
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 

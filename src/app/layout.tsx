@@ -24,13 +24,43 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 });
 
+const TITLE = "Divvy: split bills with friends";
+const DESCRIPTION =
+  "Split bills with friends and housemates. See who owes what and pay each other back. Free, with no ads.";
+
+/**
+ * Where the app lives, for the absolute addresses a link preview needs.
+ * Railway gives the running server its public domain.
+ */
+const SITE = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: {
-    default: "Divvy: split bills with friends",
+    default: TITLE,
     template: "%s · Divvy",
   },
-  description:
-    "Split bills with friends and housemates. See who owes what and pay each other back. Free, with no ads.",
+  description: DESCRIPTION,
+  /*
+   * What WhatsApp, Messages and Slack show when a Divvy link is shared, an
+   * invite above all: the name, the line above and the app's icon, instead
+   * of a bare address (POLISH-AUDIT 29).
+   */
+  openGraph: {
+    type: "website",
+    siteName: "Divvy",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "Divvy" }],
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/icons/icon-512.png"],
+  },
   applicationName: "Divvy",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
