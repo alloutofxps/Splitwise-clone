@@ -1243,6 +1243,86 @@ console.log("\nMerging a placeholder from the group screen");
   await ctx5.close();
 }
 
+/*
+ * Panels by keyboard. Focus used to stay on the page behind an open panel,
+ * Tab walked out of it, and closing it dropped focus to the top of the page,
+ * so a keyboard user lost their place every time (POLISH-AUDIT keyboard pass).
+ */
+console.log("\nPanels by keyboard");
+{
+  const ctx6 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p6 = await ctx6.newPage();
+  await p6.goto(BASE, { waitUntil: "networkidle" });
+  const groupId = await p6.evaluate(async () => {
+    const post = (path, body) => fetch(path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }).then(r => r.json());
+    const me = (await post("/api/identity", { displayName: "Keys", defaultCurrency: "EUR" })).me;
+    const group = (await post("/api/groups", { name: "Keyboard", currency: "EUR", placeholderNames: ["Sam"] })).group;
+    const detail = await (await fetch(`/api/groups/${group.id}`)).json();
+    const sam = detail.group.members.find(m => m.displayName === "Sam").id;
+    await post("/api/expenses", {
+      groupId: group.id, description: "Lunch", amount: "2000", currency: "EUR", splitMode: "EQUAL",
+      payers: [{ personId: me.id, amount: "2000" }],
+      splits: [{ personId: me.id, amount: "1000" }, { personId: sam, amount: "1000" }],
+    });
+    return group.id;
+  });
+  await p6.goto(`${BASE}/groups/${groupId}`, { waitUntil: "networkidle" });
+  await p6.waitForTimeout(800);
+
+  // Where focus is: "panel" (the top one), "lower" (one underneath), "page" or "body".
+  const where = () => p6.evaluate(() => {
+    const el = document.activeElement;
+    if (!el || el === document.body) return "body";
+    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
+    const own = el.closest('[role="dialog"]');
+    if (!own) return el.hasAttribute("data-opener") ? "opener" : "page";
+    return own === dialogs[dialogs.length - 1] ? "panel" : "lower";
+  });
+
+  const settle = p6.getByRole("button", { name: "Settle up", exact: true }).first();
+  await settle.evaluate(el => el.setAttribute("data-opener", ""));
+  await settle.focus();
+  await p6.keyboard.press("Enter");
+  await p6.waitForTimeout(700);
+  check("opening a panel moves focus into it", await where() === "panel", await where());
+  const places = new Set();
+  for (let i = 0; i < 20; i++) {
+    await p6.keyboard.press("Tab");
+    places.add(await where());
+  }
+  check("Tab never reaches the page behind it", !places.has("page") && !places.has("opener"), [...places].join(", "));
+  if (await where() !== "panel") await p6.keyboard.press("Tab");
+  await p6.keyboard.press("Escape");
+  await p6.waitForTimeout(700);
+  check("Escape gives focus back to the button that opened it", await where() === "opener", await where());
+
+  // A panel over a panel: the composer's split editor.
+  await p6.getByRole("button", { name: "Add an expense" }).first().focus();
+  await p6.keyboard.press("Enter");
+  await p6.waitForTimeout(800);
+  const split = p6.locator('[role="dialog"]').last().getByRole("button", { name: /^Split/ }).first();
+  await split.evaluate(el => el.setAttribute("data-split", ""));
+  await split.focus();
+  await p6.keyboard.press("Enter");
+  await p6.waitForTimeout(800);
+  const lowerReached = new Set();
+  for (let i = 0; i < 25; i++) {
+    await p6.keyboard.press("Tab");
+    lowerReached.add(await where());
+  }
+  check("Tab stays in the top panel, not the one underneath", !lowerReached.has("lower"), [...lowerReached].join(", "));
+  if (await where() !== "panel") await p6.keyboard.press("Tab");
+  await p6.keyboard.press("Escape");
+  await p6.waitForTimeout(700);
+  const backOnSplit = await p6.evaluate(() => document.activeElement?.hasAttribute("data-split") ?? false);
+  check("closing the top one returns focus to its button in the panel below", backOnSplit);
+  check("and the panel below is still open", await p6.locator('[role="dialog"]').count() === 1);
+  await p6.keyboard.press("Escape");
+  await ctx6.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
