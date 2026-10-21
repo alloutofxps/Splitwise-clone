@@ -13,7 +13,12 @@ dropped (see the end).
 - **Fixed in the small design PR:** items 9, 10, 25 and 28.
 - **Done in upgrade 4a:** item 6 (the row travelling into the header).
 - **Done in upgrade 4e:** item 3 (panels now slide on the browser's own
-  thread; PERF-BASELINE section 14).
+  thread; PERF-BASELINE section 14). Item 7 was measured and needs no
+  change: deleting a row and Undo had no task over 50ms in any 4e run.
+  Item 8 was traced: opening a group has one pause of 86 to 97ms left
+  (the screen's first draw and layout; drawing the list later was tried
+  and dropped), and after Save on an expense, nothing over 50ms
+  (PERF-BASELINE sections 13 to 17).
 - **Item 19:** waits for the phone test.
 - **Everything else:** still open.
 
