@@ -111,6 +111,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         onClick={(event) => {
           if (!disabled && !loading) haptic();
           onClick?.(event);

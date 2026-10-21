@@ -192,7 +192,7 @@ the script after changing Home's outline, the tab bar or the colours.
 - Lists arriving one row after another. Lists appear all at once.
 - Anything on scroll except a sticky bar's shadow. No parallax, no reveal-on-scroll.
 - The tab bar and top bar during navigation.
-- Anything that loops, bobs or pulses forever. The only loops are the opening and pull-to-refresh, and only while work is actually happening.
+- Anything that loops, bobs or pulses forever. The only loops are the opening, pull-to-refresh and the short line running along a busy button's bottom edge, and only while work is actually happening.
 - Error messages shaking. They fade in with a short buzz on the phone.
 - Motion as the only signal. Every change also shows in text or colour.
 - Waiting for an animation before you can tap.
@@ -204,7 +204,8 @@ the script after changing Home's outline, the tab bar or the colours.
 With Reduce Motion (iPhone) or Remove animations (Android) on, every slide,
 scale, travel and roll becomes a 150ms fade or simply the end result. The
 drawings show their final still frame. Depth stays: shadows aren't motion.
-Panels fade in and out where they sit instead of rising and dropping.
+Panels fade in and out where they sit instead of rising and dropping. A busy
+button's running line becomes a still one along its bottom edge.
 
 ## 7. Download size
 

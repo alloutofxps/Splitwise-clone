@@ -541,6 +541,18 @@
   opacity: 0.7;
   animation: divvy-progress 1.1s cubic-bezier(0.2, 0, 0, 1) infinite;
 }
+/*
+ * With motion turned off the loop would run once, instantly, and end off the
+ * edge, leaving no sign the button is working. A still line says it instead
+ * (MOTION-SPEC 6).
+ */
+@media (prefers-reduced-motion: reduce) {
+  .divvy-progress::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
 
 /*
  * Placeholders are still outlines shaped like the screen that's coming
