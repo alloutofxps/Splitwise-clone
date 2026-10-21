@@ -19,7 +19,8 @@ dropped (see the end).
   (the screen's first draw and layout; drawing the list later was tried
   and dropped), and after Save on an expense, nothing over 50ms
   (PERF-BASELINE sections 13 to 17).
-- **Done after 4e:** item 24 (the busy button's line is in the spec, and is
+- **Done after 4e:** item 30 (the app now uses `motion`, framer-motion's
+  current name, at the same 14.4.0); item 24 (the busy button's line is in the spec, and is
   a still line with Reduce Motion); item 27 (a "Needs you" row that's done with
   cross-fades with the one taking its place; folding it away was tried
   first, and moved the Groups list under the row flying back into it).

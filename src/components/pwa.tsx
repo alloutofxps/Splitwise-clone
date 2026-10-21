@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./ui/motion";
 import { ArrowUpFromLine, Download, Plus, RefreshCw, Share, X } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
@@ -130,7 +130,7 @@ function ServiceWorkerManager() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        // Without a transition framer-motion uses a spring, which can bounce.
+        // Without a transition Motion uses a spring, which can bounce.
         transition={{ duration: DURATION.quick, ease: EASE_ENTER }}
         className="pointer-events-auto flex w-full max-w-[420px] items-center gap-3 rounded-[var(--radius-lg)] border border-line bg-elevated px-4 py-3 shadow-float"
       >

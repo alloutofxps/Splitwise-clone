@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, CloudOff, Info, TriangleAlert, Undo2 } from "lucide-react";
 import { cn, haptic, useMounted } from "./primitives";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";

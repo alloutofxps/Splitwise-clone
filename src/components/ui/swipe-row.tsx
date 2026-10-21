@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "framer-motion";
+import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "motion/react";
 import { Sheet, WhileOpen } from "./sheet";
 import { cn, haptic } from "./primitives";
 

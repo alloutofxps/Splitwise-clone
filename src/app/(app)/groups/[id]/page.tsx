@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, Settings2, UserPlus } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { DURATION, EASE_STANDARD } from "@/components/ui/motion";

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "motion/react";
 import { currencyFormat, formatMoney, toDecimalString } from "@/lib/money";
 import { COUNT_MS, EASE_COUNT } from "./motion";
 import { untilCount, useStageWhile } from "./stage";

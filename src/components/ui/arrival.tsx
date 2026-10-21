@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
 import { LAND_MS, PANEL_EXIT_MS, untilClear, useStageWhile } from "./stage";
 

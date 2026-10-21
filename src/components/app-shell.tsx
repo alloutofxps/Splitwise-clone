@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
+import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "motion/react";
 import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";

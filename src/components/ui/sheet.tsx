@@ -11,7 +11,7 @@ import {
   useMotionValue,
   useTransform,
   type PanInfo,
-} from "framer-motion";
+} from "motion/react";
 import { X } from "lucide-react";
 import { cn, haptic, IconButton, useMounted } from "./primitives";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
@@ -402,7 +402,7 @@ function SheetBody({
         animated by script, frame by frame, on the same thread that is busy
         saving. A plain `transform` here is handed to the browser, which runs
         it on its own (POLISH-AUDIT 3). With Reduce Motion it fades instead
-        (MOTION-SPEC 6): framer's own setting doesn't cover a plain transform.
+        (MOTION-SPEC 6): Motion's own setting doesn't cover a plain transform.
       */}
       <motion.div
         initial={reduce ? { opacity: 0, transform: "translateY(0%)" } : { transform: "translateY(100%)" }}
@@ -452,7 +452,7 @@ function SheetBody({
           Grab handle. Decorative on desktop, load-bearing on a phone — and now
           literally the handle: it and the title bar are what start a drag.
           `touch-action: none` stops the browser claiming the gesture as a
-          scroll before framer-motion sees it.
+          scroll before Motion sees it.
         */}
         <div
           onPointerDown={(event) => dragControls.start(event)}
