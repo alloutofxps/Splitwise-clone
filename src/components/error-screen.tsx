@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { clsx } from "clsx";
 import { RefreshCw } from "lucide-react";
-import { FlowDoodle } from "./ui/primitives";
-import { Button } from "./ui/primitives";
+import { BUTTON_BASE, BUTTON_SIZES, BUTTON_VARIANTS } from "./ui/button-style";
+import { FlowDoodle } from "./ui/doodle";
+import { haptic } from "./ui/haptic";
 
 /**
  * What a route-level error boundary renders.
@@ -14,6 +16,9 @@ import { Button } from "./ui/primitives";
  * digest, and "Minified React error #418" tells someone splitting a dinner
  * bill nothing they can act on. The digest is printed small, because it is the
  * one thing worth quoting in a bug report.
+ *
+ * Built from small pieces rather than `primitives.tsx`: the boundaries are
+ * loaded with every page, and each would otherwise carry a copy of it.
  */
 export function ErrorScreen({
   error,
@@ -38,21 +43,22 @@ export function ErrorScreen({
         {description}
       </p>
       <div className="mt-5 flex gap-2">
-        <Button variant="primary" icon={<RefreshCw size={16} />} onClick={reset}>
+        <ScreenButton variant="primary" onClick={reset}>
+          <RefreshCw size={16} />
           Try again
-        </Button>
+        </ScreenButton>
         {/*
           A full page load, not a router push: the React tree is the thing that
           just broke, and a client-side navigation would reuse it. The URL is
           built absolute because Next patches history and resolves a bare "/"
           against the router's idea of the current route rather than the origin.
         */}
-        <Button
+        <ScreenButton
           variant="secondary"
           onClick={() => window.location.assign(window.location.origin)}
         >
           Go home
-        </Button>
+        </ScreenButton>
       </div>
       {error.digest ? (
         <p className="display-number mt-6 text-tiny text-subtle">
@@ -60,5 +66,28 @@ export function ErrorScreen({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** The app's medium button, as `Button` draws it, without its busy state. */
+function ScreenButton({
+  variant,
+  onClick,
+  children,
+}: {
+  variant: "primary" | "secondary";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={() => {
+        haptic();
+        onClick();
+      }}
+      className={clsx(BUTTON_BASE, BUTTON_VARIANTS[variant], BUTTON_SIZES.md)}
+    >
+      {children}
+    </button>
   );
 }

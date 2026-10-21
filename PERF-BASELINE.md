@@ -662,3 +662,28 @@ before the page has finished loading, and offline after one visit; My code on
 Friends and Add another device on Account still show theirs. ui-check (81),
 ui-features (32) and pwa-check (36) all pass. No recorded flow opens a QR
 panel, so smoothness isn't affected.
+
+## 20. The error and "Nothing here" screens without primitives (21 October 2026)
+
+CODE-HEALTH-AUDIT item 3. Before: main at `998ac1a`. After: the same plus
+the change. Measured as in section 19 (same linked worktree, one after the
+other, three runs each, identical every run).
+
+| | Before | After | Change |
+|---|---|---|---|
+| A group, scripts to show it | 324.0 KB | 321.9 KB | -2.1 KB |
+| Home, scripts to show it | 310.8 KB | 308.7 KB | -2.1 KB |
+| After load (both) | unchanged | unchanged | 0 |
+
+The audit estimated 5 to 6 KB. The rest stays because the build still gives
+the error screen its own copy of anything small it shares with the pages (the
+doodle, the button styles, the buzz and the icon code, about 2 KB together).
+Removing that too would mean copying code, or fetching the error screen only
+when an error happens, which could fail exactly when the network is the
+problem; neither is worth 2 KB.
+
+Pixel comparison (`perf-runs/2026-10-21-boundaries/`, main against the
+branch, phone width, Day and Night): "Nothing here", Offline, the error
+screen and a settled group's doodle are identical, 0.00% of pixels. The
+pull-to-refresh doodle ends up with the same four classes as before. ui-check
+(81), ui-features (32) and pwa-check (36) pass.

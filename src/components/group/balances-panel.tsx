@@ -5,7 +5,8 @@ import { ArrowDownLeft, ArrowUpRight, BellRing, Check, ChevronRight } from "luci
 import { Amount } from "../ui/money";
 import { useMirror } from "../ui/state-hooks";
 import { Avatar } from "../ui/avatar";
-import { Button, FlowDoodle, Switch, cn, haptic } from "../ui/primitives";
+import { FlowDoodle } from "../ui/doodle";
+import { Button, Switch, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useNudge, useUpdateGroup } from "@/lib/client/queries";
 import { ApiError } from "@/lib/client/api";

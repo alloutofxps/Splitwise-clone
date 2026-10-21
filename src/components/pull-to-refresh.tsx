@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FlowDoodle, haptic } from "./ui/primitives";
+import { FlowDoodle } from "./ui/doodle";
+import { haptic } from "./ui/primitives";
 
 const PULL = 72;
 /** How long "Up to date" stays once a refresh has finished. */
@@ -88,7 +89,7 @@ export function PullToRefresh({ enabled }: { enabled: boolean }) {
     >
       <span className="flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-1.5 text-caption font-medium text-text shadow-raised">
         <FlowDoodle
-          className="h-4 w-10"
+          small
           play={refreshing ? "wait" : undefined}
           progress={settled ? 1 : Math.min(distance / PULL, 1)}
         />
