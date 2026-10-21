@@ -229,7 +229,10 @@ rolling digits about 1 KB each. That leaves 2.4 KB on Home and 0.7 KB on a
 group. NumberFlow itself (6 KB) is fetched once the group page has loaded, and
 so, since 21 October 2026, is the QR code library (9.6 KB), which only draws
 when Invite, My code or Add another device opens; that took a group from 333.0
-to about 323.4 KB (PERF-BASELINE 19). Home also fetches the group screen's code (44 KB) once it
+to about 323.4 KB (PERF-BASELINE 19). The error and "Nothing here" screens
+stopped carrying their own copies of the shared buttons the same day, 2.1 KB
+off every screen, which leaves a group about 321.3 KB and Home about 308.2 KB
+(PERF-BASELINE 20). Home also fetches the group screen's code (44 KB) once it
 has loaded, so opening a group doesn't wait; that doesn't delay Home and
 sits outside the limit.
 

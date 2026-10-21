@@ -1,5 +1,5 @@
 import { Wordmark } from "@/components/app-shell";
-import { FlowDoodle } from "@/components/ui/primitives";
+import { FlowDoodle } from "@/components/ui/doodle";
 
 /**
  * The service worker's last-resort fallback for a navigation it cannot serve.

@@ -4,6 +4,9 @@ import * as React from "react";
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 import { TEXT_SCALE } from "@/lib/type-scale";
+import { BUTTON_BASE, BUTTON_SIZES, BUTTON_VARIANTS, type ButtonSize, type ButtonVariant } from "./button-style";
+import { FlowDoodle, type DoodlePlay } from "./doodle";
+import { haptic } from "./haptic";
 
 /**
  * Class merging, taught about this app's type scale.
@@ -34,54 +37,12 @@ export function cn(...inputs: ClassValue[]): string {
   return merge(clsx(inputs));
 }
 
-/**
- * A short buzz on a meaningful action.
- *
- * Android fires the Vibration API; iOS ignores it entirely and there is no web
- * equivalent of a Taptic tap, so this is a progressive enhancement rather than
- * a promise. Kept to the confirming actions only - vibrating on every tap makes
- * a phone feel cheap.
- */
-export function haptic(pattern: number | number[] = 8): void {
-  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
-  try {
-    navigator.vibrate(pattern);
-  } catch {
-    // Some browsers expose `vibrate` but throw when the page is not visible.
-  }
-}
+// Passed on, because most of the app already imports it from here.
+export { haptic };
 
 // ---------------------------------------------------------------------------
 // Button
 // ---------------------------------------------------------------------------
-
-type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "danger"
-  | "positive"
-  | "outline";
-type ButtonSize = "sm" | "md" | "lg";
-
-const VARIANTS: Record<ButtonVariant, string> = {
-  // One solid colour, no gradient and no glow: it is the one thing on a
-  // screen meant to be pressed, and it doesn't need to shout about it.
-  primary:
-    "bg-brand text-inverse hover:bg-brand-hover active:bg-brand-hover disabled:opacity-50",
-  secondary:
-    "border border-line bg-surface text-text hover:bg-surface-2 active:bg-surface-2",
-  outline: "border border-line-strong text-text hover:bg-surface-2 active:bg-surface-2",
-  ghost: "text-text hover:bg-surface-2 active:bg-surface-2",
-  danger: "bg-danger text-inverse hover:opacity-90 active:opacity-90",
-  positive: "bg-positive text-inverse hover:opacity-90 active:opacity-90",
-};
-
-const SIZES: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)]",
-  md: "h-11 px-4 text-subhead gap-2 rounded-[var(--radius-md)]",
-  lg: "h-[52px] px-6 text-subhead gap-2 rounded-[var(--radius-lg)]",
-};
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -117,13 +78,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           onClick?.(event);
         }}
         className={cn(
-          "relative inline-flex select-none items-center justify-center font-semibold",
-          // Gives under the finger before anything else happens (MOTION-SPEC 4).
-          "overflow-hidden press-firm",
-          "disabled:pointer-events-none",
+          BUTTON_BASE,
           !loading && "disabled:opacity-50",
-          VARIANTS[variant],
-          SIZES[size],
+          BUTTON_VARIANTS[variant],
+          BUTTON_SIZES[size],
           fullWidth && "w-full",
           className,
         )}
@@ -348,68 +306,6 @@ export function Switch({
 
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("shimmer rounded-[var(--radius-sm)]", className)} />;
-}
-
-/** How the doodle moves when it appears (MOTION-SPEC 4, illustrated). */
-export type DoodlePlay = "arrive" | "start" | "settled" | "wait";
-
-/**
- * The small drawing on an empty screen: three people, two lines between them.
- * The app's one picture, in the same language as the flow map.
- *
- * With `play` it moves once as it appears (the steps are in globals.css):
- * "arrive" for an empty list, "start" for a brand new account, "settled" when
- * nobody owes anything, "wait" while pull to refresh works. `progress` (0 to 1)
- * instead draws it as far as a pull has got. A tap makes the three hop.
- */
-export function FlowDoodle({
-  className,
-  play,
-  progress,
-}: {
-  className?: string;
-  play?: DoodlePlay;
-  progress?: number;
-}) {
-  const ref = React.useRef<SVGSVGElement>(null);
-  const moving = play !== undefined || progress !== undefined;
-  const line =
-    moving
-      ? {
-          pathLength: 1,
-          strokeDasharray: "1 1",
-          style: progress === undefined ? undefined : { strokeDashoffset: 1 - progress },
-        }
-      : {};
-  const person =
-    progress === undefined ? undefined : { transform: `scale(${0.5 + 0.5 * progress})` };
-
-  const hop = () => {
-    if (!play || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    ref.current?.querySelectorAll("circle").forEach((circle, index) => {
-      circle.animate(
-        [{ transform: "translateY(0)" }, { transform: "translateY(-5px)", offset: 0.4 }, { transform: "translateY(0)" }],
-        { duration: 420, delay: index * 70, easing: "cubic-bezier(0.2, 0, 0, 1)" },
-      );
-    });
-  };
-
-  return (
-    <svg
-      ref={ref}
-      viewBox="0 0 96 40"
-      className={cn("h-10 w-24 overflow-visible", moving && "doodle", className)}
-      data-play={play}
-      onPointerDown={play ? hop : undefined}
-      aria-hidden="true"
-    >
-      <path d="M 18 26 Q 33 6 48 20" fill="none" stroke="var(--person-azure)" strokeWidth="2" strokeLinecap="round" {...line} />
-      <path d="M 48 20 Q 63 34 78 14" fill="none" stroke="var(--person-coral)" strokeWidth="2" strokeLinecap="round" {...line} />
-      <circle cx="14" cy="27" r="6" fill="var(--person-azure)" style={person} />
-      <circle cx="48" cy="20" r="6" fill="var(--person-teal)" style={person} />
-      <circle cx="82" cy="13" r="6" fill="var(--person-coral)" style={person} />
-    </svg>
-  );
 }
 
 export function EmptyState({

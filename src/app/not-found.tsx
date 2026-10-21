@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FlowDoodle } from "@/components/ui/primitives";
+import { FlowDoodle } from "@/components/ui/doodle";
 
 /**
  * A URL that does not resolve.
