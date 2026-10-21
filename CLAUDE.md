@@ -1,8 +1,8 @@
 # Divvy: notes for Claude sessions
 
 Divvy is a Splitwise-style app: Next.js 15 (app router), React 19, TanStack
-Query 5, framer-motion, Tailwind v4, Prisma on SQLite, hosted on Railway
-(deploys automatically from `main`).
+Query 5, Motion (`motion/react`, formerly framer-motion), Tailwind v4, Prisma
+on SQLite, hosted on Railway (deploys automatically from `main`).
 
 ## Read first, in this order
 
@@ -97,7 +97,7 @@ detail.
 
 ## Animation rules learned the hard way
 
-- Never let framer-motion blend a transform from `none`: it starts at scale 0.
+- Never let Motion blend a transform from `none`: it starts at scale 0.
   Give every `initial` an explicit transform.
 - Use WAAPI or CSS for anything that runs while React is busy.
 - Count numbers by writing text directly (`useCountedText`), not through

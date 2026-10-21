@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { edgeKey, edgePath, placeLabels, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
 import { formatMoney } from "@/lib/money";
 import { initials } from "@/lib/avatar";

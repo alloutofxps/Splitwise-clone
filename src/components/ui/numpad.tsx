@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { DURATION, EASE_STANDARD } from "./motion";
 import { Check, Delete } from "lucide-react";
 import { cn, haptic } from "./primitives";

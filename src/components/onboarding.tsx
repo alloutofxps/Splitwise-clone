@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./ui/motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {

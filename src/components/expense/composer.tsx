@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { CalendarDays, Camera, Check, ChevronDown, NotebookPen, Plus } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountPad } from "../ui/numpad";

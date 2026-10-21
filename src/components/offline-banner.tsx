@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_STANDARD } from "./ui/motion";
 import { CloudOff, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { cn } from "./ui/primitives";

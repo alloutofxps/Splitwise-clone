@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
 import { Copy, Paperclip, MessageSquare, Pencil, Receipt, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { ActionSheet, SwipeRow, useLongPress } from "../ui/swipe-row";

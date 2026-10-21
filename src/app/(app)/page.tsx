@@ -17,7 +17,7 @@ import {
 import { useActivity, useBudgets, useDashboard, usePrefetch, useUpdateGroup } from "@/lib/client/queries";
 import { useOpenScreen } from "@/components/ui/open-screen";
 import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { DURATION, EASE_STANDARD } from "@/components/ui/motion";
 
 import { ActionSheet, useLongPress } from "@/components/ui/swipe-row";

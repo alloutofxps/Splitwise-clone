@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MotionConfig } from "framer-motion";
+import { MotionConfig } from "motion/react";
 import { ApiError } from "@/lib/client/api";
 import { startAutoFlush } from "@/lib/client/outbox";
 import { ToastProvider } from "./ui/toast";

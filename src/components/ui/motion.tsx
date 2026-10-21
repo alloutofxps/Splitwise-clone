@@ -16,7 +16,7 @@ export const EASE_STANDARD = [0.2, 0, 0, 1] as const;
 export const EASE_COUNT = [0, 0, 0, 1] as const;
 
 /**
- * MOTION-SPEC 3's durations, in seconds for framer-motion. Every animation
+ * MOTION-SPEC 3's durations, in seconds for Motion. Every animation
  * picks one of these rather than typing its own, so the app keeps one rhythm.
  */
 export const DURATION = {
