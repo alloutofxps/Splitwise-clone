@@ -1,8 +1,28 @@
 "use client";
 
 import * as React from "react";
-import QRCode from "qrcode";
 import { cn } from "./primitives";
+
+/**
+ * The QR code library (about 10 KB), fetched once the page has finished loading
+ * rather than with it. A code is only drawn when a panel opens, and the group
+ * page has no room for the library in what it downloads to show itself
+ * (MOTION-SPEC 7). One fetch, shared by every code in the app; a failed one
+ * (offline before it ever arrived) is tried again next time.
+ */
+let loading: Promise<typeof import("qrcode")> | null = null;
+export function loadQrLibrary(): Promise<typeof import("qrcode")> {
+  return (loading ??= import("qrcode").catch((error: unknown) => {
+    loading = null;
+    throw error;
+  }));
+}
+
+if (typeof window !== "undefined") {
+  const fetchIt = () => void loadQrLibrary().catch(() => {});
+  if (document.readyState === "complete") fetchIt();
+  else window.addEventListener("load", fetchIt, { once: true });
+}
 
 /**
  * A QR code, ink on paper in both themes (a scanner needs dark on light), drawn
@@ -14,14 +34,19 @@ export function QrCode({ value, label, className }: { value: string; label: stri
   React.useEffect(() => {
     if (!value) return;
     let cancelled = false;
-    void QRCode.toString(value, {
-      type: "svg",
-      margin: 1,
-      errorCorrectionLevel: "M",
-      color: { dark: "#141412", light: "#ffffff" },
-    }).then((markup) => {
-      if (!cancelled) setSvg(markup);
-    });
+    void loadQrLibrary()
+      .then((QRCode) =>
+        QRCode.toString(value, {
+          type: "svg",
+          margin: 1,
+          errorCorrectionLevel: "M",
+          color: { dark: "#141412", light: "#ffffff" },
+        }),
+      )
+      .then((markup) => {
+        if (!cancelled) setSvg(markup);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };

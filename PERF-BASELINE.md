@@ -636,3 +636,29 @@ panel has gone; balances show their new value.
 
 **Videos:** a before/after pair for each of the 11 flows, at quarter and
 real speed, made frame by frame (`motion-compare.mjs`).
+
+## 19. The QR code library after load (21 October 2026)
+
+CODE-HEALTH-AUDIT item 1. Before: main at `08b9669`. After: the same plus
+the change. Both built one after the other in the same linked worktree and
+measured three times each, identical every run (`size-report.mjs`). A linked
+worktree reads about 0.5 KB higher than the main folder for the same code
+(main measures 333.0 there), so compare the change, not the totals with
+section 18.
+
+| | Before | After | Change |
+|---|---|---|---|
+| A group, scripts to show it | 333.6 KB | 324.0 KB | -9.6 KB |
+| A group, after load | 7.0 KB | 16.5 KB | +9.5 KB |
+| Home, scripts to show it | 310.9 KB | 310.8 KB | -0.1 KB |
+| Home, after load | 45.5 KB | 45.4 KB | -0.1 KB |
+
+Friends and Account no longer load the library at start either (checked in
+the build's page lists; `size-report.mjs` measures Home and a group only).
+
+Checked in the browser (`perf-runs/2026-10-21-qr/qr-check.mjs`): the group's
+Invite code appears 7ms after the tap once the page has loaded, when tapped
+before the page has finished loading, and offline after one visit; My code on
+Friends and Add another device on Account still show theirs. ui-check (81),
+ui-features (32) and pwa-check (36) all pass. No recorded flow opens a QR
+panel, so smoothness isn't affected.

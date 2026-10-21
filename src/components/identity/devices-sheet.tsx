@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import QRCode from "qrcode";
 import { KeyRound, Laptop, Loader2, MonitorSmartphone, Smartphone, Tablet, Trash2, TriangleAlert } from "lucide-react";
+import { loadQrLibrary } from "@/components/ui/qr-code";
 import { Sheet } from "@/components/ui/sheet";
 import { useResetOnOpen } from "@/components/ui/use-reset-on-open";
 import { Button, cn, haptic } from "@/components/ui/primitives";
@@ -281,19 +281,26 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [expired, setExpired] = React.useState(false);
 
   const create = useMutation({
-    mutationFn: () => api.post<{ path: string; expiresInSeconds: number }>("/api/identity/link"),
-    onSuccess: async (data) => {
+    // The QR library is fetched alongside the code, so neither waits for the
+    // other and a library that can't arrive fails here, with the request.
+    mutationFn: async () => {
+      const [data, QRCode] = await Promise.all([
+        api.post<{ path: string; expiresInSeconds: number }>("/api/identity/link"),
+        loadQrLibrary(),
+      ]);
       const absolute = `${window.location.origin}${data.path}`;
+      const png = await QRCode.toDataURL(absolute, {
+        width: 512,
+        margin: 1,
+        errorCorrectionLevel: "M",
+      });
+      return { absolute, png, expiresInSeconds: data.expiresInSeconds };
+    },
+    onSuccess: ({ absolute, png, expiresInSeconds }) => {
       setUrl(absolute);
       setExpired(false);
-      setPng(
-        await QRCode.toDataURL(absolute, {
-          width: 512,
-          margin: 1,
-          errorCorrectionLevel: "M",
-        }),
-      );
-      window.setTimeout(() => setExpired(true), data.expiresInSeconds * 1000);
+      setPng(png);
+      window.setTimeout(() => setExpired(true), expiresInSeconds * 1000);
     },
     onError: (error) =>
       toast({
