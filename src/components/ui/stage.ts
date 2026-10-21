@@ -151,6 +151,29 @@ export function useStage(): StageState {
   );
 }
 
+/**
+ * The stage, but only while `listening`; null otherwise, and no redraw when
+ * it changes. Every row of a ledger waits on the stage only while it is
+ * arriving, yet each one used to redraw whenever any panel opened or closed,
+ * in the same instant a closing panel was starting to slide.
+ */
+export function useStageWhile(listening: boolean): StageState | null {
+  return React.useSyncExternalStore(
+    subscribe,
+    () => (listening ? state : null),
+    () => (listening ? SERVER : null),
+  );
+}
+
+/** Whether a panel is open, redrawing only when that changes. */
+export function useStageCovered(): boolean {
+  return React.useSyncExternalStore(
+    subscribe,
+    () => state.covered,
+    () => false,
+  );
+}
+
 /** Milliseconds from now until the panel has gone, or 0 if it already has. */
 export function untilClear(stage: StageState): number {
   return Math.max(0, stage.clearAt - performance.now());

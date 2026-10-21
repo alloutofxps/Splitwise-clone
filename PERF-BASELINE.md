@@ -533,3 +533,56 @@ shows, the dot travels, the balance rolls from €31.40 to €28.40.
 
 **Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
 pwa-check 36, all passing.
+
+---
+
+## 17. Re-tracing opening a group and settling up (21 October 2026)
+
+Upgrade 4e, fix 5 of 5, and POLISH-AUDIT items 7 and 8. Re-traced with
+React's profiler on main `c577098` (fixes 1 to 4 in place), then measured
+against it in one sitting. Raw runs in `perf-runs/2026-10-21-open-group/`.
+
+**What's adopted:** only what is waiting on a panel listens to panels
+opening and closing (`useStageWhile` and `useStageCovered` in
+`src/components/ui/stage.ts`). Before, every row's arrival wrapper, the
+balance figure and the app's outer frame redrew each time any panel opened
+or closed, or a save set the money's timing, in the same task that starts a
+closing panel's slide. Now a row listens only while it is waiting to land,
+the figure only while it has a new number to show, and the frame only to
+whether a panel is open.
+
+| | Main | After |
+|---|---|---|
+| Arrival wrappers redrawn, settling up (profiler) | 15 | 7 |
+| Arrival wrappers redrawn, delete and Undo | 17 to 19 | 11 to 13 |
+| Panel starts leaving after the answer, settling a whole debt | 130 ms | 117 ms |
+| The same, a part payment | 89.5 ms | 80.5 ms |
+| The same, adding an expense | 87.5 ms | 73 ms |
+| Late frames in the 2.5s after Save, adding an expense (eight runs) | 1.7% | 2.0% |
+| Late frames after Save, settling up (six runs) | 6.0% | 5.0% |
+
+The timings are within noise on this laptop; the test group has a handful
+of expenses, and the redraws saved grow with every row a real group has.
+Settling a whole debt still pauses before the panel moves in some runs (3
+of 6, up to 74 ms; main 2 of 6, up to 65 ms): that is the instant update
+made when Save is tapped, still running when this laptop's very quick
+server answers. On a phone's network the answer comes later.
+
+**What was tried and dropped:** drawing a group's tab content a moment
+after the rest of the screen (`useDeferredValue`), to let the header's
+travel in from Home start sooner. It did: the screen showed at +300 ms
+instead of +400 ms (CPU slowed 4x). But the Expenses list then sat empty
+for about 200 ms while the header flew in, and appeared at +500 ms, later
+than before (`open-strip.png`). A blank, then a list popping in, is worse
+than the pause it removes.
+
+**Opening a group** is left at one pause of 86 to 97 ms, 0.2s after the
+tap: the whole screen's first draw (about 70 ms) and its first layout
+(about 58 ms) on the slowed profile. The baseline's 265 ms (section 4)
+was measured with a slow network too, so the two aren't like for like.
+
+**Download size:** Home 310.0 KB, a group 332.8 KB of scripts, under the
+312 and 333 KB limits (a group has 0.2 KB of room left).
+
+**Checks:** types, lint, 353 unit tests, ui-check 81, ui-features 32,
+pwa-check 36, all passing.
