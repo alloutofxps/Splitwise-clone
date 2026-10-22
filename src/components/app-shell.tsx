@@ -240,6 +240,7 @@ function TabLink({ destination, active, exact }: { destination: Destination; act
   return (
     <Link
       href={destination.href}
+      aria-label={nameWithCount(destination)}
       onClick={() => haptic()}
       // "page" only on the tab's own screen; under it (a group, a friend) it
       // is the current section rather than the current page.
@@ -260,9 +261,17 @@ function TabLink({ destination, active, exact }: { destination: Destination; act
   );
 }
 
+/**
+ * The badge's number, said after the tab's name: "Activity, 8 new" rather
+ * than "8 Activity". The drawn badge is hidden from speech.
+ */
+function nameWithCount(destination: Destination): string {
+  return destination.badge ? `${destination.label}, ${destination.badge} new` : destination.label;
+}
+
 function Dot({ count }: { count: number }) {
   return (
-    <span className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-text px-1 text-micro font-semibold leading-[16px] text-inverse ring-2 ring-surface">
+    <span aria-hidden className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-text px-1 text-micro font-semibold leading-[16px] text-inverse ring-2 ring-surface">
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -301,6 +310,7 @@ function Sidebar({
             <Link
               key={destination.href}
               href={destination.href}
+              aria-label={nameWithCount(destination)}
               aria-current={active ? (pathname === destination.href ? "page" : "true") : undefined}
               className={cn(
                 "relative flex h-10 items-center gap-3 rounded-[var(--radius-md)] px-3 text-body-lg font-medium transition-colors",
@@ -310,7 +320,7 @@ function Sidebar({
               <Icon className="relative size-[18px]" strokeWidth={1.75} />
               <span className="relative">{destination.label}</span>
               {destination.badge ? (
-                <span className="relative ml-auto rounded-full bg-text px-1.5 text-micro font-semibold leading-4 text-inverse">
+                <span aria-hidden className="relative ml-auto rounded-full bg-text px-1.5 text-micro font-semibold leading-4 text-inverse">
                   {destination.badge > 9 ? "9+" : destination.badge}
                 </span>
               ) : null}

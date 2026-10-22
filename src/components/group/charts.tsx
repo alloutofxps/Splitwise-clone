@@ -5,7 +5,7 @@ import { BarChart3, Table2 } from "lucide-react";
 import { Avatar, usePersonHue } from "../ui/avatar";
 import { EmptyState, Segmented, Skeleton, cn } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";
-import { useGroupStats } from "@/lib/client/queries";
+import { useDashboard, useGroupStats } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
 import { formatMoney } from "@/lib/money";
 import type { GroupStatsDto, PersonDto } from "@/lib/types";
@@ -379,6 +379,7 @@ function PersonChart({
   stats: GroupStatsDto;
   people: Map<string, PersonDto>;
 }) {
+  const meId = useDashboard().data?.me.id;
   const rows = stats.byPerson
     .map((row) => ({
       person: people.get(row.personId),
@@ -412,9 +413,16 @@ function PersonChart({
               <div className="mb-1.5 flex items-center gap-2">
                 <Avatar person={row.person!} size="xs" />
                 <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
-                  {row.person!.displayName}
+                  {row.person!.id === meId ? "You" : row.person!.displayName}
+                </span>
+                {/* The figure is drawn bare; speech gets the currency and what it means. */}
+                <span className="sr-only">
+                  {row.net === 0n
+                    ? `paid ${row.person!.id === meId ? "your" : "their"} share exactly`
+                    : `paid ${formatMoney(magnitude, stats.currency)} ${positive ? "more" : "less"} than ${row.person!.id === meId ? "your" : "their"} share`}
                 </span>
                 <span
+                  aria-hidden
                   className={cn(
                     "tabular shrink-0 text-caption font-semibold",
                     row.net === 0n

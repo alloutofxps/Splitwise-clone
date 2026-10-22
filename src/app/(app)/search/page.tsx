@@ -65,6 +65,8 @@ export default function SearchPage() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Boat, hotel, groceries…"
+            // The example text isn't a name; speech needs one.
+            aria-label="Search expenses"
             autoFocus
             enterKeyHint="search"
             className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"

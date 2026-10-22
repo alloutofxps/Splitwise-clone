@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { barSegments } from "@/lib/flow";
 import { formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
@@ -12,17 +13,18 @@ import { cn } from "../ui/primitives";
  * is between you (DESIGN-PLAN Part 2). Solid for people who owe you, striped
  * for people you owe, so the direction never rests on colour alone.
  *
- * Tap a segment to open that person.
+ * With `linkTo`, a segment is a link to that person: it opens their screen,
+ * so it is announced as a link, not a button.
  */
 export function FlowBar({
   entries,
   currency,
-  onSelect,
+  linkTo,
   className,
 }: {
   entries: { person: PersonDto; amount: bigint }[];
   currency: string;
-  onSelect?: (personId: string) => void;
+  linkTo?: (personId: string) => string;
   className?: string;
 }) {
   const people = React.useMemo(
@@ -53,7 +55,7 @@ export function FlowBar({
             amount={segment.amount}
             share={segment.share}
             currency={currency}
-            onSelect={onSelect}
+            linkTo={linkTo}
           />
         );
       })}
@@ -66,13 +68,13 @@ function Segment({
   amount,
   share,
   currency,
-  onSelect,
+  linkTo,
 }: {
   person: PersonDto;
   amount: bigint;
   share: number;
   currency: string;
-  onSelect?: (personId: string) => void;
+  linkTo?: (personId: string) => string;
 }) {
   const hue = usePersonHue(person);
   const owesYou = amount > 0n;
@@ -85,14 +87,14 @@ function Segment({
       : `repeating-linear-gradient(135deg, ${hue} 0 3px, color-mix(in oklch, ${hue} 35%, var(--surface)) 3px 6px)`,
   };
 
-  // A tappable segment is a button inside a list item, not a button calling
-  // itself one: speech software then says both "list item" and "button".
-  return onSelect ? (
+  // A tappable segment is a link inside a list item, not a link calling
+  // itself one: speech software then says both "list item" and "link".
+  return linkTo ? (
     <span role="listitem" className="h-full min-w-0" style={{ width: style.width }}>
-      <button
+      <Link
+        href={linkTo(person.id)}
         aria-label={label}
         title={label}
-        onClick={() => onSelect(person.id)}
         // Above its neighbours while focused, so they don't cover its ring.
         className="relative block size-full rounded-[inherit] transition-opacity hover:opacity-80 focus-visible:z-10"
         style={{ background: style.background }}
