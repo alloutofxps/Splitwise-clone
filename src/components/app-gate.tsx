@@ -3,7 +3,6 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { Onboarding } from "@/components/onboarding";
 import { ExpenseComposer } from "@/components/expense/composer";
 import { useDashboard, usePrefetch } from "@/lib/client/queries";
 import { SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
@@ -131,8 +130,6 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
   // the app, since each one reads it.
   const composerContext = React.useMemo(() => ({ open: openComposer }), [openComposer]);
 
-  if (isLoading) return signedIn ? <BootSkeleton pathname={pathname} /> : <WelcomeSkeleton />;
-
   /*
    * A setup interrupted on the recovery step resumes there, even though the
    * account already exists and the dashboard would load perfectly well.
@@ -148,28 +145,24 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
    * is acknowledged, so it stops being true on its own.
    */
   const interruptedSetup = mounted && stashedRecoveryKey() !== null;
+  const needsSetup = setupOpen || unauthorized || interruptedSetup;
+  // Fetched at once on a device with no account, otherwise only when needed.
+  const setup = useOnboardingScreen(!signedIn || needsSetup);
 
-  if (setupOpen || unauthorized || interruptedSetup) {
-    return <Onboarding onFinished={() => setSetupOpen(false)} />;
+  // Still the opening's outline while sign-up arrives: the same element in the
+  // same place, so its drawing carries on rather than starting again.
+  if (isLoading || (needsSetup && !setup.Screen && !setup.failed)) {
+    return signedIn ? <BootSkeleton pathname={pathname} /> : <WelcomeSkeleton />;
+  }
+
+  if (needsSetup) {
+    if (setup.Screen) return <setup.Screen onFinished={() => setSetupOpen(false)} />;
+    // Never the app instead: an interrupted setup must show its recovery key.
+    return <Unreachable offline={!navigator.onLine} />;
   }
 
   if (error || !data) {
-    return (
-      <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
-        <p className="text-title font-semibold text-text">Couldn&rsquo;t reach Divvy</p>
-        <p className="mt-2 text-body-lg leading-relaxed text-muted">
-          {error instanceof ApiError && error.isOffline
-            ? "You seem to be offline. Anything you add will be saved when you're back online."
-            : "Something went wrong while loading. Please try again."}
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-subhead font-semibold text-inverse"
-        >
-          Try again
-        </button>
-      </div>
-    );
+    return <Unreachable offline={error instanceof ApiError && error.isOffline} />;
   }
 
   return (
@@ -186,6 +179,53 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
       />
     </ComposerContext.Provider>
   );
+}
+
+/** The app can't start: the dashboard, or the sign-up screens, couldn't be fetched. */
+function Unreachable({ offline }: { offline: boolean }) {
+  return (
+    <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
+      <p className="text-title font-semibold text-text">Couldn&rsquo;t reach Divvy</p>
+      <p className="mt-2 text-body-lg leading-relaxed text-muted">
+        {offline
+          ? "You seem to be offline. Anything you add will be saved when you're back online."
+          : "Something went wrong while loading. Please try again."}
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="mt-6 h-11 rounded-[var(--radius-md)] bg-brand px-5 text-subhead font-semibold text-inverse"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+type OnboardingScreen = typeof import("@/components/onboarding").Onboarding;
+
+/**
+ * The sign-up screens (about 12 KB with the passkey library, the currency
+ * guess and the emoji picker), fetched only when `wanted`. Everyone already
+ * signed in stopped downloading them with every screen.
+ */
+function useOnboardingScreen(wanted: boolean): { Screen: OnboardingScreen | null; failed: boolean } {
+  const [state, setState] = React.useState<{ Screen: OnboardingScreen | null; failed: boolean }>({
+    Screen: null,
+    failed: false,
+  });
+  const loaded = state.Screen !== null;
+  React.useEffect(() => {
+    if (!wanted || loaded) return;
+    let live = true;
+    import("@/components/onboarding").then(
+      (m) => live && setState({ Screen: m.Onboarding, failed: false }),
+      () => live && setState({ Screen: null, failed: true }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [wanted, loaded]);
+  return state;
 }
 
 /**
