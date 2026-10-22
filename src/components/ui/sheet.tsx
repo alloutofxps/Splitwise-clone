@@ -47,7 +47,76 @@ const sheetStack: object[] = [];
 // Who is listening for the stack to change, so a panel knows when another
 // has opened on top of it.
 const stackListeners = new Set<() => void>();
-const stackChanged = () => stackListeners.forEach((listener) => listener());
+const stackChanged = () => {
+  shutOffBehindTopSheet();
+  stackListeners.forEach((listener) => listener());
+};
+
+/** Where each open panel sits in the page, by its place in the stack. */
+const sheetRoots = new Map<object, HTMLElement>();
+/** What this file made inert, so it only ever undoes its own. */
+const madeInert = new Set<HTMLElement>();
+
+/**
+ * Only the top panel can be reached. Everything else in the page, the panel
+ * underneath included, is `inert` while it is open: Tab used to walk straight
+ * out of a panel into the page behind it, and a screen reader could read the
+ * page as though nothing covered it. Announcements stay live, so "Copied"
+ * from inside a panel is still heard.
+ */
+function shutOffBehindTopSheet() {
+  const top = sheetRoots.get(sheetStack[sheetStack.length - 1]);
+  const keep = (element: Element) =>
+    element === top || element.matches('[aria-live], [role="status"], [role="alert"], next-route-announcer');
+  for (const element of madeInert) {
+    if (top && !keep(element)) continue;
+    element.inert = false;
+    madeInert.delete(element);
+  }
+  if (!top) return;
+  for (const element of document.body.children) {
+    if (!(element instanceof HTMLElement) || element.inert || keep(element)) continue;
+    element.inert = true;
+    madeInert.add(element);
+  }
+}
+
+/**
+ * Focus goes back to the button that opened a panel when it closes, so the
+ * next Tab carries on from there. It used to drop to the top of the page.
+ * Only if focus is still in the closing panel, or nowhere: if it has moved on
+ * (to a panel opened in its place, or a new screen), it stays where it went.
+ */
+/**
+ * What had focus before what has it now. A panel that puts the cursor in its
+ * field as it opens has already taken focus by the time it can look, so the
+ * button that opened it is the one before.
+ */
+let focusedBefore: Element | null = null;
+let focusedNow: Element | null = null;
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "focusin",
+    (event) => {
+      focusedBefore = focusedNow;
+      focusedNow = event.target as Element;
+    },
+    true,
+  );
+}
+
+/** The button a panel was opened from, even if a field in it already has focus. */
+function openerOf(root: HTMLElement | undefined): Element | null {
+  const now = document.activeElement;
+  return root && now && root.contains(now) ? focusedBefore : now;
+}
+
+function giveFocusBack(opener: Element | null, closing: HTMLElement | undefined) {
+  const now = document.activeElement;
+  const stranded = !now || now === document.body || (closing?.contains(now) ?? false);
+  if (stranded && opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+}
+
 function subscribeStack(listener: () => void) {
   stackListeners.add(listener);
   return () => stackListeners.delete(listener);
@@ -127,6 +196,7 @@ export function Sheet({
   React.useEffect(() => {
     if (!open) return;
     const me = token;
+    const opener = openerOf(sheetRoots.get(me));
     sheetStack.push(me);
     stackChanged();
     const uncover = coverStage();
@@ -142,6 +212,7 @@ export function Sheet({
       const index = sheetStack.lastIndexOf(me);
       if (index !== -1) sheetStack.splice(index, 1);
       stackChanged();
+      giveFocusBack(opener, sheetRoots.get(me));
     };
   }, [open, token]);
 
@@ -162,6 +233,7 @@ export function Sheet({
           className={className}
           ariaLabel={ariaLabel}
           covered={covered}
+          token={token}
         >
           {children}
         </SheetBody>
@@ -286,8 +358,35 @@ function SheetBody({
   className,
   ariaLabel,
   covered,
-}: Omit<SheetProps, "open"> & { covered: boolean }) {
+  token,
+}: Omit<SheetProps, "open"> & { covered: boolean; token: object }) {
   const y = useMotionValue(0);
+
+  // This panel's place in the page, so the rest can be shut off behind it.
+  const root = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    sheetRoots.set(token, element);
+    shutOffBehindTopSheet();
+    return () => {
+      if (sheetRoots.get(token) === element) sheetRoots.delete(token);
+      shutOffBehindTopSheet();
+    };
+  }, [token]);
+
+  // Focus moves into the panel as it opens, unless a field in it has already
+  // taken it, so the keyboard and screen readers start inside. The panel
+  // itself takes it rather than its first control, which would light a ring
+  // on Close, or raise a phone's keyboard for a field nobody chose.
+  const dialog = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const element = dialog.current;
+      if (element && !element.contains(document.activeElement)) element.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const reduce = useReducedMotion();
   // The backdrop fades as the sheet is dragged down, so the gesture feels
   // connected to the page behind it rather than to the sheet alone.
@@ -371,6 +470,7 @@ function SheetBody({
     // what lets the sheet below size itself as a percentage of the space that
     // actually exists rather than of the whole page.
     <div
+      ref={root}
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{
         ...(visible ? { top: visible.top, height: visible.height, bottom: "auto" } : {}),
@@ -421,8 +521,10 @@ function SheetBody({
         )}
       >
       <motion.div
+        ref={dialog}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-label={typeof title === "string" ? title : (ariaLabel ?? "Dialog")}
         initial={{ y: 0, scale: 1 }}
         // With a panel open on top, this one steps back a little: smaller,
@@ -440,7 +542,8 @@ function SheetBody({
         onDragEnd={handleDragEnd}
         style={{ y }}
         className={cn(
-          "relative flex min-h-0 w-full flex-col overflow-hidden bg-elevated shadow-sheet",
+          // No ring on the panel itself when it takes focus: it isn't a control.
+          "relative flex min-h-0 w-full flex-col overflow-hidden bg-elevated shadow-sheet outline-none",
           "rounded-t-[var(--radius-2xl)] sm:rounded-[var(--radius-xl)]",
           // Sized by the wrapper: all of it when tall, otherwise as much as
           // the content needs, up to the wrapper's limit.
