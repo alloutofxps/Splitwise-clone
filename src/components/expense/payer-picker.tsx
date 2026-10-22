@@ -112,6 +112,7 @@ export function PayerPicker({
     >
       <div className="px-5 pb-6">
         <button
+          aria-pressed={multiple}
           onClick={() => {
             haptic();
             const next = !multiple;
@@ -153,6 +154,7 @@ export function PayerPicker({
                   )}
                 >
                   <button
+                    aria-pressed={selected}
                     onClick={() =>
                       multiple ? toggleMultiple(member.id) : pickSingle(member.id)
                     }

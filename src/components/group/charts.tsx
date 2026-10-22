@@ -65,6 +65,8 @@ export function GroupCharts({
 
       <div className="flex items-center gap-2">
         <Segmented
+          kind="choice"
+          label="Show spending for"
           className="flex-1"
           size="sm"
           value={lens}

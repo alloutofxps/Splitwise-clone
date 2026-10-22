@@ -391,6 +391,7 @@ export function SettleUpSheet({
                 {methodChoices(iAmPaying ? payeeMethods : (dashboard?.me.paymentMethods ?? [])).map((option) => (
                   <button
                     key={option}
+                    aria-pressed={method === option}
                     onClick={() => {
                       haptic();
                       setMethod(method === option ? null : option);

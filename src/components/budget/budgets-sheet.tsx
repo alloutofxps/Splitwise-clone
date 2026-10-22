@@ -295,6 +295,8 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
         <div className="mt-4">
           <SectionLabel>Period</SectionLabel>
           <Segmented
+            kind="choice"
+            label="Period"
             value={period}
             onChange={setPeriod}
             options={[

@@ -202,6 +202,13 @@ export interface SegmentedOption<T extends string> {
  * The indicator is a single absolutely-positioned element rather than a
  * background on the active segment, so it animates *between* options - which is
  * what makes the control feel like one object instead of several buttons.
+ *
+ * Two kinds, because they are told apart by speech software: "tabs" switch
+ * between parts of a screen (Expenses, Balances, Insights), and say which part
+ * they show when given `id` and the part is marked with `tabPanelProps`;
+ * "choice" picks one setting (Light, Night, Auto) and needs a `label`. Both
+ * are one Tab stop, moved through with the arrow keys, as keyboard users
+ * expect of either.
  */
 export function Segmented<T extends string>({
   options,
@@ -209,21 +216,43 @@ export function Segmented<T extends string>({
   onChange,
   className,
   size = "md",
+  kind = "tabs",
+  label,
+  id,
 }: {
   options: SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
   className?: string;
   size?: "sm" | "md";
+  kind?: "tabs" | "choice";
+  /** What the choice is about, for speech software. */
+  label?: string;
+  /** Ties tabs to the part of the screen they switch (see tabPanelProps). */
+  id?: string;
 }) {
   const index = Math.max(
     0,
     options.findIndex((option) => option.value === value),
   );
+  const buttons = React.useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Arrows move along and pick as they go, Home and End jump to the ends.
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    const to =
+      event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : step === undefined ? null : (index + step + options.length) % options.length;
+    if (to === null) return;
+    event.preventDefault();
+    buttons.current[to]?.focus();
+    if (to !== index) onChange(options[to].value);
+  };
 
   return (
     <div
-      role="tablist"
+      role={kind === "tabs" ? "tablist" : "radiogroup"}
+      aria-label={label}
+      onKeyDown={onKeyDown}
       className={cn("relative grid border-b border-line", className)}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
@@ -235,11 +264,21 @@ export function Segmented<T extends string>({
           transform: `translateX(${index * 100}%)`,
         }}
       />
-      {options.map((option) => (
+      {options.map((option, position) => (
         <button
           key={option.value}
-          role="tab"
-          aria-selected={option.value === value}
+          ref={(element) => {
+            buttons.current[position] = element;
+          }}
+          type="button"
+          {...(kind === "tabs"
+            ? {
+                role: "tab",
+                "aria-selected": option.value === value,
+                ...(id ? { id: `${id}-${option.value}`, "aria-controls": `${id}-panel` } : {}),
+              }
+            : { role: "radio", "aria-checked": option.value === value })}
+          tabIndex={position === index ? 0 : -1}
           onClick={() => {
             haptic();
             onChange(option.value);
@@ -255,6 +294,11 @@ export function Segmented<T extends string>({
       ))}
     </div>
   );
+}
+
+/** Marks the part of the screen that a Segmented given this `id` switches. */
+export function tabPanelProps(id: string, value: string) {
+  return { id: `${id}-panel`, role: "tabpanel", "aria-labelledby": `${id}-${value}` } as const;
 }
 
 // ---------------------------------------------------------------------------

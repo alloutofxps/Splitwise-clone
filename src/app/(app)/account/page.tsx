@@ -241,6 +241,8 @@ export default function AccountPage() {
             Appearance
           </p>
           <Segmented
+            kind="choice"
+            label="Appearance"
             value={theme}
             onChange={setTheme}
             options={[

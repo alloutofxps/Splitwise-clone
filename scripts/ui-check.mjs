@@ -1307,6 +1307,25 @@ console.log("\nPanels by keyboard");
   await p6.keyboard.press("Escape");
 }
 
+// A group's tabs: one Tab stop, moved through with the arrow keys.
+console.log("\nTabs by keyboard");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+  const stops = await page.locator('[role="tab"]').evaluateAll(els => els.filter(e => e.tabIndex === 0).length);
+  check("only the chosen tab is a Tab stop", stops === 1, `${stops} tabs in the Tab order`);
+  await page.getByRole("tab", { name: "Expenses" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(400);
+  const now = await page.evaluate(() => ({ name: document.activeElement?.innerText.trim(), selected: document.activeElement?.getAttribute("aria-selected") }));
+  check("ArrowRight moves to Balances and shows it", now.name === "Balances" && now.selected === "true", JSON.stringify(now));
+  const labelled = await page.evaluate(() => {
+    const panel = document.querySelector('[role="tabpanel"]');
+    return panel ? document.getElementById(panel.getAttribute("aria-labelledby"))?.innerText.trim() : null;
+  });
+  check("the part it shows is named after its tab", labelled === "Balances", String(labelled));
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
