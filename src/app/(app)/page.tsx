@@ -79,6 +79,8 @@ export default function HomePage() {
 
   return (
     <div className="pt-[max(1rem,env(safe-area-inset-top))]">
+      {/* The wordmark stands in for this on screen; speech still needs it. */}
+      <h1 className="sr-only">Home</h1>
       <header className="mb-5 flex items-center justify-between gap-3">
         {/* On a desktop the sidebar already carries the logo. */}
         <Wordmark className="lg:invisible" />

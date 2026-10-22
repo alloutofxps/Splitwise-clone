@@ -1326,6 +1326,20 @@ console.log("\nTabs by keyboard");
   check("the part it shows is named after its tab", labelled === "Balances", String(labelled));
 }
 
+// Every screen used to share one name, so screen readers announced nothing on
+// moving between them.
+console.log("\nPage names");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  check("a group's screen is named after it", (await page.title()) === "Audit · Divvy", await page.title());
+  await page.getByRole("link", { name: "Friends" }).first().click();
+  await page.waitForURL("**/friends");
+  await page.waitForTimeout(800);
+  check("moving to Friends renames the page", (await page.title()) === "Friends · Divvy", await page.title());
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  check("Home has a main heading", (await page.locator("main h1").count()) === 1);
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
