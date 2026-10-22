@@ -323,7 +323,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
                     onClick={() => setGroupId(groupId === group.id ? null : group.id)}
                   >
                     <span aria-hidden>{group.emoji}</span>
-                    {group.name}
+                    <bdi>{group.name}</bdi>
                   </Chip>
                 ))}
             </ChipRow>

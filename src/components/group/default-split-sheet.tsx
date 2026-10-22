@@ -156,7 +156,7 @@ export function DefaultSplitSheet({
                   className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-2.5"
                 >
                   <Avatar person={member} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                  <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                     {member.id === meId ? "You" : member.displayName}
                   </span>
                   <label className="flex items-center gap-1.5">

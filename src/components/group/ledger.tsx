@@ -28,6 +28,7 @@ import { categoryById } from "@/lib/categories";
 import { groupByDay } from "@/lib/day-groups";
 import { abs, formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 /**
  * The group ledger.
@@ -208,7 +209,7 @@ export function GroupLedger({
                     onClick={() => setPerson(person === member.id ? null : member.id)}
                   >
                     <Avatar person={member} size="xs" />
-                    {member.id === meId ? "You" : member.displayName.split(" ")[0]}
+                    <bdi>{member.id === meId ? "You" : member.displayName.split(" ")[0]}</bdi>
                   </FilterChip>
                 ))}
               </FilterRow>
@@ -453,7 +454,7 @@ function ExpenseRowButton({
     expense.payers.length > 1
       ? `${expense.payers.length} people paid`
       : payer
-        ? `${payer.id === meId ? "You" : payer.displayName.split(" ")[0]} paid ${formatBare(expense.amount, expense.currency)}`
+        ? `${payer.id === meId ? "You" : isolate(payer.displayName.split(" ")[0])} paid ${formatBare(expense.amount, expense.currency)}`
         : "";
 
   return (
@@ -482,7 +483,7 @@ function ExpenseRowButton({
 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-body-lg font-medium text-text">
+          <span dir="auto" className="truncate text-left text-body-lg font-medium text-text">
             {expense.description}
           </span>
           {expense.attachments.length > 0 ? (
@@ -611,8 +612,8 @@ export function SettlementRow({
       <PairGlyph from={from} to={to} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-body-lg font-medium text-text">
-          {from?.id === meId ? "You" : (from?.displayName ?? "Someone")} paid{" "}
-          {to?.id === meId ? "you" : (to?.displayName ?? "someone")}
+          <bdi>{from?.id === meId ? "You" : (from?.displayName ?? "Someone")}</bdi> paid{" "}
+          <bdi>{to?.id === meId ? "you" : (to?.displayName ?? "someone")}</bdi>
         </span>
         {settlement.note || settlement.method ? (
           <span className="mt-0.5 block truncate text-caption text-subtle">

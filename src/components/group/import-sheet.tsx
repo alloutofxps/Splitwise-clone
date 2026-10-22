@@ -199,6 +199,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
             <label className="block">
               <span className="mb-1.5 block text-body font-semibold text-muted">Group name</span>
               <input
+                dir="auto"
                 value={name}
                 onChange={(event) => setName(event.target.value.slice(0, 60))}
                 className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none focus:ring-[1.5px] focus:ring-text"

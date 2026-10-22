@@ -12,6 +12,7 @@ import { api, ApiError } from "@/lib/client/api";
 import { colorForName, hueVar, initials } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/invite-code";
 import type { MeDto, PersonDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 interface GroupPreview {
   kind: "group";
@@ -173,7 +174,7 @@ export default function JoinPage() {
           <>
             <h1 className="mt-2 flex items-center gap-2.5 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
               <span>{preview.group.emoji}</span>
-              <span className="min-w-0 break-words">{preview.group.name}</span>
+              <span dir="auto" className="min-w-0 break-words text-left">{preview.group.name}</span>
             </h1>
             <p className="mt-2 text-subhead text-muted">
               {preview.group.memberCount}{" "}
@@ -190,7 +191,7 @@ export default function JoinPage() {
                   className="flex items-center gap-2 rounded-full bg-surface-2 py-1.5 pl-1.5 pr-3"
                 >
                   <Avatar person={member} size="xs" />
-                  <span className="text-body font-semibold text-text">
+                  <span dir="auto" className="text-body font-semibold text-text">
                     {member.displayName}
                   </span>
                 </li>
@@ -199,7 +200,7 @@ export default function JoinPage() {
           </>
         ) : (
           <>
-            <h1 className="mt-2 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
+            <h1 dir="auto" className="mt-2 text-left text-display font-semibold leading-tight tracking-[-0.03em] text-text">
               {preview.person.displayName}
             </h1>
             <p className="mt-2 text-subhead text-muted">
@@ -240,7 +241,7 @@ export default function JoinPage() {
                     )}
                   >
                     <Avatar person={member} size="sm" />
-                    <span className="flex-1 truncate text-body-lg font-semibold text-text">
+                    <span dir="auto" className="flex-1 truncate text-left text-body-lg font-semibold text-text">
                       {member.displayName}
                     </span>
                     <span
@@ -281,6 +282,7 @@ export default function JoinPage() {
                   {name.trim() ? initials(name) : "?"}
                 </span>
                 <input
+                  dir="auto"
                   value={name}
                   onChange={(event) => setName(event.target.value.slice(0, 60))}
                   onKeyDown={(event) => void (event.key === "Enter" && createAndJoin())}
@@ -310,15 +312,15 @@ export default function JoinPage() {
         >
           {preview.kind === "group"
             ? claimId
-              ? `Join as ${preview.group.unclaimedMembers.find((m) => m.id === claimId)?.displayName}`
-              : `Join ${preview.group.name}`
-            : `Add ${preview.person.displayName}`}
+              ? `Join as ${isolate(preview.group.unclaimedMembers.find((m) => m.id === claimId)?.displayName ?? "")}`
+              : `Join ${isolate(preview.group.name)}`
+            : `Add ${isolate(preview.person.displayName)}`}
           <ArrowRight className="size-[18px]" />
         </Button>
 
         {me ? (
           <p className="mt-3 text-center text-caption text-subtle">
-            Joining as {me.displayName}
+            Joining as <bdi>{me.displayName}</bdi>
           </p>
         ) : null}
       </div>

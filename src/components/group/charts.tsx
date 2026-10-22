@@ -412,7 +412,7 @@ function PersonChart({
             <li key={row.person!.id}>
               <div className="mb-1.5 flex items-center gap-2">
                 <Avatar person={row.person!} size="xs" />
-                <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
+                <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-semibold text-text">
                   {row.person!.id === meId ? "You" : row.person!.displayName}
                 </span>
                 {/* The figure is drawn bare; speech gets the currency and what it means. */}

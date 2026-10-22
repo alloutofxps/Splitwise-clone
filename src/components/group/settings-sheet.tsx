@@ -178,6 +178,7 @@ export function GroupSettingsSheet({
               Name
             </span>
             <input
+              dir="auto"
               value={name}
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               onBlur={commitName}

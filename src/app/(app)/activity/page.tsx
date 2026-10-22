@@ -99,7 +99,7 @@ export default function ActivityPage() {
               onClick={() => setGroupFilter(groupFilter === group.id ? null : group.id)}
             >
               <span aria-hidden>{group.emoji}</span>
-              {group.name}
+              <bdi>{group.name}</bdi>
             </GroupChip>
           ))}
         </div>
@@ -248,14 +248,20 @@ function ActivityRow({
         <span className="mt-0.5 flex items-center gap-1.5 text-caption text-subtle">
           {activity.groupName ? (
             <>
-              <span className="truncate">
-                {activity.groupEmoji} {activity.groupName}
+              <span className="shrink-0" aria-hidden>
+                {activity.groupEmoji}
+              </span>
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {activity.groupName}
               </span>
               <span aria-hidden>·</span>
             </>
           ) : withNames ? (
             <>
-              <span className="truncate">With {withNames}</span>
+              <span className="shrink-0">With</span>
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {withNames}
+              </span>
               <span aria-hidden>·</span>
             </>
           ) : null}
