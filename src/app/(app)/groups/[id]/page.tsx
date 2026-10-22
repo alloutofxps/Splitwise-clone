@@ -224,7 +224,9 @@ export default function GroupPage() {
 
         <FlowBar className="mt-4" entries={barEntries} currency={group.currency} />
 
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+        {/* The balance shrinks to fit this row (Amount's `fit`); Settle up
+            moves under it when both don't fit. */}
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-3 [container-type:inline-size]">
           <Standing net={net} currency={group.currency} everyone={group.balances.pairwise.length === 0} />
           {/* Adding an expense is the tab bar's job (it opens in this group);
               a second Add button here only made people wonder which to use. */}
@@ -387,6 +389,7 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
               currency={currency}
               arrow
               figure={<RollingFigure value={net} currency={currency} onRest={setRest} />}
+              fit="display"
               className="text-display font-semibold leading-tight tracking-[-0.03em]"
             />
           </span>

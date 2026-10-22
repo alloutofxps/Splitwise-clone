@@ -343,6 +343,72 @@ export function currencySymbol(code: string, locale = "en-US"): string {
 }
 
 // ---------------------------------------------------------------------------
+// Typed amounts, grouped as they are typed
+// ---------------------------------------------------------------------------
+
+/**
+ * A typed amount with its whole part grouped, "9999999.99" to "9,999,999.99",
+ * the way every other amount is written. Only for showing in the field; the
+ * field's own text keeps no commas.
+ */
+export function groupTypedAmount(text: string): string {
+  const dot = text.indexOf(".");
+  const whole = dot === -1 ? text : text.slice(0, dot);
+  return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (dot === -1 ? "" : text.slice(dot));
+}
+
+/**
+ * What was typed, from a grouped field's new contents (`raw`) and what it
+ * showed before (`shown`), with where the caret belongs.
+ *
+ * The commas the field drew are taken out. A comma the person types is a
+ * decimal point, as many people write one ("12,50"). Deleting a drawn comma
+ * deletes the digit before it, or the comma would simply be drawn again.
+ *
+ * `caret` is the caret in `raw`; `significant` comes back as how many digits
+ * and points lie before it, which `caretInGrouped` turns into a position in
+ * whatever the field shows next.
+ */
+export function readTypedAmount(raw: string, shown: string, caret: number): { text: string; significant: number } {
+  const count = (part: string) => (part.match(/[\d.]/g) ?? []).length;
+  let first = 0;
+  while (first < Math.min(raw.length, shown.length) && raw[first] === shown[first]) first++;
+
+  // One character typed, and it is a comma: a decimal point.
+  if (raw.length === shown.length + 1 && raw[first] === "," && raw.slice(first + 1) === shown.slice(first)) {
+    const text = `${raw.slice(0, first).replace(/,/g, "")}.${raw.slice(first + 1).replace(/,/g, "")}`;
+    return { text, significant: count(raw.slice(0, caret)) + (first < caret ? 1 : 0) };
+  }
+
+  // One drawn comma deleted: take the digit before it instead.
+  if (raw.length === shown.length - 1 && shown[first] === "," && raw === shown.slice(0, first) + shown.slice(first + 1) && first > 0) {
+    const without = raw.slice(0, first - 1) + raw.slice(first);
+    return { text: without.replace(/,/g, ""), significant: Math.max(0, count(raw.slice(0, caret)) - 1) };
+  }
+
+  // One digit or point typed or deleted: every comma left was drawn.
+  // Anything else, such as a paste: commas are grouping, unless there is just
+  // one, no point, and not three digits after it ("12,50", not "1,234").
+  const commas = (raw.match(/,/g) ?? []).length;
+  const oneKey = Math.abs(raw.length - shown.length) === 1;
+  if (!oneKey && commas === 1 && !raw.includes(".") && !/,\d{3}$/.test(raw)) {
+    const at = raw.indexOf(",");
+    return { text: raw.replace(",", "."), significant: count(raw.slice(0, caret)) + (at < caret ? 1 : 0) };
+  }
+  return { text: raw.replace(/,/g, ""), significant: count(raw.slice(0, caret)) };
+}
+
+/** The caret position in `shown` that has `significant` digits and points before it. */
+export function caretInGrouped(shown: string, significant: number): number {
+  let seen = 0;
+  for (let index = 0; index < shown.length; index++) {
+    if (seen === significant) return index;
+    if (/[\d.]/.test(shown[index])) seen++;
+  }
+  return shown.length;
+}
+
+// ---------------------------------------------------------------------------
 // Conversion
 // ---------------------------------------------------------------------------
 
