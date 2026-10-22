@@ -16,7 +16,7 @@
 // numbers its pieces differently in another folder, or after unrelated server
 // code changes, and the numbers compress a little better or worse. The
 // uncompressed figures only move when code really changes, so check them
-// whenever a result is that close to a limit (PERF-BASELINE 21).
+// whenever a result is that close to a limit (PERF-BASELINE 22).
 //
 // Seeds its own data: two people, one group, one expense.
 import { chromium } from "playwright";
