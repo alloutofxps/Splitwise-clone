@@ -926,6 +926,7 @@ function ScopePicker({
                   <li key={option.key}>
                     <button
                       type="button"
+                      aria-pressed={option.key === current}
                       onClick={() => {
                         haptic();
                         onChange(option.apply());

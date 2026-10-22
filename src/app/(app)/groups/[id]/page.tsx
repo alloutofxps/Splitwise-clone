@@ -15,7 +15,7 @@ import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
-import { Button, Segmented, haptic } from "@/components/ui/primitives";
+import { Button, Segmented, haptic, tabPanelProps } from "@/components/ui/primitives";
 import { GroupSkeleton } from "@/components/screen-skeletons";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
@@ -244,6 +244,7 @@ export default function GroupPage() {
           </div>
           <div className="min-w-0">
             <Segmented
+              id="group-side-tabs"
               value={sideTab}
               onChange={setTab}
               options={[
@@ -251,7 +252,9 @@ export default function GroupPage() {
                 { value: "charts", label: "Insights" },
               ]}
             />
-            <div className="mt-4">{panel(sideTab)}</div>
+            <div className="mt-4" {...tabPanelProps("group-side-tabs", sideTab)}>
+              {panel(sideTab)}
+            </div>
           </div>
         </div>
       ) : (
@@ -259,6 +262,7 @@ export default function GroupPage() {
           {/* Tabs ---------------------------------------------------------- */}
           <StickyBar spacing="mt-6" className="-mx-4 bg-bg px-4 lg:-mx-8 lg:px-8">
             <Segmented
+              id="group-tabs"
               value={tab}
               onChange={setTab}
               options={[
@@ -288,6 +292,7 @@ export default function GroupPage() {
             animate={{ opacity: 1, transform: "translateX(0px)", transitionEnd: { transform: "none" } }}
             transition={reduce ? { duration: DURATION.fade } : { duration: DURATION.change, ease: EASE_STANDARD }}
             className="mt-4"
+            {...tabPanelProps("group-tabs", tab)}
           >
             {/* The tabs stand in for this heading on screen; speech still needs it. */}
             <h2 className="sr-only">{TAB_NAMES[tab]}</h2>

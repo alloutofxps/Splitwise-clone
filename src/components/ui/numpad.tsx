@@ -208,6 +208,10 @@ function Key({
       onClick={onPress}
       disabled={disabled}
       aria-label={label}
+      // Out of the Tab order: the amount field takes typed digits, so on a
+      // computer these were twelve extra presses between it and the next
+      // field. Taps and screen readers still reach them.
+      tabIndex={-1}
       className={cn(
         "display-number flex h-[46px] items-center justify-center bg-surface text-title font-medium text-text",
         "transition-colors duration-150 active:bg-surface-2",

@@ -320,6 +320,7 @@ function NewRecurrenceSheet({
           {RECURRENCE_FREQUENCIES.map((option) => (
             <button
               key={option}
+              aria-pressed={frequency === option}
               onClick={() => {
                 haptic();
                 setFrequency(option);
@@ -360,6 +361,7 @@ function NewRecurrenceSheet({
           {group.members.map((member) => (
             <button
               key={member.id}
+              aria-pressed={payerId === member.id}
               onClick={() => {
                 haptic();
                 setPayerId(member.id);

@@ -53,7 +53,7 @@ for (const scheme of ["light", "dark"]) {
   await ring("friend-chip", null, () => btn("Everything", true));
   await ring("name-field", "/account", () => page.getByLabel("Your name"));
   await ring("switch", null, () => page.getByRole("switch").first());
-  await ring("theme-segment", null, () => page.getByRole("tab", { name: "Night" }));
+  await ring("theme-segment", null, () => page.getByRole("radio", { name: "Night" }));
   await ring("filter-chip", "/activity", () => btn("All", true));
   await ring("activity-row", null, () => btn(/added Concert tickets/));
   await ring("settle-suggestion", `/groups/${data.trip}`, async () => {

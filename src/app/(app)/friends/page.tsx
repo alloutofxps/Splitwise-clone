@@ -174,7 +174,8 @@ export default function FriendsPage() {
                 haptic();
                 setFilterOpen(true);
               }}
-              aria-label="Filter this list"
+              // Filled while a filter is on; say so too.
+              aria-label={filter === "all" ? "Filter this list" : `Filter this list, showing ${FILTERS.find((option) => option.value === filter)?.label.toLowerCase()}`}
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
                 filter === "all" ? "text-muted hover:bg-surface-2" : "bg-text text-inverse",
@@ -218,6 +219,7 @@ export default function FriendsPage() {
           {FILTERS.map((option) => (
             <li key={option.value}>
               <button
+                aria-pressed={filter === option.value}
                 onClick={() => {
                   haptic();
                   setFilter(option.value);

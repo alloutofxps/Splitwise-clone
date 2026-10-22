@@ -241,6 +241,7 @@ export function SettleAcrossSheet({
             {["Cash", "Bank transfer", "UPI", "PayPal", "Venmo", "Other"].map((option) => (
               <button
                 key={option}
+                aria-pressed={method === option}
                 onClick={() => {
                   haptic();
                   setMethod(method === option ? null : option);

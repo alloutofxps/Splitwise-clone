@@ -61,6 +61,7 @@ export function CurrencyPicker({
             return (
               <li key={entry.code}>
                 <button
+                  aria-pressed={active}
                   onClick={() => {
                     haptic();
                     onChange(entry.code);

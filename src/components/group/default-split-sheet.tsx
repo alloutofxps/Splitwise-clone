@@ -131,6 +131,8 @@ export function DefaultSplitSheet({
         </p>
 
         <Segmented<Mode>
+          kind="choice"
+          label="Default split"
           className="mt-4"
           value={mode}
           onChange={switchMode}
