@@ -164,6 +164,7 @@ export default function AccountPage() {
         </button>
         <div className="min-w-0 flex-1">
           <input
+            dir="auto"
             value={name}
             onChange={(event) => setName(event.target.value.slice(0, 60))}
             onBlur={() => {

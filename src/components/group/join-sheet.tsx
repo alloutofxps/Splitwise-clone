@@ -13,6 +13,7 @@ import { normalizeInviteCode } from "@/lib/invite-code";
 import type { PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { ScanCodeButton } from "../ui/qr-scanner";
+import { isolate } from "@/lib/bidi";
 
 interface GroupPreview {
   kind: "group";
@@ -143,9 +144,9 @@ export function JoinSheet({
           <Button variant="primary" size="lg" fullWidth loading={joining} onClick={() => void join()}>
             {preview.kind === "group"
               ? claimId
-                ? `Join as ${preview.group.unclaimedMembers.find((m) => m.id === claimId)?.displayName}`
-                : `Join ${preview.group.name}`
-              : `Add ${preview.person.displayName}`}
+                ? `Join as ${isolate(preview.group.unclaimedMembers.find((m) => m.id === claimId)?.displayName ?? "")}`
+                : `Join ${isolate(preview.group.name)}`
+              : `Add ${isolate(preview.person.displayName)}`}
           </Button>
         ) : undefined
       }
@@ -188,7 +189,7 @@ export function JoinSheet({
                   {preview.group.emoji}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-subhead font-semibold text-text">
+                  <p dir="auto" className="truncate text-left text-subhead font-semibold text-text">
                     {preview.group.name}
                   </p>
                   <p className="text-caption text-muted">
@@ -228,7 +229,7 @@ export function JoinSheet({
                           )}
                         >
                           <Avatar person={member} size="sm" />
-                          <span className="flex-1 truncate text-body-lg font-semibold text-text">
+                          <span dir="auto" className="flex-1 truncate text-left text-body-lg font-semibold text-text">
                             {member.displayName}
                           </span>
                           <span
@@ -260,7 +261,7 @@ export function JoinSheet({
             <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface p-4">
               <Avatar person={preview.person} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-subhead font-semibold text-text">
+                <p dir="auto" className="truncate text-left text-subhead font-semibold text-text">
                   {preview.person.displayName}
                 </p>
                 <p className="text-caption text-muted">

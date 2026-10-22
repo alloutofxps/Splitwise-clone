@@ -378,6 +378,7 @@ function ProfileStep({
           {emoji ?? (name.trim() ? initials(name) : "?")}
         </span>
         <input
+          dir="auto"
           value={name}
           onChange={(event) => setName(event.target.value.slice(0, 60))}
           onKeyDown={(event) => void (event.key === "Enter" && submit())}

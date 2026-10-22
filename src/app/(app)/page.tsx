@@ -38,6 +38,7 @@ import { formatMoney } from "@/lib/money";
 import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Home: what needs you (DESIGN-PLAN 3.2).
@@ -358,7 +359,7 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
         <LinkRow
           href={`/friends/${item.person.id}`}
           avatar={item.person}
-          title={`Pay ${item.person.displayName.split(" ")[0]} ${formatMoney(item.amount, item.currency)}`}
+          title={`Pay ${isolate(item.person.displayName.split(" ")[0])} ${formatMoney(item.amount, item.currency)}`}
           caption="Settle up"
           tone="owe"
         />
@@ -585,7 +586,8 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span data-travel="name" className="truncate text-title font-semibold tracking-[-0.01em] text-text">
+          {/* dir="auto": a right-to-left name is cut at its end, not its start. */}
+          <span data-travel="name" dir="auto" className="truncate text-left text-title font-semibold tracking-[-0.01em] text-text">
             {group.name}
           </span>
           {group.unreadCount > 0 ? (
@@ -619,9 +621,10 @@ function groupCaption(group: GroupSummaryDto, meId: string): string {
   const actor =
     last.actorPersonId === meId
       ? "You"
-      : (group.members.find((member) => member.id === last.actorPersonId)?.displayName.split(" ")[0] ??
-        "Someone");
-  const what = last.description ? ` ${last.description}` : "";
+      : isolate(
+          group.members.find((member) => member.id === last.actorPersonId)?.displayName.split(" ")[0] ?? "Someone",
+        );
+  const what = last.description ? ` ${isolate(last.description)}` : "";
   const verb =
     last.type === "expense.created"
       ? `added${what}`

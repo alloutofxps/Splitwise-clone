@@ -26,6 +26,7 @@ import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
+import { isolate } from "@/lib/bidi";
 
 /**
  * One friend.
@@ -87,7 +88,7 @@ export default function FriendPage() {
     return historyFilter === "direct" ? groupId === null : groupId === historyFilter;
   });
   const grouped = groupByDay(filtered, (item) => item.date);
-  const groupName = new Map(data.sharedGroups.map((group) => [group.id, `${group.emoji} ${group.name}`]));
+  const groupName = new Map(data.sharedGroups.map((group) => [group.id, `${group.emoji} ${isolate(group.name)}`]));
 
   // Where the two of you stand in total, and what it is made of.
   const combined = Object.entries(data.combined ?? {});
@@ -112,7 +113,7 @@ export default function FriendPage() {
         >
           <ChevronLeft className="size-6" />
         </button>
-        <h1 data-travel="name" className="min-w-0 flex-1 truncate px-1 text-title font-semibold tracking-[-0.02em] text-text">
+        <h1 data-travel="name" dir="auto" className="min-w-0 flex-1 truncate px-1 text-left text-title font-semibold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
         <button
@@ -146,7 +147,7 @@ export default function FriendPage() {
                 return (
                   <p key={code} className="flex flex-col">
                     <span className="text-body text-muted">
-                      {net > 0n ? `${data.person.displayName.split(" ")[0]} owes you` : `You owe ${data.person.displayName.split(" ")[0]}`}
+                      {net > 0n ? `${isolate(data.person.displayName.split(" ")[0])} owes you` : `You owe ${isolate(data.person.displayName.split(" ")[0])}`}
                     </span>
                     {/* Travels only when it is the one balance, so it lands on the same figure. */}
                     <span data-travel={combined.length === 1 ? "amount" : undefined} className="self-start">
@@ -191,14 +192,16 @@ export default function FriendPage() {
               const net = BigInt(ledger.net);
               const note =
                 ledger.planned !== null
-                  ? planNote(net, BigInt(ledger.planned), data.person.displayName.split(" ")[0], ledger.currency)
+                  ? planNote(net, BigInt(ledger.planned), isolate(data.person.displayName.split(" ")[0]), ledger.currency)
                   : null;
               const body = (
                 <>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body-lg font-medium text-text">
-                      {ledger.emoji ? `${ledger.emoji} ` : ""}
-                      {ledger.name ?? "Just between you"}
+                    <span className="flex min-w-0 items-baseline gap-1.5 text-body-lg font-medium text-text">
+                      {ledger.emoji ? <span className="shrink-0">{ledger.emoji}</span> : null}
+                      <span dir="auto" className="min-w-0 truncate text-left">
+                        {ledger.name ?? "Just between you"}
+                      </span>
                     </span>
                     {note ? <span className="mt-0.5 block text-caption leading-relaxed text-muted">{note}</span> : null}
                   </span>
@@ -342,7 +345,7 @@ export default function FriendPage() {
                       className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                     >
                       <span className="text-input">{group.emoji}</span>
-                      <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                      <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                         {group.name}
                       </span>
                       <ChevronRight className="size-4 shrink-0 text-subtle" />

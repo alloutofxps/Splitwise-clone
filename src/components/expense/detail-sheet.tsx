@@ -144,14 +144,14 @@ export function ExpenseDetailSheet({
                 <CategoryGlyph name={category!.icon} className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-title-lg font-semibold leading-tight tracking-[-0.02em] text-text">
+                <h2 dir="auto" className="text-left text-title-lg font-semibold leading-tight tracking-[-0.02em] text-text">
                   {expense.description}
                 </h2>
                 <p className="mt-1 text-caption text-subtle">
                   Added by{" "}
                   {expense.createdByPersonId === meId
                     ? "you"
-                    : (people.get(expense.createdByPersonId)?.displayName.split(" ")[0] ?? "someone")}{" "}
+                    : <bdi>{people.get(expense.createdByPersonId)?.displayName.split(" ")[0] ?? "someone"}</bdi>}{" "}
                   · {shortDate(new Date(expense.date), new Date(expense.date).getFullYear() !== new Date().getFullYear())}
                   {" "}· {category!.name}
                 </p>
@@ -213,7 +213,7 @@ export function ExpenseDetailSheet({
                     <li key={personId} className="flex items-start gap-3 px-4 py-3">
                       <Avatar person={person} size="sm" className="mt-0.5" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body-lg font-medium text-text">
+                        <span dir="auto" className="block truncate text-left text-body-lg font-medium text-text">
                           {isMe ? "You" : person.displayName}
                         </span>
                         <span className="tabular block text-caption text-subtle">{parts.join(" · ")}</span>
@@ -322,12 +322,12 @@ export function ExpenseDetailSheet({
                       <li key={comment.id} className="flex gap-2.5">
                         {person ? <Avatar person={person} size="xs" /> : null}
                         <span className="min-w-0 flex-1">
-                          <span className="block text-caption font-semibold text-muted">
+                          <span dir="auto" className="block text-left text-caption font-semibold text-muted">
                             {comment.personId === meId
                               ? "You"
                               : (person?.displayName ?? "Someone")}
                           </span>
-                          <span className="mt-0.5 block whitespace-pre-wrap text-body-lg leading-snug text-text">
+                          <span dir="auto" className="mt-0.5 block whitespace-pre-wrap text-left text-body-lg leading-snug text-text">
                             {comment.body}
                           </span>
                         </span>
@@ -347,6 +347,7 @@ export function ExpenseDetailSheet({
                       setDraft("");
                     }
                   }}
+                  dir="auto"
                   placeholder="Add a comment"
                   className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
                 />

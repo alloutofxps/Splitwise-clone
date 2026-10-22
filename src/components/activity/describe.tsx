@@ -57,7 +57,13 @@ export function describeActivity(
       ? formatMoney(BigInt(data.amount), data.currency)
       : null;
 
-  const strong = (text: string) => <strong className="font-medium text-text">{text}</strong>;
+  // dir="auto" fences typed text, so a right-to-left name or description
+  // runs its own way without reordering the sentence around it.
+  const strong = (text: string) => (
+    <strong dir="auto" className="font-medium text-text">
+      {text}
+    </strong>
+  );
 
   switch (activity.type) {
     case "expense.created":

@@ -9,6 +9,7 @@ import { useDashboard, useSearch } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
 import { CATEGORIES } from "@/lib/categories";
 import { StickyBar } from "@/components/ui/sticky";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Search across everything.
@@ -39,7 +40,7 @@ export default function SearchPage() {
   );
 
   const groupNames = React.useMemo(
-    () => new Map((data?.groups ?? []).map((group) => [group.id, `${group.emoji} ${group.name}`])),
+    () => new Map((data?.groups ?? []).map((group) => [group.id, `${group.emoji} ${isolate(group.name)}`])),
     [data?.groups],
   );
 

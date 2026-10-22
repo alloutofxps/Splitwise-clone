@@ -189,7 +189,7 @@ export default function GroupPage() {
           <span aria-hidden data-travel="icon">
             {group.emoji}
           </span>
-          <span data-travel="name" className="truncate">
+          <span data-travel="name" dir="auto" className="truncate text-left">
             {group.name}
           </span>
         </h1>

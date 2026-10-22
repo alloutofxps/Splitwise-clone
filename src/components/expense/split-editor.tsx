@@ -335,7 +335,7 @@ function ParticipantRow({
         </span>
         <Avatar person={member} size="sm" className={cn(!included && "opacity-50")} />
         <span className="min-w-0 flex-1">
-          <span className={cn("block truncate text-body-lg font-medium", included ? "text-text" : "text-subtle")}>
+          <span dir="auto" className={cn("block truncate text-left text-body-lg font-medium", included ? "text-text" : "text-subtle")}>
             {isMe ? "You" : member.displayName}
           </span>
           {included && mode !== "EXACT" ? (
@@ -660,7 +660,7 @@ function ItemEditor({
                     )}
                   >
                     <Avatar person={member} size="xs" className={active ? "" : "opacity-50"} />
-                    {member.id === meId ? "You" : member.displayName.split(" ")[0]}
+                    <bdi>{member.id === meId ? "You" : member.displayName.split(" ")[0]}</bdi>
                   </button>
                 );
               })}

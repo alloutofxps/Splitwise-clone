@@ -91,7 +91,7 @@ export function MergePersonSheet({
                     className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3 py-2.5 text-left transition active:opacity-70 active:bg-surface-2"
                   >
                     <Avatar person={person} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                    <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                       {person.id === dashboard?.me.id ? "You" : person.displayName}
                     </span>
                     <Merge className="size-4 shrink-0 text-subtle" />

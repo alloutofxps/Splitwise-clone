@@ -14,6 +14,7 @@ import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 import { FlowMap, type Travel } from "../flow/flow-map";
 import { SwipeRow } from "../ui/swipe-row";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Who owes whom.
@@ -90,8 +91,9 @@ export function BalancesPanel({
   );
 
   const [showEveryone, setShowEveryone] = React.useState(false);
+  // Fenced, so a right-to-left name doesn't reorder "Sam pays you €25.20".
   const firstName = (person: PersonDto) =>
-    person.id === meId ? "You" : person.displayName.split(" ")[0];
+    person.id === meId ? "You" : isolate(person.displayName.split(" ")[0]);
 
   return (
     <div>
@@ -317,7 +319,7 @@ export function BalancesPanel({
               return (
                 <li key={member.id} className="flex items-center gap-3 px-4 py-3">
                   <Avatar person={member} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-body font-medium text-text">
+                  <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-medium text-text">
                     {member.id === meId ? "You" : member.displayName}
                   </span>
                   {net === 0n ? (

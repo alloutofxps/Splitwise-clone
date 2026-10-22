@@ -17,6 +17,7 @@ import { useOpenScreen } from "@/components/ui/open-screen";
 import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
 
 import type { FriendDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Friends.
@@ -311,7 +312,7 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
       ? `In ${friend.ledgers.length} places`
       : friend.ledgers[0]
         ? friend.ledgers[0].name
-          ? `In ${friend.ledgers[0].name}`
+          ? `In ${isolate(friend.ledgers[0].name)}`
           : "Just between you"
         : null;
 
@@ -329,7 +330,7 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
           <Avatar person={friend.person} size="md" />
         </span>
         <span className="min-w-0 flex-1">
-          <span data-travel="name" className="block truncate text-body-lg font-medium text-text">
+          <span data-travel="name" dir="auto" className="block truncate text-left text-body-lg font-medium text-text">
             {friend.person.displayName}
           </span>
           <span className="block truncate text-caption text-subtle">
