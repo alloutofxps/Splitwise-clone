@@ -32,18 +32,20 @@ const TAB_ORDER: Tab[] = ["expenses", "balances", "charts"];
 // in the instant a saved panel was trying to start leaving.
 const Ledger = React.memo(GroupLedger);
 const Balances = React.memo(BalancesPanel);
-const Charts = React.memo(
-  lazyAfterLoad(() => import("@/components/group/charts").then((m) => m.GroupCharts)),
-);
-
 // Panels nobody sees until they tap, and the Insights tab: fetched once the
-// page has loaded rather than with it (components/ui/after-load.tsx).
-const GroupSettingsSheet = lazyAfterLoad(() =>
-  import("@/components/group/settings-sheet").then((m) => m.GroupSettingsSheet),
+// page has loaded rather than with it (components/ui/after-load.tsx), all in
+// one file, because four small files compressed to 8 KB more than one.
+const Charts = React.memo(
+  lazyAfterLoad(() => import(/* webpackChunkName: "group-panels" */ "@/components/group/charts").then((m) => m.GroupCharts)),
 );
-const InviteSheet = lazyAfterLoad(() => import("@/components/group/invite-sheet").then((m) => m.InviteSheet));
+const GroupSettingsSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/settings-sheet").then((m) => m.GroupSettingsSheet),
+);
+const InviteSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/invite-sheet").then((m) => m.InviteSheet),
+);
 const SettleUpSheet = lazyAfterLoad(() =>
-  import("@/components/group/settle-up-sheet").then((m) => m.SettleUpSheet),
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/settle-up-sheet").then((m) => m.SettleUpSheet),
 );
 
 export default function GroupPage() {
