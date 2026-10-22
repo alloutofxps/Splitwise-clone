@@ -259,14 +259,20 @@ function Balance({ data }: { data: DashboardPayload }) {
 
 function BalanceLine({ label, amount, currency }: { label: string; amount: bigint; currency: string }) {
   return (
-    <p className="flex flex-wrap items-baseline gap-x-2">
-      <span className="text-body text-muted">{label}</span>
-      <Amount
-        value={amount}
-        currency={currency}
-        arrow
-        className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
-      />
+    // The label always beside the figure, which shrinks to fit the rest of
+    // the line. It used to wrap under the label only when long, so the labels
+    // sat in two different places.
+    <p className="flex items-baseline gap-x-2">
+      <span className="shrink-0 text-body text-muted">{label}</span>
+      <span className="min-w-0 flex-1 [container-type:inline-size]">
+        <Amount
+          value={amount}
+          currency={currency}
+          arrow
+          fit="hero"
+          className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
+        />
+      </span>
     </p>
   );
 }

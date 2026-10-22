@@ -133,7 +133,8 @@ export default function FriendPage() {
           <span data-travel="icon" className="shrink-0">
             <Avatar person={data.person} size="lg" />
           </span>
-          <div className="min-w-0 flex-1">
+          {/* The figures below shrink to fit this column (Amount's `fit`). */}
+          <div className="min-w-0 flex-1 [container-type:inline-size]">
             {!anythingOutstanding ? (
               <>
                 <p className="text-title-lg font-semibold tracking-[-0.02em] text-text">You&rsquo;re all settled up</p>
@@ -153,6 +154,7 @@ export default function FriendPage() {
                         value={net}
                         currency={code}
                         arrow
+                        fit="display"
                         className="text-display font-semibold leading-tight tracking-[-0.03em]"
                       />
                     </span>
