@@ -36,7 +36,12 @@ export function FlowBar({
     <div
       role="list"
       aria-label="Who makes up this balance"
-      className={cn("flex h-2.5 w-full gap-[2px] overflow-hidden rounded-full", className)}
+      // The ends are rounded on the end segments rather than clipped by the
+      // bar, which clipped a segment's focus ring with them.
+      className={cn(
+        "flex h-2.5 w-full gap-[2px] [&>:first-child]:rounded-l-full [&>:last-child]:rounded-r-full",
+        className,
+      )}
     >
       {segments.map((segment) => {
         const person = people.get(segment.personId);
@@ -83,16 +88,17 @@ function Segment({
   // A tappable segment is a button inside a list item, not a button calling
   // itself one: speech software then says both "list item" and "button".
   return onSelect ? (
-    <span role="listitem" className="h-full shrink-0" style={{ width: style.width }}>
+    <span role="listitem" className="h-full min-w-0" style={{ width: style.width }}>
       <button
         aria-label={label}
         title={label}
         onClick={() => onSelect(person.id)}
-        className="block size-full transition-opacity hover:opacity-80"
+        // Above its neighbours while focused, so they don't cover its ring.
+        className="relative block size-full rounded-[inherit] transition-opacity hover:opacity-80 focus-visible:z-10"
         style={{ background: style.background }}
       />
     </span>
   ) : (
-    <span role="listitem" aria-label={label} title={label} className="h-full shrink-0" style={style} />
+    <span role="listitem" aria-label={label} title={label} className="h-full min-w-0" style={style} />
   );
 }

@@ -368,7 +368,7 @@ function ChipRow({ children, wrap }: { children: React.ReactNode; wrap?: boolean
         "-mx-1 gap-1.5 px-1",
         wrap
           ? "flex max-h-[9.5rem] flex-wrap overflow-y-auto py-1"
-          : "flex overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          : "-mt-1 flex overflow-x-auto pt-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       )}
     >
       {children}

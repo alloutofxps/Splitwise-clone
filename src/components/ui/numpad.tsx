@@ -144,7 +144,7 @@ export function AmountPad({
         {/* A calculator grid: hairlines between the keys rather than twelve
             floating buttons, so the pad is a compact block under the amount. */}
         <div
-          className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
+          className="ring-inside mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
           role="group"
           aria-label="Amount keypad"
         >

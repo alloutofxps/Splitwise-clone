@@ -70,7 +70,7 @@ export default function FriendsPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
-        <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
+        <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2].map((index) => (
             <div key={index} className="flex items-center gap-3 px-4 py-3">
               <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -269,7 +269,7 @@ function PeopleSection({
     <section className="mb-8">
       <h2 className="px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
       {caption ? <p className="mt-0.5 px-1 text-caption text-muted">{caption}</p> : null}
-      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+      <ul className="ring-inside mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {rows.map((friend) => (
           <li key={friend.person.id}>
             <FriendRow friend={friend} largest={largest} offerAdd={offerAdd} />

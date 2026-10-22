@@ -107,7 +107,7 @@ export function GroupLedger({
 
   if (isLoading) {
     return (
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+      <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {[0, 1, 2, 3, 4].map((index) => (
           <div key={index} className="flex items-center gap-3 px-4 py-3">
             <Skeleton className="size-10 shrink-0 rounded-[var(--radius-md)]" />
@@ -282,7 +282,7 @@ export function GroupLedger({
           {groups.map(({ label, precise, entries }) => (
             <section key={label}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 <AnimatePresence initial={false}>
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
@@ -672,7 +672,7 @@ function FilterRow({ label, children }: { label: string; children: React.ReactNo
       <p className="mb-1.5 text-caption font-medium text-subtle">
         {label}
       </p>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-1 -mt-1 -mb-0.5 flex gap-1.5 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
     </div>
