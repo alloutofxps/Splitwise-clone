@@ -198,7 +198,7 @@ export default function FriendsPage() {
           ) : null}
 
           {added.length > 0 ? (
-            <PeopleSection title="Friends" friends={added} largest={largest} showSettled={showSettled} onShowSettled={() => setShowSettled(true)} />
+            <PeopleSection title="Added by code" friends={added} largest={largest} showSettled={showSettled} onShowSettled={() => setShowSettled(true)} />
           ) : null}
           {inGroups.length > 0 ? (
             <PeopleSection
