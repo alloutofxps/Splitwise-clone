@@ -712,13 +712,16 @@ function PairLine({
   const hue = usePersonHue(from ?? { avatarColor: "sand" });
   if (!from || !to) return null;
   const name = (person: PersonDto) => (person.id === meId ? "You" : person.displayName.split(" ")[0]);
+  // The picture says who pays whom; speech gets it as a sentence.
+  const said = `${name(from)} ${from.id === meId ? "pay" : "pays"} ${to.id === meId ? "you" : name(to)}${label ? ` ${label}` : ""}`;
   return (
     <div className="flex items-center gap-2 px-2 pt-2">
-      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+      <span className="sr-only">{said}</span>
+      <span aria-hidden className="flex w-16 shrink-0 flex-col items-center gap-1">
         <Avatar person={from} size="md" />
         <span className="max-w-full truncate text-caption text-text">{name(from)}</span>
       </span>
-      <span className="relative min-w-0 flex-1 self-start pt-3">
+      <span aria-hidden className="relative min-w-0 flex-1 self-start pt-3">
         <svg viewBox="0 0 100 16" preserveAspectRatio="none" className="h-4 w-full" aria-hidden="true">
           <path d="M 0 10 Q 50 0 96 10" fill="none" stroke={hue} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
         </svg>
@@ -729,7 +732,7 @@ function PairLine({
           </span>
         ) : null}
       </span>
-      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+      <span aria-hidden className="flex w-16 shrink-0 flex-col items-center gap-1">
         <Avatar person={to} size="md" />
         <span className="max-w-full truncate text-caption text-text">{name(to)}</span>
       </span>

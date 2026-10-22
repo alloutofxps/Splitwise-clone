@@ -195,7 +195,6 @@ export default function HomePage() {
  * currency, with the flow bar of who makes it up underneath.
  */
 function Balance({ data }: { data: DashboardPayload }) {
-  const router = useRouter();
   const currencies = Object.keys(data.totals);
   const nothingYet = data.groups.length === 0 && data.friends.length === 0;
 
@@ -242,7 +241,7 @@ function Balance({ data }: { data: DashboardPayload }) {
               className="mt-3"
               currency={line.currency}
               entries={line.entries}
-              onSelect={(personId) => router.push(`/friends/${personId}`)}
+              linkTo={(personId) => `/friends/${personId}`}
             />
           </div>
         ))}

@@ -122,7 +122,7 @@ await panel("Add a payment", g, async () => {
   await page.waitForTimeout(400);
   return btn("Add a payment");
 });
-await panel("Suggested payment", null, () => btn(/^Add Sam Lee paying you/));
+await panel("Suggested payment", null, () => btn(/^Settle, Sam Lee pays you/));
 
 // Panels over a panel: from inside the composer.
 for (const [label, name] of [["Composer > Split", /^Split/], ["Composer > Who paid", /^Paid by/], ["Composer > Currency", /^Currency/], ["Composer > Category", /^Category/]]) {

@@ -44,7 +44,7 @@ for (const scheme of ["light", "dark"]) {
   await ring("back-button", null, () => btn("Back"));
   await ring("tab-bar-friends", null, () => page.getByRole("link", { name: "Friends" }));
   await ring("tab-bar-add", null, () => btn("Add an expense"));
-  await ring("flow-bar-segment", "/", () => btn(/Ravi Kumar owes you/));
+  await ring("flow-bar-segment", "/", () => page.getByRole("link", { name: /Ravi Kumar owes you/ }));
   await ring("needs-you-row", null, () => page.getByRole("link", { name: /Settle up/ }));
   await ring("small-pill", null, () => btn("New group"));
   await ring("group-row", null, () => page.getByRole("link", { name: /Lisbon 2026/ }).last());

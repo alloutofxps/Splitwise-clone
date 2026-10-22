@@ -153,7 +153,7 @@ console.log("\nSettling up");
   const rowLabels = await page.evaluate(() =>
     [...document.querySelectorAll("button")]
       .map((b) => (b.getAttribute("aria-label") ?? "").trim())
-      .filter((n) => /^(Pay|Add) /.test(n)),
+      .filter((n) => /^Settle, /.test(n)),
   );
   check("a suggested transfer is a control, not a list item", rowLabels.length > 0, rowLabels.join(" / "));
 

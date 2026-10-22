@@ -211,7 +211,8 @@ export function BalancesPanel({
                           <button
                             type="button"
                             onClick={settle}
-                            aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                            // Starts with the word on the button, so "tap Settle" works by voice.
+                            aria-label={mine ? `Settle, you pay ${to.displayName} ${money}` : `Settle, ${from.displayName} pays you ${money}`}
                             className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
                           >
                             Settle
@@ -267,7 +268,8 @@ export function BalancesPanel({
                         <button
                           type="button"
                           onClick={settle}
-                          aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                          // Starts with the word on the button, so "tap Settle" works by voice.
+                            aria-label={mine ? `Settle, you pay ${to.displayName} ${money}` : `Settle, ${from.displayName} pays you ${money}`}
                           className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
                         >
                           Settle
