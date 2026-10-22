@@ -234,7 +234,10 @@ stopped carrying their own copies of the shared buttons the same day, 2.1 KB
 off every screen, which leaves a group about 321.3 KB and Home about 308.2 KB
 (PERF-BASELINE 20). Then the sign-up screens stopped loading for people who
 already have an account: a group about 312.6 KB, Home about 292.6 KB
-(PERF-BASELINE 21). Home also fetches the group screen's code (44 KB) once it
+(PERF-BASELINE 21). A group's panels (Settings, Invite, Settle up) and the
+Insights tab now come after load too, through one shared helper
+(`components/ui/after-load.tsx`): a group about 299.0 KB (PERF-BASELINE 23).
+Home also fetches the group screen's code (44 KB) once it
 has loaded, so opening a group doesn't wait; that doesn't delay Home and
 sits outside the limit.
 

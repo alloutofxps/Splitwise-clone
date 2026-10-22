@@ -1,28 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { afterLoad } from "./after-load";
 import { cn } from "./primitives";
 
 /**
  * The QR code library (about 10 KB), fetched once the page has finished loading
- * rather than with it. A code is only drawn when a panel opens, and the group
- * page has no room for the library in what it downloads to show itself
- * (MOTION-SPEC 7). One fetch, shared by every code in the app; a failed one
- * (offline before it ever arrived) is tried again next time.
+ * rather than with it: a code is only drawn when a panel opens. One fetch,
+ * shared by every code in the app.
  */
-let loading: Promise<typeof import("qrcode")> | null = null;
-export function loadQrLibrary(): Promise<typeof import("qrcode")> {
-  return (loading ??= import("qrcode").catch((error: unknown) => {
-    loading = null;
-    throw error;
-  }));
-}
-
-if (typeof window !== "undefined") {
-  const fetchIt = () => void loadQrLibrary().catch(() => {});
-  if (document.readyState === "complete") fetchIt();
-  else window.addEventListener("load", fetchIt, { once: true });
-}
+export const loadQrLibrary = afterLoad(() => import("qrcode"));
 
 /**
  * A QR code, ink on paper in both themes (a scanner needs dark on light), drawn

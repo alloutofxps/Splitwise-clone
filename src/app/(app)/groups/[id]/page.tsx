@@ -19,11 +19,8 @@ import { Button, Segmented, haptic } from "@/components/ui/primitives";
 import { GroupSkeleton } from "@/components/screen-skeletons";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
-import { GroupCharts } from "@/components/group/charts";
-import { GroupSettingsSheet } from "@/components/group/settings-sheet";
-import { InviteSheet } from "@/components/group/invite-sheet";
-import { SettleUpSheet } from "@/components/group/settle-up-sheet";
 import { useComposer } from "@/components/expense/composer-context";
+import { lazyAfterLoad } from "@/components/ui/after-load";
 import { useDashboard, useGroup, useMarkGroupRead } from "@/lib/client/queries";
 
 type Tab = "expenses" | "balances" | "charts";
@@ -35,7 +32,21 @@ const TAB_ORDER: Tab[] = ["expenses", "balances", "charts"];
 // in the instant a saved panel was trying to start leaving.
 const Ledger = React.memo(GroupLedger);
 const Balances = React.memo(BalancesPanel);
-const Charts = React.memo(GroupCharts);
+// Panels nobody sees until they tap, and the Insights tab: fetched once the
+// page has loaded rather than with it (components/ui/after-load.tsx), all in
+// one file, because four small files compressed to 8 KB more than one.
+const Charts = React.memo(
+  lazyAfterLoad(() => import(/* webpackChunkName: "group-panels" */ "@/components/group/charts").then((m) => m.GroupCharts)),
+);
+const GroupSettingsSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/settings-sheet").then((m) => m.GroupSettingsSheet),
+);
+const InviteSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/invite-sheet").then((m) => m.InviteSheet),
+);
+const SettleUpSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "group-panels" */ "@/components/group/settle-up-sheet").then((m) => m.SettleUpSheet),
+);
 
 export default function GroupPage() {
   const params = useParams<{ id: string }>();

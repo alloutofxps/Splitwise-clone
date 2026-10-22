@@ -772,3 +772,46 @@ script with `DETAIL=1`). The compressed figures it prints are unchanged.
 **Then,** main at `998ac1a` (after section 19, before section 20), built in
 the worktree: a group 324.0 KB compressed (959.4 KB uncompressed), Home
 310.8 KB (909.9 KB), three runs, identical.
+
+## 23. A group's panels and Insights after load (21 to 22 October 2026)
+
+CODE-HEALTH-AUDIT item 4. Before: main at `178a200`. After: the same plus
+the change. Measured as in section 19.
+
+| | Before | After | Change |
+|---|---|---|---|
+| A group, scripts to show it | 313.2 KB | 299.6 KB | -13.6 KB |
+| A group, after load | 16.5 KB | 32.9 KB | +16.4 KB |
+| Home, scripts to show it | 293.1 KB | 293.1 KB | 0 |
+| Home, after load | 52.3 KB | 55.1 KB | +2.8 KB |
+
+Settings (with Recurring, Usual split and Merge), Invite, Settle up and the
+Insights tab are one file fetched once the page has loaded. Split into four
+files they compressed to 7.7 KB more in total than inside the page's own file
+(the same code: compression works better on one large file); one file costs
+2.8 KB more, which is the whole of the extra data a cold visit now pays, after
+load.
+
+Checked in the browser (`perf-runs/2026-10-22-panels/panel-check.mjs`), main
+and the change side by side, two alternating rounds: every panel and Insights
+opens 30 to 65ms after the tap on both, whether tapped once the page has
+loaded or before (fonts held back so the load event is late); arriving with
+`?open=settle` opens Settle up. On a slow connection a tap before the page has
+loaded would wait for the panels' file (16.4 KB); locally that can't be seen.
+The QR check (section 19) passes again, as the QR library now uses the same
+helper. ui-check (81), ui-features (32) and pwa-check (36) pass.
+
+Smoothness (`motion-record.mjs` timing, CPU slowed 4x, side by side,
+alternating runs, median late frames at 60Hz; three runs, five for Settle up
+and Panels):
+
+| Flow | Main | Change |
+|---|---|---|
+| Home to a group | 2.8% | 2.8% |
+| Paying a debt off | 4.0% (after Save 4.0%) | 4.1% (after Save 4.0%) |
+| Panels | 2.9% | 2.8% |
+| A payment | 4.0% (after Save 2.0%) | 3.2% (after Save 2.7%) |
+| The three tabs | 4.0% (after Save 3.3%) | 3.9% (after Save 3.3%) |
+
+No change beyond run-to-run spread (a payment's after-Save ran 2.0 to 4.0% on
+main and 2.0 to 4.7% with the change).
