@@ -88,6 +88,11 @@ detail.
   clears it.
 - Stopping a background shell doesn't stop the server. In PowerShell:
   `Get-NetTCPConnection -LocalPort 3100 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`.
+- Download size: compare before and after built in the same folder. The
+  compressed figure can move by about 0.6 KB with no code change (the build
+  numbers its pieces differently), so when a result is that close to a
+  limit, check `ScriptRaw`, which only moves when code does
+  (PERF-BASELINE 22).
 - iPhone launch screens: after changing Home's outline, the tab bar or the
   colours, run `node scripts/launch-screens.mjs <url>` against a production
   build and commit `public/launch/` and `src/app/launch-screens.ts`.
