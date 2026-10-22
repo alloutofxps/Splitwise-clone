@@ -137,7 +137,7 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {items.map((expense) => (
               <li key={expense.id}>
                 <ExpenseRow

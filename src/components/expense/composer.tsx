@@ -921,7 +921,7 @@ function ScopePicker({
           .map((section) => (
             <section key={section.title}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{section.title}</h3>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
                 {section.list.map((option) => (
                   <li key={option.key}>
                     <button

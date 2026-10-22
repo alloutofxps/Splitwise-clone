@@ -184,7 +184,7 @@ export default function FriendPage() {
       {ledgers.length > 1 || ledgers.some((ledger) => ledger.planned !== null) ? (
         <section className="mt-8">
           <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Where it comes from</h2>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {ledgers.map((ledger) => {
               const net = BigInt(ledger.net);
               const note =
@@ -227,7 +227,7 @@ export default function FriendPage() {
         <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Shared history</h2>
 
         {data.sharedGroups.length > 0 ? (
-          <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
+          <div className="no-scrollbar -mx-4 -mt-1 mb-2 flex gap-1.5 overflow-x-auto px-4 py-1 lg:-mx-8 lg:px-8">
             {[
               { id: "all", label: "Everything" },
               { id: "direct", label: "Just between you" },
@@ -266,7 +266,7 @@ export default function FriendPage() {
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
                 <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-                <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+                <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                   {entries.map((entry) =>
                     entry.kind === "expense" && entry.expense ? (
                       <li key={entry.expense.id}>
@@ -326,7 +326,7 @@ export default function FriendPage() {
               <p className="mb-2 px-1 text-caption font-medium text-subtle">
                 Shared groups
               </p>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {data.sharedGroups.map((group) => (
                   <li key={group.id}>
                     <Link

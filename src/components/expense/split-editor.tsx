@@ -208,7 +208,7 @@ export function SplitEditor({
         {/* Six ways to split as a row of underlined words that scrolls, with
             a fade at the right edge so it's clear there are more. */}
         <div className="relative -mx-5">
-          <div className="no-scrollbar flex gap-5 overflow-x-auto border-b border-line px-5">
+          <div className="ring-inside no-scrollbar flex gap-5 overflow-x-auto border-b border-line px-5">
             {MODES.map((option) => {
               const active = option.value === localMode;
               return (
@@ -263,7 +263,7 @@ export function SplitEditor({
               </div>
             ) : null}
 
-            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+            <ul className="ring-inside mt-4 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
               {members.map((member) => {
                 const entry = local.find((e) => e.personId === member.id);
                 if (!entry) return null;

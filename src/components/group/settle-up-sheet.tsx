@@ -477,7 +477,7 @@ function SuggestionList({
           <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length === 1 ? "Suggested" : "Suggested payments"}
           </p>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {suggestions.map((edge, index) => {
               const from = people.get(edge.fromPersonId);
               const to = people.get(edge.toPersonId);
@@ -533,7 +533,7 @@ function SuggestionList({
           <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length > 0 ? "Someone else" : "Add a payment anyway"}
           </p>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {rest.map((person) => (
               <li key={person.id}>
                 <button
@@ -616,7 +616,7 @@ function PayThem({
       <p className="mb-2 px-1 text-caption font-medium text-subtle">
         How {person.displayName.split(" ")[0]} would like to be paid
       </p>
-      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+      <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
         {methods.map((entry) => {
           const kind = PAYMENT_KINDS.find((k) => k.value === entry.kind);
           const link = paymentLink(entry, amount, currency, person.displayName);

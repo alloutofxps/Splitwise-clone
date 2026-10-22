@@ -685,7 +685,7 @@ function Section({
 /** A grouped inset list: one card, rows separated by hairlines. */
 function Rows({ children, as: Tag = "div" }: { children: React.ReactNode; as?: "div" | "ul" }) {
   return (
-    <Tag className="relative divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+    <Tag className="ring-inside relative divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {children}
     </Tag>
   );
