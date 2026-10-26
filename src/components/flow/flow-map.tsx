@@ -12,8 +12,47 @@ import { DURATION, EASE_ENTER, EASE_STANDARD } from "../ui/motion";
 import { untilClear, useStage } from "../ui/stage";
 
 const DOT = 18;
-/** The width of an amount's pill: about 7px a character at 11.5px, plus padding. */
-const labelWidthFor = (label: string) => label.length * 7 + 12;
+/**
+ * The width of an amount's pill at 11.5px, plus padding: figures about 6.8px,
+ * commas and points 2.2px, letters and symbols about 8px (measured). A flat 7px
+ * a character made long amounts' pills wider than their text, so they met.
+ */
+const labelWidthFor = (label: string) => {
+  let width = 12;
+  for (const char of label) width += /\d/.test(char) ? 6.8 : /[.,]/.test(char) ? 2.2 : char === " " ? 3 : 8;
+  return Math.round(width);
+};
+
+/** A name's width at 12px, erring wide, to keep it inside the drawing. */
+const nameWidthFor = (name: string) => name.length * 7;
+
+/**
+ * Where a person's first name goes: outside the ring, away from the lines,
+ * which all run inwards; under the dot for someone alone in the middle, or
+ * whose name would run past the edge of the drawing (and out of its card).
+ */
+function nameSpot(person: PersonDto, at: Point, size: number, isMe: boolean) {
+  const centre = size / 2;
+  const first = isMe ? "You" : person.displayName.split(" ")[0];
+  const text = first.length > 10 ? `${first.slice(0, 9)}…` : first;
+  const width = nameWidthFor(text);
+  const dx = at.x - centre;
+  const dy = at.y - centre;
+  const away = Math.hypot(dx, dy);
+  const ux = away < 1 ? 0 : dx / away;
+  const uy = away < 1 ? 1 : dy / away;
+  let x = at.x + ux * (DOT + 12);
+  let y = at.y + uy * (DOT + 12) + 4;
+  let anchor: "start" | "end" | "middle" = ux > 0.35 ? "start" : ux < -0.35 ? "end" : "middle";
+  if ((anchor === "start" && x + width > size - 2) || (anchor === "end" && x - width < 2)) {
+    anchor = "middle";
+    y = at.y + DOT + 16;
+  }
+  if (anchor === "middle") x = Math.min(Math.max(x, width / 2 + 2), size - width / 2 - 2);
+  // The box it takes up, by its middle, for keeping amounts off it.
+  const middle = anchor === "start" ? x + width / 2 : anchor === "end" ? x - width / 2 : x;
+  return { x, y, anchor, text, box: { x: middle, y: y - 4, width, height: 14 } };
+}
 
 /** A payment travelling along its line (MOTION-SPEC, money). */
 export const TRAVEL_MS = 700;
@@ -98,9 +137,15 @@ export function FlowMap({
       const to = positions.get(edge.toPersonId);
       return from && to ? [{ key: edgeKey(edge), from, to, width: labelWidthFor(formatMoney(edge.amount, currency)) }] : [];
     });
-    const spots = placeLabels(drawn, DOT + 4);
+    // Clear of people's dots and names and inside the drawing, as well as of
+    // each other.
+    const names = people.flatMap((person) => {
+      const at = positions.get(person.id);
+      return at ? [nameSpot(person, at, size, person.id === meId).box] : [];
+    });
+    const spots = placeLabels(drawn, DOT + 4, { size, dots: [...positions.values()], dotRadius: DOT, blocks: names });
     return new Map(drawn.map((line, index) => [line.key, spots[index]]));
-  }, [edges, positions, currency]);
+  }, [edges, positions, currency, size, people, meId]);
   const nameOf = (id: string) => (id === meId ? "You" : (byId.get(id)?.displayName ?? "Someone"));
 
   return (
@@ -123,13 +168,23 @@ export function FlowMap({
                 from={from}
                 to={to}
                 width={strokeFor(edge.amount, largest)}
-                label={labels ? formatMoney(edge.amount, currency) : null}
-                labelAt={labelSpots.get(edgeKey(edge))}
                 reduce={Boolean(reduce)}
               />
             );
           })}
         </AnimatePresence>
+
+        {/* Every amount over every line, so no line is drawn across an amount. */}
+        {labels ? (
+          <AnimatePresence initial={false}>
+            {edges.map((edge) => {
+              const spot = labelSpots.get(edgeKey(edge));
+              return spot ? (
+                <EdgeLabel key={edgeKey(edge)} label={formatMoney(edge.amount, currency)} at={spot} reduce={Boolean(reduce)} />
+              ) : null;
+            })}
+          </AnimatePresence>
+        ) : null}
 
         {people.map((person) => {
           const at = positions.get(person.id);
@@ -176,26 +231,19 @@ function EdgeLine({
   from,
   to,
   width,
-  label,
-  labelAt,
   reduce,
 }: {
   payer: PersonDto;
   from: Point;
   to: Point;
   width: number;
-  label: string | null;
-  /** Where the amount goes; the middle of the line unless that is taken. */
-  labelAt?: Point;
   reduce: boolean;
 }) {
   const hue = usePersonHue(payer);
-  const { d, mid, end, angle } = edgePath(from, to, DOT + 4);
+  const { d, end, angle } = edgePath(from, to, DOT + 4);
   const draw = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : { initial: { pathLength: 0, opacity: 0 }, animate: { pathLength: 1, opacity: 1 }, exit: { pathLength: 0, opacity: 0 } };
-  const labelWidth = labelWidthFor(label ?? "");
-  const spot = labelAt ?? mid;
 
   return (
     <motion.g>
@@ -225,31 +273,28 @@ function EdgeLine({
           strokeLinejoin="round"
           transform={`translate(${end.x} ${end.y}) rotate(${angle})`}
         />
-        {label ? (
-        <>
-        <rect
-          x={spot.x - labelWidth / 2}
-          y={spot.y - 10}
-          width={labelWidth}
-          height={20}
-          rx={10}
-          fill="var(--surface)"
-          stroke="var(--border)"
-        />
-        <text
-          x={spot.x}
-          y={spot.y + 4}
-          textAnchor="middle"
-          className="tabular"
-          fill="var(--text)"
-          fontSize={11.5}
-          fontWeight={500}
-        >
-          {label}
-        </text>
-        </>
-        ) : null}
       </motion.g>
+    </motion.g>
+  );
+}
+
+/**
+ * One amount on its line. Drawn in a layer above all the lines, so none is
+ * drawn across it; it fades in a moment after its line draws, as before.
+ */
+function EdgeLabel({ label, at, reduce }: { label: string; at: Point; reduce: boolean }) {
+  const width = labelWidthFor(label);
+  return (
+    <motion.g
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: DURATION.fade, ease: EASE_STANDARD, delay: reduce ? 0 : 0.18 }}
+    >
+      <rect x={at.x - width / 2} y={at.y - 10} width={width} height={20} rx={10} fill="var(--surface)" stroke="var(--border)" />
+      <text x={at.x} y={at.y + 4} textAnchor="middle" className="tabular" fill="var(--text)" fontSize={11.5} fontWeight={500}>
+        {label}
+      </text>
     </motion.g>
   );
 }
@@ -266,17 +311,7 @@ function PersonNode({
   isMe: boolean;
 }) {
   const hue = usePersonHue(person);
-  const first = isMe ? "You" : person.displayName.split(" ")[0];
-  // The name sits on the outside of the ring, away from the lines, which all
-  // run inwards. Someone alone in the middle gets it underneath.
-  const dx = at.x - centre;
-  const dy = at.y - centre;
-  const away = Math.hypot(dx, dy);
-  const ux = away < 1 ? 0 : dx / away;
-  const uy = away < 1 ? 1 : dy / away;
-  const nameX = at.x + ux * (DOT + 12);
-  const nameY = at.y + uy * (DOT + 12) + 4;
-  const anchor = ux > 0.35 ? "start" : ux < -0.35 ? "end" : "middle";
+  const name = nameSpot(person, at, centre * 2, isMe);
   return (
     <g>
       <circle
@@ -297,8 +332,8 @@ function PersonNode({
       >
         {person.avatarEmoji ?? initials(person.displayName)}
       </text>
-      <text x={nameX} y={nameY} textAnchor={anchor} fontSize={12} fill="var(--text-muted)">
-        {first.length > 10 ? `${first.slice(0, 9)}…` : first}
+      <text x={name.x} y={name.y} textAnchor={name.anchor} fontSize={12} fill="var(--text-muted)">
+        {name.text}
       </text>
     </g>
   );
