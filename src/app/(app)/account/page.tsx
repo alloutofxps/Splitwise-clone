@@ -177,7 +177,7 @@ export default function AccountPage() {
             }}
             onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
             aria-label="Your name"
-            className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1 focus:ring-[1.5px] focus:ring-text"
+            className="w-full text-ellipsis rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1 focus:ring-[1.5px] focus:ring-text"
           />
           <p className="mt-0.5 text-caption text-subtle">
             Member since{" "}
@@ -512,9 +512,11 @@ function Row({
       <span className={cn("shrink-0", tone === "danger" ? "text-danger" : "text-muted")}>
         {icon}
       </span>
+      {/* The label wraps rather than being cut: it says what the row is. The
+          value beside it is the one that gives way. */}
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-body-lg font-medium",
+          "min-w-0 flex-1 text-body-lg font-medium",
           tone === "danger" ? "text-danger" : "text-text",
         )}
       >

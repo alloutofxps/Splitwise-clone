@@ -63,11 +63,13 @@ export function GroupCharts({
     <div className="space-y-4">
       <HeadlineTiles stats={stats} />
 
-      <div className="flex items-center gap-2">
+      {/* On a narrow phone the table button moves under the choice, rather than
+          squeezing "Whole group" onto two lines. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Segmented
           kind="choice"
           label="Show spending for"
-          className="flex-1"
+          className="min-w-0 grow basis-48"
           size="sm"
           value={lens}
           onChange={setLens}
@@ -121,17 +123,24 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
   ];
 
   return (
-    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body text-muted">
-      {/* The dot trails each figure, so a wrapped line never starts with one. */}
-      {figures.map((figure, index) => (
-        <span key={figure.label} className="whitespace-nowrap">
-          {figure.label}{" "}
-          <span className="tabular font-medium text-text">
-            {formatMoney(BigInt(figure.value), stats.currency)}
+    // Each figure carries its dot in front, in the gap; a figure that starts a
+    // line has its dot in the margin the box clips. So no line starts or ends
+    // with a dot, however the figures wrap (a trailing dot ended every line
+    // once long amounts made them wrap).
+    <p className="overflow-hidden text-body text-muted">
+      <span className="-ml-4 flex flex-wrap items-baseline gap-y-1">
+        {figures.map((figure) => (
+          <span key={figure.label} className="relative whitespace-nowrap pl-4">
+            <span aria-hidden className="absolute left-1.5">
+              ·
+            </span>
+            {figure.label}{" "}
+            <span className="tabular font-medium text-text">
+              {formatMoney(BigInt(figure.value), stats.currency)}
+            </span>
           </span>
-          {index < figures.length - 1 ? <span aria-hidden className="ml-2">·</span> : null}
-        </span>
-      ))}
+        ))}
+      </span>
     </p>
   );
 }
