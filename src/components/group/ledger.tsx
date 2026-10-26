@@ -107,7 +107,7 @@ export function GroupLedger({
 
   if (isLoading) {
     return (
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+      <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {[0, 1, 2, 3, 4].map((index) => (
           <div key={index} className="flex items-center gap-3 px-4 py-3">
             <Skeleton className="size-10 shrink-0 rounded-[var(--radius-md)]" />
@@ -208,7 +208,7 @@ export function GroupLedger({
                     onClick={() => setPerson(person === member.id ? null : member.id)}
                   >
                     <Avatar person={member} size="xs" />
-                    {member.id === meId ? "You" : member.displayName.split(" ")[0]}
+                    <bdi>{member.id === meId ? "You" : member.displayName.split(" ")[0]}</bdi>
                   </FilterChip>
                 ))}
               </FilterRow>
@@ -282,7 +282,7 @@ export function GroupLedger({
           {groups.map(({ label, precise, entries }) => (
             <section key={label}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 <AnimatePresence initial={false}>
                 {entries.map((entry) =>
                   entry.kind === "expense" && entry.expense ? (
@@ -449,12 +449,11 @@ function ExpenseRowButton({
   const foreign = expense.settlementCurrency !== expense.currency;
   const payer = expense.payers[0] ? people.get(expense.payers[0].personId) : undefined;
 
-  const paidLabel =
-    expense.payers.length > 1
-      ? `${expense.payers.length} people paid`
-      : payer
-        ? `${payer.id === meId ? "You" : payer.displayName.split(" ")[0]} paid ${formatBare(expense.amount, expense.currency)}`
-        : "";
+  // Who paid, and what. The name gives way when space runs short, never the
+  // amount: a long name cut "Alexandra paid €9,999,…" mid-number.
+  const payerName =
+    expense.payers.length === 1 && payer ? (payer.id === meId ? "You" : payer.displayName.split(" ")[0]) : null;
+  const paidLabel = expense.payers.length > 1 ? `${expense.payers.length} people paid` : "";
 
   return (
     <button
@@ -482,7 +481,7 @@ function ExpenseRowButton({
 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-body-lg font-medium text-text">
+          <span dir="auto" className="truncate text-left text-body-lg font-medium text-text">
             {expense.description}
           </span>
           {expense.attachments.length > 0 ? (
@@ -495,10 +494,19 @@ function ExpenseRowButton({
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 flex items-center gap-1.5 truncate text-caption text-subtle">
-          {showGroup ? <span className="truncate">{showGroup} ·</span> : null}
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-subtle">
+          {showGroup ? <span className="min-w-0 truncate">{showGroup} ·</span> : null}
           {payer && expense.payers.length === 1 ? <PersonDot person={payer} /> : null}
-          <span className="truncate">{paidLabel}</span>
+          {payerName ? (
+            <span className="flex min-w-0 gap-1">
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {payerName}
+              </span>
+              <span className="shrink-0">paid {formatBare(expense.amount, expense.currency)}</span>
+            </span>
+          ) : (
+            <span className="truncate">{paidLabel}</span>
+          )}
         </span>
       </span>
 
@@ -610,9 +618,12 @@ export function SettlementRow({
 
       <PairGlyph from={from} to={to} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body-lg font-medium text-text">
-          {from?.id === meId ? "You" : (from?.displayName ?? "Someone")} paid{" "}
-          {to?.id === meId ? "you" : (to?.displayName ?? "someone")}
+        {/* First names, each cut on its own, so "paid you" always shows: a long
+            name used to push it off the end and leave just the name. */}
+        <span className="flex min-w-0 gap-1 text-body-lg font-medium text-text">
+          <bdi className="min-w-0 truncate">{from?.id === meId ? "You" : (from?.displayName.split(" ")[0] ?? "Someone")}</bdi>
+          <span className="shrink-0">paid</span>
+          <bdi className="min-w-0 truncate">{to?.id === meId ? "you" : (to?.displayName.split(" ")[0] ?? "someone")}</bdi>
         </span>
         {settlement.note || settlement.method ? (
           <span className="mt-0.5 block truncate text-caption text-subtle">
@@ -672,7 +683,7 @@ function FilterRow({ label, children }: { label: string; children: React.ReactNo
       <p className="mb-1.5 text-caption font-medium text-subtle">
         {label}
       </p>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-1 -mt-1 -mb-0.5 flex gap-1.5 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
     </div>

@@ -164,6 +164,7 @@ export default function AccountPage() {
         </button>
         <div className="min-w-0 flex-1">
           <input
+            dir="auto"
             value={name}
             onChange={(event) => setName(event.target.value.slice(0, 60))}
             onBlur={() => {
@@ -176,7 +177,7 @@ export default function AccountPage() {
             }}
             onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
             aria-label="Your name"
-            className="w-full rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1"
+            className="w-full text-ellipsis rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1 focus:ring-[1.5px] focus:ring-text"
           />
           <p className="mt-0.5 text-caption text-subtle">
             Member since{" "}
@@ -241,6 +242,8 @@ export default function AccountPage() {
             Appearance
           </p>
           <Segmented
+            kind="choice"
+            label="Appearance"
             value={theme}
             onChange={setTheme}
             options={[
@@ -477,7 +480,7 @@ function Group({ title, caption, children }: { title: string; caption?: string; 
   return (
     <section className="mt-8">
       <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
-      <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+      <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {children}
       </div>
       {caption ? <p className="mt-2 px-1 text-caption leading-relaxed text-subtle">{caption}</p> : null}
@@ -509,9 +512,11 @@ function Row({
       <span className={cn("shrink-0", tone === "danger" ? "text-danger" : "text-muted")}>
         {icon}
       </span>
+      {/* The label wraps rather than being cut: it says what the row is. The
+          value beside it is the one that gives way. */}
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-body-lg font-medium",
+          "min-w-0 flex-1 text-body-lg font-medium",
           tone === "danger" ? "text-danger" : "text-text",
         )}
       >
@@ -742,7 +747,7 @@ function PaymentMethodsSheet({
         <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card p-3.5">
           <p className="mb-2.5 text-body font-semibold text-text">Add a way to pay</p>
 
-          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+          <div className="no-scrollbar -mx-1 -mt-1 flex gap-2 overflow-x-auto px-1 pt-1 pb-2">
             {PAYMENT_KINDS.map((entry) => (
               <button
                 key={entry.value}

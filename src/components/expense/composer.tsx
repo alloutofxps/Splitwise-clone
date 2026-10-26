@@ -26,6 +26,7 @@ import { ApiError } from "@/lib/client/api";
 import { newId } from "@/lib/ids";
 import type { ExpenseDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { isolate } from "@/lib/bidi";
 
 /**
  * The expense composer.
@@ -421,6 +422,7 @@ export function ExpenseComposer({
             </button>
 
             <input
+              dir="auto"
               value={draft.description}
               onChange={(event) => {
                 const description = event.target.value.slice(0, 140);
@@ -689,6 +691,7 @@ export function ExpenseComposer({
             onChange={(event) => patch({ notes: event.target.value.slice(0, 2000) })}
             rows={5}
             autoFocus
+            dir="auto"
             placeholder="Add a note…"
             className="w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
           />
@@ -859,7 +862,7 @@ function ScopePicker({
     return (
       <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5">
         <span className="shrink-0 text-body font-semibold text-muted">With</span>
-        <span className="min-w-0 flex-1 truncate text-subhead font-semibold text-text">
+        <span dir="auto" className="min-w-0 flex-1 truncate text-left text-subhead font-semibold text-text">
           {label}
         </span>
         <span className="shrink-0 text-caption text-subtle">Can&rsquo;t be moved</span>
@@ -906,7 +909,7 @@ function ScopePicker({
       className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-line px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
     >
       <span className="shrink-0 text-body text-muted">With</span>
-      <span className="min-w-0 flex-1 truncate text-body-lg font-medium text-text">
+      <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-medium text-text">
         {options.find((o) => o.key === current)?.label ?? "Pick a group or a friend"}
       </span>
       <ChevronDown className="size-4 shrink-0 text-subtle" />
@@ -921,11 +924,12 @@ function ScopePicker({
           .map((section) => (
             <section key={section.title}>
               <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{section.title}</h3>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
                 {section.list.map((option) => (
                   <li key={option.key}>
                     <button
                       type="button"
+                      aria-pressed={option.key === current}
                       onClick={() => {
                         haptic();
                         onChange(option.apply());
@@ -934,7 +938,7 @@ function ScopePicker({
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                     >
                       {option.leading}
-                      <span className="min-w-0 flex-1 truncate text-body-lg font-medium text-text">{option.name}</span>
+                      <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-medium text-text">{option.name}</span>
                       {option.key === current ? <Check className="size-5 shrink-0 text-text" /> : null}
                     </button>
                   </li>
@@ -963,7 +967,7 @@ function ScopePicker({
               )}
             >
               {on ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
-              {friend.person.displayName}
+              <bdi>{friend.person.displayName}</bdi>
             </button>
           );
         })}
@@ -1089,7 +1093,7 @@ function SplitPreview({
             return (
               <li key={split.personId} className="flex items-center gap-2.5">
                 <Avatar person={person} size="xs" />
-                <span className="min-w-0 flex-1 truncate text-body font-medium text-text">
+                <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-medium text-text">
                   {split.personId === meId ? "You" : person.displayName}
                 </span>
                 <span className="tabular text-body font-semibold text-muted">
@@ -1132,7 +1136,7 @@ function payerLabel(
   if (payers.length > 1) return `${payers.length} people`;
   const person = peopleById.get(payers[0].personId);
   if (!person) return "Someone";
-  return payers[0].personId === meId ? "You" : person.displayName;
+  return payers[0].personId === meId ? "You" : isolate(person.displayName);
 }
 
 function splitSentence(mode: SplitMode, count: number): string {

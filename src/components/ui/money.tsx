@@ -3,7 +3,16 @@
 import * as React from "react";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "./primitives";
-import { currencySymbol, decimalsFor, formatMoney, parseAmount, toDecimalString } from "@/lib/money";
+import {
+  caretInGrouped,
+  currencySymbol,
+  decimalsFor,
+  formatMoney,
+  groupTypedAmount,
+  parseAmount,
+  readTypedAmount,
+  toDecimalString,
+} from "@/lib/money";
 
 /**
  * A monetary amount.
@@ -22,6 +31,7 @@ export function Amount({
   className,
   arrow,
   figure,
+  fit,
 }: {
   /** Minor units, as a bigint or the decimal string the API sends. */
   value: bigint | string;
@@ -44,8 +54,17 @@ export function Amount({
   size?: "xs" | "sm" | "md" | "lg" | "xl" | "hero";
   signed?: boolean;
   className?: string;
+  /**
+   * For a headline figure: drawn at this size, or smaller when that would be
+   * wider than its container (the nearest `container-type: inline-size`).
+   * A balance of KWD 2,500,000.000 ran off the screen and made the page
+   * scroll sideways. Only the figure's length and the space decide the size,
+   * so it never changes while the figure counts.
+   */
+  fit?: "display" | "hero";
 }) {
   const amount = typeof value === "bigint" ? value : BigInt(value || "0");
+  const written = formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed });
 
   const resolvedTone =
     tone === "auto" ? (amount > 0n ? "positive" : amount < 0n ? "negative" : "plain") : tone;
@@ -68,6 +87,7 @@ export function Amount({
         resolvedTone === "plain" && "text-text",
         className,
       )}
+      style={fit ? { fontSize: fitSize(fit, written, arrow === true && amount !== 0n) } : undefined}
     >
       {arrow && amount !== 0n ? (
         // An icon rather than the arrow character, which some fonts draw so
@@ -78,9 +98,20 @@ export function Amount({
           <ArrowUpRight aria-hidden className="mr-[0.1em] inline size-[0.7em] -translate-y-[0.05em]" strokeWidth={2} />
         )
       ) : null}
-      {figure ?? formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed })}
+      {figure ?? written}
     </span>
   );
+}
+
+/**
+ * The headline size, or as big as fits. Widths are the display face's, in em,
+ * measured as the headline draws them: figures 0.59, commas and points 0.19,
+ * letters and symbols up to 0.72, the arrow 0.8. A little to spare on top.
+ */
+function fitSize(size: "display" | "hero", written: string, arrow: boolean): string {
+  let em = arrow ? 0.8 : 0;
+  for (const char of written) em += /\d/.test(char) ? 0.59 : /[.,]/.test(char) ? 0.19 : char === " " ? 0.25 : 0.72;
+  return `min(var(--text-${size}), ${(100 / (em * 1.04)).toFixed(2)}cqi)`;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +153,7 @@ export function AmountInput({
   const decimals = decimalsFor(currency);
   const symbol = currencySymbol(currency);
   const [text, setText] = useAmountText(value, currency);
+  const shown = groupTypedAmount(text);
 
   /*
    * Typing into a field that already holds an amount replaces it, as if the
@@ -144,6 +176,7 @@ export function AmountInput({
     setText(masked);
     onChange(masked === "" ? null : parseAmount(masked, currency));
   };
+  const [inputRef, onGroupedChange] = useGroupedField(shown, handleChange);
 
   return (
     <div
@@ -175,9 +208,10 @@ export function AmountInput({
         spellCheck={false}
         enterKeyHint="done"
         autoFocus={autoFocus}
-        value={text}
+        ref={inputRef}
+        value={shown}
         placeholder={placeholder}
-        onChange={(event) => handleChange(event.target.value)}
+        onChange={onGroupedChange}
         onKeyDown={(event) => {
           if (event.key === "Enter") onEnter?.();
           // Arrow keys and Home/End mean the person is moving through the number.
@@ -207,7 +241,7 @@ export function AmountInput({
         // input centres its text and strands the symbol at the far left.
         style={
           size === "hero"
-            ? { width: `${Math.max(1, (text || placeholder).length)}ch` }
+            ? { width: `${Math.max(1, (shown || placeholder).length)}ch` }
             : undefined
         }
         className={cn(
@@ -225,6 +259,33 @@ export function AmountInput({
       />
     </div>
   );
+}
+
+/**
+ * An amount field that shows its figure grouped, "9,999,999.99", while its
+ * text keeps no commas (a long typed number was a run of digits to count).
+ * The caret stays beside what was typed, though commas come and go around it.
+ */
+export function useGroupedField(
+  shown: string,
+  onText: (next: string) => void,
+): [React.RefObject<HTMLInputElement | null>, (event: React.ChangeEvent<HTMLInputElement>) => void] {
+  const ref = React.useRef<HTMLInputElement>(null);
+  const caret = React.useRef<number | null>(null);
+  React.useLayoutEffect(() => {
+    const input = ref.current;
+    if (caret.current === null || !input || document.activeElement !== input) return;
+    const at = caretInGrouped(input.value, caret.current);
+    caret.current = null;
+    input.setSelectionRange(at, at);
+  });
+  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    const read = readTypedAmount(raw, shown, event.target.selectionStart ?? raw.length);
+    caret.current = read.significant;
+    onText(read.text);
+  };
+  return [ref, onChange];
 }
 
 /**

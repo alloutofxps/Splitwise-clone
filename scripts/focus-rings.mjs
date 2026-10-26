@@ -21,13 +21,11 @@ for (const scheme of ["light", "dark"]) {
     if (path) await page.goto(BASE + path, { waitUntil: "networkidle" });
     await page.waitForTimeout(400);
     const el = (await locate()).first();
-    // Reach it by keyboard so :focus-visible applies: focus the one before, Tab.
-    await el.evaluate((node) => {
-      const all = [...document.querySelectorAll("a[href],button,input,textarea,select,[tabindex]")].filter((n) => n.tabIndex >= 0 && !n.disabled);
-      const i = all.indexOf(node);
-      (all[i - 1] ?? document.body).focus();
-    });
-    await page.keyboard.press("Tab");
+    // A key press first, so the browser treats the focus as keyboard focus
+    // and :focus-visible applies, as it would for someone tabbing.
+    await el.scrollIntoViewIfNeeded();
+    await page.keyboard.press("Shift");
+    await el.focus();
     await page.waitForTimeout(250);
     const box = await page.evaluate(() => {
       const r = document.activeElement.getBoundingClientRect();
@@ -46,13 +44,33 @@ for (const scheme of ["light", "dark"]) {
   await ring("back-button", null, () => btn("Back"));
   await ring("tab-bar-friends", null, () => page.getByRole("link", { name: "Friends" }));
   await ring("tab-bar-add", null, () => btn("Add an expense"));
-  await ring("flow-bar-segment", "/", () => btn(/Ravi Kumar owes you/));
+  await ring("flow-bar-segment", "/", () => page.getByRole("link", { name: /Ravi Kumar owes you/ }));
   await ring("needs-you-row", null, () => page.getByRole("link", { name: /Settle up/ }));
   await ring("small-pill", null, () => btn("New group"));
+  await ring("group-row", null, () => page.getByRole("link", { name: /Lisbon 2026/ }).last());
+  await ring("friends-row", "/friends", () => page.getByRole("link", { name: /Ana Costa/ }));
+  await ring("friend-history-row", `/friends/${data.ravi.id}`, () => btn(/Concert tickets/));
+  await ring("friend-chip", null, () => btn("Everything", true));
   await ring("name-field", "/account", () => page.getByLabel("Your name"));
   await ring("switch", null, () => page.getByRole("switch").first());
-  await ring("theme-segment", null, () => page.getByRole("tab", { name: "Night" }));
+  await ring("theme-segment", null, () => page.getByRole("radio", { name: "Night" }));
   await ring("filter-chip", "/activity", () => btn("All", true));
+  await ring("activity-row", null, () => btn(/added Concert tickets/));
+  await ring("settle-suggestion", `/groups/${data.trip}`, async () => {
+    await btn("Settle up", true).first().click();
+    await page.waitForTimeout(700);
+    return page.locator('[role="dialog"] button').filter({ hasText: /pays you|^Pay / });
+  });
+  await ring("keypad-key", null, async () => {
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(500);
+    await btn("Add an expense").first().click();
+    await page.waitForTimeout(700);
+    await page.getByLabel("Amount").first().click();
+    await page.waitForTimeout(300);
+    return page.getByLabel("Amount keypad").getByRole("button", { name: "5", exact: true });
+  });
+  await page.keyboard.press("Escape");
   await context.close();
 }
 // One sheet.

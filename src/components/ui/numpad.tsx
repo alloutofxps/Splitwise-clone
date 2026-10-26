@@ -5,8 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { DURATION, EASE_STANDARD } from "./motion";
 import { Check, Delete } from "lucide-react";
 import { cn, haptic } from "./primitives";
-import { maskAmount, useAmountText } from "./money";
-import { currencySymbol, decimalsFor, parseAmount } from "@/lib/money";
+import { maskAmount, useAmountText, useGroupedField } from "./money";
+import { currencySymbol, decimalsFor, groupTypedAmount, parseAmount } from "@/lib/money";
 
 /**
  * The amount field, with its own keypad.
@@ -82,6 +82,8 @@ export function AmountPad({
     setText(masked);
     onChange(masked === "" ? null : parseAmount(masked, currency));
   };
+  const shown = groupTypedAmount(text);
+  const [inputRef, onGroupedChange] = useGroupedField(shown, commit);
 
   const press = (key: string) => {
     haptic();
@@ -111,9 +113,10 @@ export function AmountPad({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          value={text}
+          ref={inputRef}
+          value={shown}
           placeholder="0"
-          onChange={(event) => commit(event.target.value)}
+          onChange={onGroupedChange}
           onFocus={(event) => {
             setOpen(true);
             event.currentTarget.select();
@@ -121,7 +124,7 @@ export function AmountPad({
           onKeyDown={(event) => {
             if (event.key === "Enter") onSubmit?.();
           }}
-          style={{ width: `${Math.max(1, (text || "0").length)}ch` }}
+          style={{ width: `${Math.max(1, (shown || "0").length)}ch` }}
           className="display-number min-w-0 bg-transparent text-center text-display font-semibold leading-none tracking-[-0.03em] text-text outline-none placeholder:text-subtle/60"
           aria-label="Amount"
         />
@@ -144,7 +147,7 @@ export function AmountPad({
         {/* A calculator grid: hairlines between the keys rather than twelve
             floating buttons, so the pad is a compact block under the amount. */}
         <div
-          className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
+          className="ring-inside mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line"
           role="group"
           aria-label="Amount keypad"
         >
@@ -208,6 +211,10 @@ function Key({
       onClick={onPress}
       disabled={disabled}
       aria-label={label}
+      // Out of the Tab order: the amount field takes typed digits, so on a
+      // computer these were twelve extra presses between it and the next
+      // field. Taps and screen readers still reach them.
+      tabIndex={-1}
       className={cn(
         "display-number flex h-[46px] items-center justify-center bg-surface text-title font-medium text-text",
         "transition-colors duration-150 active:bg-surface-2",

@@ -234,7 +234,7 @@ const FLOWS = {
     await page.waitForTimeout(800);
     await page.getByRole("tab", { name: "Balances" }).click();
     await page.waitForTimeout(1000);
-    await page.getByRole("button", { name: /^Add Sam Lee paying you/ }).click();
+    await page.getByRole("button", { name: /^Settle, Sam Lee pays you/ }).click();
     await page.waitForTimeout(900);
     mark("save");
     await page.getByRole("button", { name: "Save payment" }).click();

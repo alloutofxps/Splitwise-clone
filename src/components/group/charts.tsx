@@ -5,7 +5,7 @@ import { BarChart3, Table2 } from "lucide-react";
 import { Avatar, usePersonHue } from "../ui/avatar";
 import { EmptyState, Segmented, Skeleton, cn } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";
-import { useGroupStats } from "@/lib/client/queries";
+import { useDashboard, useGroupStats } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
 import { formatMoney } from "@/lib/money";
 import type { GroupStatsDto, PersonDto } from "@/lib/types";
@@ -63,9 +63,13 @@ export function GroupCharts({
     <div className="space-y-4">
       <HeadlineTiles stats={stats} />
 
-      <div className="flex items-center gap-2">
+      {/* On a narrow phone the table button moves under the choice, rather than
+          squeezing "Whole group" onto two lines. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Segmented
-          className="flex-1"
+          kind="choice"
+          label="Show spending for"
+          className="min-w-0 grow basis-48"
           size="sm"
           value={lens}
           onChange={setLens}
@@ -119,17 +123,24 @@ function HeadlineTiles({ stats }: { stats: GroupStatsDto }) {
   ];
 
   return (
-    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body text-muted">
-      {/* The dot trails each figure, so a wrapped line never starts with one. */}
-      {figures.map((figure, index) => (
-        <span key={figure.label} className="whitespace-nowrap">
-          {figure.label}{" "}
-          <span className="tabular font-medium text-text">
-            {formatMoney(BigInt(figure.value), stats.currency)}
+    // Each figure carries its dot in front, in the gap; a figure that starts a
+    // line has its dot in the margin the box clips. So no line starts or ends
+    // with a dot, however the figures wrap (a trailing dot ended every line
+    // once long amounts made them wrap).
+    <p className="overflow-hidden text-body text-muted">
+      <span className="-ml-4 flex flex-wrap items-baseline gap-y-1">
+        {figures.map((figure) => (
+          <span key={figure.label} className="relative whitespace-nowrap pl-4">
+            <span aria-hidden className="absolute left-1.5">
+              ·
+            </span>
+            {figure.label}{" "}
+            <span className="tabular font-medium text-text">
+              {formatMoney(BigInt(figure.value), stats.currency)}
+            </span>
           </span>
-          {index < figures.length - 1 ? <span aria-hidden className="ml-2">·</span> : null}
-        </span>
-      ))}
+        ))}
+      </span>
     </p>
   );
 }
@@ -377,6 +388,7 @@ function PersonChart({
   stats: GroupStatsDto;
   people: Map<string, PersonDto>;
 }) {
+  const meId = useDashboard().data?.me.id;
   const rows = stats.byPerson
     .map((row) => ({
       person: people.get(row.personId),
@@ -409,10 +421,17 @@ function PersonChart({
             <li key={row.person!.id}>
               <div className="mb-1.5 flex items-center gap-2">
                 <Avatar person={row.person!} size="xs" />
-                <span className="min-w-0 flex-1 truncate text-body font-semibold text-text">
-                  {row.person!.displayName}
+                <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-semibold text-text">
+                  {row.person!.id === meId ? "You" : row.person!.displayName}
+                </span>
+                {/* The figure is drawn bare; speech gets the currency and what it means. */}
+                <span className="sr-only">
+                  {row.net === 0n
+                    ? `paid ${row.person!.id === meId ? "your" : "their"} share exactly`
+                    : `paid ${formatMoney(magnitude, stats.currency)} ${positive ? "more" : "less"} than ${row.person!.id === meId ? "your" : "their"} share`}
                 </span>
                 <span
+                  aria-hidden
                   className={cn(
                     "tabular shrink-0 text-caption font-semibold",
                     row.net === 0n

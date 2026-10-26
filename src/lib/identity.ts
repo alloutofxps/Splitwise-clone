@@ -29,7 +29,7 @@
 
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { Person } from "@prisma/client";
+import type { Person } from "@/generated/prisma/client";
 import { prisma } from "./db";
 import {
   generateInviteCode,

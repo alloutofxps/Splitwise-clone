@@ -141,7 +141,7 @@ export function ActionSheet({
   return (
     <WhileOpen open={open}>
     <Sheet open={open} onClose={onClose} title={title}>
-      <ul className="mx-5 mb-6 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+      <ul className="ring-inside mx-5 mb-6 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
         {actions.map((action) => (
           <li key={action.label}>
             <button

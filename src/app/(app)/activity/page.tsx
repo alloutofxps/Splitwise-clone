@@ -57,7 +57,7 @@ export default function ActivityPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
+        <div className="ring-inside overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2, 3, 4].map((index) => (
             <div key={index} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
               <Skeleton className="size-9 shrink-0 rounded-full" />
@@ -88,7 +88,7 @@ export default function ActivityPage() {
       <h1 className="mb-4 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
 
       {groupsInFeed.length > 1 ? (
-        <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-4 -mt-1 mb-3.5 flex gap-1.5 overflow-x-auto px-4 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <GroupChip active={groupFilter === null} onClick={() => setGroupFilter(null)}>
             All
           </GroupChip>
@@ -99,7 +99,7 @@ export default function ActivityPage() {
               onClick={() => setGroupFilter(groupFilter === group.id ? null : group.id)}
             >
               <span aria-hidden>{group.emoji}</span>
-              {group.name}
+              <bdi>{group.name}</bdi>
             </GroupChip>
           ))}
         </div>
@@ -126,7 +126,7 @@ export default function ActivityPage() {
           {days.map(({ label, entries }) => (
             <section key={label}>
               <h2 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h2>
-              <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+              <ul className="ring-inside overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {entries.map((item) => (
                   <li key={item.id} className="border-b border-line last:border-b-0">
                     <ActivityRow
@@ -248,14 +248,20 @@ function ActivityRow({
         <span className="mt-0.5 flex items-center gap-1.5 text-caption text-subtle">
           {activity.groupName ? (
             <>
-              <span className="truncate">
-                {activity.groupEmoji} {activity.groupName}
+              <span className="shrink-0" aria-hidden>
+                {activity.groupEmoji}
+              </span>
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {activity.groupName}
               </span>
               <span aria-hidden>·</span>
             </>
           ) : withNames ? (
             <>
-              <span className="truncate">With {withNames}</span>
+              <span className="shrink-0">With</span>
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {withNames}
+              </span>
               <span aria-hidden>·</span>
             </>
           ) : null}

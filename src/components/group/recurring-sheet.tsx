@@ -124,7 +124,7 @@ export function RecurringSheet({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-body-lg font-semibold text-text">
+                      <p dir="auto" className="truncate text-left text-body-lg font-semibold text-text">
                         {recurrence.description}
                       </p>
                       <p className="mt-0.5 flex items-center gap-1 text-caption text-muted">
@@ -297,6 +297,7 @@ function NewRecurrenceSheet({
     >
       <div className="px-5 pb-6">
         <input
+          dir="auto"
           value={description}
           onChange={(event) => setDescription(event.target.value.slice(0, 140))}
           placeholder="Rent"
@@ -320,6 +321,7 @@ function NewRecurrenceSheet({
           {RECURRENCE_FREQUENCIES.map((option) => (
             <button
               key={option}
+              aria-pressed={frequency === option}
               onClick={() => {
                 haptic();
                 setFrequency(option);
@@ -360,6 +362,7 @@ function NewRecurrenceSheet({
           {group.members.map((member) => (
             <button
               key={member.id}
+              aria-pressed={payerId === member.id}
               onClick={() => {
                 haptic();
                 setPayerId(member.id);
@@ -371,7 +374,7 @@ function NewRecurrenceSheet({
                   : "border-line bg-surface text-text hover:bg-surface-2",
               )}
             >
-              {member.id === meId ? "You" : member.displayName.split(" ")[0]}
+              <bdi>{member.id === meId ? "You" : member.displayName.split(" ")[0]}</bdi>
             </button>
           ))}
         </div>

@@ -15,6 +15,7 @@ import { ApiError } from "@/lib/client/api";
 import { paymentLink, PAYMENT_KINDS } from "@/lib/payments";
 import type { GroupDetailDto, PaymentMethodDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Settling up.
@@ -391,6 +392,7 @@ export function SettleUpSheet({
                 {methodChoices(iAmPaying ? payeeMethods : (dashboard?.me.paymentMethods ?? [])).map((option) => (
                   <button
                     key={option}
+                    aria-pressed={method === option}
                     onClick={() => {
                       haptic();
                       setMethod(method === option ? null : option);
@@ -409,6 +411,7 @@ export function SettleUpSheet({
             </div>
 
             <input
+              dir="auto"
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 500))}
               placeholder="Add a note (optional)"
@@ -477,7 +480,7 @@ function SuggestionList({
           <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length === 1 ? "Suggested" : "Suggested payments"}
           </p>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {suggestions.map((edge, index) => {
               const from = people.get(edge.fromPersonId);
               const to = people.get(edge.toPersonId);
@@ -494,8 +497,8 @@ function SuggestionList({
                     <span className="min-w-0 flex-1">
                       <span className="block text-body-lg font-semibold text-text">
                         {iAmPaying
-                          ? `Pay ${to.displayName.split(" ")[0]}`
-                          : `${from.displayName.split(" ")[0]} pays you`}
+                          ? `Pay ${isolate(to.displayName.split(" ")[0])}`
+                          : `${isolate(from.displayName.split(" ")[0])} pays you`}
                       </span>
                       {/* Coloured and pointed the way Balances shows the same debt. */}
                       <span
@@ -533,7 +536,7 @@ function SuggestionList({
           <p className="mb-2 px-1 text-caption font-medium text-subtle">
             {suggestions.length > 0 ? "Someone else" : "Add a payment anyway"}
           </p>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
             {rest.map((person) => (
               <li key={person.id}>
                 <button
@@ -616,7 +619,7 @@ function PayThem({
       <p className="mb-2 px-1 text-caption font-medium text-subtle">
         How {person.displayName.split(" ")[0]} would like to be paid
       </p>
-      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
+      <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line">
         {methods.map((entry) => {
           const kind = PAYMENT_KINDS.find((k) => k.value === entry.kind);
           const link = paymentLink(entry, amount, currency, person.displayName);
@@ -710,14 +713,20 @@ function PairLine({
 }) {
   const hue = usePersonHue(from ?? { avatarColor: "sand" });
   if (!from || !to) return null;
-  const name = (person: PersonDto) => (person.id === meId ? "You" : person.displayName.split(" ")[0]);
+  // Shown under each avatar in an element of its own direction; fenced when
+  // dropped into the spoken sentence.
+  const shown = (person: PersonDto) => (person.id === meId ? "You" : person.displayName.split(" ")[0]);
+  const name = (person: PersonDto) => (person.id === meId ? "You" : isolate(shown(person)));
+  // The picture says who pays whom; speech gets it as a sentence.
+  const said = `${name(from)} ${from.id === meId ? "pay" : "pays"} ${to.id === meId ? "you" : name(to)}${label ? ` ${label}` : ""}`;
   return (
     <div className="flex items-center gap-2 px-2 pt-2">
-      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+      <span className="sr-only">{said}</span>
+      <span aria-hidden className="flex w-16 shrink-0 flex-col items-center gap-1">
         <Avatar person={from} size="md" />
-        <span className="max-w-full truncate text-caption text-text">{name(from)}</span>
+        <span dir="auto" className="max-w-full truncate text-caption text-text">{shown(from)}</span>
       </span>
-      <span className="relative min-w-0 flex-1 self-start pt-3">
+      <span aria-hidden className="relative min-w-0 flex-1 self-start pt-3">
         <svg viewBox="0 0 100 16" preserveAspectRatio="none" className="h-4 w-full" aria-hidden="true">
           <path d="M 0 10 Q 50 0 96 10" fill="none" stroke={hue} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
         </svg>
@@ -728,9 +737,9 @@ function PairLine({
           </span>
         ) : null}
       </span>
-      <span className="flex w-16 shrink-0 flex-col items-center gap-1">
+      <span aria-hidden className="flex w-16 shrink-0 flex-col items-center gap-1">
         <Avatar person={to} size="md" />
-        <span className="max-w-full truncate text-caption text-text">{name(to)}</span>
+        <span dir="auto" className="max-w-full truncate text-caption text-text">{shown(to)}</span>
       </span>
     </div>
   );

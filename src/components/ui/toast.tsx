@@ -170,6 +170,8 @@ function ToastViewport({
               {toast.description ? (
                 <p className="mt-0.5 text-caption leading-snug opacity-70">{toast.description}</p>
               ) : null}
+              {/* So it's announced as "Added Tapas. Undo", not "Added TapasUndo". */}
+              {toast.action ? <span className="sr-only">{". "}</span> : null}
             </div>
             {toast.action ? (
               <button

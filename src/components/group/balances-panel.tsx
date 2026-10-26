@@ -14,6 +14,7 @@ import { formatMoney } from "@/lib/money";
 import type { GroupDetailDto, PersonDto } from "@/lib/types";
 import { FlowMap, type Travel } from "../flow/flow-map";
 import { SwipeRow } from "../ui/swipe-row";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Who owes whom.
@@ -67,6 +68,7 @@ export function BalancesPanel({
   const [simplified, setSimplified] = useMirror(group.simplifyDebts);
 
   const edges = simplified ? group.balances.simplified : group.balances.pairwise;
+  const owing = group.balances.pairwise.length > 0 || group.balances.simplified.length > 0 || Boolean(travel);
 
   const members = group.members;
   const netById = group.balances.net;
@@ -90,8 +92,9 @@ export function BalancesPanel({
   );
 
   const [showEveryone, setShowEveryone] = React.useState(false);
+  // Fenced, so a right-to-left name doesn't reorder "Sam pays you €25.20".
   const firstName = (person: PersonDto) =>
-    person.id === meId ? "You" : person.displayName.split(" ")[0];
+    person.id === meId ? "You" : isolate(person.displayName.split(" ")[0]);
 
   return (
     <div>
@@ -111,13 +114,15 @@ export function BalancesPanel({
             />
           </div>
         ) : (
+          // The headline above already says "Everyone is settled up".
           <div className="flex flex-col items-center px-6 py-8 text-center">
             <FlowDoodle className="mb-3" play="settled" />
-            <p className="text-title font-semibold text-text">Everyone is settled up</p>
-            <p className="mt-1 text-body text-muted">Nobody in this group owes anything.</p>
+            <p className="text-body text-muted">Nobody in this group owes anything.</p>
           </div>
         )}
 
+        {/* With nothing owed there is nothing to simplify. */}
+        {owing ? (
         <div className="flex items-center gap-3 border-t border-line px-4 py-3">
           <span className="min-w-0 flex-1">
             <span className="block text-body font-medium text-text">Simplify</span>
@@ -138,6 +143,7 @@ export function BalancesPanel({
             }}
           />
         </div>
+        ) : null}
       </section>
 
       {/* Suggested payments ------------------------------------------------ */}
@@ -211,7 +217,8 @@ export function BalancesPanel({
                           <button
                             type="button"
                             onClick={settle}
-                            aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                            // Starts with the word on the button, so "tap Settle" works by voice.
+                            aria-label={mine ? `Settle, you pay ${to.displayName} ${money}` : `Settle, ${from.displayName} pays you ${money}`}
                             className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
                           >
                             Settle
@@ -267,7 +274,8 @@ export function BalancesPanel({
                         <button
                           type="button"
                           onClick={settle}
-                          aria-label={mine ? `Pay ${to.displayName} ${money}` : `Add ${from.displayName} paying you ${money}`}
+                          // Starts with the word on the button, so "tap Settle" works by voice.
+                            aria-label={mine ? `Settle, you pay ${to.displayName} ${money}` : `Settle, ${from.displayName} pays you ${money}`}
                           className="shrink-0 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
                         >
                           Settle
@@ -315,7 +323,7 @@ export function BalancesPanel({
               return (
                 <li key={member.id} className="flex items-center gap-3 px-4 py-3">
                   <Avatar person={member} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-body font-medium text-text">
+                  <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-medium text-text">
                     {member.id === meId ? "You" : member.displayName}
                   </span>
                   {net === 0n ? (

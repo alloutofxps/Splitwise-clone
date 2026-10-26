@@ -84,6 +84,36 @@ describe("placeLabels", () => {
     );
     expect(overlap(down, across, 54 + 8)).toBe(false);
   });
+
+  it("keeps a label off a person's dot", () => {
+    // A third person sits right where this line's middle is.
+    const from = { x: 20, y: 100 };
+    const to = { x: 320, y: 100 };
+    const dot = edgePath(from, to, 12).mid;
+    const [spot] = placeLabels([{ from, to, width: 60 }], 12, { dots: [dot], dotRadius: 18 });
+    const nearestX = Math.max(spot.x - 30, Math.min(dot.x, spot.x + 30));
+    const nearestY = Math.max(spot.y - 10, Math.min(dot.y, spot.y + 10));
+    expect(Math.hypot(dot.x - nearestX, dot.y - nearestY)).toBeGreaterThanOrEqual(18);
+  });
+
+  it("keeps a wide label inside the drawing", () => {
+    const [spot] = placeLabels([{ from: { x: 10, y: 20 }, to: { x: 60, y: 30 }, width: 140 }], 12, { size: 320 });
+    expect(spot.x - 70).toBeGreaterThanOrEqual(0);
+    expect(spot.y - 10).toBeGreaterThanOrEqual(0);
+  });
+
+  it("would rather not lie over somebody else's line", () => {
+    // A long line down the page (drawn bowed, as every line is), and one
+    // across it whose middle would sit on it.
+    const down = { from: { x: 160, y: 20 }, to: { x: 160, y: 300 }, width: 40 };
+    const across = { from: { x: 60, y: 160 }, to: { x: 220, y: 160 }, width: 40 };
+    const trace = Array.from({ length: 49 }, (_, step) => pointOnEdge(down.from, down.to, 12, step / 48));
+    const under = (at: { x: number; y: number }) =>
+      trace.some((point) => Math.abs(point.x - at.x) < 20 && Math.abs(point.y - at.y) < 10);
+    expect(under(edgePath(across.from, across.to, 12).mid)).toBe(true);
+    const [, label] = placeLabels([down, across], 12, { size: 320 });
+    expect(under(label)).toBe(false);
+  });
 });
 
 describe("strokeFor", () => {

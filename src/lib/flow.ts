@@ -109,47 +109,119 @@ export function pointOnEdge(from: Point, to: Point, inset: number, t: number, be
 }
 
 /** How far along its line a label may slide to get clear, nearest first. */
-const LABEL_STOPS = [0.5, 0.4, 0.6, 0.32, 0.68, 0.25, 0.75];
+const LABEL_STOPS = [0.5, ...[0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36].flatMap((step) => [0.5 - step, 0.5 + step])];
+
+/** What a label must keep clear of, besides the other labels. */
+export interface LabelSurroundings {
+  /** The drawing's width and height: a label stays inside it. */
+  size?: number;
+  /** People's dots, which a label must not cover. */
+  dots?: Point[];
+  dotRadius?: number;
+  /** Other things to keep clear of, such as names: centre, width and height. */
+  blocks?: { x: number; y: number; width: number; height: number }[];
+}
 
 /**
- * Where each line's amount label goes, so that no two sit on top of each other.
+ * Where each line's amount label goes.
  *
- * Every label starts at the middle of its line. Then, in a few passes, a label
- * that covers another slides along its own line, a little each way, to the
- * first spot that is clear of all the others. Either label of a pair may be
- * the one that moves: a short line often has nowhere to go, while the line
- * crossing it does. A label with no clear spot keeps the middle.
+ * Every label starts at the middle of its line. Then, in a few passes, each
+ * label tries the spots along its own line, nearest the middle first, and
+ * takes the one that costs least: on top of another label, a person's dot
+ * or a name costs most, then running out of the drawing, then lying over somebody
+ * else's line (it would hide that line), and last, distance from the middle.
+ * When every spot on its line is taken, it may sit just beside the line.
+ * Either label of a pair may be the one that moves: a short line often has
+ * nowhere to go, while the line crossing it does. With many people the best
+ * spot can still touch something; it is then the least bad one, and kept
+ * inside the drawing.
  */
 export function placeLabels(
   lines: { from: Point; to: Point; width: number }[],
   inset: number,
+  surroundings: LabelSurroundings = {},
   height = 20,
   gap = 4,
 ): Point[] {
+  const { size, dots = [], dotRadius = 18, blocks = [] } = surroundings;
   const spots = lines.map(({ from, to }) => pointOnEdge(from, to, inset, 0.5));
-  const covers = (index: number, at: Point) =>
-    lines.some(
-      (other, otherIndex) =>
-        otherIndex !== index &&
-        Math.abs(at.x - spots[otherIndex].x) * 2 < lines[index].width + other.width + gap * 2 &&
-        Math.abs(at.y - spots[otherIndex].y) < height + gap,
-    );
-  for (let pass = 0; pass < 3; pass++) {
+  // Points along every line, to tell whether a label would lie over one.
+  const traces = lines.map(({ from, to }) =>
+    Array.from({ length: 25 }, (_, step) => pointOnEdge(from, to, inset, step / 24)),
+  );
+
+  const cost = (index: number, at: Point, t: number) => {
+    const half = lines[index].width / 2;
+    let total = Math.abs(t - 0.5) * 10;
+    lines.forEach((other, otherIndex) => {
+      if (otherIndex === index) return;
+      const there = spots[otherIndex];
+      if (Math.abs(at.x - there.x) * 2 < lines[index].width + other.width + gap * 2 && Math.abs(at.y - there.y) < height + gap) {
+        total += 1000;
+      }
+      for (const point of traces[otherIndex]) {
+        if (Math.abs(point.x - at.x) < half + 2 && Math.abs(point.y - at.y) < height / 2 + 2) {
+          total += 40;
+          break;
+        }
+      }
+    });
+    for (const dot of dots) {
+      const nearestX = Math.max(at.x - half, Math.min(dot.x, at.x + half));
+      const nearestY = Math.max(at.y - height / 2, Math.min(dot.y, at.y + height / 2));
+      if (Math.hypot(dot.x - nearestX, dot.y - nearestY) < dotRadius + 2) total += 500;
+    }
+    for (const block of blocks) {
+      if (Math.abs(block.x - at.x) * 2 < block.width + lines[index].width + gap && Math.abs(block.y - at.y) * 2 < block.height + height + gap) {
+        total += 500;
+      }
+    }
+    if (size !== undefined) {
+      const spill =
+        Math.max(0, half - at.x) + Math.max(0, at.x + half - size) + Math.max(0, height / 2 - at.y) + Math.max(0, at.y + height / 2 - size);
+      total += spill * 10;
+    }
+    return total;
+  };
+
+  const along = spots.map(() => 0.5);
+  const beside = spots.map(() => false);
+  const best = spots.map((spot, index) => cost(index, spot, 0.5));
+  for (let pass = 0; pass < 6; pass++) {
     let moved = false;
     lines.forEach(({ from, to }, index) => {
-      if (!covers(index, spots[index])) return;
-      for (const t of LABEL_STOPS.slice(1)) {
-        const candidate = pointOnEdge(from, to, inset, t);
-        if (!covers(index, candidate)) {
-          spots[index] = candidate;
-          moved = true;
-          return;
+      best[index] = cost(index, spots[index], along[index]) + (beside[index] ? 60 : 0);
+      // Beside its line, just clear of it, is the fallback when every spot on
+      // it is taken: it costs more than lying over one other line.
+      const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
+      for (const t of LABEL_STOPS) {
+        const onLine = pointOnEdge(from, to, inset, t);
+        for (const side of [0, 1, -1]) {
+          const candidate = { x: onLine.x + normal.x * side * (height / 2 + 6), y: onLine.y + normal.y * side * (height / 2 + 6) };
+          const price = cost(index, candidate, t) + (side === 0 ? 0 : 60);
+          if (price < best[index] - 0.01) {
+            spots[index] = candidate;
+            along[index] = t;
+            beside[index] = side !== 0;
+            best[index] = price;
+            moved = true;
+          }
         }
       }
     });
     if (!moved) break;
   }
-  return spots;
+
+  // Inside the drawing whatever else happened.
+  return spots.map(({ x, y }, index) => {
+    if (size === undefined) return { x, y };
+    const half = lines[index].width / 2;
+    return {
+      x: Math.min(Math.max(x, half + 1), size - half - 1),
+      y: Math.min(Math.max(y, height / 2 + 1), size - height / 2 - 1),
+    };
+  });
 }
 
 /**

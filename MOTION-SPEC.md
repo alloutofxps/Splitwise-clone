@@ -126,7 +126,7 @@ are written where they are used.
 | Pressing a button or a standalone card | Shrinks to 96% (buttons) or 98% (cards), sinks one level (`press-firm`, `press`) | 100 / 150 | The app felt your tap |
 | Pressing a row in a list | Darkens a step (`active:bg-surface-2`). Rows don't shrink: one row shrinking inside its card leaves gaps, and system lists don't do it either | 100 | The app felt your tap |
 | Swiping a row | Follows the finger, lifted to level 2, lets go at the finger's speed | finger | You're holding this row |
-| Pull to refresh (drawn) | Follows the pull, plays while loading, settles | finger | How far to pull, and that it's working |
+| Pull to refresh (drawn) | The page follows the pull down (52px at the point where letting go refreshes), and the label fades in in the room above it, so it never covers the screen's name or buttons. The page stays down while it loads, then slides back ("In place" easing). With Reduce Motion it snaps back and the label fades | finger, then 250 | How far to pull, and that it's working |
 
 ### Panels
 | Moment | What moves | ms | What it explains |
@@ -172,7 +172,7 @@ animation engine, no player to download.
 |---|---|---|
 | Welcome untangle | tangled, untangling, untangled | Progress through the welcome, 0 to 1 |
 | Empty states (3) | arrive (an empty list), start (a new account), settled (nobody owes); a tap makes the three hop | Which one, and a tap |
-| Paid | hidden, paying, paid, done: a jade disc pops over the payee, a tick draws, six sparks fly, then it fades (1.2s) | "paid" when a debt reaches zero |
+| Paid | hidden, paying, paid, done: a jade disc pops over the payee, a tick draws, six sparks burst out bright then drift, shrink and fade, then it all fades (1.2s) | "paid" when a debt reaches zero |
 | Pull to refresh | resting, pulling (the doodle draws as far as you've pulled), loading (the three take turns to hop), done ("Up to date") | Pull distance 0 to 1, then "loading", "done" |
 | App opening | drawing (the logo draws its line from one person to the other), waiting (the two breathe), ready (Home replaces it) | "ready" the moment data arrives |
 

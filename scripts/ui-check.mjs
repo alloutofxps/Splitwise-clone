@@ -153,7 +153,7 @@ console.log("\nSettling up");
   const rowLabels = await page.evaluate(() =>
     [...document.querySelectorAll("button")]
       .map((b) => (b.getAttribute("aria-label") ?? "").trim())
-      .filter((n) => /^(Pay|Add) /.test(n)),
+      .filter((n) => /^Settle, /.test(n)),
   );
   check("a suggested transfer is a control, not a list item", rowLabels.length > 0, rowLabels.join(" / "));
 
@@ -1305,6 +1305,39 @@ console.log("\nPanels by keyboard");
   check("closing the top one returns focus to its button in the panel below", backOnSplit);
   check("and the panel below is still open", await p6.locator('[role="dialog"]').count() === 1);
   await p6.keyboard.press("Escape");
+}
+
+// A group's tabs: one Tab stop, moved through with the arrow keys.
+console.log("\nTabs by keyboard");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+  const stops = await page.locator('[role="tab"]').evaluateAll(els => els.filter(e => e.tabIndex === 0).length);
+  check("only the chosen tab is a Tab stop", stops === 1, `${stops} tabs in the Tab order`);
+  await page.getByRole("tab", { name: "Expenses" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(400);
+  const now = await page.evaluate(() => ({ name: document.activeElement?.innerText.trim(), selected: document.activeElement?.getAttribute("aria-selected") }));
+  check("ArrowRight moves to Balances and shows it", now.name === "Balances" && now.selected === "true", JSON.stringify(now));
+  const labelled = await page.evaluate(() => {
+    const panel = document.querySelector('[role="tabpanel"]');
+    return panel ? document.getElementById(panel.getAttribute("aria-labelledby"))?.innerText.trim() : null;
+  });
+  check("the part it shows is named after its tab", labelled === "Balances", String(labelled));
+}
+
+// Every screen used to share one name, so screen readers announced nothing on
+// moving between them.
+console.log("\nPage names");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  check("a group's screen is named after it", (await page.title()) === "Audit · Divvy", await page.title());
+  await page.getByRole("link", { name: "Friends" }).first().click();
+  await page.waitForURL("**/friends");
+  await page.waitForTimeout(800);
+  check("moving to Friends renames the page", (await page.title()) === "Friends · Divvy", await page.title());
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  check("Home has a main heading", (await page.locator("main h1").count()) === 1);
 }
 
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));

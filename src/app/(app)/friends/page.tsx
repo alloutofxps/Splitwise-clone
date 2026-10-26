@@ -17,6 +17,7 @@ import { useOpenScreen } from "@/components/ui/open-screen";
 import { TRAVEL_BACK_MS, useArrival } from "@/components/ui/travel";
 
 import type { FriendDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Friends.
@@ -70,7 +71,7 @@ export default function FriendsPage() {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
-        <div className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
+        <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2].map((index) => (
             <div key={index} className="flex items-center gap-3 px-4 py-3">
               <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -174,7 +175,8 @@ export default function FriendsPage() {
                 haptic();
                 setFilterOpen(true);
               }}
-              aria-label="Filter this list"
+              // Filled while a filter is on; say so too.
+              aria-label={filter === "all" ? "Filter this list" : `Filter this list, showing ${FILTERS.find((option) => option.value === filter)?.label.toLowerCase()}`}
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
                 filter === "all" ? "text-muted hover:bg-surface-2" : "bg-text text-inverse",
@@ -197,7 +199,7 @@ export default function FriendsPage() {
           ) : null}
 
           {added.length > 0 ? (
-            <PeopleSection title="Friends" friends={added} largest={largest} showSettled={showSettled} onShowSettled={() => setShowSettled(true)} />
+            <PeopleSection title="Added by code" friends={added} largest={largest} showSettled={showSettled} onShowSettled={() => setShowSettled(true)} />
           ) : null}
           {inGroups.length > 0 ? (
             <PeopleSection
@@ -218,6 +220,7 @@ export default function FriendsPage() {
           {FILTERS.map((option) => (
             <li key={option.value}>
               <button
+                aria-pressed={filter === option.value}
                 onClick={() => {
                   haptic();
                   setFilter(option.value);
@@ -269,7 +272,7 @@ function PeopleSection({
     <section className="mb-8">
       <h2 className="px-1 text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
       {caption ? <p className="mt-0.5 px-1 text-caption text-muted">{caption}</p> : null}
-      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+      <ul className="ring-inside mt-2 divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
         {rows.map((friend) => (
           <li key={friend.person.id}>
             <FriendRow friend={friend} largest={largest} offerAdd={offerAdd} />
@@ -309,7 +312,7 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
       ? `In ${friend.ledgers.length} places`
       : friend.ledgers[0]
         ? friend.ledgers[0].name
-          ? `In ${friend.ledgers[0].name}`
+          ? `In ${isolate(friend.ledgers[0].name)}`
           : "Just between you"
         : null;
 
@@ -327,12 +330,27 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
           <Avatar person={friend.person} size="md" />
         </span>
         <span className="min-w-0 flex-1">
-          <span data-travel="name" className="block truncate text-body-lg font-medium text-text">
+          <span data-travel="name" dir="auto" className="block truncate text-left text-body-lg font-medium text-text">
             {friend.person.displayName}
           </span>
           <span className="block truncate text-caption text-subtle">
             {friend.person.isGhost ? "not on Divvy yet" : (where ?? "settled up")}
           </span>
+          {/* Balances in several currencies go under the name, one line that
+              wraps, rather than a tall column that squeezed the name to "Alex…". */}
+          {entries.length > 1 ? (
+            <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+              {entries.map(([currency, value]) => {
+                const amount = BigInt(value);
+                return (
+                  <span key={currency}>
+                    <Amount value={amount} currency={currency} size="sm" arrow />
+                    <span className="sr-only">{amount > 0n ? " owes you" : " you owe"}</span>
+                  </span>
+                );
+              })}
+            </span>
+          ) : null}
           {/* Their segment of the flow: how big this balance is next to the rest. */}
           {share > 0 ? (
             <span className="mt-1.5 block h-1 w-full max-w-[160px] overflow-hidden rounded-full bg-surface-2">
@@ -349,7 +367,7 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-right">
+        <span className={cn("shrink-0 text-right", entries.length > 1 && "hidden")}>
           {entries.length === 0 ? (
             <span className="text-caption text-subtle">settled up</span>
           ) : (

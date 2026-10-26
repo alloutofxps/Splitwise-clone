@@ -9,6 +9,7 @@ import { useDashboard, useSearch } from "@/lib/client/queries";
 import { formatMoney } from "@/lib/money";
 import { CATEGORIES } from "@/lib/categories";
 import { StickyBar } from "@/components/ui/sticky";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Search across everything.
@@ -39,7 +40,7 @@ export default function SearchPage() {
   );
 
   const groupNames = React.useMemo(
-    () => new Map((data?.groups ?? []).map((group) => [group.id, `${group.emoji} ${group.name}`])),
+    () => new Map((data?.groups ?? []).map((group) => [group.id, `${group.emoji} ${isolate(group.name)}`])),
     [data?.groups],
   );
 
@@ -65,6 +66,8 @@ export default function SearchPage() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Boat, hotel, groceries…"
+            // The example text isn't a name; speech needs one.
+            aria-label="Search expenses"
             autoFocus
             enterKeyHint="search"
             className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
@@ -137,7 +140,7 @@ export default function SearchPage() {
             ))}
           </div>
 
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {items.map((expense) => (
               <li key={expense.id}>
                 <ExpenseRow

@@ -26,6 +26,7 @@ import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 
 import { groupByDay } from "@/lib/day-groups";
 import { formatMoney } from "@/lib/money";
+import { isolate } from "@/lib/bidi";
 
 /**
  * One friend.
@@ -87,7 +88,7 @@ export default function FriendPage() {
     return historyFilter === "direct" ? groupId === null : groupId === historyFilter;
   });
   const grouped = groupByDay(filtered, (item) => item.date);
-  const groupName = new Map(data.sharedGroups.map((group) => [group.id, `${group.emoji} ${group.name}`]));
+  const groupName = new Map(data.sharedGroups.map((group) => [group.id, `${group.emoji} ${isolate(group.name)}`]));
 
   // Where the two of you stand in total, and what it is made of.
   const combined = Object.entries(data.combined ?? {});
@@ -112,7 +113,7 @@ export default function FriendPage() {
         >
           <ChevronLeft className="size-6" />
         </button>
-        <h1 data-travel="name" className="min-w-0 flex-1 truncate px-1 text-title font-semibold tracking-[-0.02em] text-text">
+        <h1 data-travel="name" dir="auto" className="min-w-0 flex-1 truncate px-1 text-left text-title font-semibold tracking-[-0.02em] text-text">
           {data.person.displayName}
         </h1>
         <button
@@ -133,7 +134,8 @@ export default function FriendPage() {
           <span data-travel="icon" className="shrink-0">
             <Avatar person={data.person} size="lg" />
           </span>
-          <div className="min-w-0 flex-1">
+          {/* The figures below shrink to fit this column (Amount's `fit`). */}
+          <div className="min-w-0 flex-1 [container-type:inline-size]">
             {!anythingOutstanding ? (
               <>
                 <p className="text-title-lg font-semibold tracking-[-0.02em] text-text">You&rsquo;re all settled up</p>
@@ -145,7 +147,7 @@ export default function FriendPage() {
                 return (
                   <p key={code} className="flex flex-col">
                     <span className="text-body text-muted">
-                      {net > 0n ? `${data.person.displayName.split(" ")[0]} owes you` : `You owe ${data.person.displayName.split(" ")[0]}`}
+                      {net > 0n ? `${isolate(data.person.displayName.split(" ")[0])} owes you` : `You owe ${isolate(data.person.displayName.split(" ")[0])}`}
                     </span>
                     {/* Travels only when it is the one balance, so it lands on the same figure. */}
                     <span data-travel={combined.length === 1 ? "amount" : undefined} className="self-start">
@@ -153,6 +155,7 @@ export default function FriendPage() {
                         value={net}
                         currency={code}
                         arrow
+                        fit="display"
                         className="text-display font-semibold leading-tight tracking-[-0.03em]"
                       />
                     </span>
@@ -164,7 +167,9 @@ export default function FriendPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2">
+        {/* Each label on one line; on a narrow phone the second button moves
+            under the first instead of both breaking in two. */}
+        <div className="mt-4 flex flex-wrap gap-2 [&>button]:whitespace-nowrap">
           {anythingOutstanding ? (
             <Button variant="primary" onClick={() => setSettleUp(true)}>
               Settle up
@@ -184,19 +189,21 @@ export default function FriendPage() {
       {ledgers.length > 1 || ledgers.some((ledger) => ledger.planned !== null) ? (
         <section className="mt-8">
           <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Where it comes from</h2>
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+          <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
             {ledgers.map((ledger) => {
               const net = BigInt(ledger.net);
               const note =
                 ledger.planned !== null
-                  ? planNote(net, BigInt(ledger.planned), data.person.displayName.split(" ")[0], ledger.currency)
+                  ? planNote(net, BigInt(ledger.planned), isolate(data.person.displayName.split(" ")[0]), ledger.currency)
                   : null;
               const body = (
                 <>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body-lg font-medium text-text">
-                      {ledger.emoji ? `${ledger.emoji} ` : ""}
-                      {ledger.name ?? "Just between you"}
+                    <span className="flex min-w-0 items-baseline gap-1.5 text-body-lg font-medium text-text">
+                      {ledger.emoji ? <span className="shrink-0">{ledger.emoji}</span> : null}
+                      <span dir="auto" className="min-w-0 truncate text-left">
+                        {ledger.name ?? "Just between you"}
+                      </span>
                     </span>
                     {note ? <span className="mt-0.5 block text-caption leading-relaxed text-muted">{note}</span> : null}
                   </span>
@@ -227,7 +234,7 @@ export default function FriendPage() {
         <h2 className="mb-2 px-1 text-title font-semibold tracking-[-0.01em] text-text">Shared history</h2>
 
         {data.sharedGroups.length > 0 ? (
-          <div className="no-scrollbar -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 lg:-mx-8 lg:px-8">
+          <div className="no-scrollbar -mx-4 -mt-1 mb-2 flex gap-1.5 overflow-x-auto px-4 py-1 lg:-mx-8 lg:px-8">
             {[
               { id: "all", label: "Everything" },
               { id: "direct", label: "Just between you" },
@@ -266,7 +273,7 @@ export default function FriendPage() {
             {grouped.map(({ label, precise, entries }) => (
               <div key={label}>
                 <h3 className="mb-2 px-1 text-caption font-medium text-subtle">{label}</h3>
-                <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+                <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                   {entries.map((entry) =>
                     entry.kind === "expense" && entry.expense ? (
                       <li key={entry.expense.id}>
@@ -326,7 +333,7 @@ export default function FriendPage() {
               <p className="mb-2 px-1 text-caption font-medium text-subtle">
                 Shared groups
               </p>
-              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+              <ul className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
                 {data.sharedGroups.map((group) => (
                   <li key={group.id}>
                     <Link
@@ -340,7 +347,7 @@ export default function FriendPage() {
                       className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                     >
                       <span className="text-input">{group.emoji}</span>
-                      <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                      <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                         {group.name}
                       </span>
                       <ChevronRight className="size-4 shrink-0 text-subtle" />

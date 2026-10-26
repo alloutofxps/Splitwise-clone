@@ -480,6 +480,13 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--highlight), var(--shadow-sm);
 }
+
+/* A list drawn as one rounded card clips its rows to its corners, and
+   clipped the focus ring drawn outside them with it: on an expense row it
+   didn't show at all. Inside one, the ring sits just inside the edge. */
+.ring-inside :focus-visible {
+  outline-offset: -2px;
+}
 }
 
 /* --------------------------------------------------------------------------

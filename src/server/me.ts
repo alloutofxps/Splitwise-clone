@@ -6,7 +6,7 @@ import type {
   PersonDto,
   SharedLedgerDto,
 } from "@/lib/types";
-import type { Person } from "@prisma/client";
+import type { Person } from "@/generated/prisma/client";
 import {
   directBalanceSheets,
   directUnreadCount,

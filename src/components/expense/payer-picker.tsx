@@ -112,6 +112,7 @@ export function PayerPicker({
     >
       <div className="px-5 pb-6">
         <button
+          aria-pressed={multiple}
           onClick={() => {
             haptic();
             const next = !multiple;
@@ -153,13 +154,14 @@ export function PayerPicker({
                   )}
                 >
                   <button
+                    aria-pressed={selected}
                     onClick={() =>
                       multiple ? toggleMultiple(member.id) : pickSingle(member.id)
                     }
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
                     <Avatar person={member} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                    <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                       {member.id === meId ? "You" : member.displayName}
                     </span>
                     {!multiple && selected ? (

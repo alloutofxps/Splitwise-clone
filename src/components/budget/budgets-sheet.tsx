@@ -295,6 +295,8 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
         <div className="mt-4">
           <SectionLabel>Period</SectionLabel>
           <Segmented
+            kind="choice"
+            label="Period"
             value={period}
             onChange={setPeriod}
             options={[
@@ -321,7 +323,7 @@ function BudgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
                     onClick={() => setGroupId(groupId === group.id ? null : group.id)}
                   >
                     <span aria-hidden>{group.emoji}</span>
-                    {group.name}
+                    <bdi>{group.name}</bdi>
                   </Chip>
                 ))}
             </ChipRow>
@@ -368,7 +370,7 @@ function ChipRow({ children, wrap }: { children: React.ReactNode; wrap?: boolean
         "-mx-1 gap-1.5 px-1",
         wrap
           ? "flex max-h-[9.5rem] flex-wrap overflow-y-auto py-1"
-          : "flex overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          : "-mt-1 flex overflow-x-auto pt-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       )}
     >
       {children}

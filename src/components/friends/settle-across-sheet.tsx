@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/lib/client/api";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import type { PersonDto, SharedLedgerDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 /**
  * Squaring up with a person, across everywhere the two of you owe each other.
@@ -140,14 +141,14 @@ export function SettleAcrossSheet({
         <div className="flex items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-4">
           <div className="flex flex-col items-center gap-1.5">
             <Avatar person={payer} size="md" />
-            <span className="text-caption font-semibold text-text">
+            <span dir="auto" className="text-caption font-semibold text-text">
               {payer.id === me.id ? "You" : payer.displayName.split(" ")[0]}
             </span>
           </div>
           <ArrowRight className="size-5 shrink-0 text-subtle" />
           <div className="flex flex-col items-center gap-1.5">
             <Avatar person={payee} size="md" />
-            <span className="text-caption font-semibold text-text">
+            <span dir="auto" className="text-caption font-semibold text-text">
               {payee.id === me.id ? "You" : payee.displayName.split(" ")[0]}
             </span>
           </div>
@@ -203,14 +204,16 @@ export function SettleAcrossSheet({
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body-lg font-semibold text-text">
-                      {ledger.emoji ? `${ledger.emoji} ` : ""}
-                      {ledger.name ?? "Just between you"}
+                    <span className="flex min-w-0 items-baseline gap-1.5 text-body-lg font-semibold text-text">
+                      {ledger.emoji ? <span className="shrink-0">{ledger.emoji}</span> : null}
+                      <span dir="auto" className="min-w-0 truncate text-left">
+                        {ledger.name ?? "Just between you"}
+                      </span>
                     </span>
                     <span className="mt-0.5 block text-caption text-subtle">
                       {owedToMe
-                        ? `${person.displayName.split(" ")[0]} owes you here`
-                        : `You owe ${person.displayName.split(" ")[0]} here`}
+                        ? `${isolate(person.displayName.split(" ")[0])} owes you here`
+                        : `You owe ${isolate(person.displayName.split(" ")[0])} here`}
                     </span>
                   </span>
 
@@ -241,6 +244,7 @@ export function SettleAcrossSheet({
             {["Cash", "Bank transfer", "UPI", "PayPal", "Venmo", "Other"].map((option) => (
               <button
                 key={option}
+                aria-pressed={method === option}
                 onClick={() => {
                   haptic();
                   setMethod(method === option ? null : option);
@@ -259,6 +263,7 @@ export function SettleAcrossSheet({
         </div>
 
         <input
+          dir="auto"
           value={note}
           onChange={(event) => setNote(event.target.value.slice(0, 500))}
           placeholder="Add a note (optional)"

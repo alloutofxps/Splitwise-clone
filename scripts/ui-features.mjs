@@ -61,7 +61,7 @@ await page.getByRole("button", { name: "Group settings" }).click();
 await page.waitForTimeout(700);
 await page.getByRole("button", { name: /Usual split/ }).click();
 await page.waitForTimeout(700);
-await sheet().getByRole("tab", { name: "By percent" }).click();
+await sheet().getByRole("radio", { name: "By percent" }).click();
 await page.getByLabel("Percent for you").fill("60");
 await page.getByLabel("Percent for Jules").fill("40");
 if (process.env.SHOTS) {

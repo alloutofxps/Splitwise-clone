@@ -160,6 +160,7 @@ export function NewGroupSheet({
               {emoji}
             </button>
             <input
+              dir="auto"
               value={name}
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               placeholder="Lisbon 2026"
@@ -254,7 +255,7 @@ export function NewGroupSheet({
                         )}
                       >
                         <Avatar person={person} size="sm" />
-                        <span className="min-w-0 flex-1 truncate text-body-lg font-semibold text-text">
+                        <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">
                           {person.displayName}
                         </span>
                         {on ? <Check className="size-[18px] shrink-0 text-brand" strokeWidth={3} /> : null}
@@ -275,6 +276,7 @@ export function NewGroupSheet({
                     addName();
                   }
                 }}
+                dir="auto"
                 placeholder="Add a name"
                 enterKeyHint="done"
                 className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"

@@ -36,6 +36,7 @@ import { formatMoney } from "@/lib/money";
 import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
+import { isolate } from "@/lib/bidi";
 
 // Panels nobody sees until they tap: fetched once Home has loaded rather than
 // with it, in one file (components/ui/after-load.tsx).
@@ -89,6 +90,8 @@ export default function HomePage() {
 
   return (
     <div className="pt-[max(1rem,env(safe-area-inset-top))]">
+      {/* The wordmark stands in for this on screen; speech still needs it. */}
+      <h1 className="sr-only">Home</h1>
       <header className="mb-5 flex items-center justify-between gap-3">
         {/* On a desktop the sidebar already carries the logo. */}
         <Wordmark className="lg:invisible" />
@@ -203,7 +206,6 @@ export default function HomePage() {
  * currency, with the flow bar of who makes it up underneath.
  */
 function Balance({ data }: { data: DashboardPayload }) {
-  const router = useRouter();
   const currencies = Object.keys(data.totals);
   const nothingYet = data.groups.length === 0 && data.friends.length === 0;
 
@@ -250,7 +252,7 @@ function Balance({ data }: { data: DashboardPayload }) {
               className="mt-3"
               currency={line.currency}
               entries={line.entries}
-              onSelect={(personId) => router.push(`/friends/${personId}`)}
+              linkTo={(personId) => `/friends/${personId}`}
             />
           </div>
         ))}
@@ -268,14 +270,20 @@ function Balance({ data }: { data: DashboardPayload }) {
 
 function BalanceLine({ label, amount, currency }: { label: string; amount: bigint; currency: string }) {
   return (
-    <p className="flex flex-wrap items-baseline gap-x-2">
-      <span className="text-body text-muted">{label}</span>
-      <Amount
-        value={amount}
-        currency={currency}
-        arrow
-        className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
-      />
+    // The label always beside the figure, which shrinks to fit the rest of
+    // the line. It used to wrap under the label only when long, so the labels
+    // sat in two different places.
+    <p className="flex items-baseline gap-x-2">
+      <span className="shrink-0 text-body text-muted">{label}</span>
+      <span className="min-w-0 flex-1 [container-type:inline-size]">
+        <Amount
+          value={amount}
+          currency={currency}
+          arrow
+          fit="hero"
+          className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
+        />
+      </span>
     </p>
   );
 }
@@ -361,7 +369,7 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
         <LinkRow
           href={`/friends/${item.person.id}`}
           avatar={item.person}
-          title={`Pay ${item.person.displayName.split(" ")[0]} ${formatMoney(item.amount, item.currency)}`}
+          title={`Pay ${isolate(item.person.displayName.split(" ")[0])} ${formatMoney(item.amount, item.currency)}`}
           caption="Settle up"
           tone="owe"
         />
@@ -588,7 +596,8 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span data-travel="name" className="truncate text-title font-semibold tracking-[-0.01em] text-text">
+          {/* dir="auto": a right-to-left name is cut at its end, not its start. */}
+          <span data-travel="name" dir="auto" className="truncate text-left text-title font-semibold tracking-[-0.01em] text-text">
             {group.name}
           </span>
           {group.unreadCount > 0 ? (
@@ -603,7 +612,8 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
         ) : (
           <>
             <span data-travel="amount" className="block">
-              <Amount value={net} currency={group.currency} size="md" className="block" />
+              {/* A long figure steps down a size, so the group's name keeps room. */}
+              <Amount value={net} currency={group.currency} size={formatMoney(net < 0n ? -net : net, group.currency).length > 11 ? "sm" : "md"} className="block" />
             </span>
             <span className="block text-caption text-subtle">{net > 0n ? "you're owed" : "you owe"}</span>
           </>
@@ -622,9 +632,10 @@ function groupCaption(group: GroupSummaryDto, meId: string): string {
   const actor =
     last.actorPersonId === meId
       ? "You"
-      : (group.members.find((member) => member.id === last.actorPersonId)?.displayName.split(" ")[0] ??
-        "Someone");
-  const what = last.description ? ` ${last.description}` : "";
+      : isolate(
+          group.members.find((member) => member.id === last.actorPersonId)?.displayName.split(" ")[0] ?? "Someone",
+        );
+  const what = last.description ? ` ${isolate(last.description)}` : "";
   const verb =
     last.type === "expense.created"
       ? `added${what}`
@@ -695,7 +706,7 @@ function Section({
 /** A grouped inset list: one card, rows separated by hairlines. */
 function Rows({ children, as: Tag = "div" }: { children: React.ReactNode; as?: "div" | "ul" }) {
   return (
-    <Tag className="relative divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
+    <Tag className="ring-inside relative divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card">
       {children}
     </Tag>
   );
