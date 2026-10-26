@@ -602,7 +602,8 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
         ) : (
           <>
             <span data-travel="amount" className="block">
-              <Amount value={net} currency={group.currency} size="md" className="block" />
+              {/* A long figure steps down a size, so the group's name keeps room. */}
+              <Amount value={net} currency={group.currency} size={formatMoney(net < 0n ? -net : net, group.currency).length > 11 ? "sm" : "md"} className="block" />
             </span>
             <span className="block text-caption text-subtle">{net > 0n ? "you're owed" : "you owe"}</span>
           </>

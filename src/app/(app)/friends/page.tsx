@@ -336,6 +336,21 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
           <span className="block truncate text-caption text-subtle">
             {friend.person.isGhost ? "not on Divvy yet" : (where ?? "settled up")}
           </span>
+          {/* Balances in several currencies go under the name, one line that
+              wraps, rather than a tall column that squeezed the name to "Alex…". */}
+          {entries.length > 1 ? (
+            <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+              {entries.map(([currency, value]) => {
+                const amount = BigInt(value);
+                return (
+                  <span key={currency}>
+                    <Amount value={amount} currency={currency} size="sm" arrow />
+                    <span className="sr-only">{amount > 0n ? " owes you" : " you owe"}</span>
+                  </span>
+                );
+              })}
+            </span>
+          ) : null}
           {/* Their segment of the flow: how big this balance is next to the rest. */}
           {share > 0 ? (
             <span className="mt-1.5 block h-1 w-full max-w-[160px] overflow-hidden rounded-full bg-surface-2">
@@ -352,7 +367,7 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-right">
+        <span className={cn("shrink-0 text-right", entries.length > 1 && "hidden")}>
           {entries.length === 0 ? (
             <span className="text-caption text-subtle">settled up</span>
           ) : (

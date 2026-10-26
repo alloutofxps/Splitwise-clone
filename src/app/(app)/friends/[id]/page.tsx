@@ -167,7 +167,9 @@ export default function FriendPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2">
+        {/* Each label on one line; on a narrow phone the second button moves
+            under the first instead of both breaking in two. */}
+        <div className="mt-4 flex flex-wrap gap-2 [&>button]:whitespace-nowrap">
           {anythingOutstanding ? (
             <Button variant="primary" onClick={() => setSettleUp(true)}>
               Settle up

@@ -28,7 +28,6 @@ import { categoryById } from "@/lib/categories";
 import { groupByDay } from "@/lib/day-groups";
 import { abs, formatMoney } from "@/lib/money";
 import type { PersonDto } from "@/lib/types";
-import { isolate } from "@/lib/bidi";
 
 /**
  * The group ledger.
@@ -450,12 +449,11 @@ function ExpenseRowButton({
   const foreign = expense.settlementCurrency !== expense.currency;
   const payer = expense.payers[0] ? people.get(expense.payers[0].personId) : undefined;
 
-  const paidLabel =
-    expense.payers.length > 1
-      ? `${expense.payers.length} people paid`
-      : payer
-        ? `${payer.id === meId ? "You" : isolate(payer.displayName.split(" ")[0])} paid ${formatBare(expense.amount, expense.currency)}`
-        : "";
+  // Who paid, and what. The name gives way when space runs short, never the
+  // amount: a long name cut "Alexandra paid €9,999,…" mid-number.
+  const payerName =
+    expense.payers.length === 1 && payer ? (payer.id === meId ? "You" : payer.displayName.split(" ")[0]) : null;
+  const paidLabel = expense.payers.length > 1 ? `${expense.payers.length} people paid` : "";
 
   return (
     <button
@@ -496,10 +494,19 @@ function ExpenseRowButton({
             </span>
           ) : null}
         </span>
-        <span className="mt-0.5 flex items-center gap-1.5 truncate text-caption text-subtle">
-          {showGroup ? <span className="truncate">{showGroup} ·</span> : null}
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-subtle">
+          {showGroup ? <span className="min-w-0 truncate">{showGroup} ·</span> : null}
           {payer && expense.payers.length === 1 ? <PersonDot person={payer} /> : null}
-          <span className="truncate">{paidLabel}</span>
+          {payerName ? (
+            <span className="flex min-w-0 gap-1">
+              <span dir="auto" className="min-w-0 truncate text-left">
+                {payerName}
+              </span>
+              <span className="shrink-0">paid {formatBare(expense.amount, expense.currency)}</span>
+            </span>
+          ) : (
+            <span className="truncate">{paidLabel}</span>
+          )}
         </span>
       </span>
 
@@ -611,9 +618,12 @@ export function SettlementRow({
 
       <PairGlyph from={from} to={to} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body-lg font-medium text-text">
-          <bdi>{from?.id === meId ? "You" : (from?.displayName ?? "Someone")}</bdi> paid{" "}
-          <bdi>{to?.id === meId ? "you" : (to?.displayName ?? "someone")}</bdi>
+        {/* First names, each cut on its own, so "paid you" always shows: a long
+            name used to push it off the end and leave just the name. */}
+        <span className="flex min-w-0 gap-1 text-body-lg font-medium text-text">
+          <bdi className="min-w-0 truncate">{from?.id === meId ? "You" : (from?.displayName.split(" ")[0] ?? "Someone")}</bdi>
+          <span className="shrink-0">paid</span>
+          <bdi className="min-w-0 truncate">{to?.id === meId ? "you" : (to?.displayName.split(" ")[0] ?? "someone")}</bdi>
         </span>
         {settlement.note || settlement.method ? (
           <span className="mt-0.5 block truncate text-caption text-subtle">
