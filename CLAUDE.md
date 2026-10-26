@@ -1,7 +1,7 @@
 # Divvy: notes for Claude sessions
 
 Divvy is a Splitwise-style app: Next.js 15 (app router), React 19, TanStack
-Query 5, Motion (`motion/react`, formerly framer-motion), Tailwind v4, Prisma
+Query 5, Motion (`motion/react`, formerly framer-motion), Tailwind v4, Prisma 7
 on SQLite, hosted on Railway (deploys automatically from `main`).
 
 ## Read first, in this order
@@ -68,6 +68,32 @@ fetches `public/unsupported.js` only when needed). Don't add a
 - Animate UI and 21st.dev are reference only. Rebuild anything borrowed with
   Divvy's tokens and depth levels, with its licence and size checked first
   (MOTION-SPEC section 9).
+
+## Prisma 7
+
+- `prisma`, `@prisma/client` and `@prisma/adapter-better-sqlite3` are
+  pinned to the same exact version and always move together. npm's "latest"
+  `prisma` is a Prisma 8 test release, so never install `prisma@latest`,
+  even when Prisma's "update available" box suggests it.
+- The app's client doesn't read `.env`; Next.js and `prisma.config.ts` load
+  it. A plain `tsx` script that uses the database needs `DATABASE_URL` set,
+  or should run through `prisma db seed` as `npm run db:seed` does.
+- The client is generated into `src/generated/prisma` (not in git). Import
+  it from `@/generated/prisma/client`, never `@prisma/client`. `npm ci` and a
+  plain `npm install` generate it; `npm install <package>` doesn't, so run
+  `npx prisma generate` after that and after any schema change.
+- `prisma migrate dev` no longer generates the client or loads demo data.
+  Run `npx prisma generate`, then `npm run db:seed` if wanted.
+- Use the one client in `src/lib/db.ts`; don't create another. It keeps two
+  settings that protect real data:
+  - `timestampFormat: "unixepoch-ms"`: dates are stored as numbers, as
+    Prisma 6 stored them. Without it new dates are saved as text.
+  - `oneAtATime`: database work takes turns. Without it a save can run
+    inside another request's transaction and vanish if that one fails.
+- A relative `file:` address still means a file in `prisma/`
+  (`prisma/database-url.ts`), for the app and the CLI alike.
+- A worktree with a `node_modules` junction to a Prisma 6 checkout won't
+  build Prisma 7 code. Run `npm ci` in it instead.
 
 ## Checking work
 
