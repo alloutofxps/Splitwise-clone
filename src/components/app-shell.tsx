@@ -269,9 +269,11 @@ function nameWithCount(destination: Destination): string {
   return destination.badge ? `${destination.label}, ${destination.badge} new` : destination.label;
 }
 
+// Pinned by its left edge, where a single digit sits, so a wider "9+" grows
+// away from the icon instead of over it.
 function Dot({ count }: { count: number }) {
   return (
-    <span aria-hidden className="absolute -right-1.5 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-text px-1 text-micro font-semibold leading-[16px] text-inverse ring-2 ring-surface">
+    <span aria-hidden className="absolute left-3 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-text px-1 text-micro font-semibold leading-[16px] text-inverse ring-2 ring-surface">
       {count > 9 ? "9+" : count}
     </span>
   );
