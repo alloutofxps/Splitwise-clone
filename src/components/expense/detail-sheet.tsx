@@ -10,7 +10,7 @@ import { Avatar } from "../ui/avatar";
 import { Button, Skeleton, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { CategoryGlyph } from "./category-glyph";
-import { ExpenseComposer } from "./composer";
+import { ExpenseComposer } from "./composer-after-load";
 import {
   useAddComment,
   useComments,

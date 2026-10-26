@@ -26,9 +26,17 @@ import * as React from "react";
  * @param reset  clears the sheet's own state. Called during render, so it must
  *               only call this component's setters and must not do anything
  *               else - no fetching, no logging, no timers.
+ * @param options.whenMountedOpen  also reset when the sheet first appears
+ *               already open. Off by default, because most sheets start with
+ *               fresh state anyway; on for one whose code can arrive after it
+ *               was asked to open (the expense composer).
  */
-export function useResetOnOpen(open: boolean, reset: () => void): void {
-  const [wasOpen, setWasOpen] = React.useState(open);
+export function useResetOnOpen(
+  open: boolean,
+  reset: () => void,
+  options: { whenMountedOpen?: boolean } = {},
+): void {
+  const [wasOpen, setWasOpen] = React.useState(options.whenMountedOpen ? false : open);
 
   if (open !== wasOpen) {
     setWasOpen(open);

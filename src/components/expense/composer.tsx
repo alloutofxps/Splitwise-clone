@@ -130,6 +130,10 @@ export function ExpenseComposer({
   // returning to a backgrounded phone rebuilt the draft and wiped whatever was
   // half-typed into it. Keying on the open transition instead means the draft
   // is built once, when it should be.
+  //
+  // `whenMountedOpen`, because this composer's code is fetched after the page
+  // has loaded (composer-after-load.tsx): tapped before it arrives, it first
+  // appears already open, and must still build its draft.
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
     setFoundItems(null);
@@ -167,7 +171,7 @@ export function ExpenseComposer({
     // Open straight onto the receipts if that is what was shared, so the person
     // can see the photo actually arrived rather than having to go looking.
     setPanel(initialAttachments && initialAttachments.length > 0 ? "receipt" : null);
-  });
+  }, { whenMountedOpen: true });
 
   // Closed, or closing: nothing here needs rebuilding. A panel on its way out
   // keeps the content it left with, so this skips re-working the whole form
