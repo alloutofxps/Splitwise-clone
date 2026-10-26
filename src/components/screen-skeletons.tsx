@@ -196,12 +196,14 @@ export function TabBarFrame() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised shadow-bar pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <div className="mx-auto flex h-16 max-w-[560px] items-center justify-around px-1.5">
+        {/* A step above the bar, not the usual placeholder grey: at Night
+            that is the bar's own colour, and the dots vanished. */}
         {[0, 1].map((index) => (
-          <Skeleton key={index} className="size-6 rounded-full" />
+          <span key={index} className="size-6 rounded-full bg-surface-3" />
         ))}
         <span className="size-12 rounded-full bg-brand shadow-float" />
         {[2, 3].map((index) => (
-          <Skeleton key={index} className="size-6 rounded-full" />
+          <span key={index} className="size-6 rounded-full bg-surface-3" />
         ))}
       </div>
     </div>

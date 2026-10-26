@@ -566,15 +566,18 @@ function playPaid(root: SVGGElement): Animation[] {
       }),
     );
   }
+  // Eased in two halves, not as a whole: eased as a whole, a spark was at full
+  // strength for 11ms and spent the rest fading, which read as grey dots at
+  // Night. Now it bursts out bright, then drifts, shrinks and fades.
   root.querySelectorAll<SVGCircleElement>("[data-spark]").forEach((spark, index) => {
     animations.push(
       spark.animate(
         [
-          { transform: `translateY(-${DOT + 4}px) scale(1)`, opacity: 0 },
-          { transform: `translateY(-${DOT + 8}px) scale(1)`, opacity: 1, offset: 0.25 },
+          { transform: `translateY(-${DOT + 4}px) scale(1)`, opacity: 0, easing: enter },
+          { transform: `translateY(-${DOT + 12}px) scale(1)`, opacity: 1, offset: 0.5, easing: "cubic-bezier(0.4, 0, 1, 1)" },
           { transform: `translateY(-${DOT + 16}px) scale(0.4)`, opacity: 0 },
         ],
-        { duration: 520, delay: 220 + (index % 2) * 50, easing: enter, fill: "both" },
+        { duration: 520, delay: 220 + (index % 2) * 50, fill: "both" },
       ),
     );
   });
