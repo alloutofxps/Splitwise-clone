@@ -848,3 +848,21 @@ here is #72's code, without #71):
 | Home to a group | 3.9% | 3.5% |
 | First run | 3.3% | 3.3% |
 | Adding an expense | 4.1% (after Save 1.3%) | 3.6% (after Save 1.3%) |
+
+**Measured again on 26 October**, after 33 commits had landed on main
+(Prisma 7, Next.js 15.5.28, the accessibility and layout work), against main
+at `adbb05a`, built in the same worktree with its own installed packages:
+
+| | Main | Change | Difference |
+|---|---|---|---|
+| Home, scripts to show it | 295.3 KB (868.3 uncompressed) | 287.9 KB (846.8) | -7.4 KB |
+| Home, after load | 56.4 KB | 67.3 KB | +10.9 KB |
+| A group, scripts to show it | 302.0 KB (878.9 uncompressed) | 301.1 KB (878.9) | none (the wobble) |
+
+Smoothness, same method: opening the app 1.9, 4.2, 4.2% on main and 4.2,
+3.7, 4.2% with the change (median 4.2% both); Home to a group 3.5, 3.1, 2.8%
+on main and 1.8, 2.2, 1.9% with the change (median 3.1% and 1.9%). The Home
+panel check passes on both; the very first tap after a fresh start can take
+about 0.8s on either (887ms on main), then New group opens in 60 to 110ms and
+the others in 30 to 55ms. ui-check (93), ui-features (32) and pwa-check (36)
+pass.
