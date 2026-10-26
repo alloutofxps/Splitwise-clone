@@ -815,3 +815,54 @@ and Panels):
 
 No change beyond run-to-run spread (a payment's after-Save ran 2.0 to 4.0% on
 main and 2.0 to 4.7% with the change).
+
+## 24. Home's panels after load (22 October 2026)
+
+CODE-HEALTH-AUDIT item 6. Before: main at `bb30c9b` (with #71's panel focus
+work, which added about 0.4 KB to every screen). After: the same plus the
+change. Measured as in section 19.
+
+| | Before | After | Change |
+|---|---|---|---|
+| Home, scripts to show it | 293.5 KB (862.5 uncompressed) | 286.3 KB (841.1) | -7.2 KB |
+| Home, after load | 55.1 KB | 65.9 KB | +10.8 KB |
+| A group, scripts to show it | 300.1 KB (872.0 uncompressed) | 299.2 KB (872.0) | none: same code, the 0.9 KB is the wobble in section 22 |
+
+New group, Join (with the code scanner) and Import from Splitwise (with its
+file reader) are one file fetched once Home has loaded (7.0 KB). Friends also
+uses Join, so the build keeps Join's code in a file both can share (3.8 KB);
+together a cold visit to Home pays 3.6 KB more in total, all after load.
+
+Checked in the browser (`perf-runs/2026-10-22-home-panels/home-panel-check.mjs`,
+a new account, whose Home offers all three), before and after side by side:
+each panel opens 26 to 92ms after the tap on both, once Home has loaded and
+when tapped before. ui-check (81), ui-features (32) and pwa-check (36) pass.
+
+Smoothness (`motion-record.mjs` timing, CPU slowed 4x, before and after served
+side by side, three alternating runs, median late frames at 60Hz; the "before"
+here is #72's code, without #71):
+
+| Flow | Before | Change |
+|---|---|---|
+| Opening the app | 3.1% | 3.1% |
+| Home to a group | 3.9% | 3.5% |
+| First run | 3.3% | 3.3% |
+| Adding an expense | 4.1% (after Save 1.3%) | 3.6% (after Save 1.3%) |
+
+**Measured again on 26 October**, after 33 commits had landed on main
+(Prisma 7, Next.js 15.5.28, the accessibility and layout work), against main
+at `adbb05a`, built in the same worktree with its own installed packages:
+
+| | Main | Change | Difference |
+|---|---|---|---|
+| Home, scripts to show it | 295.3 KB (868.3 uncompressed) | 287.9 KB (846.8) | -7.4 KB |
+| Home, after load | 56.4 KB | 67.3 KB | +10.9 KB |
+| A group, scripts to show it | 302.0 KB (878.9 uncompressed) | 301.1 KB (878.9) | none (the wobble) |
+
+Smoothness, same method: opening the app 1.9, 4.2, 4.2% on main and 4.2,
+3.7, 4.2% with the change (median 4.2% both); Home to a group 3.5, 3.1, 2.8%
+on main and 1.8, 2.2, 1.9% with the change (median 3.1% and 1.9%). The Home
+panel check passes on both; the very first tap after a fresh start can take
+about 0.8s on either (887ms on main), then New group opens in 60 to 110ms and
+the others in 30 to 55ms. ui-check (93), ui-features (32) and pwa-check (36)
+pass.

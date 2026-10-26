@@ -237,6 +237,8 @@ already have an account: a group about 312.6 KB, Home about 292.6 KB
 (PERF-BASELINE 21). A group's panels (Settings, Invite, Settle up) and the
 Insights tab now come after load too, through one shared helper
 (`components/ui/after-load.tsx`): a group about 299.0 KB (PERF-BASELINE 23).
+Home's New group, Join and Import panels the same way: Home about 285.8 KB
+(PERF-BASELINE 24).
 Home also fetches the group screen's code (44 KB) once it
 has loaded, so opening a group doesn't wait; that doesn't delay Home and
 sits outside the limit.

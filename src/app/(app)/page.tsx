@@ -27,9 +27,7 @@ import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { FlowDoodle } from "@/components/ui/doodle";
 import { Skeleton, cn } from "@/components/ui/primitives";
-import { NewGroupSheet } from "@/components/group/new-group-sheet";
-import { JoinSheet } from "@/components/group/join-sheet";
-import { ImportSheet } from "@/components/group/import-sheet";
+import { lazyAfterLoad } from "@/components/ui/after-load";
 import { Wordmark } from "@/components/app-shell";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { GroupMark } from "@/components/group/group-mark";
@@ -39,6 +37,18 @@ import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
+
+// Panels nobody sees until they tap: fetched once Home has loaded rather than
+// with it, in one file (components/ui/after-load.tsx).
+const NewGroupSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "home-panels" */ "@/components/group/new-group-sheet").then((m) => m.NewGroupSheet),
+);
+const JoinSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "home-panels" */ "@/components/group/join-sheet").then((m) => m.JoinSheet),
+);
+const ImportSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "home-panels" */ "@/components/group/import-sheet").then((m) => m.ImportSheet),
+);
 
 /**
  * Home: what needs you (DESIGN-PLAN 3.2).
