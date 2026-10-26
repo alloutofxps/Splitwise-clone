@@ -33,7 +33,7 @@ import { log } from "@/lib/log";
 import { daysInMonth, fromWallClock, wallClock } from "@/lib/zoned";
 import { createExpense, recordActivity } from "./write";
 import type { RecurrenceFrequency } from "@/lib/types";
-import type { Recurrence } from "@prisma/client";
+import type { Recurrence } from "@/generated/prisma/client";
 
 /** Occurrences one recurrence may post in a single run; the rest wait a minute. */
 const MAX_PER_RUN = 31;

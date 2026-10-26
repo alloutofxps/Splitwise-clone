@@ -1,4 +1,5 @@
 import { defineConfig } from "prisma/config";
+import { databaseFile } from "./prisma/database-url";
 
 /**
  * How the Prisma CLI finds the schema, the migrations and the seed.
@@ -24,4 +25,14 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
+  // Not Prisma's `env()`, which throws when the variable is unset: the Docker
+  // image runs `prisma generate` before any database exists, and generating
+  // needs no address. Commands that do need one fail on the empty value.
+  datasource: { url: cliAddress(process.env.DATABASE_URL) },
 });
+
+/** The same file the app opens (see `databaseFile`). */
+function cliAddress(url: string | undefined): string {
+  if (!url) return "";
+  return url.startsWith("file:") ? `file:${databaseFile(url)}` : url;
+}
