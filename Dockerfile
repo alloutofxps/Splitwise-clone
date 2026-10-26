@@ -17,7 +17,7 @@ WORKDIR /app
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci
 
@@ -84,7 +84,9 @@ RUN apt-get update \
  && apt-get purge -y curl && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json ./
+# `prisma.config.ts` says where the schema and migrations are; the CLI reads it
+# both here and when the entrypoint runs `migrate deploy`.
+COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 # `--omit=dev` and then the postinstall regenerates the client here, so the
 # engine matches this image rather than whatever built it.

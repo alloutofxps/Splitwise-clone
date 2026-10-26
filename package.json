@@ -24,9 +24,6 @@
     "pwa:check": "node scripts/pwa-check.mjs",
     "ui:check": "node scripts/ui-check.mjs"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@number-flow/react": "0.6.2",
     "@prisma/client": "6.19.3",
