@@ -866,3 +866,53 @@ panel check passes on both; the very first tap after a fresh start can take
 about 0.8s on either (887ms on main), then New group opens in 60 to 110ms and
 the others in 30 to 55ms. ui-check (93), ui-features (32) and pwa-check (36)
 pass.
+
+## 25. The Add expense panel after load (26 October 2026)
+
+CODE-HEALTH-AUDIT item 5. Before: main at `14602f0`. After: the same plus
+the change. Built one after the other in the same worktree (its own
+installed packages), three runs each, identical every run.
+
+| | Before | After | Change |
+|---|---|---|---|
+| Home, scripts to show it | 287.9 KB (846.8 uncompressed) | 267.2 KB (778.6) | -20.7 KB |
+| Home, after load | 67.3 KB | 92.5 KB | +25.2 KB |
+| A group, scripts to show it | 301.1 KB (878.9 uncompressed) | 286.5 KB (823.2) | -14.6 KB |
+| A group, after load | 33.3 KB | 49.9 KB | +16.6 KB |
+
+The composer (split editor, receipt picker, number pad, pickers) is fetched
+once the page has loaded, for both places that hold one: the app gate (+, a
+shared receipt) and the expense details (Edit). It shares one file with a
+group's panels: as two files each carried a copy of the code they share, 1.2
+KB more. Home gains more than the composer itself because Home's own panels
+(section 24) share code with it that now leaves start-up too. In total a cold
+visit pays 4.5 KB more on Home and 2.0 KB more on a group, all after load.
+
+The composer builds its form as it opens. Arriving after a tap, it first
+appears already open, so `useResetOnOpen` gained a `whenMountedOpen` option,
+used by the composer alone; every other way in mounts it closed first, as
+before (the empty "Add an expense" panel #50 fixed).
+
+Checked in the browser, main and the change side by side
+(`perf-runs/2026-10-26-composer/`): + on Home and in a group opens the form,
+for that group, 45 to 92ms after the tap, once the page has loaded and when
+tapped before (the case where it arrives late); Edit from a row's menu twice,
+the expense's own Edit and saving a change fill and save the form exactly as
+on main (`edit-check.mjs` from section 16), no page errors; a shared receipt's
+text becomes the description (pwa-check). Home's and a group's panel checks
+(sections 23 and 24) pass. ui-check (93), ui-features (32) and pwa-check (36)
+pass.
+
+Smoothness (`motion-record.mjs` timing, CPU slowed 4x, side by side,
+alternating, five runs; Panels three; median late frames at 60Hz):
+
+| Flow | Main | Change |
+|---|---|---|
+| Opening the app | 4.2% (1.8 to 4.2) | 3.7% (1.3 to 5.2) |
+| Adding an expense | 4.0% (after Save 2.7%) | 4.0% (after Save 3.3%) |
+| Paying a debt off | 3.2% (after Save 2.7%) | 3.6% (after Save 3.3%) |
+| Panels | 3.0% | 3.0% |
+
+No change the runs can separate: each side's spread covers the other's median
+(after Save, adding an expense ran 1.3 to 4.7% on main and 2.7 to 4.0% with
+the change).
