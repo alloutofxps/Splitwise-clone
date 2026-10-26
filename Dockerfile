@@ -1,8 +1,9 @@
 # Divvy in one container.
 #
 # The app is a Next.js server plus a single SQLite file, so the image needs to
-# do exactly two things a plain `next start` does not: generate a Prisma client
-# for *this* platform, and apply migrations at boot rather than at build time.
+# do exactly two things a plain `next start` does not: install the SQLite
+# driver built for *this* platform, and apply migrations at boot rather than
+# at build time.
 #
 # Boot, not build, because the database lives on a mounted volume that does not
 # exist while the image is being made. Running `migrate deploy` in the build
@@ -12,12 +13,12 @@
 # --- dependencies ----------------------------------------------------------
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-# Prisma's engines are linked against OpenSSL; without it `prisma generate`
-# picks the wrong binary target and the failure only shows up at query time.
+# Prisma 7's migration engine is still a native program linked against
+# OpenSSL, and Prisma's system requirements list it.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci
 
@@ -84,10 +85,12 @@ RUN apt-get update \
  && apt-get purge -y curl && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json ./
+# `prisma.config.ts` says where the schema and migrations are; the CLI reads it
+# both here and when the entrypoint runs `migrate deploy`.
+COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-# `--omit=dev` and then the postinstall regenerates the client here, so the
-# engine matches this image rather than whatever built it.
+# `--omit=dev`, installed here rather than copied from the build stage, so
+# better-sqlite3's built-in program and the migration engine match this image.
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/.next ./.next
