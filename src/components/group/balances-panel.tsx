@@ -68,6 +68,7 @@ export function BalancesPanel({
   const [simplified, setSimplified] = useMirror(group.simplifyDebts);
 
   const edges = simplified ? group.balances.simplified : group.balances.pairwise;
+  const owing = group.balances.pairwise.length > 0 || group.balances.simplified.length > 0 || Boolean(travel);
 
   const members = group.members;
   const netById = group.balances.net;
@@ -113,13 +114,15 @@ export function BalancesPanel({
             />
           </div>
         ) : (
+          // The headline above already says "Everyone is settled up".
           <div className="flex flex-col items-center px-6 py-8 text-center">
             <FlowDoodle className="mb-3" play="settled" />
-            <p className="text-title font-semibold text-text">Everyone is settled up</p>
-            <p className="mt-1 text-body text-muted">Nobody in this group owes anything.</p>
+            <p className="text-body text-muted">Nobody in this group owes anything.</p>
           </div>
         )}
 
+        {/* With nothing owed there is nothing to simplify. */}
+        {owing ? (
         <div className="flex items-center gap-3 border-t border-line px-4 py-3">
           <span className="min-w-0 flex-1">
             <span className="block text-body font-medium text-text">Simplify</span>
@@ -140,6 +143,7 @@ export function BalancesPanel({
             }}
           />
         </div>
+        ) : null}
       </section>
 
       {/* Suggested payments ------------------------------------------------ */}

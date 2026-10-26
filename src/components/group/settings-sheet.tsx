@@ -200,7 +200,11 @@ export function GroupSettingsSheet({
                 Simplify debts
               </span>
               <span className="mt-0.5 block text-caption leading-relaxed text-muted">
-                {group.simplifyDebts ? "On" : "Off"}. Change it on the Balances tab.
+                {group.simplifyDebts ? "On" : "Off"}.{" "}
+                {/* The switch only shows on Balances while someone owes something. */}
+                {group.balances.pairwise.length > 0 || group.balances.simplified.length > 0
+                  ? "Change it on the Balances tab."
+                  : "You can change it on the Balances tab once someone owes something."}
               </span>
             </span>
             <ChevronRight className="size-[18px] shrink-0 text-subtle" />
