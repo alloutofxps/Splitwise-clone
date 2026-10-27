@@ -46,7 +46,6 @@
   --brand-hover: #2e2d2a;
   --brand-soft: #f3f2ef;
   --brand-soft-text: #141412;
-  --brand-ring: rgb(20 20 18 / 0.22);
 
   /*
    * Money. Calm rather than traffic-light, and never the only signal: every
@@ -69,8 +68,6 @@
   --warning-soft: #fdf3e2;
 
   --chart-bar: #141412;
-  --chart-positive: #0f7a5c;
-  --chart-negative: #c2410c;
   --chart-grid: #e7e5e1;
   --chart-track: #f3f2ef;
 
@@ -147,7 +144,6 @@
   --brand-hover: #dcdad5;
   --brand-soft: #1c1c1a;
   --brand-soft-text: #f3f2ee;
-  --brand-ring: rgb(243 242 238 / 0.28);
 
   --positive: #4cc9a0;
   --positive-soft: #10261f;
@@ -165,8 +161,6 @@
   --warning-soft: #2a1f0d;
 
   --chart-bar: #f3f2ee;
-  --chart-positive: #4cc9a0;
-  --chart-negative: #f08a5d;
   --chart-grid: #2a2926;
   --chart-track: #1c1c1a;
 
@@ -278,8 +272,6 @@
   --color-warning-soft: var(--warning-soft);
 
   --color-chart-bar: var(--chart-bar);
-  --color-chart-positive: var(--chart-positive);
-  --color-chart-negative: var(--chart-negative);
   --color-chart-grid: var(--chart-grid);
   --color-chart-track: var(--chart-track);
 
@@ -386,8 +378,7 @@
 
   button,
   [role="button"],
-  a,
-  .no-select {
+  a {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
@@ -444,43 +435,18 @@
    Utilities
    -------------------------------------------------------------------------- */
 
-/* Home indicator and notch. `env()` is 0 everywhere it does not apply. */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.pt-safe {
-  padding-top: env(safe-area-inset-top);
-}
-.mb-safe {
-  margin-bottom: env(safe-area-inset-bottom);
-}
+/* The home indicator's height. `env()` is 0 everywhere it does not apply. */
 .h-safe-bottom {
   height: env(safe-area-inset-bottom);
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 /* --------------------------------------------------------------------------
    Surfaces
    -------------------------------------------------------------------------- */
 
-/* In the components layer, so a utility on one element can still override a
-   piece of these (a rounded-full button that is also a surface-card). */
+/* In the components layer, so a utility on one element can still override
+   it. */
 @layer components {
-/* A card that catches light: lit top edge, a hairline that is barely there,
-   and a soft two-layer shadow. */
-.surface-card {
-  background: var(--surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--highlight), var(--shadow-sm);
-}
-
 /* A list drawn as one rounded card clips its rows to its corners, and
    clipped the focus ring drawn outside them with it: on an expense row it
    didn't show at all. Inside one, the ring sits just inside the edge. */
@@ -496,12 +462,12 @@
 /*
  * Timing (MOTION-SPEC 3), from Material 3. Arrivals start fast and settle,
  * departures start gently and leave fast, things that stay on screen change
- * on the standard curve. The same values live in components/ui/motion.tsx.
+ * on the standard curve. The same values live in components/ui/motion.tsx,
+ * which is the only place the leaving curve is used.
  */
 :root {
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
-  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
 }
 
 /*
