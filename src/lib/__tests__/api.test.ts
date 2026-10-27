@@ -60,10 +60,10 @@ describe("exchangeRateInput", () => {
     expect(exchangeRateInput.safeParse("0.000").success).toBe(false);
   });
 
-  it("refuses precision that would round to zero downstream", () => {
-    // `convert` truncates at twelve fraction digits.
-    expect(exchangeRateInput.safeParse("0.0000000000001").success).toBe(false);
-    expect(exchangeRateInput.safeParse("0.000000000001").success).toBe(true);
+  it("takes up to 24 decimal places, which `convert` reads in full", () => {
+    // An exact rate for a very large payment needs more than 12 (exactRate).
+    expect(exchangeRateInput.safeParse(`0.${"0".repeat(23)}1`).success).toBe(true);
+    expect(exchangeRateInput.safeParse(`0.${"0".repeat(24)}1`).success).toBe(false);
   });
 
   it("refuses negatives, scientific notation, and anything else", () => {
