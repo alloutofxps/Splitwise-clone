@@ -56,6 +56,9 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     return json({ expense: expenseDto(expense, session.person.id) });
   }
 
+  // Placeholders on the expense who were removed from the group come back with it.
+  let rejoining: string[] = [];
+
   // A group that has since been deleted takes its expenses with it, and putting
   // one back into nothing would produce a row no screen can reach.
   if (expense.groupId) {
@@ -74,15 +77,28 @@ export const POST = route(async (_request: Request, { params }: Params) => {
         ...expense.splits.filter((s) => s.amount !== 0n).map((s) => s.personId),
       ]),
     ];
-    const members = await prisma.membership.findMany({
-      where: { groupId: expense.groupId, personId: { in: involved }, leftAt: null },
-      select: { personId: true },
+    const memberships = await prisma.membership.findMany({
+      where: { groupId: expense.groupId, personId: { in: involved } },
+      select: { id: true, personId: true, leftAt: true, person: { select: { isGhost: true, deletedAt: true } } },
     });
-    if (members.length !== involved.length) {
-      throw new ValidationError(
-        "Someone on this expense has left the group. Add them back first.",
-      );
+    const gone = involved.filter(
+      (personId) => !memberships.some((m) => m.personId === personId && !m.leftAt),
+    );
+    /*
+     * A placeholder is different. Nobody settled up to leave: somebody tidied
+     * the name away, and a placeholder can't be added back by hand. Restoring
+     * an expense they are on brings the name back with it, so the expense
+     * returns whole instead of being stuck in the bin for good.
+     */
+    for (const personId of gone) {
+      const membership = memberships.find((m) => m.personId === personId);
+      if (!membership?.person.isGhost || membership.person.deletedAt) {
+        throw new ValidationError(
+          "Someone on this expense has left the group. Add them back first.",
+        );
+      }
     }
+    rejoining = memberships.filter((m) => gone.includes(m.personId)).map((m) => m.id);
   }
 
   const [restored] = await prisma.$transaction([
@@ -91,6 +107,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       data: { deletedAt: null },
       include: EXPENSE_INCLUDE,
     }),
+    prisma.membership.updateMany({ where: { id: { in: rejoining } }, data: { leftAt: null } }),
     bumpLedgerQuery([expense.groupId]),
   ]);
 

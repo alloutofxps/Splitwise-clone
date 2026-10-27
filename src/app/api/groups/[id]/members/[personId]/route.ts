@@ -41,13 +41,32 @@ export const DELETE = route(async (_request: Request, { params }: Params) => {
     );
   }
 
-  const involvement = await prisma.expense.count({
-    where: {
-      groupId: id,
-      deletedAt: null,
-      OR: [{ payers: { some: { personId } } }, { splits: { some: { personId } } }],
-    },
-  });
+  /*
+   * Any history at all, binned expenses and payments included, means they are
+   * marked as left rather than deleted.
+   *
+   * This used to count only expenses that were not in the bin. A placeholder
+   * whose only expense had been binned was then deleted outright, and the
+   * database's cascade took their shares with them: restoring the expense
+   * brought back a bill whose shares no longer added up, and the money they
+   * owed was gone without a trace.
+   */
+  const [expenses, payments] = await Promise.all([
+    prisma.expense.count({
+      where: {
+        groupId: id,
+        OR: [
+          { payers: { some: { personId } } },
+          { splits: { some: { personId } } },
+          { items: { some: { shares: { some: { personId } } } } },
+        ],
+      },
+    }),
+    prisma.settlement.count({
+      where: { groupId: id, OR: [{ fromPersonId: personId }, { toPersonId: personId }] },
+    }),
+  ]);
+  const involvement = expenses + payments;
 
   if (involvement > 0) {
     await prisma.membership.update({

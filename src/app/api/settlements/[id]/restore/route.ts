@@ -56,21 +56,31 @@ export const POST = route(async (_request: Request, { params }: Params) => {
   // who has since left reopens a balance nobody in the group can see to fix.
   // They also have to be two people. Merging a placeholder can leave a deleted
   // payment from someone to themselves, and that one must stay deleted.
+  // A removed placeholder comes back with it instead, as with expenses
+  // (expenses/[id]/restore), since nobody can add one back by hand.
+  const rejoining = new Set<string>();
   const inGroups = siblings.filter((row) => row.groupId !== null);
   if (inGroups.length > 0) {
-    const present = await prisma.membership.findMany({
+    const memberships = await prisma.membership.findMany({
       where: {
         groupId: { in: inGroups.map((row) => row.groupId!) },
         personId: { in: inGroups.flatMap((row) => [row.fromPersonId, row.toPersonId]) },
-        leftAt: null,
       },
-      select: { groupId: true, personId: true },
+      select: { id: true, groupId: true, personId: true, leftAt: true, person: { select: { isGhost: true, deletedAt: true } } },
     });
-    const here = new Set(present.map((row) => `${row.groupId} ${row.personId}`));
+    const byKey = new Map(memberships.map((m) => [`${m.groupId} ${m.personId}`, m]));
+    const canBeHere = (groupId: string, personId: string) => {
+      const m = byKey.get(`${groupId} ${personId}`);
+      if (!m) return false;
+      if (!m.leftAt) return true;
+      if (!m.person.isGhost || m.person.deletedAt) return false;
+      rejoining.add(m.id);
+      return true;
+    };
     const bothHere = (row: (typeof inGroups)[number]) =>
       row.fromPersonId !== row.toPersonId &&
-      here.has(`${row.groupId} ${row.fromPersonId}`) &&
-      here.has(`${row.groupId} ${row.toPersonId}`);
+      canBeHere(row.groupId!, row.fromPersonId) &&
+      canBeHere(row.groupId!, row.toPersonId);
     if (!inGroups.every(bothHere)) {
       throw new ValidationError(
         "Someone on this payment has left the group. Add them back first.",
@@ -83,6 +93,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       where: { id: { in: siblings.map((row) => row.id) } },
       data: { deletedAt: null },
     }),
+    prisma.membership.updateMany({ where: { id: { in: [...rejoining] } }, data: { leftAt: null } }),
     bumpLedgerQuery(siblings.map((row) => row.groupId)),
   ]);
 
