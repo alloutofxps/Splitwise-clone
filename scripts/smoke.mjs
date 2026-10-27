@@ -2136,6 +2136,33 @@ async function auditRegressions() {
   const aliceWithDebts = await alice.call("/api/identity/account", { method: "DELETE", allowError: true });
   check("M16: an account with open balances cannot be deleted", aliceWithDebts.status === 422, String(aliceWithDebts.status));
 
+  // Removing a placeholder whose only expense is in the bin keeps their
+  // share, so restoring the expense still adds up.
+  const binTrip = (await alice.call("/api/groups", { method: "POST", body: { name: "Bin trip", currency: "EUR", placeholderNames: ["Pip"] } })).body.group;
+  const pipId = (await alice.call(`/api/groups/${binTrip.id}`)).body.group.members.find((m) => m.displayName === "Pip").id;
+  const binned = (
+    await alice.call("/api/expenses", {
+      method: "POST",
+      body: {
+        groupId: binTrip.id, description: "Ferry", amount: "1000", currency: "EUR", splitMode: "EQUAL",
+        payers: [{ personId: aliceMe.id, amount: "1000" }],
+        splits: [{ personId: aliceMe.id, amount: "500" }, { personId: pipId, amount: "500" }],
+      },
+    })
+  ).body.expense;
+  await alice.call(`/api/expenses/${binned.id}`, { method: "DELETE" });
+  const pipRemoved = await alice.call(`/api/groups/${binTrip.id}/members/${pipId}`, { method: "DELETE", allowError: true });
+  await alice.call(`/api/expenses/${binned.id}/restore`, { method: "POST" });
+  const restoredFerry = (await alice.call(`/api/expenses/${binned.id}`)).body.expense;
+  const ferryShares = restoredFerry.splits.reduce((total, s) => total + BigInt(s.amount), 0n);
+  check(
+    "a placeholder removed while their expense was binned keeps their share",
+    pipRemoved.status === 200 && ferryShares === 1000n,
+    `remove ${pipRemoved.status}, shares add up to ${ferryShares} of 1000`,
+  );
+  const binBalances = (await alice.call(`/api/groups/${binTrip.id}`)).body.group.balances.net;
+  check("restoring it brings back what they owe", binBalances[pipId] === "-500", JSON.stringify(binBalances));
+
   // M14, M13 - health and security headers.
   const health = await fetch(`${BASE}/api/health`);
   check("M14: the health check answers", health.status === 200, String(health.status));
