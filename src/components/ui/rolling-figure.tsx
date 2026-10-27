@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useReducedMotion } from "motion/react";
-import { currencyFormat, formatMoney, toDecimalString } from "@/lib/money";
+import { abs, currencyFormat, formatMoney, toDecimalString } from "@/lib/money";
 import { COUNT_MS, EASE_COUNT } from "./motion";
 import { untilCount, useStageWhile } from "./stage";
 
@@ -103,8 +103,8 @@ export function RollingFigure({
     restRef.current?.(shown);
   }, [shown, rolls]);
 
-  const abs = shown < 0n ? -shown : shown;
-  const text = formatMoney(abs, currency);
+  const size = abs(shown);
+  const text = formatMoney(size, currency);
   if (!flowReady || !format) return <span data-figure-text={text}>{text}</span>;
   return (
     // NumberFlow draws its digits inside its own shadow root, out of the
@@ -119,7 +119,7 @@ export function RollingFigure({
       <NumberFlow
         // A number, as formatMoney itself uses: exact for any real balance,
         // and what NumberFlow compares to decide which way the digits spin.
-        value={Number(toDecimalString(abs, currency))}
+        value={Number(toDecimalString(size, currency))}
         locales="en-US"
         format={format}
         transformTiming={TIMING}

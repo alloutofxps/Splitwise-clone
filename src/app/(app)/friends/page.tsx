@@ -9,7 +9,7 @@ import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primit
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/client/api";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import { JoinSheet } from "@/components/group/join-sheet";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { useAddFriend, useDashboard, usePrefetch } from "@/lib/client/queries";
@@ -100,7 +100,7 @@ export default function FriendsPage() {
     for (const [currency, value] of Object.entries(friend.net)) {
       const amount = BigInt(value);
       const bucket = amount > 0n ? owed : owes;
-      bucket.set(currency, (bucket.get(currency) ?? 0n) + (amount > 0n ? amount : -amount));
+      bucket.set(currency, (bucket.get(currency) ?? 0n) + abs(amount));
     }
   }
   const list = (map: Map<string, bigint>) => [...map].map(([currency, value]) => formatMoney(value, currency)).join(", ");
@@ -109,7 +109,7 @@ export default function FriendsPage() {
   // the screen, so the eye finds the large debts first.
   const largest = data.friends.reduce((max, friend) => {
     for (const value of Object.values(friend.net)) {
-      const amount = BigInt(value) < 0n ? -BigInt(value) : BigInt(value);
+      const amount = abs(BigInt(value));
       if (amount > max) max = amount;
     }
     return max;
@@ -304,9 +304,9 @@ function FriendRow({ friend, largest, offerAdd }: { friend: FriendDto; largest: 
   const hue = usePersonHue(friend.person);
   const biggest = entries.reduce((max, [, value]) => {
     const amount = BigInt(value);
-    return (amount < 0n ? -amount : amount) > (max < 0n ? -max : max) ? amount : max;
+    return abs(amount) > abs(max) ? amount : max;
   }, 0n);
-  const share = largest > 0n ? Number(biggest < 0n ? -biggest : biggest) / Number(largest) : 0;
+  const share = largest > 0n ? Number(abs(biggest)) / Number(largest) : 0;
   const where =
     friend.ledgers.length > 1
       ? `In ${friend.ledgers.length} places`

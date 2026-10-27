@@ -3,6 +3,7 @@ import { currencyCode, dateInput, json, minorUnits, readBody, route, text } from
 import { ConflictError, requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { newId } from "@/lib/ids";
+import { abs } from "@/lib/money";
 import { areFriends } from "@/server/access";
 import { settlementDto, sharedLedgers } from "@/server/read";
 import { bumpLedgerQuery } from "@/server/ledger";
@@ -111,7 +112,7 @@ export const POST = route(async (request: Request) => {
       }
 
       const outstanding = BigInt(ledger.net);
-      const magnitude = outstanding < 0n ? -outstanding : outstanding;
+      const magnitude = abs(outstanding);
       if (row.amount > magnitude) {
         throw new ValidationError(
           "That's more than is owed in one of these. Close this and open it again to see the latest.",

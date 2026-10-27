@@ -308,7 +308,7 @@ export function formatMoney(
   const info = currency(code);
   const value = typeof minor === "bigint" ? minor : BigInt(Math.round(minor));
   const locale = options.locale ?? "en-US";
-  const asNumber = Number(toDecimalString(value < 0n ? -value : value, info.code));
+  const asNumber = Number(toDecimalString(abs(value), info.code));
 
   const fractionDigits = info.decimals;
 

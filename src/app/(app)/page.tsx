@@ -32,7 +32,7 @@ import { Wordmark } from "@/components/app-shell";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { GroupMark } from "@/components/group/group-mark";
 import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
@@ -260,7 +260,7 @@ function Balance({ data }: { data: DashboardPayload }) {
 
       {approx !== null && data.approxTotal ? (
         <p className="mt-3 text-body text-muted">
-          About {formatMoney(approx < 0n ? -approx : approx, data.approxTotal.currency)}{" "}
+          About {formatMoney(abs(approx), data.approxTotal.currency)}{" "}
           {approx >= 0n ? "owed to you" : "that you owe"} overall
         </p>
       ) : null}
@@ -613,7 +613,7 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
           <>
             <span data-travel="amount" className="block">
               {/* A long figure steps down a size, so the group's name keeps room. */}
-              <Amount value={net} currency={group.currency} size={formatMoney(net < 0n ? -net : net, group.currency).length > 11 ? "sm" : "md"} className="block" />
+              <Amount value={net} currency={group.currency} size={formatMoney(abs(net), group.currency).length > 11 ? "sm" : "md"} className="block" />
             </span>
             <span className="block text-caption text-subtle">{net > 0n ? "you're owed" : "you owe"}</span>
           </>

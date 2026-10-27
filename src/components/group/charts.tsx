@@ -7,7 +7,7 @@ import { EmptyState, Segmented, Skeleton, cn } from "../ui/primitives";
 import { CategoryGlyph } from "../expense/category-glyph";
 import { useDashboard, useGroupStats } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import type { GroupStatsDto, PersonDto } from "@/lib/types";
 
 /**
@@ -402,7 +402,7 @@ function PersonChart({
   if (rows.length === 0) return null;
 
   const extent = rows.reduce((max, row) => {
-    const magnitude = row.net < 0n ? -row.net : row.net;
+    const magnitude = abs(row.net);
     return magnitude > max ? magnitude : max;
   }, 1n);
 
@@ -543,7 +543,7 @@ function DataTable({
             people.get(row.personId)?.displayName ?? "Unknown",
             formatMoney(BigInt(row.paid), stats.currency),
             formatMoney(BigInt(row.share), stats.currency),
-            `${net > 0n ? "+" : net < 0n ? "−" : ""}${formatMoney(net < 0n ? -net : net, stats.currency)}`,
+            `${net > 0n ? "+" : net < 0n ? "−" : ""}${formatMoney(abs(net), stats.currency)}`,
           ];
         })}
       />

@@ -348,7 +348,7 @@ MOTION-SPEC section 7 gets a line for each, as NumberFlow's did.
 
 | PR | Items |
 |---|---|
-| 11. `abs` everywhere, outside the files the Prisma 7 PR changes | 12 |
+| 11. `abs` everywhere, outside the files the Prisma 7 PR changes | 12 (done 27 October: 22 places in 13 files, including `push.ts`, the batch settle route and a private copy in `flow.ts`; `read.ts` and `me.ts` stay for PR 16 with their sorts; download unchanged) |
 | 12. One date field helper, the `shown` alias, one attachment limit | 14, 16 (third point), 22 |
 
 ### Phase 4: the server (after #64 and #65 merge)
