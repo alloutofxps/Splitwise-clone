@@ -2,59 +2,37 @@ import { z } from "zod";
 import { currencyCode, json, readBody, route, text } from "@/lib/api";
 import { ForbiddenError, requireSession, ValidationError } from "@/lib/identity";
 import { prisma } from "@/lib/db";
-import { balanceSheetDto, groupBalanceSheet, personDto } from "@/server/read";
+import { balanceSheetDto, groupBalanceSheet, groupMembershipsFor, groupSummaries } from "@/server/read";
 import { requireGroupAccess, requireGroupOwner } from "@/server/access";
 import { recordActivity } from "@/server/write";
 import type { GroupDetailDto } from "@/lib/types";
 import { ACCEPTED_COLORS, normalizeColor } from "@/lib/avatar";
-import { defaultSplitProblem, parseDefaultSplit } from "@/lib/default-split";
+import { defaultSplitProblem } from "@/lib/default-split";
 
 type Params = { params: Promise<{ id: string }> };
 
 export const GET = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
   const session = await requireSession();
-  const { group, membership } = await requireGroupAccess(id, session.person.id);
+  const { group } = await requireGroupAccess(id, session.person.id);
 
-  const [memberships, sheet, lastActivity, unreadCount] = await Promise.all([
-    prisma.membership.findMany({
-      where: { groupId: id, leftAt: null },
-      include: { person: true },
-      orderBy: { joinedAt: "asc" },
-    }),
+  // The same row Home shows for this group, so the two can't disagree about
+  // what's unread, plus what only this screen needs.
+  const [memberships, sheet] = await Promise.all([
+    groupMembershipsFor(session.person.id, id),
     groupBalanceSheet(id),
-    prisma.activity.findFirst({
-      where: { groupId: id },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
-    }),
-    prisma.activity.count({
-      where: {
-        groupId: id,
-        createdAt: { gt: membership.lastReadActivityAt },
-        actorPersonId: { not: session.person.id },
-      },
-    }),
   ]);
+  const [summary] = await groupSummaries(session.person.id, {
+    memberships,
+    sheets: new Map([[id, sheet]]),
+    seenAt: session.person.activitySeenAt ?? null,
+  });
+  // Left the group between the access check and now.
+  if (!summary) throw new ForbiddenError("You're not in that group.");
 
   const detail: GroupDetailDto = {
-    id: group.id,
-    name: group.name,
-    kind: group.kind,
-    emoji: group.emoji,
-    color: group.color,
-    currency: group.currency,
-    simplifyDebts: group.simplifyDebts,
-    defaultSplit: parseDefaultSplit(group.defaultSplit),
-    inviteCode: group.inviteCodeActive ? group.inviteCode : "",
-    archivedAt: group.archivedAt?.toISOString() ?? null,
+    ...summary,
     createdAt: group.createdAt.toISOString(),
-    memberCount: memberships.length,
-    members: memberships.map((m) => personDto(m.person)),
-    yourNet: (sheet.net.get(session.person.id) ?? 0n).toString(),
-    totalSpend: sheet.totalSpend.toString(),
-    lastActivityAt: lastActivity?.createdAt.toISOString() ?? null,
-    unreadCount,
     balances: balanceSheetDto(sheet, group.currency),
   };
 

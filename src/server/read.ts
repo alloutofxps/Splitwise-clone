@@ -610,10 +610,13 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
   return ledgers;
 }
 
-/** The groups the viewer is in, with their current members: what Home lists. */
-export function groupMembershipsFor(personId: string) {
+/**
+ * The groups the viewer is in, with their current members: what Home lists,
+ * or just `groupId` for one group's screen.
+ */
+export function groupMembershipsFor(personId: string, groupId?: string) {
   return prisma.membership.findMany({
-    where: { personId, leftAt: null },
+    where: { personId, leftAt: null, ...(groupId ? { groupId } : {}) },
     include: {
       group: {
         include: {
@@ -628,6 +631,13 @@ export function groupMembershipsFor(personId: string) {
   });
 }
 
+/**
+ * A group as a list row: Home's group list, and the shared part of one group's
+ * screen (`api/groups/[id]`). Both are built here so they agree, above all on
+ * unread: the newest group-wide entry, and entries by other people since you
+ * last opened the group or Activity, whichever is later, leaving out reminders
+ * between two other people.
+ */
 export async function groupSummaries(
   personId: string,
   /**
