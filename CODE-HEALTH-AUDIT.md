@@ -359,7 +359,7 @@ these wait until it is merged.
 
 | PR | Items | Expected saving |
 |---|---|---|
-| 13. Four lookups asked in two steps | 17, 16 (fourth point) | Home's request: about 60 to 70 ms of its 99 ms on the test data |
+| 13. Four lookups asked in two steps | 17, 16 (fourth point) | Home's request: about 60 to 70 ms of its 99 ms on the test data. Done 27 October: same answers for all 8,713 test accounts; Home's request 62 to 29 ms and 56 to 17 ms in two rounds against main (Prisma 7 had already brought main's down from 99), Activity 23 to 21 and 21 to 16 ms. The never-matching case in the unread count is kept, with a comment, so the badge and the feed keep one shared scope |
 | 14. Home's request stops repeating work | 18 | a few ms |
 | 15. One rule for unread, one builder for group details | 15 | an extra refresh when opening some groups |
 | 16. Server-side `abs`, one shared sort, read.ts tidy-ups | 12, 13, 16 | |
