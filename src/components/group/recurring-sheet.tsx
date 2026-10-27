@@ -15,6 +15,7 @@ import { formatMoney } from "@/lib/money";
 import { suggestCategory, DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import { RECURRENCE_FREQUENCIES, type GroupDetailDto, type RecurrenceFrequency } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
+import { fromDateInput, toDateInput } from "@/lib/date-input";
 
 /**
  * Repeating expenses.
@@ -346,10 +347,7 @@ function NewRecurrenceSheet({
             type="date"
             value={toDateInput(startDate)}
             onChange={(event) => {
-              if (event.target.value) {
-                const [year, month, day] = event.target.value.split("-").map(Number);
-                setStartDate(new Date(year, month - 1, day, 12));
-              }
+              if (event.target.value) setStartDate(fromDateInput(event.target.value));
             }}
             className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none focus:ring-[1.5px] focus:ring-text"
           />
@@ -395,9 +393,4 @@ function nextFirstOfMonth(): Date {
   const now = new Date();
   // Default to the 1st of next month, which is when rent and bills land.
   return new Date(now.getFullYear(), now.getMonth() + 1, 1, 12);
-}
-
-function toDateInput(date: Date): string {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
 }

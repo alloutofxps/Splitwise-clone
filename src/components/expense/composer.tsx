@@ -27,6 +27,7 @@ import { newId } from "@/lib/ids";
 import type { ExpenseDto, PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { isolate } from "@/lib/bidi";
+import { fromDateInput, toDateInput } from "@/lib/date-input";
 
 /**
  * The expense composer.
@@ -1204,18 +1205,6 @@ function formatDateChip(date: Date): string {
   }
 
   return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-}
-
-function toDateInput(date: Date): string {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
-}
-
-function fromDateInput(value: string): Date {
-  // Parsed as local midnight rather than UTC, so a date picked in Sydney does
-  // not land on the previous day.
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
 }
 
 /** Says why a new expense isn't splitting equally, or why it is despite a usual split. */

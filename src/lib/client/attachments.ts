@@ -30,8 +30,7 @@ export interface PendingAttachment {
 const TARGET_BYTES = 400 * 1024;
 const MAX_DIMENSION = 1600;
 
-/** How many receipts one expense may carry. */
-export const MAX_ATTACHMENTS = 6;
+export { MAX_ATTACHMENTS } from "@/lib/attachment-limit";
 
 async function processFile(file: File): Promise<PendingAttachment> {
   const id = `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

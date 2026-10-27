@@ -8,8 +8,7 @@ import { areFriends, assertCanInvolve } from "./access";
 import { computeBalances } from "@/lib/balances";
 import { decodeDataUrl, MAX_ATTACHMENT_BYTES, type ExpenseWriteInput } from "./write";
 import { checkRateIsPlausible } from "./rates";
-
-const MAX_ATTACHMENTS = 6;
+import { MAX_ATTACHMENTS } from "@/lib/attachment-limit";
 
 /**
  * The largest body an expense request may have: six receipts at the 4 MB cap,
