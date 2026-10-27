@@ -20,6 +20,7 @@ import { groupSheets } from "./ledger";
 import type { BalanceSheet } from "@/lib/balances";
 import { getRate } from "./rates";
 import { convert } from "@/lib/money";
+import { biggestFirst } from "@/lib/shared-ledgers";
 
 export async function meDto(person: Person): Promise<MeDto> {
   const paymentMethods = await prisma.paymentMethod.findMany({
@@ -190,11 +191,7 @@ async function friendDtos(
       });
     }
 
-    const size = (value: string) => {
-      const amount = BigInt(value);
-      return amount < 0n ? -amount : amount;
-    };
-    ledgers.sort((a, b) => (size(b.net) > size(a.net) ? 1 : -1));
+    ledgers.sort(biggestFirst);
 
     const net: Record<string, string> = {};
     for (const [currency, value] of combined) {

@@ -3,7 +3,7 @@ import { currencyCode, json, minorUnits, readBody, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { CATEGORY_BY_ID } from "@/lib/categories";
-import { convertedBreakdown } from "@/server/read";
+import { convertedBreakdown } from "@/lib/split";
 import { getRate } from "@/server/rates";
 import { convert } from "@/lib/money";
 import type { BudgetDto } from "@/lib/types";
