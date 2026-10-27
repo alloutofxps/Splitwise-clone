@@ -17,13 +17,10 @@
 import type { DashboardDto, ExpenseDto, PersonDto, SettlementDto } from "@/lib/types";
 
 export const keys = {
-  me: ["me"] as const,
   dashboard: ["dashboard"] as const,
-  people: ["people"] as const,
   group: (id: string) => ["group", id] as const,
   groupLedger: (id: string) => ["group", id, "ledger"] as const,
   groupStats: (id: string) => ["group", id, "stats"] as const,
-  friends: ["friends"] as const,
   friend: (id: string) => ["friend", id] as const,
   activity: ["activity"] as const,
   expense: (id: string) => ["expense", id] as const,

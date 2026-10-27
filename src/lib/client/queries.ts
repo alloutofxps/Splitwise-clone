@@ -343,7 +343,6 @@ function invalidateLedger(client: QueryClient, ...scopes: (string | null | undef
   const queryKeys: unknown[][] = [
     [...keys.dashboard],
     [...keys.activity],
-    [...keys.friends],
     [...keys.budgets],
     ["search"],
   ];
@@ -900,8 +899,6 @@ export function useCreateGroup() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.dashboard });
       // A new group changes who each of these screens shows.
-      void client.invalidateQueries({ queryKey: keys.people });
-      void client.invalidateQueries({ queryKey: keys.friends });
     },
   });
 }
@@ -924,7 +921,6 @@ export function useAddMember(groupId: string) {
       api.post<{ member: PersonDto }>(`/api/groups/${groupId}/members`, input),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.group(groupId) });
-      void client.invalidateQueries({ queryKey: keys.people });
       void client.invalidateQueries({ queryKey: keys.dashboard });
     },
   });
@@ -990,11 +986,9 @@ export function useUpdateProfile() {
      */
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.dashboard });
-      void client.invalidateQueries({ queryKey: keys.people });
       // Prefix keys: one call each covers every group and every friend.
       void client.invalidateQueries({ queryKey: ["group"] });
       void client.invalidateQueries({ queryKey: ["friend"] });
-      void client.invalidateQueries({ queryKey: keys.friends });
       void client.invalidateQueries({ queryKey: keys.activity });
     },
   });
