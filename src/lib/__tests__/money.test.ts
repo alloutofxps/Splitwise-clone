@@ -152,9 +152,15 @@ describe("convert", () => {
     // harmless when both currencies count minor units the same way. Across a
     // decimal boundary it is a factor of a hundred: 50.00 USD arriving as ¥5000
     // rather than ¥50.
-    for (const bad of ["", "abc", "1e-7", "-2", "0", "0.0000000000001"]) {
+    for (const bad of ["", "abc", "1e-7", "-2", "0"]) {
       expect(convert(5_000n, "USD", "JPY", bad)).toBe(50n);
       expect(convert(5_000n, "USD", "EUR", bad)).toBe(5_000n);
     }
+  });
+
+  it("reads every decimal place of a rate, not just the first twelve", () => {
+    // 0.0000000000005 used to be cut to zero and treated as unreadable.
+    expect(convert(10n ** 15n, "USD", "EUR", "0.0000000000005")).toBe(500n);
+    expect(convert(10n ** 15n, "USD", "EUR", "0.0000000000004")).toBe(400n);
   });
 });
