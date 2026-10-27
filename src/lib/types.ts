@@ -274,7 +274,6 @@ export interface FriendDto {
    * split with inside that group.
    */
   isFriend?: boolean;
-  lastActivityAt: string | null;
 }
 
 /** One ledger two people share, and where they stand in it. */

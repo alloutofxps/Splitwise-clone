@@ -140,52 +140,6 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 );
 
 // ---------------------------------------------------------------------------
-// Card
-// ---------------------------------------------------------------------------
-
-export function Card({
-  className,
-  children,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** A card that is also a button - a group row, an expense row. */
-export const PressableCard = React.forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(function PressableCard({ className, children, onClick, ...props }, ref) {
-  return (
-    <button
-      ref={ref}
-      onClick={(event) => {
-        haptic();
-        onClick?.(event);
-      }}
-      className={cn(
-        "block w-full text-left press",
-        "active:bg-surface-2",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-});
-
-// ---------------------------------------------------------------------------
 // Segmented control
 // ---------------------------------------------------------------------------
 
@@ -383,61 +337,6 @@ export function EmptyState({
         </p>
       ) : null}
       {action ? <div className="mt-5">{action}</div> : null}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Badge
-// ---------------------------------------------------------------------------
-
-export function Badge({
-  tone = "neutral",
-  children,
-  className,
-}: {
-  tone?: "neutral" | "brand" | "positive" | "negative" | "warning";
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-tiny font-semibold",
-        tone === "neutral" && "bg-neutral-soft text-muted",
-        tone === "brand" && "bg-brand-soft text-brand-soft-text",
-        tone === "positive" && "bg-positive-soft text-positive-text",
-        tone === "negative" && "bg-negative-soft text-negative-text",
-        tone === "warning" && "bg-warning-soft text-text",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Section header
-// ---------------------------------------------------------------------------
-
-export function SectionHeader({
-  title,
-  action,
-  className,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    // A headline, not a form label: the display face, sentence case, with the
-    // weight to anchor the list beneath it.
-    <div className={cn("flex items-end justify-between px-1 pb-3", className)}>
-      <h2 className="font-display text-title-lg font-semibold tracking-[-0.02em] text-text">
-        {title}
-      </h2>
-      {action}
     </div>
   );
 }

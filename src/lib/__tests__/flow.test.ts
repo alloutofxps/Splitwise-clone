@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barSegments, diffEdges, edgePath, placeLabels, pointOnEdge, ringPositions, strokeFor } from "../flow";
+import { barSegments, edgePath, placeLabels, pointOnEdge, ringPositions, strokeFor } from "../flow";
 
 describe("ringPositions", () => {
   it("puts one person in the middle", () => {
@@ -123,18 +123,6 @@ describe("strokeFor", () => {
     const quarter = strokeFor(25n, 100n);
     expect(quarter).toBeGreaterThan(1.5);
     expect(quarter).toBeLessThan(5);
-  });
-});
-
-describe("diffEdges", () => {
-  it("says which lines stay, appear and go", () => {
-    const tangle = [
-      { fromPersonId: "a", toPersonId: "b", amount: 10n },
-      { fromPersonId: "b", toPersonId: "c", amount: 10n },
-      { fromPersonId: "a", toPersonId: "c", amount: 5n },
-    ];
-    const simple = [{ fromPersonId: "a", toPersonId: "c", amount: 15n }];
-    expect(diffEdges(tangle, simple)).toEqual({ kept: ["a>c"], added: [], removed: ["a>b", "b>c"] });
   });
 });
 

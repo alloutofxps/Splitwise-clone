@@ -86,7 +86,7 @@ const refreshing = new Set<string>();
  * One write transaction rather than ~160 parallel upserts, which on SQLite
  * meant 160 turns at the only write lock for a single lookup.
  */
-export async function refreshBase(base: string): Promise<Record<string, number> | null> {
+async function refreshBase(base: string): Promise<Record<string, number> | null> {
   if (refreshing.has(base)) return null;
   refreshing.add(base);
   try {

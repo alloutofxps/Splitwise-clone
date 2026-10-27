@@ -191,7 +191,7 @@ export function balanceSheetDto(sheet: BalanceSheet, currency: string): BalanceS
   };
 }
 
-export function attachmentDto(row: {
+function attachmentDto(row: {
   id: string;
   filename: string;
   mimeType: string;
@@ -338,7 +338,7 @@ export function commentDto(row: {
  * group and the last time they opened Activity; an entry outside any group
  * only has the second.
  */
-export function isUnread(
+function isUnread(
   row: { actorPersonId: string; createdAt: Date },
   groupReadAt: Date | null,
   viewer: { id: string; activitySeenAt: Date | null },

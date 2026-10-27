@@ -71,7 +71,7 @@ export function WelcomeSkeleton() {
   );
 }
 
-export function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) {
+function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) {
   return (
     <div aria-hidden className={cn("pt-[max(1rem,env(safe-area-inset-top))]", late && "appear-late")}>
       <div className="mb-5 flex h-10 items-center justify-between">
@@ -160,7 +160,7 @@ export function FriendSkeleton({ name, late }: { name?: string; late?: boolean }
   );
 }
 
-export function ListSkeleton({ late, title = true }: { late?: boolean; title?: boolean }) {
+function ListSkeleton({ late, title = true }: { late?: boolean; title?: boolean }) {
   return (
     <div aria-hidden className={cn("pt-[max(1.5rem,env(safe-area-inset-top))]", late && "appear-late")}>
       {title ? <Skeleton className="mb-6 h-8 w-32" /> : null}

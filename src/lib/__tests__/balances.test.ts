@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  aggregateNet,
   applyEvent,
   computeBalances,
-  personalBalance,
   simplifyDebts,
   type BalanceEvent,
 } from "../balances";
@@ -165,54 +163,6 @@ describe("simplifyDebts", () => {
     simplifyDebts(net);
     expect(net.get("alice")).toBe(-500n);
     expect(net.get("bob")).toBe(500n);
-  });
-});
-
-describe("personalBalance", () => {
-  it("separates what you owe from what you are owed", () => {
-    const sheet = computeBalances([
-      expense("e1", [["alice", 900n]], [
-        ["alice", 300n],
-        ["bob", 300n],
-        ["cara", 300n],
-      ]),
-      expense("e2", [["cara", 200n]], [["alice", 100n], ["cara", 100n]]),
-    ]);
-
-    const view = personalBalance(sheet, "alice", false);
-    expect(view.net).toBe(500n);
-    expect(view.owed.map((e) => e.fromPersonId).sort()).toEqual(["bob", "cara"]);
-    expect(view.owes).toHaveLength(0);
-  });
-});
-
-describe("aggregateNet", () => {
-  it("keeps currencies apart", () => {
-    const eur = computeBalances([expense("e1", [["alice", 1000n]], [["bob", 1000n]])]);
-    const inr = computeBalances([expense("e2", [["bob", 5000n]], [["alice", 5000n]])]);
-
-    const totals = aggregateNet(
-      [
-        { currency: "EUR", sheet: eur },
-        { currency: "INR", sheet: inr },
-      ],
-      "alice",
-    );
-    expect(totals.get("EUR")).toBe(1000n);
-    expect(totals.get("INR")).toBe(-5000n);
-  });
-
-  it("drops currencies that net to zero", () => {
-    const a = computeBalances([expense("e1", [["alice", 1000n]], [["bob", 1000n]])]);
-    const b = computeBalances([expense("e2", [["bob", 1000n]], [["alice", 1000n]])]);
-    const totals = aggregateNet(
-      [
-        { currency: "EUR", sheet: a },
-        { currency: "EUR", sheet: b },
-      ],
-      "alice",
-    );
-    expect(totals.has("EUR")).toBe(false);
   });
 });
 

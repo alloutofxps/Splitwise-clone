@@ -228,6 +228,14 @@ nothing unread.
   you (via `feedScope`, line 367).
 - *Risk:* none. *Test:* type check, tests.
 
+**22. The attachment limit is written twice** (found 27 October, while making
+file-only values private). `MAX_ATTACHMENTS = 6` is in both
+`src/server/expense-input.ts:12` and `src/lib/client/attachments.ts:34`. Both
+are 6 today; nothing makes them stay equal, and if they drifted the app
+would accept receipts the server then refuses.
+- *Fix:* one constant in a small shared file both import.
+- *Risk:* none. *Test:* type check, tests, the receipt tests in ui-features.
+
 ### D. Work the server does
 
 **17. Home's data takes about 99 ms; four of its lookups search everybody's
@@ -331,7 +339,7 @@ MOTION-SPEC section 7 gets a line for each, as NumberFlow's did.
 
 | PR | Items |
 |---|---|
-| 7. Unused components, helpers and exports, and their tests | 7, 8 (not `clearLedgerCache`, see phase 4) |
+| 7. Unused components, helpers and exports, and their tests | 7, 8 (done 27 October, with `clearLedgerCache` since #65 had merged; 22 file-only values made private, types left exported; download unchanged to the byte) |
 | 8. Unused styles | 9 |
 | 9. Refreshes that refresh nothing | 10 |
 | 10. Drop `date-fns`, move `@types/qrcode` (needs your OK) | 11 |
@@ -341,7 +349,7 @@ MOTION-SPEC section 7 gets a line for each, as NumberFlow's did.
 | PR | Items |
 |---|---|
 | 11. `abs` everywhere, outside the files the Prisma 7 PR changes | 12 |
-| 12. One date field helper, and the `shown` alias | 14, 16 (third point) |
+| 12. One date field helper, the `shown` alias, one attachment limit | 14, 16 (third point), 22 |
 
 ### Phase 4: the server (after #64 and #65 merge)
 
@@ -354,7 +362,7 @@ these wait until it is merged.
 | 13. Four lookups asked in two steps | 17, 16 (fourth point) | Home's request: about 60 to 70 ms of its 99 ms on the test data |
 | 14. Home's request stops repeating work | 18 | a few ms |
 | 15. One rule for unread, one builder for group details | 15 | an extra refresh when opening some groups |
-| 16. Server-side `abs`, one shared sort, read.ts tidy-ups, `clearLedgerCache` | 12, 13, 16, 8 | |
+| 16. Server-side `abs`, one shared sort, read.ts tidy-ups | 12, 13, 16 | |
 | 17. Group access in one question | 19 | under 1 ms per group request |
 | 18. Writes in one go instead of one at a time | 20 | small |
 | 19. Remove duplicate database indexes | 21 | smaller database, slightly faster writes |

@@ -90,12 +90,12 @@ function sign(payload: string): string {
   return createHmac("sha256", secretKey()).update(payload).digest("base64url");
 }
 
-export function encodeCookie(personId: string, secret: string): string {
+function encodeCookie(personId: string, secret: string): string {
   const payload = `${personId}.${secret}`;
   return `${payload}.${sign(payload)}`;
 }
 
-export function decodeCookie(value: string): { personId: string; secret: string } | null {
+function decodeCookie(value: string): { personId: string; secret: string } | null {
   const lastDot = value.lastIndexOf(".");
   if (lastDot === -1) return null;
 
@@ -263,7 +263,7 @@ export async function createIdentity(input: NewIdentity): Promise<{ person: Pers
  * The display form is chunked into groups of eight for legibility, and the
  * `dvy_` prefix is easy to lose when copying, so both are tolerated.
  */
-export function normalizeSecret(input: string): string {
+function normalizeSecret(input: string): string {
   const compact = input.trim().replace(/\s+/g, "");
   return compact.startsWith("dvy_") ? compact : `dvy_${compact}`;
 }
@@ -376,7 +376,7 @@ export function describeDevice(userAgent: string | null): string {
 
 // ---------------------------------------------------------------------------
 
-export async function setIdentityCookie(personId: string, secret: string): Promise<void> {
+async function setIdentityCookie(personId: string, secret: string): Promise<void> {
   const store = await cookies();
   store.set(IDENTITY_COOKIE, encodeCookie(personId, secret), {
     httpOnly: true,
@@ -408,7 +408,7 @@ export async function uniqueGroupCode(): Promise<string> {
   return `${generateInviteCode()}-${generateInviteCode().split("-").pop()}`;
 }
 
-export async function uniquePersonalCode(): Promise<string> {
+async function uniquePersonalCode(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = generatePersonalCode();
     const taken = await prisma.person.findUnique({ where: { inviteCode: code } });

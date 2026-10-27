@@ -3,10 +3,9 @@
 /**
  * The home-screen badge.
  *
- * Divvy has no push notifications — there is no server to send them from in a
- * self-hosted install, and asking for notification permission to deliver
- * nothing would be dishonest. The Badging API is the useful half of that
- * without any of the infrastructure: the count is set whenever the app has the
+ * Phone notifications (`server/push.ts`) say that something happened as it
+ * happens; the badge is the quiet half, a count of what is waiting. It needs no
+ * permission and no server: the count is set whenever the app has the
  * dashboard in hand, which is every launch and every focus refetch.
  *
  * It is therefore accurate as of the last time the app was open, and stale
@@ -30,10 +29,6 @@ function badging(): Badging | null {
   return typeof candidate.setAppBadge === "function" ? candidate : null;
 }
 
-export function badgingSupported(): boolean {
-  return badging() !== null;
-}
-
 /**
  * Sets the badge to `count`, or clears it at zero.
  *
@@ -54,8 +49,4 @@ export function setBadge(count: number): void {
   } catch {
     // Synchronous throw in some WebViews. Same treatment.
   }
-}
-
-export function clearBadge(): void {
-  setBadge(0);
 }

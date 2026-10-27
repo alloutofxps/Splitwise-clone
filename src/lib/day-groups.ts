@@ -50,7 +50,7 @@ function daysAgo(date: Date): number {
   return Math.floor((startOfToday.getTime() - startOfDay(date).getTime()) / 86_400_000);
 }
 
-export function dayLabel(date: Date): string {
+function dayLabel(date: Date): string {
   const now = new Date();
   const days = daysAgo(date);
 
