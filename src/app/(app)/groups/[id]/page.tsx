@@ -358,12 +358,11 @@ export default function GroupPage() {
  */
 function Standing({ net, currency, everyone }: { net: bigint; currency: string; everyone: boolean }) {
   const [rest, setRest] = React.useState(net);
-  // Colour, arrow and wording follow the figure the roll is at rest on, so
-  // they change once, when it lands, not halfway through it.
-  const shown = rest;
+  // Colour, arrow and wording follow `rest`, the figure the roll is at rest
+  // on, so they change once, when it lands, not halfway through it.
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {shown === 0n && net === 0n ? (
+      {rest === 0n && net === 0n ? (
         <motion.p
           key="settled"
           initial={{ opacity: 0 }}
@@ -383,10 +382,10 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
           transition={{ duration: DURATION.fade }}
           className="flex flex-col"
         >
-          <span className="text-body text-muted">{shown > 0n ? "You’re owed" : "You owe"}</span>
+          <span className="text-body text-muted">{rest > 0n ? "You’re owed" : "You owe"}</span>
           <span data-travel="amount" className="self-start">
             <Amount
-              value={shown === 0n ? net : shown}
+              value={rest === 0n ? net : rest}
               currency={currency}
               arrow
               figure={<RollingFigure value={net} currency={currency} onRest={setRest} />}
