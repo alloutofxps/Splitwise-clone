@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearBadge, badgingSupported, setBadge } from "../badge";
+import { setBadge } from "../badge";
 
 /**
  * The badge is decoration, and the contract that matters is that it can never
@@ -51,7 +51,6 @@ describe("setBadge", () => {
 
   it("does nothing where the API is absent", () => {
     vi.stubGlobal("navigator", {});
-    expect(badgingSupported()).toBe(false);
     expect(() => setBadge(2)).not.toThrow();
   });
 
@@ -70,11 +69,5 @@ describe("setBadge", () => {
       },
     });
     expect(() => setBadge(1)).not.toThrow();
-  });
-
-  it("clears through the same path", () => {
-    const { clearAppBadge } = stubBadging();
-    clearBadge();
-    expect(clearAppBadge).toHaveBeenCalled();
   });
 });

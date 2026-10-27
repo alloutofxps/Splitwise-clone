@@ -52,7 +52,7 @@ export function isPushServiceUrl(value: string): boolean {
 
 let configured = false;
 
-export function pushConfigured(): boolean {
+function pushConfigured(): boolean {
   return PUBLIC_KEY.length > 0 && PRIVATE_KEY.length > 0;
 }
 

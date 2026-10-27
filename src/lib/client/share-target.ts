@@ -112,7 +112,7 @@ export async function takeSharedPayload(): Promise<SharedPayload | null> {
   }
 }
 
-export async function clearShared(): Promise<void> {
+async function clearShared(): Promise<void> {
   if (!supported()) return;
   try {
     await caches.delete(SHARE_CACHE);

@@ -240,24 +240,6 @@ export function edgeKey(edge: Pick<FlowEdge, "fromPersonId" | "toPersonId">): st
   return `${edge.fromPersonId}>${edge.toPersonId}`;
 }
 
-/**
- * What changes between two sets of lines: which stay (and may change amount),
- * which appear and which go. Simplify uses this to untangle: the lines that
- * survive stay put, the rest draw out, the new ones draw in.
- */
-export function diffEdges(
-  before: FlowEdge[],
-  after: FlowEdge[],
-): { kept: string[]; added: string[]; removed: string[] } {
-  const was = new Set(before.map(edgeKey));
-  const now = new Set(after.map(edgeKey));
-  return {
-    kept: [...now].filter((key) => was.has(key)),
-    added: [...now].filter((key) => !was.has(key)),
-    removed: [...was].filter((key) => !now.has(key)),
-  };
-}
-
 export interface BarSegment {
   personId: string;
   /** Positive: they owe you. Negative: you owe them. */

@@ -33,7 +33,7 @@ const MAX_DIMENSION = 1600;
 /** How many receipts one expense may carry. */
 export const MAX_ATTACHMENTS = 6;
 
-export async function processFile(file: File): Promise<PendingAttachment> {
+async function processFile(file: File): Promise<PendingAttachment> {
   const id = `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   if (file.type === "application/pdf") {

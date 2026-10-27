@@ -17,7 +17,7 @@
  * before calling in.
  */
 
-import { abs, sum } from "./money";
+import { sum } from "./money";
 import { apportion } from "./split";
 
 export interface PersonAmount {
@@ -293,48 +293,3 @@ export function applyEvent(sheet: BalanceSheet, event: BalanceEvent): BalanceShe
   accumulate(ledger, event);
   return present(ledger);
 }
-
-// ---------------------------------------------------------------------------
-// Views
-// ---------------------------------------------------------------------------
-
-/** What one person sees: who they owe, who owes them, and the net. */
-export interface PersonalBalance {
-  net: bigint;
-  owes: DebtEdge[];
-  owed: DebtEdge[];
-}
-
-export function personalBalance(
-  sheet: BalanceSheet,
-  personId: string,
-  simplified: boolean,
-): PersonalBalance {
-  const edges = simplified ? sheet.simplified : sheet.pairwise;
-  return {
-    net: sheet.net.get(personId) ?? 0n,
-    owes: edges.filter((e) => e.fromPersonId === personId),
-    owed: edges.filter((e) => e.toPersonId === personId),
-  };
-}
-
-/**
- * Rolls several groups' sheets into the number that belongs at the top of the
- * home screen. Returns per-currency totals, because "you are owed 40" means
- * nothing if the 40 is a mix of euros and rupees.
- */
-export function aggregateNet(
-  sheets: { currency: string; sheet: BalanceSheet }[],
-  personId: string,
-): Map<string, bigint> {
-  const totals = new Map<string, bigint>();
-  for (const { currency, sheet } of sheets) {
-    const value = sheet.net.get(personId) ?? 0n;
-    if (value === 0n) continue;
-    totals.set(currency, (totals.get(currency) ?? 0n) + value);
-  }
-  for (const [code, value] of [...totals]) if (value === 0n) totals.delete(code);
-  return totals;
-}
-
-export const magnitude = abs;

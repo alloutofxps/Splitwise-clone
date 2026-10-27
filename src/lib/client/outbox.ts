@@ -96,7 +96,7 @@ export async function pending(): Promise<QueuedMutation[]> {
   return all.sort((a, b) => a.createdAt - b.createdAt);
 }
 
-export async function remove(id: string) {
+async function remove(id: string) {
   if (!supported()) return;
   const database = await db();
   await database.delete(STORE, id);

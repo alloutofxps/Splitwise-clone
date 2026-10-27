@@ -33,7 +33,7 @@ export type AvatarColor = (typeof AVATAR_COLORS)[number];
  * Accepted on input so a copy of the app that is still open on somebody's
  * phone from before the update can keep saving, and translated on the way in.
  */
-export const LEGACY_COLORS: Record<string, AvatarColor> = {
+const LEGACY_COLORS: Record<string, AvatarColor> = {
   iris: "violet",
   violet: "plum",
   fuchsia: "orchid",

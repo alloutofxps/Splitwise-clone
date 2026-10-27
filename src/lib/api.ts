@@ -58,7 +58,7 @@ export interface ApiErrorBody {
   code?: string;
 }
 
-export function errorResponse(status: number, body: ApiErrorBody): Response {
+function errorResponse(status: number, body: ApiErrorBody): Response {
   return json(body, { status });
 }
 
@@ -158,7 +158,7 @@ function requestIdOf(value: unknown): string | undefined {
  * requests are a few kilobytes; routes that legitimately carry receipts pass a
  * larger limit explicitly.
  */
-export const DEFAULT_BODY_LIMIT = 64 * 1024;
+const DEFAULT_BODY_LIMIT = 64 * 1024;
 
 /**
  * Reads a request body as text, refusing it once it passes `maxBytes`.

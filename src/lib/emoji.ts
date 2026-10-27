@@ -60,18 +60,3 @@ export const EMOJI_GROUPS: EmojiGroup[] = [
     ],
   },
 ];
-
-/** Flat list, for validation and for anything that just needs "is this one of ours". */
-export const ALL_EMOJI: string[] = EMOJI_GROUPS.flatMap((group) => group.emoji);
-
-/**
- * The dozen shown before the picker is opened.
- *
- * Onboarding shows a strip, not a grid: the first screen of a new app is the
- * wrong place for a wall of 128 choices, and anybody who cares can open the
- * full set. These are spread across the groups on purpose.
- */
-export const EMOJI_QUICK_PICKS = [
-  "🙂", "😎", "🦊", "🐙", "🌵", "🍕",
-  "⚡", "🌊", "🎧", "🚲", "🪐", "🐝",
-];

@@ -140,8 +140,3 @@ export async function groupSheets(groupIds: string[]): Promise<Map<string, Balan
 
   return result;
 }
-
-/** Test hook. */
-export function clearLedgerCache(): void {
-  cache.clear();
-}

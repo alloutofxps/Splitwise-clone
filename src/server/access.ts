@@ -50,7 +50,7 @@ export async function requireGroupOwner(
 }
 
 /** Active member ids, in a stable order for deterministic splits. */
-export async function groupMemberIds(groupId: string): Promise<string[]> {
+async function groupMemberIds(groupId: string): Promise<string[]> {
   const memberships = await prisma.membership.findMany({
     where: { groupId, leftAt: null },
     select: { personId: true },

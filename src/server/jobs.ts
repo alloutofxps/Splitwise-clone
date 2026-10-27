@@ -106,7 +106,7 @@ const KEEP_SNAPSHOTS = 7;
  * migrations, not against losing the disk: for that, set
  * `LITESTREAM_REPLICA_URL` (see the Dockerfile) to stream changes off-site.
  */
-export async function snapshotDatabase(): Promise<string | null> {
+async function snapshotDatabase(): Promise<string | null> {
   if (!isSqlite) return null;
   const dir = backupDir();
   if (!dir) return null;

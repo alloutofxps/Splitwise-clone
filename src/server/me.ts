@@ -65,7 +65,7 @@ export async function meDto(person: Person): Promise<MeDto> {
  * `directNet` keeps the old figure, because settling is still per-ledger and
  * the detail view has to be able to say which part of the total lives where.
  */
-export async function friendDtos(
+async function friendDtos(
   personId: string,
   /** The viewer's group sheets, computed once per request by the caller. */
   groupSheets?: Map<string, BalanceSheet>,
@@ -200,7 +200,6 @@ export async function friendDtos(
       ledgers,
       sharedGroupIds: shared.map((entry) => entry.groupId),
       isFriend: directFriends.has(other.id),
-      lastActivityAt: null,
     });
   }
 
