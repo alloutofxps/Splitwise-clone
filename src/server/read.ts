@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/db";
 import { computeBalances, type BalanceEvent, type BalanceSheet } from "@/lib/balances";
 import { convertedBreakdown } from "@/lib/split";
+import { biggestFirst } from "@/lib/shared-ledgers";
 import { groupSheets } from "./ledger";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import { parseDefaultSplit } from "@/lib/default-split";
@@ -60,11 +61,6 @@ const expenseInclude = {
 type ExpenseRow = Prisma.ExpenseGetPayload<{ include: typeof expenseInclude }>;
 
 export const EXPENSE_INCLUDE = expenseInclude;
-
-// Re-exported because two route handlers import it from here. The definition
-// moved to `lib/split` so the client can compute an optimistic balance with the
-// same arithmetic the server uses.
-export { convertedBreakdown, type ConvertedBreakdown } from "@/lib/split";
 
 // ---------------------------------------------------------------------------
 // Balances
@@ -480,20 +476,6 @@ export function activityDto(
 // Group summaries
 // ---------------------------------------------------------------------------
 
-/**
- * Builds the home-screen card for each of a person's groups.
- *
- * Deliberately batched: a naive version issues four queries per group, which is
- * fine for three groups and miserable for thirty.
- */
-/**
- * Every group the viewer belongs to, folded into a balance sheet, keyed by id.
- *
- * Lifted out because two different screens need the same fold and computing it
- * twice per request means twice the queries over the same rows: the group list
- * asks "where do I stand in each group", the friends list asks "where do I
- * stand with each person", and both answers come out of these sheets.
- */
 /** A group with nothing in it, so a missing precomputed sheet degrades to
  *  "no balances" rather than throwing. */
 const EMPTY_SHEET: BalanceSheet = {
@@ -503,6 +485,14 @@ const EMPTY_SHEET: BalanceSheet = {
   totalSpend: 0n,
 };
 
+/**
+ * Every group the viewer belongs to, folded into a balance sheet, keyed by id.
+ *
+ * Lifted out because two different screens need the same fold and computing it
+ * twice per request means twice the queries over the same rows: the group list
+ * asks "where do I stand in each group", the friends list asks "where do I
+ * stand with each person", and both answers come out of these sheets.
+ */
 export async function groupSheetsFor(personId: string): Promise<Map<string, BalanceSheet>> {
   const memberships = await prisma.membership.findMany({
     where: { personId, leftAt: null },
@@ -602,10 +592,7 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
     }
   });
 
-  // Biggest exposure first: it is the one being settled, and on a phone the
-  // rest may well be behind a "show more".
-  ledgers.sort((a, b) => (BigInt(b.net) < 0n ? -BigInt(b.net) : BigInt(b.net)) >
-    (BigInt(a.net) < 0n ? -BigInt(a.net) : BigInt(a.net)) ? 1 : -1);
+  ledgers.sort(biggestFirst);
 
   return ledgers;
 }
@@ -637,6 +624,9 @@ export function groupMembershipsFor(personId: string, groupId?: string) {
  * unread: the newest group-wide entry, and entries by other people since you
  * last opened the group or Activity, whichever is later, leaving out reminders
  * between two other people.
+ *
+ * Deliberately batched: a naive version issues four queries per group, which is
+ * fine for three groups and miserable for thirty.
  */
 export async function groupSummaries(
   personId: string,

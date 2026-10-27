@@ -2,7 +2,8 @@ import { json, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
-import { EXPENSE_INCLUDE, convertedBreakdown, expenseDto } from "@/server/read";
+import { EXPENSE_INCLUDE, expenseDto } from "@/server/read";
+import { convertedBreakdown } from "@/lib/split";
 import { DEFAULT_CATEGORY_ID } from "@/lib/categories";
 import type { CategoryTotalDto, GroupStatsDto, MonthTotalDto } from "@/lib/types";
 
