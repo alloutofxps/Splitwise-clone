@@ -340,7 +340,7 @@ MOTION-SPEC section 7 gets a line for each, as NumberFlow's did.
 | PR | Items |
 |---|---|
 | 7. Unused components, helpers and exports, and their tests | 7, 8 (done 27 October, with `clearLedgerCache` since #65 had merged; 22 file-only values made private, types left exported; download unchanged to the byte) |
-| 8. Unused styles | 9 |
+| 8. Unused styles | 9 (done 27 October, plus `.card`, which the audit's check had counted as used because the word "card" appears in comments; styles 12.5 to 12.3 KB) |
 | 9. Refreshes that refresh nothing | 10 |
 | 10. Drop `date-fns`, move `@types/qrcode` (needs your OK) | 11 |
 
