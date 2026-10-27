@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
-import type { Group, Membership } from "@/generated/prisma/client";
+import { Prisma, type Group, type Membership } from "@/generated/prisma/client";
 
 /**
  * Access control, such as it is.
@@ -21,16 +21,79 @@ export interface GroupAccess {
   isOwner: boolean;
 }
 
+/**
+ * Every column of a group and of a membership, listed by hand so the access
+ * check can ask for both in one question. Prisma asks two, one after the
+ * other, even when told to include one in the other, and this check runs on
+ * every group request.
+ *
+ * `satisfies` fails the type check, and `access.test.ts` fails, when either
+ * table gains or loses a column and these lists aren't updated to match.
+ */
+export const GROUP_COLUMNS = {
+  id: true,
+  name: true,
+  kind: true,
+  emoji: true,
+  color: true,
+  currency: true,
+  simplifyDebts: true,
+  defaultSplit: true,
+  inviteCode: true,
+  inviteCodeActive: true,
+  archivedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  ledgerVersion: true,
+} satisfies Record<keyof Group, true>;
+
+export const MEMBERSHIP_COLUMNS = {
+  id: true,
+  groupId: true,
+  personId: true,
+  role: true,
+  nickname: true,
+  joinedAt: true,
+  leftAt: true,
+  lastReadActivityAt: true,
+} satisfies Record<keyof Membership, true>;
+
+/** `g."id" AS "g_id", ...`: each column under its table's prefix. */
+function columns(table: "g" | "m", list: Record<string, true>) {
+  return Prisma.raw(Object.keys(list).map((name) => `${table}."${name}" AS "${table}_${name}"`).join(", "));
+}
+
+/** The columns under one prefix, with the prefix taken off. */
+function unprefix(row: Record<string, unknown>, table: "g" | "m", list: Record<string, true>) {
+  return Object.fromEntries(Object.keys(list).map((name) => [name, row[`${table}_${name}`]]));
+}
+
+/**
+ * Splits the one row the access question returns back into the group and your
+ * membership. No row: the group doesn't exist. No membership id: you were never
+ * in it. Exported for its test.
+ */
+export function readAccessRow(row: Record<string, unknown> | undefined): {
+  group: Group | null;
+  membership: Membership | null;
+} {
+  if (!row) return { group: null, membership: null };
+  const group = unprefix(row, "g", GROUP_COLUMNS) as Group;
+  const membership = row.m_id == null ? null : (unprefix(row, "m", MEMBERSHIP_COLUMNS) as Membership);
+  return { group, membership };
+}
+
 export async function requireGroupAccess(
   groupId: string,
   personId: string,
 ): Promise<GroupAccess> {
-  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  const rows = await prisma.$queryRaw<Record<string, unknown>[]>`
+    SELECT ${columns("g", GROUP_COLUMNS)}, ${columns("m", MEMBERSHIP_COLUMNS)}
+    FROM "Group" g
+    LEFT JOIN "Membership" m ON m."groupId" = g."id" AND m."personId" = ${personId}
+    WHERE g."id" = ${groupId}`;
+  const { group, membership } = readAccessRow(rows[0]);
   if (!group) throw new NotFoundError("That group no longer exists.");
-
-  const membership = await prisma.membership.findUnique({
-    where: { groupId_personId: { groupId, personId } },
-  });
   if (!membership || membership.leftAt) {
     throw new ForbiddenError("You're not in that group.");
   }
