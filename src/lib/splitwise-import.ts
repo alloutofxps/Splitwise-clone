@@ -19,7 +19,7 @@
  * Used on both sides: the phone reads the file to show a preview, and the
  * server rebuilds the rows itself rather than trusting what it is sent.
  */
-import { parseAmount } from "./money";
+import { abs, parseAmount } from "./money";
 import { apportion } from "./split";
 import { CATEGORIES, DEFAULT_CATEGORY_ID, suggestCategory } from "./categories";
 
@@ -129,7 +129,7 @@ export function parseSplitwiseExport(text: string): SplitwiseExport {
       date: date.slice(0, 10),
       description: (description || "Imported expense").slice(0, 140),
       category: category ?? "",
-      cost: (costMinor < 0n ? -costMinor : costMinor).toString(),
+      cost: abs(costMinor).toString(),
       currency: code,
       nets: nets.map((n) => n.toString()),
     });
@@ -168,7 +168,7 @@ export function rebuildRow(row: { cost: string; category: string; nets: string[]
   if (drift !== 0n) {
     let biggest = 0;
     nets.forEach((n, i) => {
-      if ((n < 0n ? -n : n) > (nets[biggest] < 0n ? -nets[biggest] : nets[biggest])) biggest = i;
+      if (abs(n) > abs(nets[biggest])) biggest = i;
     });
     nets[biggest] -= drift;
   }

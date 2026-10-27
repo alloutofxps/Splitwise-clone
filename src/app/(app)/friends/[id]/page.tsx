@@ -25,7 +25,7 @@ import { useOpenScreen } from "@/components/ui/open-screen";
 import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 
 import { groupByDay } from "@/lib/day-groups";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import { isolate } from "@/lib/bidi";
 
 /**
@@ -444,7 +444,7 @@ export default function FriendPage() {
  * so a friend who owes you can end up paying someone else, who pays you.
  */
 function planNote(net: bigint, planned: bigint, name: string, currency: string): string {
-  const money = (value: bigint) => formatMoney(value < 0n ? -value : value, currency);
+  const money = (value: bigint) => formatMoney(abs(value), currency);
   const head = "In the group's plan for fewer payments, ";
   if (net > 0n) {
     if (planned > 0n && planned < net) {

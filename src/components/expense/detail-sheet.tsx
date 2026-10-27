@@ -20,7 +20,7 @@ import {
   useExpense,
 } from "@/lib/client/queries";
 import { categoryById } from "@/lib/categories";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import { shortDate } from "@/lib/day-groups";
 import type { PersonDto } from "@/lib/types";
 
@@ -234,7 +234,7 @@ export function ExpenseDetailSheet({
                             )}
                           >
                             {net > 0n ? "lent " : isMe ? "owe " : "owes "}
-                            {formatMoney(net > 0n ? net : -net, expense.currency)}
+                            {formatMoney(abs(net), expense.currency)}
                           </span>
                         )}
                       </span>

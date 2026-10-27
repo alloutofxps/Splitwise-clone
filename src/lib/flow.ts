@@ -5,6 +5,8 @@
  * returns.
  */
 
+import { abs } from "./money";
+
 export interface FlowEdge {
   fromPersonId: string;
   toPersonId: string;
@@ -262,19 +264,18 @@ export function barSegments(
 ): BarSegment[] {
   const live = entries.filter((entry) => entry.amount !== 0n);
   if (live.length === 0) return [];
-  const size = (value: bigint) => (value < 0n ? -value : value);
   const sorted = [...live].sort((a, b) => {
     if (a.amount > 0n !== b.amount > 0n) return a.amount > 0n ? -1 : 1;
-    return size(b.amount) > size(a.amount) ? 1 : size(b.amount) < size(a.amount) ? -1 : 0;
+    return abs(b.amount) > abs(a.amount) ? 1 : abs(b.amount) < abs(a.amount) ? -1 : 0;
   });
 
-  const total = sorted.reduce((sum, entry) => sum + Number(size(entry.amount)), 0);
+  const total = sorted.reduce((sum, entry) => sum + Number(abs(entry.amount)), 0);
   const floor = Math.min(minShare, 1 / sorted.length);
   const spare = 1 - floor * sorted.length;
   return sorted.map((entry) => ({
     personId: entry.personId,
     amount: entry.amount,
-    share: round(floor + spare * (Number(size(entry.amount)) / total), 4),
+    share: round(floor + spare * (Number(abs(entry.amount)) / total), 4),
   }));
 }
 

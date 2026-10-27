@@ -5,6 +5,7 @@ import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "./primitives";
 import {
   caretInGrouped,
+  abs,
   currencySymbol,
   decimalsFor,
   formatMoney,
@@ -64,7 +65,7 @@ export function Amount({
   fit?: "display" | "hero";
 }) {
   const amount = typeof value === "bigint" ? value : BigInt(value || "0");
-  const written = formatMoney(signed ? amount : amount < 0n ? -amount : amount, currency, { signed });
+  const written = formatMoney(signed ? amount : abs(amount), currency, { signed });
 
   const resolvedTone =
     tone === "auto" ? (amount > 0n ? "positive" : amount < 0n ? "negative" : "plain") : tone;

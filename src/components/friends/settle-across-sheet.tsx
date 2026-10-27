@@ -8,7 +8,7 @@ import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { useSettleWithPerson } from "@/lib/client/queries";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import { ApiError } from "@/lib/client/api";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import type { PersonDto, SharedLedgerDto } from "@/lib/types";
@@ -68,7 +68,7 @@ export function SettleAcrossSheet({
   // The net of what is ticked: what actually changes hands.
   const net = chosen.reduce((total, ledger) => total + BigInt(ledger.net), 0n);
   const theyPayMe = net > 0n;
-  const magnitude = net < 0n ? -net : net;
+  const magnitude = abs(net);
 
   const submit = async () => {
     if (chosen.length === 0) return;
@@ -80,7 +80,7 @@ export function SettleAcrossSheet({
         note: note.trim() || null,
         rows: chosen.map((ledger) => ({
           groupId: ledger.groupId,
-          amount: (BigInt(ledger.net) < 0n ? -BigInt(ledger.net) : BigInt(ledger.net)).toString(),
+          amount: abs(BigInt(ledger.net)).toString(),
         })),
       });
       haptic([8, 30, 8]);
@@ -218,7 +218,7 @@ export function SettleAcrossSheet({
                   </span>
 
                   <Amount
-                    value={value < 0n ? -value : value}
+                    value={abs(value)}
                     currency={ledger.currency}
                     size="sm"
                     tone={owedToMe ? "positive" : "negative"}

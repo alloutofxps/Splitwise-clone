@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/db";
 import { log } from "@/lib/log";
-import { formatMoney } from "@/lib/money";
+import { abs, formatMoney } from "@/lib/money";
 import type { ActivityData } from "@/lib/types";
 
 /**
@@ -157,7 +157,7 @@ export function messageFor(activity: PendingActivity, recipientId: string): Push
       .reduce((t, s) => t + s.amount, 0n);
     const net = paid - owed;
     if (net === 0n) return "";
-    const amount = formatMoney(net < 0n ? -net : net, activity.expense.currency);
+    const amount = formatMoney(abs(net), activity.expense.currency);
     return net < 0n ? ` Your share is ${amount}.` : ` You get back ${amount}.`;
   })();
 
