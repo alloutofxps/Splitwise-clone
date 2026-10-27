@@ -84,6 +84,20 @@ export const PAYMENT_KINDS: PaymentKind[] = [
 ];
 
 /**
+ * Services that read an amount in one currency only, whatever the link says.
+ *
+ * Filling in "50" for a 50 euro debt opens Venmo asking for 50 dollars, or a
+ * UPI app asking for 50 rupees. For any other currency the link opens the
+ * service without an amount, and the person types it from the screen.
+ */
+const ONE_CURRENCY: Record<string, string> = {
+  upi: "INR",
+  venmo: "USD",
+  cashapp: "USD",
+  monzo: "GBP",
+};
+
+/**
  * Builds a deep link for a handle, or null when the kind has no scheme worth
  * linking to and the value should be offered as copyable text instead.
  */
@@ -96,7 +110,9 @@ export function paymentLink(
   const value = method.value.trim();
   if (!value) return null;
 
-  const decimal = amount && amount > 0n ? toDecimalString(amount, currency) : null;
+  const only = ONE_CURRENCY[method.kind];
+  const fits = !only || only === currency.toUpperCase();
+  const decimal = fits && amount && amount > 0n ? toDecimalString(amount, currency) : null;
 
   switch (method.kind) {
     case "upi": {
