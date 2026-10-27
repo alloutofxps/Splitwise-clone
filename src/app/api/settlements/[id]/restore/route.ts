@@ -63,20 +63,23 @@ export const POST = route(async (_request: Request, { params }: Params) => {
 
   // Both people still have to be in the group: restoring a payment to someone
   // who has since left reopens a balance nobody in the group can see to fix.
+  // A removed placeholder comes back with it instead, as with expenses
+  // (expenses/[id]/restore), since nobody can add one back by hand.
+  const rejoining: string[] = [];
   for (const row of siblings) {
     if (!row.groupId) continue;
-    const present = await prisma.membership.count({
-      where: {
-        groupId: row.groupId,
-        personId: { in: [row.fromPersonId, row.toPersonId] },
-        leftAt: null,
-      },
+    const memberships = await prisma.membership.findMany({
+      where: { groupId: row.groupId, personId: { in: [row.fromPersonId, row.toPersonId] } },
+      select: { id: true, leftAt: true, person: { select: { isGhost: true, deletedAt: true } } },
     });
-    if (present !== 2) {
+    const present = memberships.filter((m) => !m.leftAt).length;
+    const placeholders = memberships.filter((m) => m.leftAt && m.person.isGhost && !m.person.deletedAt);
+    if (present + placeholders.length !== 2) {
       throw new ValidationError(
         "Someone on this payment has left the group. Add them back first.",
       );
     }
+    rejoining.push(...placeholders.map((m) => m.id));
   }
 
   await prisma.$transaction([
@@ -84,6 +87,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       where: { id: { in: siblings.map((row) => row.id) } },
       data: { deletedAt: null },
     }),
+    prisma.membership.updateMany({ where: { id: { in: rejoining } }, data: { leftAt: null } }),
     bumpLedgerQuery(siblings.map((row) => row.groupId)),
   ]);
 

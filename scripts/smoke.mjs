@@ -2163,6 +2163,21 @@ async function auditRegressions() {
   const binBalances = (await alice.call(`/api/groups/${binTrip.id}`)).body.group.balances.net;
   check("restoring it brings back what they owe", binBalances[pipId] === "-500", JSON.stringify(binBalances));
 
+  // The same for a payment: a placeholder whose only history is a binned
+  // payment is kept, and restoring the payment brings them back.
+  const payTrip = (await alice.call("/api/groups", { method: "POST", body: { name: "Bin pay", currency: "EUR", placeholderNames: ["Rue"] } })).body.group;
+  const rueId = (await alice.call(`/api/groups/${payTrip.id}`)).body.group.members.find((m) => m.displayName === "Rue").id;
+  const ruePaid = (await alice.call("/api/settlements", { method: "POST", body: { groupId: payTrip.id, fromPersonId: rueId, toPersonId: aliceMe.id, amount: "300", currency: "EUR" } })).body.settlement;
+  await alice.call(`/api/settlements/${ruePaid.id}`, { method: "DELETE" });
+  const rueRemoved = await alice.call(`/api/groups/${payTrip.id}/members/${rueId}`, { method: "DELETE", allowError: true });
+  const rueBack = await alice.call(`/api/settlements/${ruePaid.id}/restore`, { method: "POST", allowError: true });
+  const payBalances = (await alice.call(`/api/groups/${payTrip.id}`)).body.group.balances.net;
+  check(
+    "restoring a binned payment brings back the placeholder it was from",
+    rueRemoved.status === 200 && rueBack.status === 200 && payBalances[rueId] === "300",
+    `remove ${rueRemoved.status}, restore ${rueBack.status}, ${JSON.stringify(payBalances)}`,
+  );
+
   // M14, M13 - health and security headers.
   const health = await fetch(`${BASE}/api/health`);
   check("M14: the health check answers", health.status === 200, String(health.status));
