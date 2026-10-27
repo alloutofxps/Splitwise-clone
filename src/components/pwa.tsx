@@ -80,11 +80,14 @@ function ServiceWorkerManager() {
         registration.addEventListener("updatefound", () => {
           const installing = registration?.installing;
           if (!installing) return;
+          // An update replaces a worker that was already running this page; a
+          // first install has none. Asked here, as the new worker starts, not
+          // once it has installed: by then Safari may already have let it take
+          // over the page, and a brand-new visitor was told "A new version of
+          // Divvy is ready" on their second screen.
+          const replacing = navigator.serviceWorker.controller !== null;
           installing.addEventListener("statechange", () => {
-            // "installed" with a controller present means an update is ready;
-            // without one it is the very first install and there is nothing
-            // to tell the user about.
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+            if (installing.state === "installed" && replacing) {
               setWaiting(installing);
             }
           });

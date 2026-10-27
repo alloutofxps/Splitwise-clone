@@ -82,6 +82,12 @@ const reg = await page.evaluate(async () => {
 check("a worker is registered", Boolean(reg), JSON.stringify(reg));
 check("registered with a build id in the URL", /\/sw\.js\?v=[^&]+$/.test(reg?.scriptURL ?? ""), reg?.scriptURL);
 check("the worker reached active", reg?.hasActive === true);
+// Safari let a first install take over the page before it finished
+// installing, and a brand-new visitor was offered "a new version".
+check(
+  "a first visit is not told a new version is ready",
+  (await page.getByText("A new version of Divvy is ready").count()) === 0,
+);
 
 const cacheNames = await page.evaluate(() => caches.keys());
 const buildId = (reg?.scriptURL ?? "").split("v=")[1];
