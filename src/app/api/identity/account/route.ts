@@ -44,13 +44,26 @@ export const DELETE = route(async () => {
   await prisma.$transaction(async (tx) => {
     // Hand each group they own to its longest-standing remaining member, so
     // no group is left with nobody able to manage it.
-    for (const { groupId } of ownerships) {
-      const successor = await tx.membership.findFirst({
-        where: { groupId, leftAt: null, personId: { not: me }, person: { isGhost: false, deletedAt: null } },
+    if (ownerships.length > 0) {
+      const candidates = await tx.membership.findMany({
+        where: {
+          groupId: { in: ownerships.map((row) => row.groupId) },
+          leftAt: null,
+          personId: { not: me },
+          person: { isGhost: false, deletedAt: null },
+        },
         orderBy: { joinedAt: "asc" },
+        select: { id: true, groupId: true },
       });
-      if (successor) {
-        await tx.membership.update({ where: { id: successor.id }, data: { role: "owner" } });
+      const successors = new Map<string, string>();
+      for (const row of candidates) {
+        if (!successors.has(row.groupId)) successors.set(row.groupId, row.id);
+      }
+      if (successors.size > 0) {
+        await tx.membership.updateMany({
+          where: { id: { in: [...successors.values()] } },
+          data: { role: "owner" },
+        });
       }
     }
 

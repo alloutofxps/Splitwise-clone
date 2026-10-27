@@ -90,28 +90,41 @@ export const POST = route(async (request: Request) => {
       },
     });
 
-    for (const personId of memberIds) {
-      await tx.membership.create({
-        data: { groupId: created.id, personId, role: "member" },
-      });
-    }
+    const placeholders = input.placeholderNames
+      .filter((name) => name)
+      .map((name) => ({
+        displayName: name,
+        isGhost: true,
+        createdByPersonId: session.person.id,
+        defaultCurrency: input.currency,
+        avatarColor: colorForName(name),
+        inviteCode: generateGhostCode(),
+      }));
+    // Matched back by code, since the rows a batch insert returns have no
+    // promised order.
+    const ghostIds = new Map(
+      (
+        await tx.person.createManyAndReturn({
+          data: placeholders,
+          select: { id: true, inviteCode: true },
+        })
+      ).map((ghost) => [ghost.inviteCode, ghost.id]),
+    );
 
-    for (const name of input.placeholderNames) {
-      if (!name) continue;
-      const ghost = await tx.person.create({
-        data: {
-          displayName: name,
-          isGhost: true,
-          createdByPersonId: session.person.id,
-          defaultCurrency: input.currency,
-          avatarColor: colorForName(name),
-          inviteCode: generateGhostCode(),
-        },
-      });
-      await tx.membership.create({
-        data: { groupId: created.id, personId: ghost.id, role: "member" },
-      });
-    }
+    // Everyone joins a millisecond apart, in the order given: the member list
+    // sorts by joining time, and so does choosing the longest-standing member
+    // when an owner leaves.
+    const joined = Date.now();
+    await tx.membership.createMany({
+      data: [...memberIds, ...placeholders.map((ghost) => ghostIds.get(ghost.inviteCode)!)].map(
+        (personId, index) => ({
+          groupId: created.id,
+          personId,
+          role: "member",
+          joinedAt: new Date(joined + index + 1),
+        }),
+      ),
+    });
 
     return created;
   });

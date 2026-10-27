@@ -46,33 +46,32 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       })
     : [settlement];
 
+  // This also refuses a group deleted since then: putting a payment back into
+  // nothing would leave a row no screen can reach.
   for (const row of siblings) {
     await requireSettlementAccess(row, session.person.id);
   }
 
-  // A group deleted since then takes its payments with it, and putting one back
-  // into nothing would leave a row no screen can reach.
-  for (const row of siblings) {
-    if (!row.groupId) continue;
-    const group = await prisma.group.findUnique({
-      where: { id: row.groupId },
-      select: { id: true },
-    });
-    if (!group) throw new ValidationError("A group this payment belonged to is gone.");
-  }
-
   // Both people still have to be in the group: restoring a payment to someone
   // who has since left reopens a balance nobody in the group can see to fix.
-  for (const row of siblings) {
-    if (!row.groupId) continue;
-    const present = await prisma.membership.count({
+  // They also have to be two people. Merging a placeholder can leave a deleted
+  // payment from someone to themselves, and that one must stay deleted.
+  const inGroups = siblings.filter((row) => row.groupId !== null);
+  if (inGroups.length > 0) {
+    const present = await prisma.membership.findMany({
       where: {
-        groupId: row.groupId,
-        personId: { in: [row.fromPersonId, row.toPersonId] },
+        groupId: { in: inGroups.map((row) => row.groupId!) },
+        personId: { in: inGroups.flatMap((row) => [row.fromPersonId, row.toPersonId]) },
         leftAt: null,
       },
+      select: { groupId: true, personId: true },
     });
-    if (present !== 2) {
+    const here = new Set(present.map((row) => `${row.groupId} ${row.personId}`));
+    const bothHere = (row: (typeof inGroups)[number]) =>
+      row.fromPersonId !== row.toPersonId &&
+      here.has(`${row.groupId} ${row.fromPersonId}`) &&
+      here.has(`${row.groupId} ${row.toPersonId}`);
+    if (!inGroups.every(bothHere)) {
       throw new ValidationError(
         "Someone on this payment has left the group. Add them back first.",
       );
