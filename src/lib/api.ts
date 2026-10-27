@@ -320,7 +320,9 @@ export const currencyCode = z
 export const exchangeRateInput = z
   .string()
   .trim()
-  .regex(/^\d+(\.\d{1,12})?$/, "The exchange rate has to be a number above zero.")
+  // Up to MAX_RATE_PLACES (lib/money): an exact rate for a large payment
+  // needs more than 12.
+  .regex(/^\d+(\.\d{1,24})?$/, "The exchange rate has to be a number above zero.")
   .refine((value) => Number(value) > 0, "The exchange rate has to be more than zero.");
 
 /** An ISO date string or timestamp, as a Date. */

@@ -46,40 +46,46 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       })
     : [settlement];
 
+  // This also refuses a group deleted since then: putting a payment back into
+  // nothing would leave a row no screen can reach.
   for (const row of siblings) {
     await requireSettlementAccess(row, session.person.id);
   }
 
-  // A group deleted since then takes its payments with it, and putting one back
-  // into nothing would leave a row no screen can reach.
-  for (const row of siblings) {
-    if (!row.groupId) continue;
-    const group = await prisma.group.findUnique({
-      where: { id: row.groupId },
-      select: { id: true },
-    });
-    if (!group) throw new ValidationError("A group this payment belonged to is gone.");
-  }
-
   // Both people still have to be in the group: restoring a payment to someone
   // who has since left reopens a balance nobody in the group can see to fix.
+  // They also have to be two people. Merging a placeholder can leave a deleted
+  // payment from someone to themselves, and that one must stay deleted.
   // A removed placeholder comes back with it instead, as with expenses
   // (expenses/[id]/restore), since nobody can add one back by hand.
-  const rejoining: string[] = [];
-  for (const row of siblings) {
-    if (!row.groupId) continue;
+  const rejoining = new Set<string>();
+  const inGroups = siblings.filter((row) => row.groupId !== null);
+  if (inGroups.length > 0) {
     const memberships = await prisma.membership.findMany({
-      where: { groupId: row.groupId, personId: { in: [row.fromPersonId, row.toPersonId] } },
-      select: { id: true, leftAt: true, person: { select: { isGhost: true, deletedAt: true } } },
+      where: {
+        groupId: { in: inGroups.map((row) => row.groupId!) },
+        personId: { in: inGroups.flatMap((row) => [row.fromPersonId, row.toPersonId]) },
+      },
+      select: { id: true, groupId: true, personId: true, leftAt: true, person: { select: { isGhost: true, deletedAt: true } } },
     });
-    const present = memberships.filter((m) => !m.leftAt).length;
-    const placeholders = memberships.filter((m) => m.leftAt && m.person.isGhost && !m.person.deletedAt);
-    if (present + placeholders.length !== 2) {
+    const byKey = new Map(memberships.map((m) => [`${m.groupId} ${m.personId}`, m]));
+    const canBeHere = (groupId: string, personId: string) => {
+      const m = byKey.get(`${groupId} ${personId}`);
+      if (!m) return false;
+      if (!m.leftAt) return true;
+      if (!m.person.isGhost || m.person.deletedAt) return false;
+      rejoining.add(m.id);
+      return true;
+    };
+    const bothHere = (row: (typeof inGroups)[number]) =>
+      row.fromPersonId !== row.toPersonId &&
+      canBeHere(row.groupId!, row.fromPersonId) &&
+      canBeHere(row.groupId!, row.toPersonId);
+    if (!inGroups.every(bothHere)) {
       throw new ValidationError(
         "Someone on this payment has left the group. Add them back first.",
       );
     }
-    rejoining.push(...placeholders.map((m) => m.id));
   }
 
   await prisma.$transaction([
@@ -87,7 +93,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
       where: { id: { in: siblings.map((row) => row.id) } },
       data: { deletedAt: null },
     }),
-    prisma.membership.updateMany({ where: { id: { in: rejoining } }, data: { leftAt: null } }),
+    prisma.membership.updateMany({ where: { id: { in: [...rejoining] } }, data: { leftAt: null } }),
     bumpLedgerQuery(siblings.map((row) => row.groupId)),
   ]);
 

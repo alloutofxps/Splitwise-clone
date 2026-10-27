@@ -417,7 +417,8 @@ export function caretInGrouped(shown: string, significant: number): number {
  *
  * `rate` is a decimal string (quote per unit of base) so it round-trips through
  * the database without float drift. The multiplication is done in integer space
- * at 12 digits of extra precision and rounded half-up at the end.
+ * with every decimal place the rate has (at least 12) and rounded half-up at
+ * the end.
  */
 export function convert(
   minor: bigint,
@@ -427,7 +428,8 @@ export function convert(
 ): bigint {
   if (fromCode.toUpperCase() === toCode.toUpperCase()) return minor;
 
-  const PRECISION = 12n;
+  const places = /\.(\d+)$/.exec(String(rate).trim())?.[1].length ?? 0;
+  const PRECISION = BigInt(Math.max(12, places));
   const parsed = decimalStringToScaled(String(rate), PRECISION);
 
   /*
@@ -494,18 +496,29 @@ export function inverseRate(rate: string): string {
   return (1 / Number(rate)).toFixed(12);
 }
 
+/** The most decimal places a rate may have (`exchangeRateInput` in lib/api). */
+export const MAX_RATE_PLACES = 24;
+
 /**
  * The rate that turns `paid` (in `paidCurrency`) into exactly `owed` (in
- * `owedCurrency`), to 12 decimal places. Used when someone pays the whole debt
- * in another currency, so the server's conversion lands on the debt to the
- * cent instead of leaving a one-cent remainder from rounding.
+ * `owedCurrency`). Used when someone pays the whole debt in another currency,
+ * so the server's conversion lands on the debt to the cent instead of leaving
+ * a one-cent remainder from rounding.
+ *
+ * Twelve decimal places is enough for everyday amounts, but not for every
+ * amount: rounding the rate moves the converted figure by up to half a unit
+ * of the last place times the payment's size, so a payment of a billion
+ * minor units or more could land one unit off. The rate gets as many places
+ * as the payment needs for that error to stay under half a unit.
  */
 export function exactRate(owed: bigint, owedCurrency: string, paid: bigint, paidCurrency: string): string {
-  const scale = 10n ** 12n;
+  const size = paid * minorUnitScale(owedCurrency);
+  const places = Math.min(MAX_RATE_PLACES, Math.max(12, size.toString().length + 1));
+  const scale = 10n ** BigInt(places);
   const numerator = owed * minorUnitScale(paidCurrency) * scale;
   const denominator = paid * minorUnitScale(owedCurrency);
   const scaled = (numerator + denominator / 2n) / denominator;
   const whole = scaled / scale;
-  const fraction = (scaled % scale).toString().padStart(12, "0").replace(/0+$/, "");
+  const fraction = (scaled % scale).toString().padStart(places, "0").replace(/0+$/, "");
   return fraction ? `${whole}.${fraction}` : whole.toString();
 }

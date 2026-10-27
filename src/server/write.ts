@@ -419,7 +419,16 @@ export function decodeDataUrl(dataUrl: string, filename: string): {
  * only foreign keys, so "Priya added Dinner - 48.00" still reads correctly
  * after the expense is edited to something else or deleted outright.
  */
-export async function recordActivity(input: {
+export async function recordActivity(input: ActivityInput) {
+  return prisma.activity.create({ data: activityRow(input) });
+}
+
+/** Several feed entries in one write, for one event seen by several groups. */
+export async function recordActivities(inputs: ActivityInput[]) {
+  return prisma.activity.createMany({ data: inputs.map(activityRow) });
+}
+
+interface ActivityInput {
   type: string;
   actorPersonId: string;
   groupId?: string | null;
@@ -428,18 +437,18 @@ export async function recordActivity(input: {
   /** Set only for entries addressed to one person, such as a nudge. */
   targetPersonId?: string | null;
   data?: ActivityData;
-}) {
-  return prisma.activity.create({
-    data: {
-      type: input.type,
-      actorPersonId: input.actorPersonId,
-      groupId: input.groupId ?? null,
-      expenseId: input.expenseId ?? null,
-      settlementId: input.settlementId ?? null,
-      targetPersonId: input.targetPersonId ?? null,
-      data: JSON.stringify(input.data ?? {}),
-    },
-  });
+}
+
+function activityRow(input: ActivityInput) {
+  return {
+    type: input.type,
+    actorPersonId: input.actorPersonId,
+    groupId: input.groupId ?? null,
+    expenseId: input.expenseId ?? null,
+    settlementId: input.settlementId ?? null,
+    targetPersonId: input.targetPersonId ?? null,
+    data: JSON.stringify(input.data ?? {}),
+  };
 }
 
 /** Describes what changed between two versions, for the feed. */
