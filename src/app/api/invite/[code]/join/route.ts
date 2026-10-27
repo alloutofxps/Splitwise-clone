@@ -106,19 +106,30 @@ export const POST = route(async (request: Request, { params }: Params) => {
   return json({ kind: "person", person: personDto(person) });
 });
 
-/** Everyone already in the group becomes a contact of the new arrival. */
+/**
+ * Everyone already in the group becomes a contact of the new arrival.
+ *
+ * One question finds the members who aren't contacts yet and one write adds
+ * them all. Both run in a transaction, so nothing can add one of the same
+ * pairs in between.
+ */
 async function connectToGroupMembers(personId: string, groupId: string) {
-  const members = await prisma.membership.findMany({
-    where: { groupId, leftAt: null, personId: { not: personId } },
-    include: { person: { select: { id: true, isGhost: true } } },
-  });
-
-  for (const member of members) {
-    if (member.person.isGhost) continue;
-    await prisma.friendship.upsert({
-      where: { personAId_personBId: friendshipPair(personId, member.personId) },
-      create: friendshipPair(personId, member.personId),
-      update: {},
+  await prisma.$transaction(async (tx) => {
+    const strangers = await tx.membership.findMany({
+      where: {
+        groupId,
+        leftAt: null,
+        personId: { not: personId },
+        person: {
+          isGhost: false,
+          friendshipsA: { none: { personBId: personId } },
+          friendshipsB: { none: { personAId: personId } },
+        },
+      },
+      select: { personId: true },
     });
-  }
+    await tx.friendship.createMany({
+      data: strangers.map((member) => friendshipPair(personId, member.personId)),
+    });
+  });
 }

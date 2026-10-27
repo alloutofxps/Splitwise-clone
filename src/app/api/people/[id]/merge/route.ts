@@ -3,7 +3,7 @@ import { json, readBody, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { mergeGhostInto } from "@/server/merge";
 import { personDto } from "@/server/read";
-import { recordActivity } from "@/server/write";
+import { recordActivities } from "@/server/write";
 import { prisma } from "@/lib/db";
 
 type Params = { params: Promise<{ id: string }> };
@@ -51,8 +51,8 @@ export const POST = route(async (request: Request, { params }: Params) => {
   // an entry as *addressed* — the feed query hides such rows from everybody but
   // the sender and the recipient, which is right for a nudge and wrong here:
   // the member list changed for the whole group.
-  for (const groupId of groupIds) {
-    await recordActivity({
+  await recordActivities(
+    groupIds.map((groupId) => ({
       type: "member.merged",
       actorPersonId: session.person.id,
       groupId,
@@ -61,8 +61,8 @@ export const POST = route(async (request: Request, { params }: Params) => {
         name: person.displayName,
         ghostName: ghost?.displayName ?? null,
       },
-    });
-  }
+    })),
+  );
 
   return json({ person: personDto(person), moved: result.moved });
 });
