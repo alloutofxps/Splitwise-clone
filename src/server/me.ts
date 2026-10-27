@@ -65,6 +65,25 @@ export async function meDto(person: Person): Promise<MeDto> {
  * `directNet` keeps the old figure, because settling is still per-ledger and
  * the detail view has to be able to say which part of the total lives where.
  */
+/**
+ * Everyone still in a group you are still in. Your groups first, then who is
+ * in them, then those people by id: asked in one go ("people in a group that
+ * has me in it"), the database checked every person on Divvy.
+ */
+async function coMembersOf(personId: string) {
+  const mine = await prisma.membership.findMany({
+    where: { personId, leftAt: null },
+    select: { groupId: true },
+  });
+  const others = await prisma.membership.findMany({
+    where: { groupId: { in: mine.map((m) => m.groupId) }, leftAt: null, personId: { not: personId } },
+    select: { personId: true },
+  });
+  return prisma.person.findMany({
+    where: { id: { in: [...new Set(others.map((m) => m.personId))] } },
+  });
+}
+
 async function friendDtos(
   personId: string,
   /** The viewer's group sheets, computed once per request by the caller. */
@@ -75,17 +94,7 @@ async function friendDtos(
       where: { OR: [{ personAId: personId }, { personBId: personId }] },
       include: { personA: true, personB: true },
     }),
-    prisma.person.findMany({
-      where: {
-        id: { not: personId },
-        memberships: {
-          some: {
-            leftAt: null,
-            group: { memberships: { some: { personId, leftAt: null } } },
-          },
-        },
-      },
-    }),
+    coMembersOf(personId),
   ]);
 
   // Union, because the two overlap: somebody added by code who then joined your
@@ -289,15 +298,25 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
  * app without a lookup per row.
  */
 export async function visiblePeople(personId: string): Promise<PersonDto[]> {
-  const people = await prisma.person.findMany({
-    where: {
-      OR: [
-        { id: personId },
-        { memberships: { some: { group: { memberships: { some: { personId } } } } } },
-        { friendshipsA: { some: { personBId: personId } } },
-        { friendshipsB: { some: { personAId: personId } } },
-      ],
-    },
+  // You, everyone in a group you are or were in (whether or not they have
+  // left it), and your friends. Collected as ids first: asked as one question
+  // about every person, the database checked all of them.
+  const [mine, friendships] = await Promise.all([
+    prisma.membership.findMany({ where: { personId }, select: { groupId: true } }),
+    prisma.friendship.findMany({
+      where: { OR: [{ personAId: personId }, { personBId: personId }] },
+      select: { personAId: true, personBId: true },
+    }),
+  ]);
+  const inGroups = await prisma.membership.findMany({
+    where: { groupId: { in: mine.map((m) => m.groupId) } },
+    select: { personId: true },
   });
+  const ids = new Set([
+    personId,
+    ...inGroups.map((m) => m.personId),
+    ...friendships.flatMap((f) => [f.personAId, f.personBId]),
+  ]);
+  const people = await prisma.person.findMany({ where: { id: { in: [...ids] } } });
   return people.map(personDto);
 }

@@ -2,7 +2,7 @@ import { json, route } from "@/lib/api";
 import { requireSession } from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { beforeCursor, encodeCursor, parseCursor } from "@/server/cursor";
-import { activityDto, feedScope } from "@/server/read";
+import { activityDto, directExpenseIds, feedScope } from "@/server/read";
 
 const PAGE_SIZE = 50;
 
@@ -18,10 +18,13 @@ export const GET = route(async (request: Request) => {
   const url = new URL(request.url);
   const cursor = parseCursor(url.searchParams.get("before"));
 
-  const memberships = await prisma.membership.findMany({
-    where: { personId: session.person.id, leftAt: null },
-    select: { groupId: true, lastReadActivityAt: true },
-  });
+  const [memberships, expenseIds] = await Promise.all([
+    prisma.membership.findMany({
+      where: { personId: session.person.id, leftAt: null },
+      select: { groupId: true, lastReadActivityAt: true },
+    }),
+    directExpenseIds(session.person.id),
+  ]);
 
   const groupIds = memberships.map((m) => m.groupId);
   const lastReadByGroup = new Map(
@@ -39,7 +42,7 @@ export const GET = route(async (request: Request) => {
       // a reminder is shown only to its sender and recipient, everything else
       // in a group to the group, and entries outside groups to the people on
       // them.
-      OR: feedScope(session.person.id, groupIds),
+      OR: feedScope(session.person.id, groupIds, expenseIds),
     },
     include: {
       group: { select: { name: true, emoji: true } },

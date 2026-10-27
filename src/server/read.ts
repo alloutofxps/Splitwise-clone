@@ -79,6 +79,27 @@ export async function groupBalanceSheet(groupId: string): Promise<BalanceSheet> 
 }
 
 /**
+ * The expenses outside groups that the viewer paid for or has a share in,
+ * deleted ones included. Asked from the payer and share rows, which are looked
+ * up by person, rather than as "expenses with a payer or share that is me",
+ * which made the database check every expense outside groups, everybody's, not
+ * just the viewer's.
+ */
+export async function directExpenseIds(personId: string): Promise<string[]> {
+  const [paid, owed] = await Promise.all([
+    prisma.expensePayer.findMany({
+      where: { personId, expense: { groupId: null } },
+      select: { expenseId: true },
+    }),
+    prisma.expenseSplit.findMany({
+      where: { personId, expense: { groupId: null } },
+      select: { expenseId: true },
+    }),
+  ]);
+  return [...new Set([...paid, ...owed].map((row) => row.expenseId))];
+}
+
+/**
  * Direct (non-group) balances between the viewer and everyone they have added.
  *
  * Bucketed by currency: two friends have no agreed settlement currency, so
@@ -89,20 +110,18 @@ export async function directBalanceSheets(
   personId: string,
 ): Promise<Map<string, BalanceSheet>> {
   const [expenses, settlements] = await Promise.all([
-    prisma.expense.findMany({
-      where: {
-        groupId: null,
-        deletedAt: null,
-        OR: [{ payers: { some: { personId } } }, { splits: { some: { personId } } }],
-      },
-      select: {
-        id: true,
-        currency: true,
-        amount: true,
-        payers: { select: { personId: true, amount: true } },
-        splits: { select: { personId: true, amount: true } },
-      },
-    }),
+    directExpenseIds(personId).then((ids) =>
+      prisma.expense.findMany({
+        where: { id: { in: ids }, deletedAt: null },
+        select: {
+          id: true,
+          currency: true,
+          amount: true,
+          payers: { select: { personId: true, amount: true } },
+          splits: { select: { personId: true, amount: true } },
+        },
+      }),
+    ),
     prisma.settlement.findMany({
       where: {
         groupId: null,
@@ -359,18 +378,22 @@ function latest(a: Date | null, b: Date | null): Date | null {
  * their groups, entries addressed to them (or sent by them to someone), and
  * expenses and payments outside groups that they are part of. The feed and
  * the unread badge both use this, so they can never disagree.
+ *
+ * `expenseIds` is `directExpenseIds(personId)`. An entry outside groups always
+ * points at an expense outside groups (an expense never changes group), so
+ * those ids find the same entries as asking about the expense's payers and
+ * shares, without checking everybody's.
  */
-export function feedScope(personId: string, groupIds: string[]): Prisma.ActivityWhereInput[] {
+export function feedScope(
+  personId: string,
+  groupIds: string[],
+  expenseIds: string[],
+): Prisma.ActivityWhereInput[] {
   return [
     { targetPersonId: personId },
     { groupId: { in: groupIds }, targetPersonId: null },
     { actorPersonId: personId, targetPersonId: { not: null } },
-    {
-      groupId: null,
-      expense: {
-        OR: [{ payers: { some: { personId } } }, { splits: { some: { personId } } }],
-      },
-    },
+    { groupId: null, expenseId: { in: expenseIds } },
     {
       groupId: null,
       settlement: { OR: [{ fromPersonId: personId }, { toPersonId: personId }] },
@@ -378,14 +401,18 @@ export function feedScope(personId: string, groupIds: string[]): Prisma.Activity
   ];
 }
 
-/** Unread entries outside any group: direct expenses, payments and reminders. */
+/**
+ * Unread entries outside any group: direct expenses, payments and reminders.
+ * Only other people's entries count, so the scope's "sent by you" case never
+ * matches here; it stays so the badge and the feed share one scope.
+ */
 export async function directUnreadCount(personId: string, seenAt: Date | null): Promise<number> {
   return prisma.activity.count({
     where: {
       groupId: null,
       actorPersonId: { not: personId },
       ...(seenAt ? { createdAt: { gt: seenAt } } : {}),
-      OR: feedScope(personId, []),
+      OR: feedScope(personId, [], await directExpenseIds(personId)),
     },
   });
 }
