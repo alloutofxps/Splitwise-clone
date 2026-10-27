@@ -323,7 +323,7 @@ Ordered from least to most risky. Expected savings are estimates.
 | 3. Sign-up screens only when needed | 2 | 11.6 KB, every signed-in screen (measured: group 8.7 KB, Home 15.6 KB, PERF-BASELINE 21) |
 | 4. A group's panels and Insights after load | 4 | Group 10 to 14 KB (measured: 13.6 KB, PERF-BASELINE 23) |
 | 5. Home's panels after load | 6 | Home 8.5 KB (measured: 7.2 KB, PERF-BASELINE 24) |
-| 6. Add expense panel after load | 5 | 16.8 KB, every screen |
+| 6. Add expense panel after load | 5 | 16.8 KB, every screen (measured: Home 20.7 KB, group 14.6 KB, PERF-BASELINE 25) |
 
 MOTION-SPEC section 7 gets a line for each, as NumberFlow's did.
 

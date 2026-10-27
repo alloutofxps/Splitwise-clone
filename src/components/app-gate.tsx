@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { ExpenseComposer } from "@/components/expense/composer";
+import { ExpenseComposer } from "@/components/expense/composer-after-load";
 import { useDashboard, usePrefetch } from "@/lib/client/queries";
 import { SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
 import { ApiError } from "@/lib/client/api";
