@@ -610,12 +610,9 @@ export async function sharedLedgers(meId: string, otherId: string): Promise<Shar
   return ledgers;
 }
 
-export async function groupSummaries(
-  personId: string,
-  /** Precomputed sheets, when the caller already needed them for something else. */
-  precomputed?: Map<string, BalanceSheet>,
-): Promise<GroupSummaryDto[]> {
-  const memberships = await prisma.membership.findMany({
+/** The groups the viewer is in, with their current members: what Home lists. */
+export function groupMembershipsFor(personId: string) {
+  return prisma.membership.findMany({
     where: { personId, leftAt: null },
     include: {
       group: {
@@ -629,15 +626,35 @@ export async function groupSummaries(
       },
     },
   });
+}
+
+export async function groupSummaries(
+  personId: string,
+  /**
+   * What the caller already has, so Home's request asks for each once. The
+   * sheets may still be on their way: they are awaited last, after this
+   * function's own lookups have gone out.
+   */
+  known: {
+    memberships?: Awaited<ReturnType<typeof groupMembershipsFor>>;
+    sheets?: Map<string, BalanceSheet> | Promise<Map<string, BalanceSheet>>;
+    seenAt?: Date | null;
+  } = {},
+): Promise<GroupSummaryDto[]> {
+  const memberships = known.memberships ?? (await groupMembershipsFor(personId));
 
   const groupIds = memberships.map((m) => m.groupId);
   if (groupIds.length === 0) return [];
 
-  const viewer = await prisma.person.findUnique({
-    where: { id: personId },
-    select: { activitySeenAt: true },
-  });
-  const seenAt = viewer?.activitySeenAt ?? null;
+  const seenAt =
+    known.seenAt !== undefined
+      ? known.seenAt
+      : ((
+          await prisma.person.findUnique({
+            where: { id: personId },
+            select: { activitySeenAt: true },
+          })
+        )?.activitySeenAt ?? null);
 
   const [latestActivity, unread] = await Promise.all([
     prisma.activity.groupBy({
@@ -696,7 +713,7 @@ export async function groupSummaries(
   // A group with nothing unread produces no row at all, hence the ?? 0 below.
   const unreadByGroup = new Map(unread.map((row) => [row.groupId, row._count._all]));
 
-  const fetched = precomputed ?? (await groupSheets(groupIds));
+  const fetched = (await known.sheets) ?? (await groupSheets(groupIds));
   const sheets = groupIds.map((id) => fetched.get(id) ?? EMPTY_SHEET);
 
   return memberships.map((membership, index) => {

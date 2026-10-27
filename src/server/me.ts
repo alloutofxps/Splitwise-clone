@@ -10,12 +10,13 @@ import type { Person } from "@/generated/prisma/client";
 import {
   directBalanceSheets,
   directUnreadCount,
-  groupSheetsFor,
+  groupMembershipsFor,
   groupSummaries,
   pairwiseNet,
   personDto,
   plannedNet,
 } from "./read";
+import { groupSheets } from "./ledger";
 import type { BalanceSheet } from "@/lib/balances";
 import { getRate } from "./rates";
 import { convert } from "@/lib/money";
@@ -42,6 +43,22 @@ export async function meDto(person: Person): Promise<MeDto> {
 }
 
 /**
+ * Everyone still in one of `groupIds` (the viewer's groups), other than the
+ * viewer. Who is in them first, then those people by id: asked in one go
+ * ("people in a group that has me in it"), the database checked every person
+ * on Divvy.
+ */
+async function coMembersOf(personId: string, groupIds: string[]) {
+  const others = await prisma.membership.findMany({
+    where: { groupId: { in: groupIds }, leftAt: null, personId: { not: personId } },
+    select: { personId: true },
+  });
+  return prisma.person.findMany({
+    where: { id: { in: [...new Set(others.map((m) => m.personId))] } },
+  });
+}
+
+/**
  * The friends list.
  *
  * A "friend" is anyone you share a ledger with - somebody you added by code, or
@@ -65,36 +82,19 @@ export async function meDto(person: Person): Promise<MeDto> {
  * `directNet` keeps the old figure, because settling is still per-ledger and
  * the detail view has to be able to say which part of the total lives where.
  */
-/**
- * Everyone still in a group you are still in. Your groups first, then who is
- * in them, then those people by id: asked in one go ("people in a group that
- * has me in it"), the database checked every person on Divvy.
- */
-async function coMembersOf(personId: string) {
-  const mine = await prisma.membership.findMany({
-    where: { personId, leftAt: null },
-    select: { groupId: true },
-  });
-  const others = await prisma.membership.findMany({
-    where: { groupId: { in: mine.map((m) => m.groupId) }, leftAt: null, personId: { not: personId } },
-    select: { personId: true },
-  });
-  return prisma.person.findMany({
-    where: { id: { in: [...new Set(others.map((m) => m.personId))] } },
-  });
-}
-
 async function friendDtos(
   personId: string,
+  /** The viewer's groups, from the caller's own lookup of them. */
+  groupIds: string[],
   /** The viewer's group sheets, computed once per request by the caller. */
-  groupSheets?: Map<string, BalanceSheet>,
+  groupSheets: Map<string, BalanceSheet> | Promise<Map<string, BalanceSheet>>,
 ): Promise<FriendDto[]> {
   const [friendships, coMembers] = await Promise.all([
     prisma.friendship.findMany({
       where: { OR: [{ personAId: personId }, { personBId: personId }] },
       include: { personA: true, personB: true },
     }),
-    coMembersOf(personId),
+    coMembersOf(personId, groupIds),
   ]);
 
   // Union, because the two overlap: somebody added by code who then joined your
@@ -120,7 +120,7 @@ async function friendDtos(
       where: {
         personId: { in: others.map((other) => other.id) },
         leftAt: null,
-        group: { memberships: { some: { personId, leftAt: null } } },
+        groupId: { in: groupIds },
       },
       select: {
         personId: true,
@@ -128,7 +128,7 @@ async function friendDtos(
         group: { select: { currency: true, name: true, emoji: true, simplifyDebts: true } },
       },
     }),
-    groupSheets ? Promise.resolve(groupSheets) : groupSheetsFor(personId),
+    groupSheets,
   ]);
 
   const sharedByFriend = new Map<
@@ -223,15 +223,24 @@ async function friendDtos(
 }
 
 export async function dashboardDto(person: Person): Promise<DashboardDto> {
-  // Folded once and handed to both: the group list and the friends list ask
-  // different questions of the same sheets, and computing them twice doubles
-  // the queries over identical rows.
-  const groupSheets = await groupSheetsFor(person.id);
+  const seenAt = person.activitySeenAt ?? null;
+  // Your groups are looked up once, and their sheets folded once, then handed
+  // to both lists: the group list and the friends list ask different
+  // questions of the same rows. Everything that doesn't need them starts
+  // straight away rather than waiting for the sheets.
+  const memberships = groupMembershipsFor(person.id);
+  const groupIds = memberships.then((rows) => rows.map((row) => row.groupId));
+  const sheets = groupIds.then(groupSheets);
+  // Either list can finish without reading the sheets (no groups, nobody to
+  // list), which would leave a failure there unhandled. One that matters still
+  // reaches the caller through the list that reads them.
+  sheets.catch(() => {});
 
-  const [me, groups, friends] = await Promise.all([
+  const [me, groups, friends, directUnread] = await Promise.all([
     meDto(person),
-    groupSummaries(person.id, groupSheets),
-    friendDtos(person.id, groupSheets),
+    memberships.then((rows) => groupSummaries(person.id, { memberships: rows, sheets, seenAt })),
+    groupIds.then((ids) => friendDtos(person.id, ids, sheets)),
+    directUnreadCount(person.id, seenAt),
   ]);
 
   // Roll every group and direct balance into one figure per currency. Groups
@@ -258,8 +267,7 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
   // Group entries plus those outside any group, on the same rule as the feed's
   // dots, so the badge and the feed always agree.
   const unreadActivityCount =
-    groups.reduce((total, g) => total + g.unreadCount, 0) +
-    (await directUnreadCount(person.id, person.activitySeenAt ?? null));
+    groups.reduce((total, g) => total + g.unreadCount, 0) + directUnread;
 
   // With balances in more than one currency, a rough single figure in the
   // person's own currency, so they can tell at a glance whether they are up or
