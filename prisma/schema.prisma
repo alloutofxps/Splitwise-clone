@@ -81,7 +81,7 @@ model Person {
   sessions           Session[]
   pushSubscriptions  PushSubscription[]
 
-  @@index([inviteCode])
+  // inviteCode needs no index of its own: @unique already makes one.
 }
 
 /// One phone or browser that has agreed to show notifications.
@@ -217,8 +217,8 @@ model Friendship {
   personA Person @relation("FriendA", fields: [personAId], references: [id], onDelete: Cascade)
   personB Person @relation("FriendB", fields: [personBId], references: [id], onDelete: Cascade)
 
+  // The unique pair also serves lookups by personAId alone.
   @@unique([personAId, personBId])
-  @@index([personAId])
   @@index([personBId])
 }
 
@@ -281,7 +281,7 @@ model Group {
   recurrences Recurrence[]
   budgets     Budget[]
 
-  @@index([inviteCode])
+  // inviteCode needs no index of its own: @unique already makes one.
 }
 
 model Membership {
@@ -300,9 +300,9 @@ model Membership {
   group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
+  // The unique pair also serves lookups by groupId alone.
   @@unique([groupId, personId])
   @@index([personId])
-  @@index([groupId])
 }
 
 // ---------------------------------------------------------------------------
@@ -375,8 +375,8 @@ model ExpensePayer {
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
+  // The unique pair also serves lookups by expenseId alone.
   @@unique([expenseId, personId])
-  @@index([expenseId])
   @@index([personId])
 }
 
@@ -401,8 +401,8 @@ model ExpenseSplit {
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
+  // The unique pair also serves lookups by expenseId alone.
   @@unique([expenseId, personId])
-  @@index([expenseId])
   @@index([personId])
 }
 
@@ -431,9 +431,9 @@ model ExpenseItemShare {
   item   ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   person Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
 
+  // The unique pair also serves lookups by itemId alone.
   @@unique([itemId, personId])
   @@index([personId])
-  @@index([itemId])
 }
 
 /// Receipt photos and PDFs. Stored as bytes in the database on purpose: it
