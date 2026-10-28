@@ -81,6 +81,7 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     },
   );
 
+  prepared.sessionId = session.sessionId;
   const after = await updateExpense(prepared);
 
   const changes = describeChanges(before, after);
