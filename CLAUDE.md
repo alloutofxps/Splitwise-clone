@@ -108,6 +108,13 @@ detail.
 - No Playwright Chromium on this machine. Use Edge:
   `export CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"`.
   Never run `msedge.exe --version`; it opens a window on the person's screen.
+- Database health, read-only and counts only (bills whose shares don't add
+  up, people outside their group, damaged file and more; every problem
+  should be 0): `DATABASE_URL=file:./design.db node scripts/db-check.mjs`,
+  or `node scripts/db-check-live.mjs` for the live database (needs the
+  Railway CLI signed in).
+- Permission table, every action as every kind of person (in CI):
+  `node scripts/permissions.mjs <url>`.
 - Browser suites: `node scripts/ui-check.mjs <url>`,
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server
