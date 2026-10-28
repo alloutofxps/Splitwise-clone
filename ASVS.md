@@ -40,7 +40,7 @@ Evidence referred to below:
 |---|---|---|
 | 2.1 Passwords | N/A | There are none |
 | 2.2 General: limits on guessing | Met | Sign-up 10 an hour per address, restore 20 an hour, passkey sign-in 20 per 5 minutes, device-link claims 20 per 10 minutes; limits read the real address, not a forged `X-Forwarded-For` (smoke C3) |
-| 2.2.3 Tell the person about new sign-ins | **Gap** | A new device appears in "Your devices" but nobody is told. Low risk without email; a push notification "Divvy was opened on a new device" would meet it |
+| 2.2.3 Tell the person about new sign-ins | Met | Since #123: a recovery key, passkey or device link signing a new device in sends "Divvy was opened on a new device" to the person's other devices with notifications on (`notifyNewDevice`, `src/server/push.ts`) |
 | 2.3 Authenticator lifecycle | Met | Recovery key shown once, stored only as a SHA-256 hash (`src/lib/codes.ts`); can be replaced; can't remove your last way in |
 | 2.4 Stored secrets | Met | Every secret is 256 random bits; only hashes are stored, and with that much randomness a plain SHA-256 is the standard choice (no salt or slow hash needed) |
 | 2.5 Recovery | Met | Recovery key or a link from another signed-in device; the link code lasts 5 minutes and is single use |
@@ -54,11 +54,11 @@ Evidence referred to below:
 | 3.1 Session token never in the URL | Met | Cookie only |
 | 3.2 New token at sign-in; 256 bits | Met | Each sign-in makes a new `Session` row with a new random secret (`startSession`) |
 | 3.3.1 Signing out ends the session on the server | Met | `DELETE /api/identity` deletes the row; the phone's notification subscription goes with it (cascade) |
-| 3.3.2 A limit on how long a session lasts | **Gap (deliberate, to confirm)** | Sessions end after 180 days unused, with no absolute limit, because the app has no password to sign back in with. ASVS level 2 wants re-authentication at least every 30 days for long sessions; meeting it would mean asking for the passkey or recovery key monthly |
+| 3.3.2 A limit on how long a session lasts | **Deviation, chosen by the owner** | Sessions end after 180 days unused, with no absolute limit. Level 2 wants re-authentication at least every 30 days for long sessions; the owner chose on 28 October 2026 not to ask monthly, since people without a passkey would have to type a long recovery key each time. Sensitive actions ask instead (3.6), new sign-ins are announced (2.2.3), and any device can be signed out (3.3.3) |
 | 3.3.3 Sign out everywhere | Met | "Your devices" lists every signed-in device and removes any one |
 | 3.4 Cookie flags | Met | `HttpOnly`, `Secure` in production, `SameSite=Lax`, path `/` (`src/lib/identity.ts`) |
 | 3.5 Tokens for APIs | Met | The same cookie; the cron entry point takes a separate secret compared in constant time |
-| 3.6 Re-authentication for sensitive actions | **Gap** | Deleting the account or adding a payment handle needs only the session. Low risk; asking for the passkey first would meet it |
+| 3.6 Re-authentication for sensitive actions | Met | Since the confirm-before-delete PR, deleting the account needs the account's own passkey (checked as at sign-in, `src/server/passkey.ts`) or recovery key, with a limit on tries; smoke checks no proof, a wrong key and another account's key are all refused. Adding a payment handle doesn't: it can't move money, and the person sees it on their own You screen |
 | 3.7 Defences against stolen sessions | Met in part | Sessions are revocable per device and listed with last use; no binding to device |
 
 ## V4 Access control
@@ -144,13 +144,11 @@ Evidence referred to below:
 
 ## The gaps
 
-1. **3.3.2 Absolute session limit.** Sessions last until 180 days unused. To
-   meet level 2, ask for the passkey or recovery key every 30 days. Needs the
-   owner's decision: it adds a sign-in step people don't have today.
-2. **3.6 Re-authentication for sensitive actions.** Deleting the account and
-   adding a payment handle. Could ask for the passkey first.
-3. **2.2.3 New-device notice.** A push notification to the person's other
-   devices when a new one signs in.
-4. **8.3.4 Retention written down.** The privacy page (finding 15).
-5. **10.3.2 Install scripts.** The npm change (finding 18).
-6. **4.2.2 `Origin` check.** Not needed today; a second wall.
+1. **3.3.2 Absolute session limit.** A deliberate deviation, the owner's
+   choice on 28 October 2026 (see the line above).
+2. **8.3.4 Retention written down.** The privacy page (finding 15).
+3. **10.3.2 Install scripts.** The npm change (finding 18).
+4. **4.2.2 `Origin` check.** Not needed today; a second wall.
+
+Closed on 28 October: 2.2.3 (new-device notice, #123) and 3.6 (confirm
+before deleting the account).

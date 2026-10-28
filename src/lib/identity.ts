@@ -268,6 +268,18 @@ function normalizeSecret(input: string): string {
   return compact.startsWith("dvy_") ? compact : `dvy_${compact}`;
 }
 
+/**
+ * Whether `input` is this person's recovery key, typed the way restoring
+ * accepts it. For confirming it's you before something that can't be undone.
+ */
+export async function recoveryKeyMatches(personId: string, input: string): Promise<boolean> {
+  const credential = await prisma.credential.findUnique({
+    where: { secretHash: hashSecret(normalizeSecret(input)) },
+    select: { personId: true, kind: true },
+  });
+  return credential?.kind === "recovery" && credential.personId === personId;
+}
+
 /** Signs in an existing identity from a recovery key. */
 export async function restoreIdentity(
   input: string,

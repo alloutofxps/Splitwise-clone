@@ -1919,8 +1919,10 @@ async function auditRegressions() {
 
   const alice = makeClient();
   const mallory = makeClient();
-  const aliceMe = (await alice.call("/api/identity", { method: "POST", body: { displayName: "Alice" } })).body.me;
-  const malloryMe = (await mallory.call("/api/identity", { method: "POST", body: { displayName: "Mallory" } })).body.me;
+  const aliceSignUp = (await alice.call("/api/identity", { method: "POST", body: { displayName: "Alice" } })).body;
+  const mallorySignUp = (await mallory.call("/api/identity", { method: "POST", body: { displayName: "Mallory" } })).body;
+  const aliceMe = aliceSignUp.me;
+  const malloryMe = mallorySignUp.me;
 
   // C8 - personal codes carry a random tail.
   check(
@@ -2164,13 +2166,25 @@ async function auditRegressions() {
   const secondDelete = await alice.call(`/api/expenses/${scratch.id}`, { method: "DELETE", allowError: true });
   check("deleting an expense twice is a success", firstDelete.status === 200 && secondDelete.status === 200, `${firstDelete.status}/${secondDelete.status}`);
 
-  // M16 - accounts can be deleted, but not to escape a debt.
-  const mallorySettled = await mallory.call("/api/identity/account", { method: "DELETE", allowError: true });
+  // M16 - accounts can be deleted, but not to escape a debt, and only by
+  // whoever holds the passkey or recovery key (ASVS 3.6).
+  const canDelete = await mallory.call("/api/identity/account", { allowError: true });
+  check("M16: the delete panel can ask whether the account can go", canDelete.status === 200 && canDelete.body.canDelete === true, JSON.stringify(canDelete.body));
+  const noProof = await mallory.call("/api/identity/account", { method: "DELETE", allowError: true });
+  const wrongKey = await mallory.call("/api/identity/account", { method: "DELETE", body: { recoveryKey: "dvy_not-the-key" }, allowError: true });
+  const othersKey = await mallory.call("/api/identity/account", { method: "DELETE", body: { recoveryKey: aliceSignUp.recoveryKey }, allowError: true });
+  check(
+    "ASVS 3.6: deleting an account needs its own passkey or recovery key",
+    noProof.status === 403 && wrongKey.status === 422 && othersKey.status === 422,
+    `${noProof.status}, ${wrongKey.status}, ${othersKey.status}`,
+  );
+  const mallorySettled = await mallory.call("/api/identity/account", { method: "DELETE", body: { recoveryKey: mallorySignUp.recoveryKey }, allowError: true });
   check("M16: an account with nothing owed can be deleted", mallorySettled.status === 200, `${mallorySettled.status} ${JSON.stringify(mallorySettled.body)}`);
   const gone = await mallory.call("/api/identity", { allowError: true });
   check("M16: a deleted account is signed out everywhere", gone.status === 401, String(gone.status));
-  const aliceWithDebts = await alice.call("/api/identity/account", { method: "DELETE", allowError: true });
-  check("M16: an account with open balances cannot be deleted", aliceWithDebts.status === 422, String(aliceWithDebts.status));
+  const aliceWithDebts = await alice.call("/api/identity/account", { method: "DELETE", body: { recoveryKey: aliceSignUp.recoveryKey }, allowError: true });
+  const aliceCanDelete = (await alice.call("/api/identity/account")).body;
+  check("M16: an account with open balances cannot be deleted", aliceWithDebts.status === 422 && aliceCanDelete.canDelete === false, `${aliceWithDebts.status} ${JSON.stringify(aliceCanDelete)}`);
 
   // Removing a placeholder whose only expense is in the bin keeps their
   // share, so restoring the expense still adds up.

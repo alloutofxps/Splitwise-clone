@@ -76,6 +76,22 @@ export async function registerPasskey(label?: string): Promise<void> {
 }
 
 /** Signs in with whatever passkey the device offers for this site. */
+/**
+ * A passkey's signature for the server to check, without signing in: for
+ * confirming it's you before deleting your account. The challenge comes from
+ * the same place as signing in's, so the server checks it the same way.
+ */
+export async function provePasskey(): Promise<Parameters<typeof api.post>[1]> {
+  const { options } = await api.get<{ options: Parameters<typeof startAuthentication>[0]["optionsJSON"] }>(
+    "/api/identity/passkeys/auth",
+  );
+  try {
+    return await startAuthentication({ optionsJSON: options });
+  } catch (error) {
+    rethrow(error);
+  }
+}
+
 export async function signInWithPasskey(): Promise<void> {
   const { options } = await api.get<{ options: Parameters<typeof startAuthentication>[0]["optionsJSON"] }>(
     "/api/identity/passkeys/auth",
