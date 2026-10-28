@@ -30,37 +30,57 @@ import { sendPendingNotifications } from "./push";
 
 const holder = `${process.pid}-${randomUUID().slice(0, 8)}`;
 
+/** When each lease this process kept runs out, by job name. */
+const kept = new Map<string, number>();
+
 /**
  * Runs `fn` only if no other runner holds the named lease. Returns undefined
  * when the lease was taken, so callers can tell "skipped" from "ran".
+ *
+ * With `keep`, the lease is held between runs and renewed only once half of
+ * it is used up. Taking and releasing it on every run was two writes a run:
+ * for the fifteen-second notification check alone, eight a minute with
+ * nobody using the app, each one copied off-site by Litestream. The cost is
+ * that after a deploy the new server waits for the old one's lease to run
+ * out (five minutes at most) before it takes over that job.
  */
 export async function withJobLock<T>(
   name: string,
   ttlMs: number,
   fn: () => Promise<T>,
+  { keep = false }: { keep?: boolean } = {},
 ): Promise<T | undefined> {
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + ttlMs);
+  const until = kept.get(name);
+  const stillHeld = keep && until !== undefined && until - now.getTime() > ttlMs / 2;
 
-  // Take an expired (or our own) lease, or create the row if there is none.
-  const taken = await prisma.jobLock.updateMany({
-    where: { name, OR: [{ expiresAt: { lt: now } }, { holder }] },
-    data: { holder, expiresAt },
-  });
-  if (taken.count === 0) {
-    try {
-      await prisma.jobLock.create({ data: { name, holder, expiresAt } });
-    } catch {
-      return undefined; // Somebody else holds it.
+  if (!stillHeld) {
+    const expiresAt = new Date(now.getTime() + ttlMs);
+    // Take an expired (or our own) lease, or create the row if there is none.
+    const taken = await prisma.jobLock.updateMany({
+      where: { name, OR: [{ expiresAt: { lt: now } }, { holder }] },
+      data: { holder, expiresAt },
+    });
+    if (taken.count === 0) {
+      try {
+        await prisma.jobLock.create({ data: { name, holder, expiresAt } });
+      } catch {
+        kept.delete(name);
+        return undefined; // Somebody else holds it.
+      }
     }
+    if (keep) kept.set(name, expiresAt.getTime());
   }
 
   try {
     return await fn();
   } finally {
-    await prisma.jobLock
-      .updateMany({ where: { name, holder }, data: { expiresAt: new Date(0) } })
-      .catch(() => {});
+    if (!keep) {
+      kept.delete(name);
+      await prisma.jobLock
+        .updateMany({ where: { name, holder }, data: { expiresAt: new Date(0) } })
+        .catch(() => {});
+    }
   }
 }
 
@@ -154,8 +174,10 @@ export function startScheduler(): void {
   for (const job of JOBS) {
     const tick = async () => {
       try {
-        // The lease outlives a slow run, but never a crashed process.
-        await withJobLock(job.name, Math.max(job.everyMs, 5 * 60_000), job.run);
+        // The lease outlives a slow run, but never a crashed process. A job
+        // that runs again before its lease would run out keeps it.
+        const ttl = Math.max(job.everyMs, 5 * 60_000);
+        await withJobLock(job.name, ttl, job.run, { keep: job.everyMs < ttl });
       } catch (error) {
         log.error("background job failed", { job: job.name, error });
       }
