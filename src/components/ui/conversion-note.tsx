@@ -27,17 +27,27 @@ export function ConversionNote({
   const pair = `${from}>${to}`;
   const [settled, setSettled] = React.useState<string | null>(null);
   const fetching = settled !== pair;
+  // What the lookup found: a date when the rate is an old stored one (both
+  // rate services were down), "none" when there was nothing at all.
+  const [found, setFound] = React.useState<{ pair: string; staleSince?: string; none?: boolean } | null>(null);
 
   // Fetch a live rate on first appearance, falling back to manual entry.
   React.useEffect(() => {
     let cancelled = false;
     fetch(`/api/rates?base=${from}&quote=${to}`)
       .then((response) => response.json())
-      .then((payload: { rate?: { rate: string } | null }) => {
-        if (!cancelled && payload.rate?.rate) onRateChange(tidyRate(payload.rate.rate));
+      .then((payload: { rate?: { rate: string; stale?: boolean; fetchedAt?: string } | null }) => {
+        if (cancelled) return;
+        if (payload.rate?.rate) {
+          onRateChange(tidyRate(payload.rate.rate));
+          setFound({ pair: `${from}>${to}`, staleSince: payload.rate.stale ? payload.rate.fetchedAt : undefined });
+        } else {
+          setFound({ pair: `${from}>${to}`, none: true });
+        }
       })
       .catch(() => {
         // Offline: the manual field below is the fallback.
+        if (!cancelled) setFound({ pair: `${from}>${to}`, none: true });
       })
       .finally(() => {
         if (!cancelled) setSettled(`${from}>${to}`);
@@ -75,6 +85,16 @@ export function ConversionNote({
       </div>
       {converted ? (
         <p className="tabular mt-1 text-body font-semibold text-text">≈ {converted}</p>
+      ) : null}
+      {/* Said out loud, so nobody takes an old or missing rate for today's. */}
+      {!fetching && found?.pair === pair && found.staleSince ? (
+        <p className="mt-1 text-caption text-muted">
+          From {new Date(found.staleSince).toLocaleDateString(undefined, { day: "numeric", month: "short" })}; today&rsquo;s
+          rate couldn&rsquo;t be fetched. Change it if you know better.
+        </p>
+      ) : null}
+      {!fetching && found?.pair === pair && found.none && !rate ? (
+        <p className="mt-1 text-caption text-muted">Couldn&rsquo;t get today&rsquo;s rate. Type it in.</p>
       ) : null}
     </div>
   );

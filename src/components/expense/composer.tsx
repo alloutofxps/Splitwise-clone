@@ -225,6 +225,9 @@ export function ExpenseComposer({
   if (!draft.description.trim()) blockers.push("Add a description");
   if (amount <= 0n) blockers.push("Enter an amount");
   if (payerMismatch) blockers.push("What people paid has to add up to the total");
+  if (group && group.currency !== draft.currency && !(Number(draft.exchangeRate) > 0)) {
+    blockers.push("Add the exchange rate");
+  }
   blockers.push(...split.errors);
 
   const canSave = blockers.length === 0;
@@ -646,7 +649,12 @@ export function ExpenseComposer({
         onClose={() => setPanel(null)}
         value={draft.currency}
         onChange={(currency) => {
-          patch({ currency, exchangeRate: "1" });
+          // In another currency than the group's, the rate starts unknown
+          // rather than 1: the conversion note fills in today's, and if it
+          // can't (offline, or the rate services are down) the box stays
+          // empty and asks for one. A 1 left there was saved as is, so a $50
+          // bill counted as 50 euros.
+          patch({ currency, exchangeRate: group && group.currency !== currency ? "" : "1" });
           setPanel(null);
         }}
       />
