@@ -340,9 +340,13 @@ model Expense {
 
   createdByPersonId String
   recurrenceId      String?
-  /// Who saved the current version, so a person can overwrite their own
-  /// queued offline edit without tripping the conflict check meant for others.
+  /// Who saved the current version.
   lastEditedById    String?
+  /// Which sign-in (device) saved it, so a phone's second queued offline edit
+  /// can follow its first without tripping the conflict check - while the
+  /// same person's other device, editing from an older version, still does.
+  /// Not a relation: a signed-out session should not take the column with it.
+  lastEditedSessionId String?
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())

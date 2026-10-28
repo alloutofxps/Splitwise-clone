@@ -70,6 +70,8 @@ export interface ExpenseWriteInput {
   recurrenceId?: string | null;
   /** For an edit: the version the editor was looking at. */
   expectedUpdatedAt?: Date | null;
+  /** The editor's sign-in, when a person (not a job) made the change. */
+  sessionId?: string | null;
   payers: { personId: string; amount: bigint }[];
   splits: {
     personId: string;
@@ -230,6 +232,7 @@ export async function createExpense(
           date: input.date,
           createdByPersonId: input.createdByPersonId,
           lastEditedById: input.createdByPersonId,
+          lastEditedSessionId: input.sessionId ?? null,
           recurrenceId: input.recurrenceId ?? null,
           payers: { create: rows.payers },
           splits: { create: rows.splits },
@@ -264,7 +267,7 @@ export async function updateExpense(input: ExpenseWriteInput) {
 
   const current = await prisma.expense.findUnique({
     where: { id: input.id },
-    select: { updatedAt: true, lastEditedById: true, groupId: true, deletedAt: true },
+    select: { updatedAt: true, lastEditedSessionId: true, groupId: true, deletedAt: true },
   });
   if (!current || current.deletedAt) {
     throw new ConflictError("That expense was deleted while you had it open.");
@@ -280,19 +283,25 @@ export async function updateExpense(input: ExpenseWriteInput) {
    * The check used to be skipped whenever the client sent no version, which is
    * exactly what a queued offline edit did - so an edit made on a plane three
    * days ago would land on top of everything since. The version is now always
-   * required. The one exception is the editor's own work: if the newer version
-   * is theirs (a second offline edit queued behind their first), overwriting it
-   * is what they asked for.
+   * required. The one exception is the device's own work: if the newer version
+   * came from this same sign-in (a second offline edit queued behind its
+   * first), overwriting it is what they asked for.
+   *
+   * It used to be the same *person*, which let one of their devices overwrite
+   * the other: a laptop corrected a bill from 30 to 40, the phone (offline
+   * since before that) sent the rename it had queued, and the bill went back
+   * to 30 without a word. Matching the sign-in refuses that, and the phone's
+   * banner says why.
    */
   if (!input.expectedUpdatedAt) {
     throw new ConflictError("Reopen the expense and make the change again.");
   }
   if (
     current.updatedAt.getTime() !== input.expectedUpdatedAt.getTime() &&
-    current.lastEditedById !== input.createdByPersonId
+    !(input.sessionId && current.lastEditedSessionId === input.sessionId)
   ) {
     throw new ConflictError(
-      "Someone else changed this expense while you had it open. Close it and open it again to see their changes.",
+      "This expense was changed by someone else, or on another of your devices, while you had it open. Close it and open it again to see the latest version.",
     );
   }
 
@@ -313,6 +322,7 @@ export async function updateExpense(input: ExpenseWriteInput) {
           categoryId: input.categoryId ?? DEFAULT_CATEGORY_ID,
           date: input.date,
           lastEditedById: input.createdByPersonId,
+          lastEditedSessionId: input.sessionId ?? null,
           payers: { deleteMany: {}, create: rows.payers },
           splits: { deleteMany: {}, create: rows.splits },
           items: { deleteMany: {}, create: rows.items },

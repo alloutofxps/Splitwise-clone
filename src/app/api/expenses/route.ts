@@ -30,6 +30,7 @@ export const POST = route(async (request: Request) => {
 
   const expenseId = input.id ?? newId("exp");
   const prepared = await prepareExpense(input, session.person.id, expenseId);
+  prepared.sessionId = session.sessionId;
 
   const { record, created } = await createExpense(prepared);
 

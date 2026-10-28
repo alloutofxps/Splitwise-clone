@@ -1075,7 +1075,7 @@ async function main() {
   );
   check(
     "and says who to blame",
-    JSON.stringify(secondSave.body).includes("Someone else changed"),
+    JSON.stringify(secondSave.body).includes("changed by someone else, or on another of your devices"),
     JSON.stringify(secondSave.body).slice(0, 110),
   );
 
@@ -2176,6 +2176,35 @@ async function auditRegressions() {
     "restoring a binned payment brings back the placeholder it was from",
     rueRemoved.status === 200 && rueBack.status === 200 && payBalances[rueId] === "300",
     `remove ${rueRemoved.status}, restore ${rueBack.status}, ${JSON.stringify(payBalances)}`,
+  );
+
+  // One person, two devices: a phone's edit queued offline, built on an old
+  // version, must not undo what the laptop saved since. Its own queue of
+  // edits still goes through.
+  const link = (await alice.call("/api/identity/link", { method: "POST" })).body;
+  const alicePhone = makeClient();
+  await alicePhone.call(`/api/identity/link/${encodeURIComponent(link.code)}/claim`, { method: "POST" });
+  const twoDevices = (amount, description, expectedUpdatedAt) => ({
+    groupId: binTrip.id, description, amount: String(amount), currency: "EUR", splitMode: "EQUAL",
+    payers: [{ personId: aliceMe.id, amount: String(amount) }],
+    splits: [{ personId: aliceMe.id, amount: String(amount / 2) }, { personId: pipId, amount: String(amount / 2) }],
+    ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+  });
+  const shared = (await alice.call("/api/expenses", { method: "POST", body: twoDevices(3000, "Two devices") })).body.expense;
+  await alice.call(`/api/expenses/${shared.id}`, { method: "PATCH", body: twoDevices(4000, "Two devices", shared.updatedAt) });
+  const stale = await alicePhone.call(`/api/expenses/${shared.id}`, { method: "PATCH", body: twoDevices(3000, "Renamed on the phone", shared.updatedAt), allowError: true });
+  const kept = (await alice.call(`/api/expenses/${shared.id}`)).body.expense;
+  check(
+    "an older edit from the same person's other device is refused, not saved over",
+    stale.status === 409 && kept.amount === "4000",
+    `${stale.status}, amount ${kept.amount}`,
+  );
+  const firstQueued = await alicePhone.call(`/api/expenses/${shared.id}`, { method: "PATCH", body: twoDevices(4000, "Phone fix 1", kept.updatedAt), allowError: true });
+  const secondQueued = await alicePhone.call(`/api/expenses/${shared.id}`, { method: "PATCH", body: twoDevices(5000, "Phone fix 2", kept.updatedAt), allowError: true });
+  check(
+    "one device's own queued edits still follow each other",
+    firstQueued.status === 200 && secondQueued.status === 200 && secondQueued.body.expense.amount === "5000",
+    `${firstQueued.status}, ${secondQueued.status}`,
   );
 
   // O3 - crashes on phones reach the server. Signed out, so these can't set
