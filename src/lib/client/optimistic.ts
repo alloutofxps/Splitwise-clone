@@ -350,6 +350,61 @@ export function applyOptimisticWrite(
 }
 
 /**
+ * Shows a delete that is waiting in the outbox.
+ *
+ * Online, deleting and editing wait for the server's answer before the screen
+ * changes. Offline that answer only comes once the phone reconnects, so the
+ * row stayed on screen and in every balance while the banner said the delete
+ * would be sent later - and people delete again, or think it failed. So a
+ * queued delete takes the row and its effect on the balances off now, with
+ * the same arithmetic as everything else here. The refetch after the outbox
+ * sends it replaces this with the server's answer.
+ */
+export function showQueuedDelete(client: QueryClient, old: ExpenseDto, meId: string) {
+  writeOptimistic(client, {
+    groupId: old.groupId,
+    currency: old.settlementCurrency,
+    event: negate(expenseEvent(old)),
+    meId,
+    ledger: (data) => removeFromLedger(data, old.id),
+  });
+}
+
+/**
+ * Shows an edit that is waiting in the outbox: the version on screen comes
+ * out, the edited one goes in (in its new group, if the edit moved it).
+ *
+ * The edited row keeps the version it was built on (`updatedAt`), so a second
+ * edit made offline is sent against the same version as the first, which the
+ * server accepts from the same device.
+ */
+export function showQueuedEdit(client: QueryClient, old: ExpenseDto, input: ExpenseInput, meId: string) {
+  showQueuedDelete(client, old, meId);
+
+  const groupId = input.groupId ?? null;
+  const currency = groupId
+    ? (client.getQueryData<GroupDetailDto>(keys.group(groupId))?.currency ?? input.currency)
+    : input.currency;
+  const next: ExpenseDto = {
+    ...optimisticExpense({ ...input, id: old.id }, meId, currency),
+    createdByPersonId: old.createdByPersonId,
+    recurrenceId: old.recurrenceId,
+    createdAt: old.createdAt,
+    updatedAt: old.updatedAt,
+    attachments: old.attachments,
+    commentCount: old.commentCount,
+  };
+  applyOptimisticWrite(client, {
+    groupId,
+    currency,
+    entry: { kind: "expense", id: old.id, date: next.date, expense: next, pending: true },
+    event: expenseEvent(next),
+    meId,
+  });
+  client.setQueryData(keys.expense(old.id), next);
+}
+
+/**
  * The cache edits shared by writing an optimistic row and taking one back.
  *
  * Both do the same three things - patch the group ledger, fold the event into
