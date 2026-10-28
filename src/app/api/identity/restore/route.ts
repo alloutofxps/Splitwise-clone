@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { json, readBody, route } from "@/lib/api";
 import { describeDevice, restoreIdentity, startSession } from "@/lib/identity";
 import { meDto } from "@/server/me";
+import { notifyNewDevice } from "@/server/push";
 import { limitByAddress, RECOVERY_ATTEMPT } from "@/server/rate-limit";
 
 const schema = z.object({
@@ -26,7 +28,10 @@ export const POST = route(async (request: Request) => {
   // moving between a phone and a laptop. What this mints is a session for
   // *this* device, listed and revocable separately from every other one.
   const { person } = await restoreIdentity(recoveryKey);
-  await startSession(person.id, describeDevice(request.headers.get("user-agent")));
+  const label = describeDevice(request.headers.get("user-agent"));
+  const sessionId = await startSession(person.id, label);
+  // Tell the person's other devices, once the answer has gone (server/push.ts).
+  after(() => notifyNewDevice(person.id, sessionId, label).catch(() => 0));
 
   return json({ me: await meDto(person) });
 });

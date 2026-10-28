@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { json, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashSecret } from "@/lib/codes";
 import { NotFoundError, ValidationError, describeDevice, startSession } from "@/lib/identity";
+import { notifyNewDevice } from "@/server/push";
 import { limitByAddress } from "@/server/rate-limit";
 import { meDto } from "@/server/me";
 
@@ -41,7 +43,10 @@ export const POST = route(async (request: Request, { params }: Params) => {
     throw new ValidationError("That code has already been used. Ask for a new one.");
   }
 
-  await startSession(link.personId, describeDevice(request.headers.get("user-agent")));
+  const label = describeDevice(request.headers.get("user-agent"));
+  const sessionId = await startSession(link.personId, label);
+  // Tell the person's other devices, once the answer has gone (server/push.ts).
+  after(() => notifyNewDevice(link.personId, sessionId, label).catch(() => 0));
   await prisma.person.update({
     where: { id: link.personId },
     data: { lastSeenAt: new Date() },
