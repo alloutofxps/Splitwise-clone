@@ -7,6 +7,7 @@ import { ArrowUpFromLine, Download, Plus, RefreshCw, Share, X } from "lucide-rea
 import { cn, haptic } from "./ui/primitives";
 import { readStored, writeStored } from "@/lib/client/storage";
 import { requestPersistence } from "@/lib/client/persistence";
+import { refreshPushKey } from "@/lib/client/push";
 import { PrivacyScreen } from "./privacy-screen";
 import { AppMark } from "./app-mark";
 
@@ -38,6 +39,7 @@ export function PwaProvider() {
     <>
       <ServiceWorkerManager />
       <StoragePersistence />
+      <PushKeyRefresh />
       <InstallPrompt />
       <PrivacyScreen />
     </>
@@ -177,6 +179,20 @@ function ServiceWorkerManager() {
 function StoragePersistence() {
   React.useEffect(() => {
     void requestPersistence();
+  }, []);
+
+  return null;
+}
+
+/**
+ * Keeps this phone's notifications working when the server's key changes:
+ * once a launch, quietly, and only if notifications are already on
+ * (lib/client/push.ts, refreshPushKey).
+ */
+function PushKeyRefresh() {
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== "production") return;
+    void refreshPushKey().catch(() => {});
   }, []);
 
   return null;
