@@ -27,6 +27,7 @@ import { log } from "@/lib/log";
 import { refreshAllBases } from "./rates";
 import { runDueRecurrences } from "./recurrence";
 import { sendPendingNotifications } from "./push";
+import { noteJobRan, noteJobScheduled } from "./health";
 
 const holder = `${process.pid}-${randomUUID().slice(0, 8)}`;
 
@@ -177,11 +178,17 @@ export function startScheduler(): void {
         // The lease outlives a slow run, but never a crashed process. A job
         // that runs again before its lease would run out keeps it.
         const ttl = Math.max(job.everyMs, 5 * 60_000);
-        await withJobLock(job.name, ttl, job.run, { keep: job.everyMs < ttl });
+        const run = async () => {
+          await job.run();
+          noteJobRan(job.name);
+        };
+        await withJobLock(job.name, ttl, run, { keep: job.everyMs < ttl });
       } catch (error) {
         log.error("background job failed", { job: job.name, error });
       }
     };
+    // The health check fails if a job stops running (server/health.ts).
+    noteJobScheduled(job.name, job.everyMs);
     if (job.atStart) setTimeout(() => void tick(), 5_000).unref();
     setInterval(() => void tick(), job.everyMs).unref();
   }
