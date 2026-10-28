@@ -10,6 +10,7 @@
  *  - A background job that has stopped running: phone notifications,
  *    repeating expenses, exchange rates, housekeeping or the daily snapshot.
  *  - Crashes reported from the phones of several signed-in people.
+ *  - Anything the daily database check found (server/integrity.ts).
  *
  * It clears by itself once the cause stops, and the monitor then sends an
  * "up again" email. State is on globalThis for the same reason as in
@@ -35,12 +36,19 @@ interface Beat {
 interface HealthState {
   jobs: Map<string, Beat>;
   phoneErrors: { at: number; personId: string }[];
+  /** What the last daily database check found (server/integrity.ts). */
+  integrity: Record<string, number>;
 }
 
 const shared = globalThis as unknown as { __divvyHealth?: HealthState };
 
 function state(): HealthState {
-  return (shared.__divvyHealth ??= { jobs: new Map(), phoneErrors: [] });
+  return (shared.__divvyHealth ??= { jobs: new Map(), phoneErrors: [], integrity: {} });
+}
+
+/** The latest daily database check's findings, replacing the last ones. */
+export function noteIntegrity(found: Record<string, number>): void {
+  state().integrity = found;
 }
 
 /** A job the scheduler has started. It counts as fresh until it is late. */
@@ -93,6 +101,10 @@ export function healthProblems(now = Date.now()): string[] {
   );
   if (people.size >= PHONE_ERROR_PEOPLE) {
     problems.push(`crashes on ${people.size} people's phones in the last hour`);
+  }
+
+  for (const [label, count] of Object.entries(state().integrity)) {
+    problems.push(`the daily database check found ${label}: ${count}`);
   }
 
   return problems;

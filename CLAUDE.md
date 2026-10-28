@@ -105,6 +105,11 @@ detail.
   migrates `.env`'s database).
 - Serve on the test database: `DATABASE_URL=file:./design.db npx next start --port 3100`.
   `prisma/dev.db` is behind on migrations; don't migrate it without asking.
+- Copy a test database only while no server is using it. A copy taken
+  mid-write misses the newest pages (they sit in the `-wal` file) and comes
+  out damaged: that is how `fix.db` ended up with 443 broken links on
+  28 October, while every suite run on a fresh database leaves it sound. A
+  fresh one: `DATABASE_URL=file:./clean.db npx prisma migrate deploy`.
 - No Playwright Chromium on this machine. Use Edge:
   `export CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"`.
   Never run `msedge.exe --version`; it opens a window on the person's screen.
