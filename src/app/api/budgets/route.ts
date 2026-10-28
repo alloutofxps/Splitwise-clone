@@ -138,7 +138,10 @@ export const PUT = route(async (request: Request) => {
 
   const scope = {
     personId: session.person.id,
-    groupId: input.groupId ?? null,
+    // An empty id means no group, as leaving it out does. Kept as "" it
+    // skipped the access check below and then failed as a foreign key: a 500
+    // found by sending every route bad input (scripts/fuzz-routes.mjs).
+    groupId: input.groupId || null,
     categoryId,
     period: input.period,
   };

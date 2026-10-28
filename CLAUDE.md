@@ -115,6 +115,10 @@ detail.
   Railway CLI signed in).
 - Permission table, every action as every kind of person (in CI):
   `node scripts/permissions.mjs <url>`.
+- Bad input at every route (no 500s, nothing internal leaked; about 30,000
+  calls, half an hour, by hand): serve a copy of the test database with
+  `DIVVY_RATE_LIMIT_SCALE=1000`, then `node scripts/fuzz-routes.mjs <url>`,
+  optionally with part of a path (no leading slash in Git Bash) to rerun one.
 - Browser suites: `node scripts/ui-check.mjs <url>`,
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server
