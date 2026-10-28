@@ -3,6 +3,7 @@ import {
   verifyAuthenticationResponse,
   type AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
+import { after } from "next/server";
 import { z } from "zod";
 import { json, readBody, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/identity";
 import { expectedOrigin, rpId } from "@/lib/webauthn";
 import { stashChallenge, takeChallenge } from "@/lib/webauthn-challenge";
+import { notifyNewDevice } from "@/server/push";
 import { limitByAddress } from "@/server/rate-limit";
 import { meDto } from "@/server/me";
 
@@ -94,6 +96,9 @@ export const POST = route(async (request: Request) => {
     prisma.person.update({ where: { id: stored.personId }, data: { lastSeenAt: new Date() } }),
   ]);
 
-  await startSession(stored.personId, describeDevice(request.headers.get("user-agent")));
+  const label = describeDevice(request.headers.get("user-agent"));
+  const sessionId = await startSession(stored.personId, label);
+  // Tell the person's other devices, once the answer has gone (server/push.ts).
+  after(() => notifyNewDevice(stored.personId, sessionId, label).catch(() => 0));
   return json({ me: await meDto(stored.person) });
 });

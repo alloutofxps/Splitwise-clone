@@ -270,23 +270,63 @@ export async function sendPendingNotifications(now = new Date()): Promise<number
     for (const sub of subscriptions) {
       const message = messageFor(activity, sub.personId);
       if (!message) continue;
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify(message),
-          { TTL: 60 * 60, urgency: "normal" },
-        );
-        delivered++;
-      } catch (error) {
-        const status = (error as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) {
-          // The phone turned notifications off or the app was removed.
-          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
-        } else {
-          log.warn("push failed", { status, type: activity.type });
-        }
-      }
+      if (await deliver(sub, message, activity.type)) delivered++;
     }
   }
+  return delivered;
+}
+
+interface Subscription {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+/** Sends one notification to one phone; drops the subscription if it's gone. */
+async function deliver(sub: Subscription, message: PushMessage, type: string): Promise<boolean> {
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify(message),
+      { TTL: 60 * 60, urgency: "normal" },
+    );
+    return true;
+  } catch (error) {
+    const status = (error as { statusCode?: number }).statusCode;
+    if (status === 404 || status === 410) {
+      // The phone turned notifications off or the app was removed.
+      await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+    } else {
+      log.warn("push failed", { status, type });
+    }
+    return false;
+  }
+}
+
+/**
+ * Tells a person's other devices that a new one has just signed in to their
+ * account (OWASP ASVS 2.2.3; the owner chose this on 28 October 2026).
+ *
+ * Without it, a stranger who got hold of a recovery key or a device-link code
+ * could sign in and nobody would know until they looked at "Your devices".
+ * Sent to every device with notifications on except the new one, after a
+ * recovery key, a passkey or a device link signs in; not on sign-up, which is
+ * a person's first device. Tapping it opens the You screen, where the device
+ * list is.
+ */
+export async function notifyNewDevice(personId: string, newSessionId: string, label: string): Promise<number> {
+  if (!ensureConfigured()) return 0;
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { personId, sessionId: { not: newSessionId } },
+  });
+  const message: PushMessage = {
+    title: "Divvy was opened on a new device",
+    body: `${label}. If that wasn't you, remove it under You, then Your devices.`,
+    url: "/account",
+    tag: `new-device-${newSessionId}`,
+  };
+  let delivered = 0;
+  for (const sub of subscriptions) if (await deliver(sub, message, "device.added")) delivered++;
   return delivered;
 }
