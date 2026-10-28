@@ -8,6 +8,7 @@ import { startAutoFlush } from "@/lib/client/outbox";
 import { ToastProvider } from "./ui/toast";
 import { ThemeProvider } from "./theme";
 import { PwaProvider } from "./pwa";
+import { ErrorReporter } from "./error-reporter";
 
 function makeClient() {
   return new QueryClient({
@@ -75,6 +76,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ToastProvider>
             {children}
             <PwaProvider />
+            <ErrorReporter />
           </ToastProvider>
         </ThemeProvider>
       </MotionConfig>

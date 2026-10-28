@@ -2178,6 +2178,18 @@ async function auditRegressions() {
     `remove ${rueRemoved.status}, restore ${rueBack.status}, ${JSON.stringify(payBalances)}`,
   );
 
+  // O3 - crashes on phones reach the server. Signed out, so these can't set
+  // off the health check's alarm below.
+  const crash = (body) =>
+    fetch(`${BASE}/api/client-errors`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Forwarded-For": "198.18.61.1" },
+      body: JSON.stringify(body),
+    });
+  const reported = await crash({ kind: "error", message: "smoke crash", path: "/groups/x?secret=1", build: "smoke" });
+  const malformed = await crash({ kind: "nope", message: "x", path: "/" });
+  check("O3: a crash on a phone is accepted, a malformed report is not", reported.status === 204 && malformed.status === 422, `${reported.status}, ${malformed.status}`);
+
   // M14, M13 - health and security headers.
   const health = await fetch(`${BASE}/api/health`);
   check("M14: the health check answers", health.status === 200, String(health.status));

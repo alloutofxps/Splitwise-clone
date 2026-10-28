@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { reportError } from "@/components/error-reporter";
 
 /**
  * The last boundary.
@@ -24,6 +25,7 @@ export default function GlobalError({
 }) {
   React.useEffect(() => {
     console.error("[divvy] the app failed to start", error);
+    reportError("screen", error);
   }, [error]);
 
   return (

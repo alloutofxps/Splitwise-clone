@@ -49,12 +49,35 @@ function write(level: Level, message: string, fields: Fields = {}): void {
 
   if (level === "error") {
     console.error(line);
+    noteError(Date.now());
     alert(message, entry);
   } else if (level === "warn") {
     console.warn(line);
   } else {
     console.log(line);
   }
+}
+
+// ---------------------------------------------------------------------------
+
+/*
+ * When recent errors happened, for the health check (server/health.ts), which
+ * fails when there are too many so the uptime monitor emails someone. Kept on
+ * globalThis because Next.js bundles route handlers and the start-up code
+ * separately, and each bundle would otherwise count only its own errors.
+ */
+const shared = globalThis as unknown as { __divvyErrorTimes?: number[] };
+const KEEP_ERROR_TIMES = 200;
+
+function noteError(at: number): void {
+  const times = (shared.__divvyErrorTimes ??= []);
+  times.push(at);
+  if (times.length > KEEP_ERROR_TIMES) times.splice(0, times.length - KEEP_ERROR_TIMES);
+}
+
+/** How many errors were logged at or after `since` (milliseconds). */
+export function errorsSince(since: number): number {
+  return (shared.__divvyErrorTimes ?? []).filter((at) => at >= since).length;
 }
 
 // ---------------------------------------------------------------------------

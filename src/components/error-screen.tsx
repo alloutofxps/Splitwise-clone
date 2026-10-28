@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { BUTTON_BASE, BUTTON_SIZES, BUTTON_VARIANTS } from "./ui/button-style";
 import { FlowDoodle } from "./ui/doodle";
 import { haptic } from "./ui/haptic";
+import { reportError } from "./error-reporter";
 
 /**
  * What a route-level error boundary renders.
@@ -33,6 +34,7 @@ export function ErrorScreen({
 }) {
   React.useEffect(() => {
     console.error("[divvy] screen failed to render", error);
+    reportError("screen", error);
   }, [error]);
 
   return (
