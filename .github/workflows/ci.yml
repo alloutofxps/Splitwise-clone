@@ -76,6 +76,11 @@ jobs:
       - name: End-to-end smoke test
         run: node scripts/smoke.mjs http://localhost:3000
 
+      # Every action tried as every kind of person: owner, member, someone who
+      # left, a stranger, a friend and someone signed out.
+      - name: Permission table
+        run: node scripts/permissions.mjs http://localhost:3000
+
       # The browser checks drive the real UI: the split editors, settling up,
       # the offline outbox, the service worker's update lifecycle, and that the
       # Content-Security-Policy blocks nothing the app itself needs.
