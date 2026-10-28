@@ -34,6 +34,8 @@ import {
   optimisticSettlement,
   revertOptimisticWrite,
   settlementEvent,
+  showQueuedDelete,
+  showQueuedEdit,
   type Reversal,
 } from "./optimistic";
 import { newId } from "@/lib/ids";
@@ -495,12 +497,17 @@ export function useUpdateExpense(expenseId: string, previousGroupId?: string | n
             body: input,
             label: `Edit to ${input.description}`,
           });
+          const queued = queuedChange(client, expenseId);
+          if (queued) showQueuedEdit(client, queued.old, input, queued.meId);
           return null;
         }
         throw error;
       }
     },
-    onSuccess: (_result, input) => {
+    onSuccess: (result, input) => {
+      // Queued: the screen already shows it, and a refetch now would put the
+      // old version back until the outbox sends the edit.
+      if (result === null) return;
       void client.invalidateQueries({ queryKey: keys.expense(expenseId) });
       invalidateLedger(client, input.groupId, previousGroupId);
     },
@@ -590,13 +597,31 @@ export function useDeleteExpense() {
             body: undefined,
             label: "Deleted expense",
           });
-          return;
+          const queued = queuedChange(client, id);
+          if (queued) showQueuedDelete(client, queued.old, queued.meId);
+          return "queued" as const;
         }
         throw error;
       }
+      return "sent" as const;
     },
-    onSuccess: (_result, variables) => invalidateLedger(client, variables.groupId),
+    // Queued: as for an edit, the screen already shows it.
+    onSuccess: (result, variables) => {
+      if (result === "queued") return;
+      invalidateLedger(client, variables.groupId);
+    },
   });
+}
+
+/**
+ * What showing a queued edit or delete needs: the expense as the screen has
+ * it, and who is looking. Without either, the screen is left to catch up
+ * once the outbox sends the change.
+ */
+function queuedChange(client: QueryClient, expenseId: string) {
+  const meId = client.getQueryData<DashboardPayload>(keys.dashboard)?.me.id;
+  const old = client.getQueryData<ExpenseDto>(keys.expense(expenseId)) ?? cachedExpense(client, expenseId);
+  return meId && old ? { meId, old } : null;
 }
 
 /** Records a payment, with the same optimistic treatment as an expense. */

@@ -93,6 +93,12 @@ jobs:
       - name: PWA checks
         run: node scripts/pwa-check.mjs http://localhost:3000
 
+      # Offline edits and deletes, two people changing the same expense, a
+      # change refused when it arrives, an update while typing, and a second
+      # phone catching up.
+      - name: Offline and two-phone checks
+        run: node scripts/offline-check.mjs http://localhost:3000
+
   # Mutation testing on the money code (RULES.md M12): Stryker plants small
   # mistakes in split.ts, balances.ts and money.ts, one at a time, and the
   # job fails if the tests catch fewer than 85% of them. Its own job, so it
