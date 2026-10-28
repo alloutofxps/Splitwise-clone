@@ -34,6 +34,7 @@ import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
+import { ConfirmDeleteSheet } from "@/components/identity/confirm-delete";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { clearRecoveryPending, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
@@ -69,7 +70,6 @@ export default function AccountPage() {
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [discardCount, setDiscardCount] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
   // Whether the recovery key made at sign-up was never confirmed saved. Lives in
   // localStorage, so it is read without an effect and hidden once a new one is.
   const keyPending = useClientValue(recoveryPending, false);
@@ -126,23 +126,13 @@ export default function AccountPage() {
     router.refresh();
   };
 
-  const deleteAccount = async () => {
-    setDeleting(true);
-    try {
-      await api.del("/api/identity/account");
-      await wipeLocalData(client);
-      setConfirmDelete(false);
-      toast({ tone: "success", title: "Your account is deleted" });
-      router.refresh();
-    } catch (error) {
-      toast({
-        tone: "error",
-        title: "Couldn't delete your account",
-        description: error instanceof ApiError ? error.message : undefined,
-      });
-    } finally {
-      setDeleting(false);
-    }
+  // The delete itself, with confirming it's you, is the panel's
+  // (ConfirmDeleteSheet); this is what follows once it's done.
+  const accountDeleted = async () => {
+    await wipeLocalData(client);
+    setConfirmDelete(false);
+    toast({ tone: "success", title: "Your account is deleted" });
+    router.refresh();
   };
 
   return (
@@ -409,14 +399,10 @@ export default function AccountPage() {
         confirmLabel="Sign out and lose them"
       />
 
-      <ConfirmSheet
+      <ConfirmDeleteSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={() => void deleteAccount()}
-        loading={deleting}
-        title="Delete your account?"
-        description="This removes your name, payment details, budgets and comments, and takes you out of every group. Other people still see the expenses you shared, under the name “Deleted user”. You need to be settled up with everyone first. You can't undo this."
-        confirmLabel="Delete my account"
+        onDeleted={accountDeleted}
       />
     </div>
   );

@@ -1,8 +1,84 @@
-import { json, route } from "@/lib/api";
-import { clearIdentityCookie, requireSession, ValidationError } from "@/lib/identity";
+import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
+import { z } from "zod";
+import { json, readBody, route } from "@/lib/api";
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+  clearIdentityCookie,
+  recoveryKeyMatches,
+  requireSession,
+} from "@/lib/identity";
 import { prisma } from "@/lib/db";
 import { generateGhostCode } from "@/lib/codes";
+import { verifyPasskey } from "@/server/passkey";
 import { directBalanceSheets, groupSheetsFor } from "@/server/read";
+import { limitByAccount, RECOVERY_ATTEMPT } from "@/server/rate-limit";
+
+const proofSchema = z
+  .object({
+    recoveryKey: z.string().max(200).optional(),
+    passkey: z
+      .custom<AuthenticationResponseJSON>(
+        (value) => typeof value === "object" && value !== null && typeof (value as { id?: unknown }).id === "string",
+        "Expected a passkey response.",
+      )
+      .optional(),
+  })
+  .optional();
+
+/**
+ * That the person deleting the account holds its passkey or recovery key, not
+ * just a phone that happens to be signed in (OWASP ASVS 3.6; the owner chose
+ * this on 28 October 2026). Asked after the settled-up check, so nobody
+ * proves who they are only to be told to settle up first.
+ *
+ * Without proof the answer is a 403, which the You screen takes as "ask for
+ * the passkey or recovery key". A wrong one is a 422 with words to show, not
+ * a 401, which would read as being signed out.
+ */
+/** Why the account can't be deleted yet, or null when it can. */
+async function unsettledReason(me: string): Promise<string | null> {
+  const [groupSheets, directSheets] = await Promise.all([
+    groupSheetsFor(me),
+    directBalanceSheets(me),
+  ]);
+  const unsettledGroups = [...groupSheets.values()].some((sheet) => (sheet.net.get(me) ?? 0n) !== 0n);
+  const unsettledDirect = [...directSheets.values()].some((sheet) => (sheet.net.get(me) ?? 0n) !== 0n);
+  return unsettledGroups || unsettledDirect
+    ? "You need to settle up with everyone first. You still owe money, or someone owes you."
+    : null;
+}
+
+/**
+ * Whether the account could be deleted now, asked as the delete panel opens,
+ * so nobody confirms it's them only to be told to settle up first. Read-only:
+ * the panel never asks by trying the delete itself, which an older server
+ * without the confirm step would simply carry out.
+ */
+export const GET = route(async () => {
+  const session = await requireSession();
+  const reason = await unsettledReason(session.person.id);
+  return json({ canDelete: reason === null, reason });
+});
+
+async function confirmItsYou(me: string, proof: z.infer<typeof proofSchema>): Promise<void> {
+  if (!proof?.passkey && !proof?.recoveryKey?.trim()) {
+    throw new ForbiddenError("Confirm it's you with your passkey or recovery key.");
+  }
+  limitByAccount(me, "account-delete-proof", RECOVERY_ATTEMPT);
+  if (proof.passkey) {
+    const owner = await verifyPasskey(proof.passkey).catch((error: unknown) => {
+      if (error instanceof UnauthorizedError) throw new ValidationError(error.message);
+      throw error;
+    });
+    if (owner.id !== me) throw new ValidationError("That passkey belongs to a different account.");
+    return;
+  }
+  if (!(await recoveryKeyMatches(me, proof.recoveryKey ?? ""))) {
+    throw new ValidationError("That recovery key doesn't match this account.");
+  }
+}
 
 /**
  * Deletes the caller's account.
@@ -17,23 +93,17 @@ import { directBalanceSheets, groupSheetsFor } from "@/server/read";
  * passkeys, recovery key, devices, friendships and comments.
  *
  * Refused while they still owe or are owed anything. Deleting an account must
- * not be a way to walk away from a debt, or to strand somebody else's.
+ * not be a way to walk away from a debt, or to strand somebody else's. And
+ * refused until they confirm it's them (`confirmItsYou`).
  */
-export const DELETE = route(async () => {
+export const DELETE = route(async (request: Request) => {
   const session = await requireSession();
   const me = session.person.id;
+  const proof = await readBody(request, proofSchema);
 
-  const [groupSheets, directSheets] = await Promise.all([
-    groupSheetsFor(me),
-    directBalanceSheets(me),
-  ]);
-  const unsettledGroups = [...groupSheets.values()].some((sheet) => (sheet.net.get(me) ?? 0n) !== 0n);
-  const unsettledDirect = [...directSheets.values()].some((sheet) => (sheet.net.get(me) ?? 0n) !== 0n);
-  if (unsettledGroups || unsettledDirect) {
-    throw new ValidationError(
-      "You need to settle up with everyone first. You still owe money, or someone owes you.",
-    );
-  }
+  const unsettled = await unsettledReason(me);
+  if (unsettled) throw new ValidationError(unsettled);
+  await confirmItsYou(me, proof);
 
   const now = new Date();
   const ownerships = await prisma.membership.findMany({

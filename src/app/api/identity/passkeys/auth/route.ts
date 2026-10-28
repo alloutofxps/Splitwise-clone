@@ -1,20 +1,15 @@
 import {
   generateAuthenticationOptions,
-  verifyAuthenticationResponse,
   type AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
 import { after } from "next/server";
 import { z } from "zod";
 import { json, readBody, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import {
-  UnauthorizedError,
-  ValidationError,
-  describeDevice,
-  startSession,
-} from "@/lib/identity";
-import { expectedOrigin, rpId } from "@/lib/webauthn";
-import { stashChallenge, takeChallenge } from "@/lib/webauthn-challenge";
+import { ValidationError, describeDevice, startSession } from "@/lib/identity";
+import { rpId } from "@/lib/webauthn";
+import { stashChallenge } from "@/lib/webauthn-challenge";
+import { verifyPasskey } from "@/server/passkey";
 import { notifyNewDevice } from "@/server/push";
 import { limitByAddress } from "@/server/rate-limit";
 import { meDto } from "@/server/me";
@@ -47,12 +42,9 @@ export const GET = route(async (request: Request) => {
 });
 
 /**
- * Finishes signing in with a passkey.
- *
- * The signature counter is stored back on every success. An authenticator that
- * replays an old count has been cloned, and `verifyAuthenticationResponse`
- * refuses it — the one check here that a copied credential cannot talk its way
- * past.
+ * Finishes signing in with a passkey. The check itself, counter and all, is
+ * `verifyPasskey` (server/passkey.ts), shared with confirming it's you before
+ * deleting your account.
  */
 export const POST = route(async (request: Request) => {
   limitByAddress(request, "passkey-auth", { limit: 20, windowSeconds: 60 * 5 });
@@ -62,43 +54,12 @@ export const POST = route(async (request: Request) => {
   const body = await readBody(request, responseSchema);
   if (!body?.response) throw new ValidationError("Expected an authentication response.");
 
-  const challenge = await takeChallenge();
-  if (!challenge) throw new ValidationError("That took too long. Try signing in again.");
-
-  const stored = await prisma.credential.findUnique({
-    where: { externalId: body.response.id },
-    include: { person: true },
-  });
-  if (!stored || stored.kind !== "passkey" || !stored.publicKey || stored.person.deletedAt) {
-    throw new UnauthorizedError("That passkey isn't set up for Divvy.");
-  }
-
-  const verification = await verifyAuthenticationResponse({
-    response: body.response,
-    expectedChallenge: challenge,
-    expectedOrigin: await expectedOrigin(),
-    expectedRPID: await rpId(),
-    credential: {
-      id: stored.externalId as string,
-      publicKey: new Uint8Array(stored.publicKey),
-      counter: stored.counter,
-      transports: stored.transports?.split(",").filter(Boolean),
-    },
-  }).catch(() => null);
-
-  if (!verification?.verified) throw new UnauthorizedError("That passkey didn't work. Please try again.");
-
-  await prisma.$transaction([
-    prisma.credential.update({
-      where: { id: stored.id },
-      data: { counter: verification.authenticationInfo.newCounter, lastUsedAt: new Date() },
-    }),
-    prisma.person.update({ where: { id: stored.personId }, data: { lastSeenAt: new Date() } }),
-  ]);
+  const person = await verifyPasskey(body.response);
+  await prisma.person.update({ where: { id: person.id }, data: { lastSeenAt: new Date() } });
 
   const label = describeDevice(request.headers.get("user-agent"));
-  const sessionId = await startSession(stored.personId, label);
+  const sessionId = await startSession(person.id, label);
   // Tell the person's other devices, once the answer has gone (server/push.ts).
-  after(() => notifyNewDevice(stored.personId, sessionId, label).catch(() => 0));
-  return json({ me: await meDto(stored.person) });
+  after(() => notifyNewDevice(person.id, sessionId, label).catch(() => 0));
+  return json({ me: await meDto(person) });
 });
