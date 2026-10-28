@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireGroupAccess } from "@/server/access";
 import { toDecimalString } from "@/lib/money";
 import { categoryById } from "@/lib/categories";
+import { convertedBreakdown } from "@/lib/split";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,6 +17,9 @@ type Params = { params: Promise<{ id: string }> };
  *
  * One row per person per expense, which is the shape that pivots cleanly: you
  * can group by person, by category, or by month without unpacking anything.
+ * A payment has a row for each side, and the last column is each person's net
+ * in the group's own currency, so adding up one person's column gives exactly
+ * the balance the app shows them.
  */
 export const GET = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
@@ -51,10 +55,17 @@ export const GET = route(async (_request: Request, { params }: Params) => {
       "Share",
       "Net",
       "Notes",
+      `Net (${group.currency})`,
     ],
   ];
 
   for (const expense of expenses) {
+    // Each person's paid and owed in the group's currency, apportioned the way
+    // the balances are (lib/split.ts), so the last column adds up to them.
+    const converted = convertedBreakdown(expense);
+    const netConverted = (personId: string) =>
+      converted.paid.filter((p) => p.personId === personId).reduce((t, p) => t + p.amount, 0n) -
+      converted.owed.filter((o) => o.personId === personId).reduce((t, o) => t + o.amount, 0n);
     const people = new Set([
       ...expense.payers.map((p) => p.personId),
       ...expense.splits.filter((s) => s.amount !== 0n).map((s) => s.personId),
@@ -81,6 +92,7 @@ export const GET = route(async (_request: Request, { params }: Params) => {
         toDecimalString(share, expense.currency),
         toDecimalString(paid - share, expense.currency),
         expense.notes ?? "",
+        toDecimalString(netConverted(personId), group.currency),
       ]);
     }
   }
@@ -88,7 +100,8 @@ export const GET = route(async (_request: Request, { params }: Params) => {
   for (const settlement of settlements) {
     const from = nameOf.get(settlement.fromPersonId) ?? "Unknown";
     const to = nameOf.get(settlement.toPersonId) ?? "Unknown";
-    rows.push([
+    // The payer paid it out; for the receiver it is money in, a negative paid.
+    const side = (person: string, sign: bigint) => [
       settlement.date.toISOString().slice(0, 10),
       "Payment",
       `${from} paid ${to}`,
@@ -96,12 +109,16 @@ export const GET = route(async (_request: Request, { params }: Params) => {
       settlement.currency,
       toDecimalString(settlement.amount, settlement.currency),
       toDecimalString(settlement.convertedAmount, group.currency),
-      from,
-      toDecimalString(settlement.amount, settlement.currency),
-      "0",
-      toDecimalString(settlement.amount, settlement.currency),
+      person,
+      toDecimalString(sign * settlement.amount, settlement.currency),
+      toDecimalString(0n, settlement.currency),
+      toDecimalString(sign * settlement.amount, settlement.currency),
       settlement.note ?? "",
-    ]);
+      toDecimalString(sign * settlement.convertedAmount, group.currency),
+    ];
+    // Both sides: with only the payer's row, the receiver's total was off by
+    // every payment they had received.
+    rows.push(side(from, 1n), side(to, -1n));
   }
 
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
@@ -126,9 +143,14 @@ export const GET = route(async (_request: Request, { params }: Params) => {
  * The leading apostrophe on formula-like values stops a spreadsheet from
  * executing a description someone typed as `=HYPERLINK(...)`, which is a real
  * injection route into a colleague's machine, not a theoretical one.
+ *
+ * A plain number is left alone. "-15.00" is what a debt looks like, and with
+ * an apostrophe in front a spreadsheet reads it as text and leaves it out of
+ * every total.
  */
 function csvCell(value: string): string {
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  const number = /^-?\d+(\.\d+)?$/.test(value);
+  const safe = !number && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   if (/[",\r\n]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
   return safe;
 }

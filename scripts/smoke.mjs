@@ -1026,6 +1026,42 @@ async function main() {
   check("CSV has a header row", csvText.includes("Date,Type,Description"));
   check("CSV includes the payments", csvText.includes("Payment"));
 
+  // D9 - read like a spreadsheet: amounts are numbers, and each person's net
+  // in the group's currency adds up to the balance the app shows them.
+  {
+    const parseCsv = (text) => {
+      const out = [];
+      let row = [], cell = "", quoted = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (quoted) {
+          if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+          else if (c === '"') quoted = false;
+          else cell += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ",") { row.push(cell); cell = ""; }
+        else if (c === "\r" && text[i + 1] === "\n") { row.push(cell); out.push(row); row = []; cell = ""; i++; }
+        else cell += c;
+      }
+      row.push(cell); out.push(row);
+      return out;
+    };
+    const [head, ...lines] = parseCsv(csvText.trimStart());
+    const exported = (await priya.call(`/api/groups/${groupId}`)).body.group;
+    const netCol = head.indexOf(`Net (${exported.currency})`);
+    const amountCols = ["Total", "Paid", "Share", "Net"].map((name) => head.indexOf(name)).concat(netCol);
+    check(
+      "D9: every amount in the export is a number a spreadsheet can add",
+      netCol > 0 && lines.every((line) => amountCols.every((i) => /^-?\d+(\.\d+)?$/.test(line[i]))),
+    );
+    // The export writes every decimal place, so dropping the point gives
+    // minor units, as the balances are kept.
+    const byName = {};
+    for (const line of lines) byName[line[head.indexOf("Person")]] = (byName[line[head.indexOf("Person")]] ?? 0) + Number(line[netCol].replace(".", ""));
+    const mismatched = exported.members.filter((m) => (byName[m.displayName] ?? 0) !== Number(exported.balances.net[m.id] ?? 0));
+    check("D9: each person's net in the export adds up to their balance", mismatched.length === 0, JSON.stringify({ byName, net: exported.balances.net }));
+  }
+
   // -- Two people editing the same expense ----------------------------------
   console.log("\nConcurrent edits");
   const contested = (await priya.call(`/api/groups/${homeId}/expenses`)).body.items.find(
