@@ -36,6 +36,9 @@ export class ApiError extends Error {
   }
 }
 
+/** Bad gateway, unavailable, gateway timeout. */
+const UNREACHABLE = new Set([502, 503, 504]);
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
@@ -58,6 +61,17 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new ApiError(0, "You're offline. This will be sent when you're back online.");
+  }
+
+  // Divvy couldn't answer for itself: the host's own error page while it
+  // restarts (each deploy is a few seconds of this), a gateway timeout, or
+  // Divvy saying the database is too busy right now. These are treated as
+  // being offline, so a change is kept on the phone and sent again shortly,
+  // rather than "Something went wrong (502)" and the person typing it again.
+  // A resend can't save anything twice: new rows carry their own id, edits
+  // their version, and deletes are idempotent.
+  if (UNREACHABLE.has(response.status)) {
+    throw new ApiError(0, "Divvy can't be reached right now. This will be sent when it's back.");
   }
 
   if (response.status === 204) return undefined as T;

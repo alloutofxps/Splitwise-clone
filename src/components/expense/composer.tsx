@@ -317,7 +317,7 @@ export function ExpenseComposer({
             ? {
                 tone: "offline",
                 title: "Saved on your phone",
-                description: "It'll be sent when you're back online.",
+                description: "It'll be sent as soon as Divvy can be reached.",
               }
             : {
                 tone: "success",
