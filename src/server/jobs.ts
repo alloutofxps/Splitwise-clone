@@ -13,7 +13,8 @@
  *  - phone notifications for new activity, every fifteen seconds;
  *  - exchange-rate refresh, every six hours;
  *  - housekeeping (expired sign-in codes, abandoned sessions), hourly;
- *  - a database snapshot, daily, for SQLite deployments.
+ *  - a database snapshot, daily, for SQLite deployments;
+ *  - a check of the database's own rules, daily.
  *
  * Set `DIVVY_DISABLE_JOBS=1` to run a server that serves requests only.
  */
@@ -28,6 +29,7 @@ import { refreshAllBases } from "./rates";
 import { runDueRecurrences } from "./recurrence";
 import { sendPendingNotifications } from "./push";
 import { noteJobRan, noteJobScheduled } from "./health";
+import { runIntegrityCheck } from "./integrity";
 
 const holder = `${process.pid}-${randomUUID().slice(0, 8)}`;
 
@@ -164,6 +166,8 @@ const JOBS: Job[] = [
   // Also shortly after boot, so a fresh deploy has a snapshot straight away
   // rather than a day later. The newest seven are kept, so restarts are cheap.
   { name: "snapshot", everyMs: 24 * 60 * 60_000, run: snapshotDatabase, atStart: true },
+  // The database's own rules, daily and after each deploy (server/integrity.ts).
+  { name: "integrity", everyMs: 24 * 60 * 60_000, run: runIntegrityCheck, atStart: true },
 ];
 
 let started = false;

@@ -4,6 +4,7 @@ import {
   allowedGap,
   healthProblems,
   noteJobRan,
+  noteIntegrity,
   noteJobScheduled,
   notePhoneError,
   resetHealth,
@@ -60,6 +61,15 @@ describe("the health check's alarm", () => {
     notePhoneError("cy");
     expect(healthProblems()).toEqual(["crashes on 3 people's phones in the last hour"]);
     expect(healthProblems(T0 + 60 * MINUTE + 1)).toEqual([]);
+  });
+
+  it("goes off while the daily database check has found something", () => {
+    noteIntegrity({ "bills whose shares don't add up to the total (live)": 1 });
+    expect(healthProblems()).toEqual([
+      "the daily database check found bills whose shares don't add up to the total (live): 1",
+    ]);
+    noteIntegrity({});
+    expect(healthProblems()).toEqual([]);
   });
 
   it("ignores a job it was never told about", () => {

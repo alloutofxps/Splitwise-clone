@@ -99,6 +99,12 @@ jobs:
       - name: Offline and two-phone checks
         run: node scripts/offline-check.mjs http://localhost:3000
 
+      # After everything above has written to it, the database must still pass
+      # every rule: undamaged, nothing pointing at a missing row, every bill's
+      # shares and payers adding up. Read-only, counts only.
+      - name: Database still sound
+        run: node scripts/db-check.mjs
+
   # Mutation testing on the money code (RULES.md M12): Stryker plants small
   # mistakes in split.ts, balances.ts and money.ts, one at a time, and the
   # job fails if the tests catch fewer than 85% of them. Its own job, so it
