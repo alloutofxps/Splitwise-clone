@@ -294,8 +294,10 @@ async function deliver(sub: Subscription, message: PushMessage, type: string): P
     return true;
   } catch (error) {
     const status = (error as { statusCode?: number }).statusCode;
-    if (status === 404 || status === 410) {
-      // The phone turned notifications off or the app was removed.
+    // 404 and 410: the phone turned notifications off or the app was removed.
+    // 401 and 403: it was set up with a key the server no longer has; the
+    // phone sets itself up again the next time Divvy opens (refreshPushKey).
+    if (status === 404 || status === 410 || status === 401 || status === 403) {
       await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
     } else {
       log.warn("push failed", { status, type });
