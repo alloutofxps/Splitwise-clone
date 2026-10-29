@@ -21,7 +21,7 @@ export default function PrivacyPage() {
   const contact = process.env.DIVVY_CONTACT || process.env["NEXT_PUBLIC_DIVVY_CONTACT"];
 
   return (
-    <main className="mx-auto w-full max-w-[640px] px-6 py-12 text-body-lg leading-relaxed text-text">
+    <main className="mx-auto w-full max-w-[640px] px-6 pb-12 pt-[max(3rem,env(safe-area-inset-top))] text-body-lg leading-relaxed text-text">
       <h1 className="text-display-sm font-semibold tracking-[-0.03em]">Privacy</h1>
 
       <h2 className="mt-8 text-title-lg font-semibold">What we keep</h2>
