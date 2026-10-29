@@ -163,7 +163,8 @@ export function GroupLedger({
               aria-label="Filter this group"
               aria-expanded={showFilters}
               className={cn(
-                "relative flex h-8 items-center gap-1.5 rounded-full px-2 text-body font-medium transition-colors hover:bg-surface-2",
+                // 44 wide, side by side with Search; tap-44 adds the height.
+                "tap-44 relative flex h-8 min-w-11 items-center justify-center gap-1.5 rounded-full px-2 text-body font-medium transition-colors hover:bg-surface-2",
                 activeFilters > 0 ? "text-text" : "text-muted",
               )}
             >
@@ -181,7 +182,7 @@ export function GroupLedger({
                 setSearching(true);
               }}
               aria-label="Search this group"
-              className="flex h-8 items-center gap-1.5 rounded-full px-2 text-body font-medium text-muted transition-colors hover:bg-surface-2"
+              className="tap-44 relative flex h-8 min-w-11 items-center justify-center gap-1.5 rounded-full px-2 text-body font-medium text-muted transition-colors hover:bg-surface-2"
             >
               <Search className="size-[17px]" strokeWidth={1.75} />
               <span className="hidden sm:inline">Search</span>

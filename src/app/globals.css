@@ -440,6 +440,19 @@
   height: env(safe-area-inset-bottom);
 }
 
+/* A tap area of at least 44 x 44 points (RULES R6) around a control drawn
+   smaller: an invisible layer reaching out past its edges by whatever it
+   lacks, and never inwards, so nothing about how it looks changes. The
+   control must be positioned (`relative`), must not clip its own overflow,
+   and needs room around it: where two would overlap, the later one wins the
+   overlap, so neighbours closer than the shortfall get wider instead. */
+.tap-44::after {
+  content: "";
+  position: absolute;
+  inset-block: min(0px, calc((100% - 44px) / 2));
+  inset-inline: min(0px, calc((100% - 44px) / 2));
+}
+
 /* --------------------------------------------------------------------------
    Surfaces
    -------------------------------------------------------------------------- */

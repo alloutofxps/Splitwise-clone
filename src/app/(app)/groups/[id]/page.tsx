@@ -181,7 +181,7 @@ export default function GroupPage() {
             router.back();
           }}
           aria-label="Back"
-          className="flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-2"
+          className="tap-44 relative flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-2"
         >
           <ChevronLeft className="size-6" strokeWidth={1.75} />
         </button>
@@ -418,7 +418,8 @@ function HeaderButton({
         onClick();
       }}
       aria-label={ariaLabel ?? label}
-      className="flex h-10 items-center gap-1.5 rounded-full px-2.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+      // 44 wide, not a wider tap area: Invite and Settings sit 4px apart.
+      className="tap-44 relative flex h-10 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
     >
       {icon}
       <span className="hidden sm:inline">{label}</span>

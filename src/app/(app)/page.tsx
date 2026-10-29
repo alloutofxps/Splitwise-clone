@@ -99,11 +99,11 @@ export default function HomePage() {
           <Link
             href="/search"
             aria-label="Search expenses"
-            className="flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-2 lg:hidden"
+            className="tap-44 relative flex size-10 items-center justify-center rounded-full text-text transition-colors hover:bg-surface-2 lg:hidden"
           >
             <Search className="size-5" strokeWidth={1.75} />
           </Link>
-          <Link href="/account" aria-label="You" className="rounded-full p-1 transition-opacity active:opacity-70">
+          <Link href="/account" aria-label="You" className="tap-44 relative rounded-full p-1 transition-opacity active:opacity-70">
             {/* The initials are a picture of you here, not the button's name. */}
             <span aria-hidden>
               <Avatar person={data.me} size="sm" />
