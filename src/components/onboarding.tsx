@@ -41,6 +41,7 @@ import { CurrencyPicker } from "./expense/currency-picker";
 import { guessCurrency } from "@/lib/guess-currency";
 import type { MeDto } from "@/lib/types";
 import { FlowMap } from "./flow/flow-map";
+import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page";
 
 /**
  * Setup.
@@ -75,7 +76,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
-    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+    <KeyboardPage className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
       <AnimatePresence mode="wait">
         {step === "welcome" ? (
           <StepShell key="welcome">
@@ -117,7 +118,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
           </StepShell>
         ) : null}
       </AnimatePresence>
-    </div>
+    </KeyboardPage>
   );
 }
 
@@ -436,7 +437,7 @@ function ProfileStep({
         }}
       />
 
-      <div className="mt-auto pt-8">
+      <KeyboardPageFooter className="mt-auto pt-8">
         <Button
           variant="primary"
           size="lg"
@@ -447,7 +448,7 @@ function ProfileStep({
         >
           Continue
         </Button>
-      </div>
+      </KeyboardPageFooter>
     </div>
   );
 }
@@ -645,7 +646,7 @@ function RecoveryStep({
         </span>
       </label>
 
-      <div className="mt-auto pt-8">
+      <KeyboardPageFooter className="mt-auto pt-8">
         <Button
           variant="primary"
           size="lg"
@@ -668,7 +669,7 @@ function RecoveryStep({
         >
           Start using Divvy
         </Button>
-      </div>
+      </KeyboardPageFooter>
     </div>
   );
 }
@@ -732,7 +733,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
       />
 
-      <div className="mt-auto pt-8">
+      <KeyboardPageFooter className="mt-auto pt-8">
         <Button
           variant="primary"
           size="lg"
@@ -743,7 +744,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         >
           Get my account back
         </Button>
-      </div>
+      </KeyboardPageFooter>
     </div>
   );
 }

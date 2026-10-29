@@ -399,6 +399,10 @@ for (const [engine, launcher, opts] of engines) {
     const { ctx, page } = await open(browser, { state: signedIn ? data.state : null, chrome, init: fakeKeyboard });
     try {
       await show(page, path, opener);
+      // The forms' own controls, which the screens above don't open.
+      const small = await page.evaluate(tapAreas);
+      count(engine, "tap", small.length);
+      if (small.length) report.push(`${engine} ${name} (form)\n  - tap under 44: ${small.join("; ")}`);
       const scope = (await page.locator("[role=dialog]").count()) ? page.locator("[role=dialog]").last() : page.locator("body");
       // inputmode=none fields (the amount pad) never bring up the phone's keyboard.
       const fields = scope.locator("input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([inputmode=none]), textarea");

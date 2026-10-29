@@ -13,6 +13,7 @@ import { colorForName, hueVar, initials } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/invite-code";
 import type { MeDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
+import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page";
 
 interface GroupPreview {
   kind: "group";
@@ -162,7 +163,7 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))]">
+    <KeyboardPage className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))]">
       <Wordmark className="mb-8" />
 
       <div className="flex flex-1 flex-col">
@@ -301,7 +302,7 @@ export default function JoinPage() {
         ) : null}
       </div>
 
-      <div className="pt-8">
+      <KeyboardPageFooter className="pt-8">
         <Button
           variant="primary"
           size="lg"
@@ -323,7 +324,7 @@ export default function JoinPage() {
             Joining as <bdi>{me.displayName}</bdi>
           </p>
         ) : null}
-      </div>
-    </div>
+      </KeyboardPageFooter>
+    </KeyboardPage>
   );
 }
