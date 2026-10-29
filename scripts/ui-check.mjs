@@ -1340,6 +1340,33 @@ console.log("\nPage names");
   check("Home has a main heading", (await page.locator("main h1").count()) === 1);
 }
 
+// The flow bar on Home was a row of links, some 17 points wide and 10 tall.
+// It's one button now, opening a list with a full-size row per person.
+console.log("\nWho makes up your balance");
+{
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  const bar = page.getByRole("button", { name: /Who makes up this balance/ }).first();
+  check("the bar on Home is one button", (await bar.count()) > 0);
+  const box = await bar.boundingBox();
+  // Where a tap 20 points above the bar's middle lands: still the bar.
+  const reach = box
+    ? await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label") ?? "", [box.x + box.width / 2, box.y + box.height / 2 - 20])
+    : "";
+  check("and its tap area reaches past the thin bar", /Who makes up this balance/.test(reach), reach);
+  await bar.click();
+  const sheet = page.getByRole("dialog", { name: /Who makes up this balance/ });
+  await sheet.waitFor({ timeout: 5000 }).catch(() => {});
+  const rows = sheet.getByRole("link");
+  check("tapping it lists who makes it up", (await rows.count()) > 0, `${await rows.count()} rows`);
+  const first = (await rows.first().innerText().catch(() => "")).replace(/\s+/g, " ");
+  check("each row says who and which way", /owes you|you owe/.test(first), first);
+  const rowBox = await rows.first().boundingBox();
+  check("each row is at least 44 tall", (rowBox?.height ?? 0) >= 44, String(rowBox?.height));
+  await rows.first().click();
+  await page.waitForURL("**/friends/**", { timeout: 8000 }).catch(() => {});
+  check("a row opens that friend", /\/friends\/[^/]+$/.test(page.url()), page.url());
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

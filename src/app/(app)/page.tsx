@@ -26,7 +26,7 @@ import { ApiError } from "@/lib/client/api";
 import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { FlowDoodle } from "@/components/ui/doodle";
-import { Skeleton, cn } from "@/components/ui/primitives";
+import { Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { lazyAfterLoad } from "@/components/ui/after-load";
 import { Wordmark } from "@/components/app-shell";
 import { FlowBar } from "@/components/flow/flow-bar";
@@ -48,6 +48,9 @@ const JoinSheet = lazyAfterLoad(() =>
 );
 const ImportSheet = lazyAfterLoad(() =>
   import(/* webpackChunkName: "home-panels" */ "@/components/group/import-sheet").then((m) => m.ImportSheet),
+);
+const BreakdownSheet = lazyAfterLoad(() =>
+  import(/* webpackChunkName: "home-panels" */ "@/components/flow/breakdown-sheet").then((m) => m.BreakdownSheet),
 );
 
 /**
@@ -208,6 +211,10 @@ export default function HomePage() {
 function Balance({ data }: { data: DashboardPayload }) {
   const currencies = Object.keys(data.totals);
   const nothingYet = data.groups.length === 0 && data.friends.length === 0;
+  // Which currency's bar was tapped, for the list of who makes it up. Kept
+  // after closing, so the list doesn't empty while it slides away.
+  const [breakdown, setBreakdown] = React.useState<string | null>(null);
+  const [breakdownOpen, setBreakdownOpen] = React.useState(false);
 
   if (currencies.length === 0) {
     return (
@@ -252,7 +259,11 @@ function Balance({ data }: { data: DashboardPayload }) {
               className="mt-3"
               currency={line.currency}
               entries={line.entries}
-              linkTo={(personId) => `/friends/${personId}`}
+              onOpen={() => {
+                haptic();
+                setBreakdown(line.currency);
+                setBreakdownOpen(true);
+              }}
             />
           </div>
         ))}
@@ -264,6 +275,13 @@ function Balance({ data }: { data: DashboardPayload }) {
           {approx >= 0n ? "owed to you" : "that you owe"} overall
         </p>
       ) : null}
+
+      <BreakdownSheet
+        open={breakdownOpen}
+        onClose={() => setBreakdownOpen(false)}
+        currency={breakdown ?? ""}
+        entries={lines.find((line) => line.currency === breakdown)?.entries ?? []}
+      />
     </section>
   );
 }
