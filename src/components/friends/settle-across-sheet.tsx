@@ -250,7 +250,7 @@ export function SettleAcrossSheet({
                   setMethod(method === option ? null : option);
                 }}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+                  "tap-44 relative rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   method === option
                     ? "border-text bg-text text-inverse"
                     : "border-line bg-surface text-text hover:bg-surface-2",

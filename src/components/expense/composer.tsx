@@ -592,7 +592,8 @@ export function ExpenseComposer({
                     // Not supported: the native tap behaviour still applies.
                   }
                 }}
-                className="absolute inset-0 h-full w-full cursor-pointer text-input opacity-0"
+                // At least 44 tall, centred on the chip drawn under it.
+                className="absolute inset-x-0 top-1/2 h-[max(100%,44px)] w-full -translate-y-1/2 cursor-pointer text-input opacity-0"
               />
             </span>
 

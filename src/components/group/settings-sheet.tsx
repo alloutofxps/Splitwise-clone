@@ -249,7 +249,7 @@ export function GroupSettingsSheet({
                         }}
                         aria-label={`${member.displayName} is someone already on Divvy`}
                         title="This is someone already on Divvy"
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2 hover:text-text"
+                        className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-surface-2 hover:text-text"
                       >
                         <Merge className="size-4" />
                       </button>
@@ -269,7 +269,7 @@ export function GroupSettingsSheet({
                             ? "They still have a balance in this group"
                             : undefined
                         }
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative disabled:opacity-30 disabled:hover:bg-transparent"
+                        className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         <X className="size-4" />
                       </button>

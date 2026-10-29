@@ -356,7 +356,7 @@ function ProfileStep({
     <div className="flex flex-1 flex-col">
       <button
         onClick={onBack}
-        className="-ml-1 mb-8 flex items-center gap-1 self-start py-2 text-body-lg font-medium text-text"
+        className="tap-44 relative -ml-1 mb-8 flex items-center gap-1 self-start py-2 text-body-lg font-medium text-text"
       >
         <ChevronLeft className="size-5" strokeWidth={1.75} />
         Back
@@ -397,7 +397,7 @@ function ProfileStep({
           haptic();
           setPickerOpen(true);
         }}
-        className="mt-2 self-start rounded-[var(--radius-sm)] px-1 py-1 text-body text-muted underline-offset-2 hover:text-text hover:underline"
+        className="tap-44 relative mt-2 self-start rounded-[var(--radius-sm)] px-1 py-1 text-body text-muted underline-offset-2 hover:text-text hover:underline"
       >
         Change colour or emoji
       </button>
@@ -422,7 +422,7 @@ function ProfileStep({
             haptic();
             setCurrencyOpen(true);
           }}
-          className="text-text underline underline-offset-2"
+          className="tap-44 relative text-text underline underline-offset-2"
         >
           Change
         </button>
@@ -708,7 +708,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
     <div className="flex flex-1 flex-col">
       <button
         onClick={onBack}
-        className="-ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
+        className="tap-44 relative -ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
       >
         Back
       </button>

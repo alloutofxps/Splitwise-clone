@@ -158,7 +158,8 @@ export function PayerPicker({
                     onClick={() =>
                       multiple ? toggleMultiple(member.id) : pickSingle(member.id)
                     }
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    // The whole height of the row, not just the avatar's 32.
+                    className="-my-2.5 flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left"
                   >
                     <Avatar person={member} size="sm" />
                     <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body-lg font-semibold text-text">

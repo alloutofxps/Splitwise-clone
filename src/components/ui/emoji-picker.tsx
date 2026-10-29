@@ -51,7 +51,9 @@ export function EmojiPicker({
           // initials or an emoji. Picking a colour keeps the sheet open.
           <div className="mb-6">
             <h3 className="mb-2 text-caption font-medium text-subtle">Your colour</h3>
-            <div className="grid grid-cols-10 gap-1.5">
+            {/* Two rows of five: ten in a row left each one 30 points, with no
+                room around it for a 44-point tap area. */}
+            <div className="grid grid-cols-5 gap-x-1.5 gap-y-2">
               {AVATAR_COLORS.map((option) => (
                 <button
                   key={option}
@@ -62,7 +64,7 @@ export function EmojiPicker({
                   aria-label={`Use the ${option} colour`}
                   aria-pressed={normalizeColor(color) === option}
                   className={cn(
-                    "aspect-square w-full max-w-9 rounded-full transition-opacity active:opacity-70",
+                    "tap-44 relative aspect-square w-full max-w-9 justify-self-center rounded-full transition-opacity active:opacity-70",
                     normalizeColor(color) === option && "outline-2 outline-offset-2 outline-text outline-solid",
                   )}
                   style={{ background: hueVar(option) }}

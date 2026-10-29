@@ -184,7 +184,9 @@ export function NewGroupSheet({
           </Button>
         }
       >
-        <div className="px-5 pb-6">
+        {/* Room above the first row of kinds: the panel's scrolling edge
+            would otherwise cut the top off their 44-point tap areas. */}
+        <div className="px-5 pb-6 pt-1">
           <div className="flex flex-wrap gap-2">
             {KINDS.map((entry) => (
               <button
@@ -196,7 +198,7 @@ export function NewGroupSheet({
                   setEmoji(entry.emoji);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+                  "tap-44 relative flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
                   kind === entry.value
                     ? "border-text bg-text text-inverse"
                     : "border-line bg-surface text-text hover:bg-surface-2",
@@ -318,7 +320,7 @@ export function NewGroupSheet({
                 haptic();
                 onImport();
               }}
-              className="mx-auto mt-8 block text-body font-semibold text-brand"
+              className="tap-44 relative mx-auto mt-8 block text-body font-semibold text-brand"
             >
               Have this group in Splitwise? Move it over
             </button>

@@ -118,7 +118,7 @@ export function InviteSheet({
           <button
             type="button"
             onClick={() => void copy(code)}
-            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-body font-medium text-text underline-offset-2 hover:underline"
+            className="tap-44 relative flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-body font-medium text-text underline-offset-2 hover:underline"
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" strokeWidth={1.75} />}
             {copied ? "Copied" : "Copy code"}
@@ -127,7 +127,7 @@ export function InviteSheet({
             type="button"
             onClick={() => setMore(!more)}
             aria-expanded={more}
-            className="rounded-[var(--radius-sm)] px-2 py-1.5 text-body text-muted underline-offset-2 hover:underline"
+            className="tap-44 relative rounded-[var(--radius-sm)] px-2 py-1.5 text-body text-muted underline-offset-2 hover:underline"
           >
             More…
           </button>
