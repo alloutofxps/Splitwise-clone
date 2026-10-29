@@ -249,7 +249,7 @@ export default function FriendPage() {
                   setHistoryFilter(chip.id);
                 }}
                 className={cn(
-                  "shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
+                  "tap-44 relative shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
                   historyFilter === chip.id ? "border-text bg-text text-inverse" : "border-line bg-surface text-text hover:bg-surface-2",
                 )}
               >

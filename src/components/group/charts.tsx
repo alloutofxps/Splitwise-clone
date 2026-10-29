@@ -81,7 +81,7 @@ export function GroupCharts({
         <button
           onClick={() => setAsTable((current) => !current)}
           aria-pressed={asTable}
-          className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+          className="tap-44 relative flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
         >
           {asTable ? (
             <BarChart3 className="size-4" strokeWidth={1.75} />

@@ -101,6 +101,7 @@ export function ExpenseComposer({
   const create = useCreateExpense(data?.me?.id);
   const update = useUpdateExpense(expense?.id ?? "", expense?.groupId);
   const remove = useDeleteExpense();
+  const descriptionId = React.useId();
 
   const [panel, setPanel] = React.useState<
     null | "split" | "payer" | "category" | "currency" | "notes" | "receipt"
@@ -419,8 +420,14 @@ export function ExpenseComposer({
             locked={Boolean(expense)}
           />
 
-          {/* Description: what it was for comes first, the way people say it. */}
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 has-[input:focus]:ring-[1.5px] has-[input:focus]:ring-text">
+          {/* Description: what it was for comes first, the way people say it.
+              The row is a label, so a tap anywhere on it lands in the field
+              (the field alone is 24 tall). Tied by id: wrapping alone would
+              label the category button, the first thing in it that can be. */}
+          <label
+            htmlFor={descriptionId}
+            className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 has-[input:focus]:ring-[1.5px] has-[input:focus]:ring-text"
+          >
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}
@@ -430,6 +437,8 @@ export function ExpenseComposer({
             </button>
 
             <input
+              id={descriptionId}
+              aria-label="What was it for?"
               dir="auto"
               value={draft.description}
               onChange={(event) => {
@@ -448,7 +457,7 @@ export function ExpenseComposer({
               enterKeyHint="done"
               className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle/70"
             />
-          </div>
+          </label>
 
           {/* Amount --------------------------------------------------------- */}
           <div className="mt-4">
@@ -463,7 +472,7 @@ export function ExpenseComposer({
                 <button
                   onClick={() => setPanel("currency")}
                   aria-label={`Currency: ${draft.currency}`}
-                  className="flex shrink-0 items-center gap-0.5 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition-colors hover:bg-surface-2"
+                  className="tap-44 relative flex shrink-0 items-center gap-0.5 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition-colors hover:bg-surface-2"
                 >
                   {draft.currency}
                   <ChevronDown className="size-3" />
@@ -1015,7 +1024,7 @@ function SentenceButton({
       }}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1 py-0.5 font-medium underline decoration-1 underline-offset-4 transition-colors hover:bg-surface-2",
+        "tap-44 relative inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1 py-0.5 font-medium underline decoration-1 underline-offset-4 transition-colors hover:bg-surface-2",
         warning ? "text-negative-text decoration-negative" : "text-text decoration-line-strong",
       )}
     >
@@ -1051,7 +1060,7 @@ function Chip({
             },
           })}
       className={cn(
-        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
+        "tap-44 relative flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
         active
           ? "border-text bg-text text-inverse"
           : "border-line bg-surface text-text hover:bg-surface-2",

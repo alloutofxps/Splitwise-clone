@@ -92,7 +92,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {/* Working: a thin line runs along the bottom edge, rather than a
             spinner replacing the label you just pressed. */}
         {loading ? (
-          <span aria-hidden className="divvy-progress absolute inset-x-0 bottom-0 h-[2px]" />
+          <span aria-hidden className={cn("divvy-progress absolute bottom-0 h-[2px]", size === "sm" ? "inset-x-2" : "inset-x-0")} />
         ) : null}
       </button>
     );
@@ -239,7 +239,7 @@ export function Segmented<T extends string>({
           }}
           className={cn(
             "relative font-medium transition-colors duration-150",
-            size === "md" ? "h-11 text-body" : "h-9 text-caption",
+            size === "md" ? "h-11 text-body" : "tap-44 h-9 text-caption",
             option.value === value ? "text-text" : "text-subtle hover:text-muted",
           )}
         >
@@ -281,7 +281,7 @@ export function Switch({
         onChange(!checked);
       }}
       className={cn(
-        "relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
+        "tap-44 relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
         "disabled:opacity-50",
         checked ? "bg-brand" : "bg-surface-3",
       )}

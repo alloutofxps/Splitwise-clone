@@ -153,6 +153,10 @@ export default function AccountPage() {
           <Avatar person={me} size="lg" />
         </button>
         <div className="min-w-0 flex-1">
+          {/* The field is 30 tall with "Change how you look" just under it,
+              so both reach away from each other to make 44: this one up,
+              over the empty space under the heading, that one down. */}
+          <label className="-mt-3.5 block pt-3.5">
           <input
             dir="auto"
             value={name}
@@ -169,6 +173,7 @@ export default function AccountPage() {
             aria-label="Your name"
             className="w-full text-ellipsis rounded-[var(--radius-sm)] bg-transparent text-title-lg font-semibold tracking-[-0.02em] text-text outline-none transition focus:bg-surface-2 focus:px-2 focus:py-1 focus:ring-[1.5px] focus:ring-text"
           />
+          </label>
           <p className="mt-0.5 text-caption text-subtle">
             Member since{" "}
             {new Date(me.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
@@ -178,7 +183,7 @@ export default function AccountPage() {
                 haptic();
                 setEmojiOpen(true);
               }}
-              className="text-text underline-offset-2 hover:underline"
+              className="relative text-text underline-offset-2 after:absolute after:inset-x-0 after:top-0 after:-bottom-6 hover:underline"
             >
               Change how you look
             </button>
