@@ -577,6 +577,8 @@ export function SettlementRow({
 
   const fromLabel = from?.id === meId ? "You" : (from?.displayName ?? "Someone");
   const toLabel = to?.id === meId ? "you" : (to?.displayName ?? "someone");
+  const fromShown = from?.id === meId ? "You" : (from?.displayName.split(" ")[0] ?? "Someone");
+  const toShown = to?.id === meId ? "you" : (to?.displayName.split(" ")[0] ?? "someone");
 
   const undo = () => {
     remove.mutate(
@@ -609,29 +611,40 @@ export function SettlementRow({
           haptic();
           setConfirming(true);
         }}
-        aria-label={`${fromLabel} paid ${toLabel}. Remove this payment.`}
+        // Everything the row shows, in its order (the date when it has one,
+        // the first names, the method and note, the amount), so voice control
+        // finds it by what it shows; then what tapping it does.
+        aria-label={`${[
+          showDate ? `${new Date(settlement.date).toLocaleDateString(undefined, { month: "short" })} ${new Date(settlement.date).toLocaleDateString(undefined, { day: "numeric" })}` : null,
+          `${fromShown} paid ${toShown}`,
+          [settlement.method, settlement.note].filter(Boolean).join(" · ") || null,
+          formatMoney(BigInt(settlement.amount), settlement.currency),
+        ].filter(Boolean).join(", ")}. Remove this payment.`}
         className={cn(
           "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
           pending ? "opacity-60" : "hover:bg-surface-2 active:bg-surface-2",
         )}
       >
-      {showDate ? <DateStamp date={settlement.date} /> : null}
+      {showDate ? <DateStamp date={settlement.date} /> : null}{" "}
 
       <PairGlyph from={from} to={to} />
       <span className="min-w-0 flex-1">
         {/* First names, each cut on its own, so "paid you" always shows: a long
             name used to push it off the end and leave just the name. */}
         <span className="flex min-w-0 gap-1 text-body-lg font-medium text-text">
-          <bdi className="min-w-0 truncate">{from?.id === meId ? "You" : (from?.displayName.split(" ")[0] ?? "Someone")}</bdi>
-          <span className="shrink-0">paid</span>
-          <bdi className="min-w-0 truncate">{to?.id === meId ? "you" : (to?.displayName.split(" ")[0] ?? "someone")}</bdi>
-        </span>
+          {/* Real spaces between the words (flex drops them from the
+              layout), so the row's text reads "Ravi paid you", not
+              "Ravipaidyou", and matches its name. */}
+          <bdi className="min-w-0 truncate">{fromShown}</bdi>{" "}
+          <span className="shrink-0">paid</span>{" "}
+          <bdi className="min-w-0 truncate">{toShown}</bdi>
+        </span>{" "}
         {settlement.note || settlement.method ? (
           <span className="mt-0.5 block truncate text-caption text-subtle">
             {[settlement.method, settlement.note].filter(Boolean).join(" · ")}
           </span>
         ) : null}
-      </span>
+      </span>{" "}
         <Amount
           value={settlement.amount}
           currency={settlement.currency}
@@ -738,7 +751,7 @@ function DateStamp({ date }: { date: string }) {
     >
       <span className="text-caption font-medium">
         {value.toLocaleDateString(undefined, { month: "short" })}
-      </span>
+      </span>{" "}
       <span className="tabular mt-0.5 text-body font-semibold">
         {value.toLocaleDateString(undefined, { day: "numeric" })}
       </span>

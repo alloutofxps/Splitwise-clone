@@ -508,7 +508,9 @@ export function ExpenseComposer({
             <SentenceButton
               onClick={() => setPanel("split")}
               warning={split.errors.length > 0}
-              ariaLabel={`Split ${splitLabel(draft.splitMode, split.splits.filter((s) => s.included).length).toLowerCase()}`}
+              // The words it shows, capitalised: voice control and the tests
+              // find it as "Split ...".
+              ariaLabel={`Split ${splitSentence(draft.splitMode, split.splits.filter((s) => s.included).length)}${!expense && group?.defaultSplit && draft.splitMode !== "EQUAL" ? " · usual split" : ""}`}
             >
               split {splitSentence(draft.splitMode, split.splits.filter((s) => s.included).length)}
               {!expense && group?.defaultSplit && draft.splitMode !== "EQUAL" ? " · usual split" : ""}
@@ -1177,25 +1179,6 @@ function splitSentence(mode: SplitMode, count: number): string {
       return "by item";
     default:
       return "equally";
-  }
-}
-
-function splitLabel(mode: SplitMode, count: number): string {
-  switch (mode) {
-    case "EQUAL":
-      return `Equally · ${count}`;
-    case "EXACT":
-      return "Exact amounts";
-    case "PERCENT":
-      return "By percentage";
-    case "SHARES":
-      return "By shares";
-    case "ADJUSTMENT":
-      return "Plus extras";
-    case "ITEMIZED":
-      return "By item";
-    default:
-      return "Custom";
   }
 }
 

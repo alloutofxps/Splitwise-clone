@@ -37,6 +37,7 @@ import { recoveryPending } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
+import { initials } from "@/lib/avatar";
 
 // Panels nobody sees until they tap: fetched once Home has loaded rather than
 // with it, in one file (components/ui/after-load.tsx).
@@ -106,8 +107,13 @@ export default function HomePage() {
           >
             <Search className="size-5" strokeWidth={1.75} />
           </Link>
-          <Link href="/account" aria-label="You" className="tap-44 relative rounded-full p-1 transition-opacity active:opacity-70">
-            {/* The initials are a picture of you here, not the button's name. */}
+          <Link
+            href="/account"
+            // Its initials in its name too, so someone using voice control
+            // can say what they see ("tap PS").
+            aria-label={data.me.avatarEmoji ? "You" : `You, ${initials(data.me.displayName)}`}
+            className="tap-44 relative rounded-full p-1 transition-opacity active:opacity-70"
+          >
             <span aria-hidden>
               <Avatar person={data.me} size="sm" />
             </span>
