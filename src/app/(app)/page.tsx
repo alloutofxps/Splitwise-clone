@@ -716,7 +716,7 @@ function TextButton({ onClick, children }: { onClick: () => void; children: Reac
   return (
     <button
       onClick={onClick}
-      className="rounded-[var(--radius-sm)] px-2 py-1 text-body font-medium text-text transition-colors hover:bg-surface-2"
+      className="tap-44 relative rounded-[var(--radius-sm)] px-2 py-1 text-body font-medium text-text transition-colors hover:bg-surface-2"
     >
       {children}
     </button>

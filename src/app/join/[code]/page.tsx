@@ -260,7 +260,7 @@ export default function JoinPage() {
                 haptic();
                 setClaimId(null);
               }}
-              className="mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
+              className="tap-44 relative mt-2.5 w-full py-1.5 text-body font-semibold text-muted"
             >
               None of these, I&rsquo;m new
             </button>

@@ -31,7 +31,9 @@ export const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
 };
 
 export const BUTTON_SIZES: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)]",
+  // 36 tall with a 44px tap area around it, which the base's overflow-hidden
+  // would clip (the loading line is kept inside the corners instead).
+  sm: "h-9 px-3.5 text-body gap-1.5 rounded-[var(--radius-sm)] tap-44 overflow-visible",
   md: "h-11 px-4 text-subhead gap-2 rounded-[var(--radius-md)]",
   lg: "h-[52px] px-6 text-subhead gap-2 rounded-[var(--radius-lg)]",
 };

@@ -104,7 +104,7 @@ export default function SearchPage() {
                   haptic();
                   setQuery(`category:${category.id}`);
                 }}
-                className="rounded-full border border-[var(--card-border)] bg-surface px-3 py-1.5 text-body font-semibold text-muted transition active:opacity-70 hover:bg-surface-2"
+                className="tap-44 relative rounded-full border border-[var(--card-border)] bg-surface px-3 py-1.5 text-body font-semibold text-muted transition active:opacity-70 hover:bg-surface-2"
               >
                 {category.name}
               </button>

@@ -180,7 +180,7 @@ function GroupChip({
         onClick();
       }}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
+        "tap-44 relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-body font-semibold transition active:opacity-70",
         active
           ? "border-text bg-text text-inverse"
           : "border-line bg-surface text-text hover:bg-surface-2",
@@ -355,7 +355,7 @@ function UndoButton({ activity }: { activity: ActivityDto }) {
       }}
       disabled={busy}
       aria-label={`Undo, bring this ${label} back`}
-      className="mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition active:opacity-70 hover:bg-surface-2 disabled:opacity-50"
+      className="tap-44 relative mt-0.5 shrink-0 rounded-full border border-line px-2.5 py-1 text-caption font-medium text-text transition active:opacity-70 hover:bg-surface-2 disabled:opacity-50"
     >
       {busy ? "…" : "Undo"}
     </button>

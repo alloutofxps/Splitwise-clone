@@ -215,7 +215,7 @@ export default function GroupPage() {
             haptic();
             setInvite(true);
           }}
-          className="flex items-center gap-2 rounded-full py-1 pr-1 transition-opacity active:opacity-70"
+          className="tap-44 relative flex items-center gap-2 rounded-full py-1 pr-1 transition-opacity active:opacity-70"
         >
           <AvatarStack people={group.members} size="sm" max={6} />
           <span className="text-caption text-subtle">
