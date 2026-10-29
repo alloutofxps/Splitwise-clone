@@ -18,12 +18,13 @@ vi.mock("@/lib/db", () => ({
         table.set(where.name, { holder: data.holder ?? row.holder, expiresAt: data.expiresAt });
         return Promise.resolve({ count: 1 });
       },
-      create({ data }: { data: { name: string; holder: string; expiresAt: Date } }) {
-        if (table.has(data.name)) return Promise.reject(new Error("unique"));
-        writes++;
-        table.set(data.name, { holder: data.holder, expiresAt: data.expiresAt });
-        return Promise.resolve();
-      },
+    },
+    // INSERT ... ON CONFLICT DO NOTHING: the number of rows added.
+    $executeRaw(_sql: TemplateStringsArray, name: string, holder: string, expiresAt: number) {
+      if (table.has(name)) return Promise.resolve(0);
+      writes++;
+      table.set(name, { holder, expiresAt: new Date(expiresAt) });
+      return Promise.resolve(1);
     },
   },
 }));

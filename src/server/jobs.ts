@@ -64,10 +64,17 @@ export async function withJobLock<T>(
       where: { name, OR: [{ expiresAt: { lt: now } }, { holder }] },
       data: { holder, expiresAt },
     });
+    // Otherwise add the row if there is none. "Do nothing" on a clash rather
+    // than a create that fails: Prisma logs every failed query as an error,
+    // which after each deploy (the old server's kept leases running out) was
+    // a dozen "Unique constraint failed" lines that weren't problems.
+    // Dates are stored as milliseconds (see lib/db.ts).
     if (taken.count === 0) {
-      try {
-        await prisma.jobLock.create({ data: { name, holder, expiresAt } });
-      } catch {
+      const added = await prisma.$executeRaw`
+        INSERT INTO "JobLock" ("name", "holder", "expiresAt")
+        VALUES (${name}, ${holder}, ${expiresAt.getTime()})
+        ON CONFLICT ("name") DO NOTHING`;
+      if (added === 0) {
         kept.delete(name);
         return undefined; // Somebody else holds it.
       }
