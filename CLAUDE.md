@@ -124,6 +124,15 @@ detail.
   calls, half an hour, by hand): serve a copy of the test database with
   `DIVVY_RATE_LIMIT_SCALE=1000`, then `node scripts/fuzz-routes.mjs <url>`,
   optionally with part of a path (no leading slash in Git Bash) to rerun one.
+- Phones and accessibility (RULES R2 to R6, A1, A4; about ten minutes):
+  `node scripts/phone-check.mjs <url> <out-dir>` reports real tap areas
+  under 44 points, axe in Day and Night, 200% text and zoom, the notch and
+  home bar, and the keyboard over every form. WebKit drops the app's
+  Secure cookie over plain http, so to include Safari's engine put a local
+  https relay in front of the server (this machine has one, not in git:
+  `node perf-runs/tls/proxy.mjs 3443 3100`) and add
+  `BASE_WEBKIT=https://localhost:3443`. Compare the totals before and
+  after a change.
 - Browser suites: `node scripts/ui-check.mjs <url>`,
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server
