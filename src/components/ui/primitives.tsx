@@ -121,11 +121,11 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
           onClick?.(event);
         }}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center rounded-full transition",
+          "relative inline-flex shrink-0 items-center justify-center rounded-full transition",
           "active:opacity-70 disabled:opacity-40 disabled:pointer-events-none",
-          // 44px is the smallest reliable touch target on a phone; the visual
-          // circle can be smaller than the tappable area.
-          size === "md" ? "size-11" : "size-9",
+          // 44px is the smallest reliable touch target on a phone; the small
+          // circle keeps a 44px tap area around it.
+          size === "md" ? "size-11" : "tap-44 size-9",
           tone === "default" && "text-muted hover:bg-surface-2 hover:text-text",
           tone === "brand" && "text-brand hover:bg-brand-soft",
           tone === "danger" && "text-negative hover:bg-negative-soft",

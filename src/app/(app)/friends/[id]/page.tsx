@@ -109,7 +109,7 @@ export default function FriendPage() {
             router.back();
           }}
           aria-label="Back"
-          className="flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
+          className="tap-44 relative flex size-10 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <ChevronLeft className="size-6" />
         </button>
@@ -122,7 +122,7 @@ export default function FriendPage() {
             setSettings(true);
           }}
           aria-label="Friend settings"
-          className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
+          className="tap-44 relative flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2"
         >
           <Settings2 className="size-5" />
         </button>

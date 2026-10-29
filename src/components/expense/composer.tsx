@@ -424,7 +424,7 @@ export function ExpenseComposer({
             <button
               onClick={() => setPanel("category")}
               aria-label={`Category: ${category.name}`}
-              className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface text-text transition-opacity active:opacity-70"
+              className="tap-44 relative flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-surface text-text transition-opacity active:opacity-70"
             >
               <CategoryGlyph name={category.icon} />
             </button>
