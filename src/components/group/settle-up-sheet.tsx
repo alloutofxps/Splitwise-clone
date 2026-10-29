@@ -328,7 +328,7 @@ export function SettleUpSheet({
                   haptic();
                   setSelected(null);
                 }}
-                className="mx-auto mt-1 block rounded-[var(--radius-sm)] px-2 py-1 text-caption font-medium text-muted underline-offset-2 hover:text-text hover:underline"
+                className="tap-44 relative mx-auto mt-1 block rounded-[var(--radius-sm)] px-2 py-1 text-caption font-medium text-muted underline-offset-2 hover:text-text hover:underline"
               >
                 Someone else
               </button>
@@ -342,7 +342,7 @@ export function SettleUpSheet({
                     haptic();
                     setPickingCurrency(true);
                   }}
-                  className="mx-auto mb-2 flex items-center gap-1 rounded-full border border-line px-3 py-1 text-caption font-medium text-text"
+                  className="tap-44 relative mx-auto mb-2 flex items-center gap-1 rounded-full border border-line px-3 py-1 text-caption font-medium text-text"
                   aria-label={`Currency: ${payCurrency}`}
                 >
                   Paying in {payCurrency}
@@ -398,7 +398,7 @@ export function SettleUpSheet({
                       setMethod(method === option ? null : option);
                     }}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
+                      "tap-44 relative rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
                       method === option
                         ? "border-text bg-text text-inverse"
                         : "border-line bg-surface text-text hover:bg-surface-2",

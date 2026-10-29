@@ -19,7 +19,12 @@
  *              the very top or bottom of a screen, or pinned in place (Chrome
  *              only: it can pretend to have a notch);
  *   - keyboard: every field of 9 forms with an iPhone-like keyboard up: is
- *              the field in view, and the form's Save button.
+ *              the field in view, and the form's Save button (and the forms'
+ *              tap areas);
+ *   - panels:  tap areas in every panel keyboard-check opens, at the top and
+ *              scrolled to the end.
+ *
+ * PARTS=screens,forms,panels (the default) runs only the parts named.
  *
  * Writes <out-dir>/phone-check.txt and results.json and prints the totals.
  * A report: compare totals before and after a change. STRICT=1 exits 1 when
@@ -33,6 +38,7 @@ import AxeBuilder from "@axe-core/playwright";
 const BASE_ARG = process.argv[2] ?? "http://localhost:3000";
 const OUT = process.argv[3] ?? "phone-check";
 let BASE = BASE_ARG;
+const PARTS = (process.env.PARTS ?? "screens,forms,panels").split(",");
 mkdirSync(OUT, { recursive: true });
 const W = 393, H = 852, KB = 336, NOTCH = 59, HOME_BAR = 34;
 
@@ -303,6 +309,41 @@ async function show(page, path, action, wait) {
 }
 
 // Forms that bring up the keyboard: [name, path, signed in?, how to open].
+// Every panel, opened the way keyboard-check opens it: [name, path, how].
+const panels = (data) => {
+  const group = `/groups/${data.tripId}`;
+  const btn = (p, name, exact) => p.getByRole("button", { name, exact }).first().click();
+  const inComposer = (name) => async (p) => {
+    await btn(p, /Add an expense/);
+    await p.waitForTimeout(800);
+    await p.locator("[role=dialog]").last().getByRole("button", { name }).first().click();
+  };
+  return [
+    ["expense details", group, (p) => btn(p, /Airbnb Alfama/)],
+    ["invite", group, (p) => btn(p, "Invite", true)],
+    ["members", group, (p) => btn(p, /4 people/)],
+    ["add a payment", group, async (p) => { await p.getByRole("tab", { name: "Balances" }).click(); await p.waitForTimeout(400); await btn(p, "Add a payment"); }],
+    ["suggested payment", group, async (p) => { await p.getByRole("tab", { name: "Balances" }).click(); await p.waitForTimeout(400); await btn(p, /^Settle, /); }],
+    ["composer > split", group, inComposer(/^Split/)],
+    ["composer > who paid", group, inComposer(/^Paid by/)],
+    ["composer > currency", group, inComposer(/^Currency/)],
+    ["composer > category", group, inComposer(/^Category/)],
+    ["join a group", "/", (p) => btn(p, "Join", true)],
+    ["my code", "/friends", (p) => btn(p, "My code")],
+    ["friends filter", "/friends", (p) => btn(p, /Filter this list/)],
+    ["friend settings", `/friends/${data.firstFriend}`, (p) => btn(p, "Friend settings")],
+    ["friend settle up", `/friends/${data.firstFriend}`, (p) => btn(p, "Settle up", true)],
+    ["activity row", "/activity", (p) => p.locator("main button").filter({ hasText: /added/ }).first().click()],
+    ["emoji", "/account", (p) => btn(p, /Pick an emoji|Change your emoji/)],
+    ["how people pay you", "/account", (p) => btn(p, /How people can pay you/)],
+    ["default currency", "/account", (p) => btn(p, /Default currency/)],
+    ["budgets", "/account", (p) => btn(p, /^Budgets/)],
+    ["your devices", "/account", (p) => btn(p, /Your devices/)],
+    ["recovery key", "/account", (p) => btn(p, /Recovery key/)],
+    ["delete my account", "/account", (p) => btn(p, "Delete my account")],
+  ];
+};
+
 const forms = (data) => [
   ["welcome", "/", false, async (p) => { await p.getByRole("button", { name: /Get started/ }).first().click(); }],
   ["invite", `/join/${data.invite}`, false, null],
@@ -331,7 +372,7 @@ for (const [engine, launcher, opts] of engines) {
   const empty = await emptyIdentity(browser);
   for (const kind of ["tap", "axe", "text", "zoom", "keyboard", ...(chrome ? ["notch"] : [])]) count(engine, kind, 0);
 
-  for (const [name, path, state, action, ctxSetup, wait] of screensFor(data, empty)) {
+  for (const [name, path, state, action, ctxSetup, wait] of PARTS.includes("screens") ? screensFor(data, empty) : []) {
     const runs = [
       { kind: "base", theme: "light" }, { kind: "base", theme: "dark" },
       { kind: "text" }, { kind: "zoom", width: Math.round(W / 2), height: Math.round(H / 2) },
@@ -395,7 +436,7 @@ for (const [engine, launcher, opts] of engines) {
     }
   }
 
-  for (const [name, path, signedIn, opener] of forms(data)) {
+  for (const [name, path, signedIn, opener] of PARTS.includes("forms") ? forms(data) : []) {
     const { ctx, page } = await open(browser, { state: signedIn ? data.state : null, chrome, init: fakeKeyboard });
     try {
       await show(page, path, opener);
@@ -430,6 +471,29 @@ for (const [engine, launcher, opts] of engines) {
     } catch (e) {
       report.push(`${engine} ${name} (keyboard)\n  - FAILED ${String(e).slice(0, 200)}`);
       console.log(engine, name, "keyboard FAILED", String(e).slice(0, 120));
+    }
+    await ctx.close();
+  }
+
+  // Every panel, as keyboard-check opens them: tap areas, at the top of the
+  // panel and scrolled to its end.
+  for (const [name, path, opener] of PARTS.includes("panels") ? panels(data) : []) {
+    const { ctx, page } = await open(browser, { state: data.state, chrome });
+    try {
+      await show(page, path, opener);
+      const small = new Set(await page.evaluate(tapAreas));
+      await page.evaluate(() => {
+        const body = [...document.querySelectorAll("[role=dialog] .scroll-area")].at(-1);
+        if (body) body.scrollTop = body.scrollHeight;
+      });
+      await page.waitForTimeout(300);
+      for (const s of await page.evaluate(tapAreas)) small.add(s);
+      count(engine, "tap", small.size);
+      if (small.size) report.push(`${engine} ${name} (panel)\n  - tap under 44: ${[...small].join("; ")}`);
+      console.log(engine, name, "panel", small.size ? `${small.size} small` : "ok");
+    } catch (e) {
+      report.push(`${engine} ${name} (panel)\n  - FAILED ${String(e).slice(0, 200)}`);
+      console.log(engine, name, "panel FAILED", String(e).slice(0, 120));
     }
     await ctx.close();
   }

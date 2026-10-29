@@ -726,7 +726,7 @@ function PaymentMethodsSheet({
                   <button
                     onClick={() => void remove(method.id)}
                     aria-label={`Remove ${entry?.label ?? method.kind}`}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
+                    className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
                   >
                     <X className="size-4" />
                   </button>
@@ -749,7 +749,7 @@ function PaymentMethodsSheet({
                   setKind(entry.value);
                 }}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
+                  "tap-44 relative flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-body font-medium transition-colors",
                   kind === entry.value
                     ? "border-text bg-text text-inverse"
                     : "border-line bg-surface text-text hover:bg-surface-2",

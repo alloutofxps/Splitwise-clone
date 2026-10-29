@@ -255,6 +255,8 @@ export function AmountInput({
           size === "lg" && "text-display",
           size === "hero" && "text-display leading-none tracking-[-0.03em]",
           size === "hero" && "text-center",
+          // At least 44 by 44 to tap, without moving anything around it.
+          size === "hero" && "-my-1 min-w-11 py-1",
         )}
         aria-label="Amount"
       />
