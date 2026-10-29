@@ -147,7 +147,8 @@ export default function AccountPage() {
             haptic();
             setEmojiOpen(true);
           }}
-          aria-label={me.avatarEmoji ? "Change your emoji" : "Pick an emoji"}
+          // With the initials it shows, so voice control can find it by them.
+          aria-label={me.avatarEmoji ? "Change your emoji" : `Pick an emoji, ${initials(me.displayName)}`}
           className="shrink-0 rounded-full transition-opacity active:opacity-70"
         >
           <Avatar person={me} size="lg" />
