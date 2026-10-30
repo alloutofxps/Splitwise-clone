@@ -189,7 +189,15 @@ const layout = () => {
     }
     return o > 0.05;
   };
-  const shown = (el, x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && (hit === el || el.contains(hit) || hit.contains(el)) && opaque(el); };
+  // Text that ignores taps (a drawing's labels) can't be found by asking
+  // what a tap would hit, so it counts wherever it isn't faded out.
+  const tapless = (el) => getComputedStyle(el).pointerEvents === "none";
+  const shown = (el, x, y) => {
+    if (!opaque(el)) return false;
+    if (tapless(el)) return true;
+    const hit = document.elementFromPoint(x, y);
+    return !!hit && (hit === el || el.contains(hit) || hit.contains(el));
+  };
   for (const el of document.querySelectorAll("body *")) {
     const r = el.getBoundingClientRect(), s = getComputedStyle(el);
     if (r.width === 0 || r.height === 0 || s.visibility === "hidden" || s.display === "none") continue;
