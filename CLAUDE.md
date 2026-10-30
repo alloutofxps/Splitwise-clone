@@ -132,7 +132,13 @@ detail.
   https relay in front of the server (this machine has one, not in git:
   `node perf-runs/tls/proxy.mjs 3443 3100`) and add
   `BASE_WEBKIT=https://localhost:3443`. Compare the totals before and
-  after a change.
+  after a change. It runs in CI with `STRICT=1 STRICT_SKIP=axe` (every total
+  but axe must be 0; axe joins once the colour phase fixes item 9).
+  `PARTS=screens` (or `forms`, `panels`) runs one part.
+- A slow connection, no connection and Reduce Motion (RULES R5, A5; in CI):
+  `node scripts/network-check.mjs <url> <out-dir>`. With Reduce Motion on,
+  nothing may change position or size over time; fades, colours and
+  instant changes may.
 - Browser suites: `node scripts/ui-check.mjs <url>`,
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server

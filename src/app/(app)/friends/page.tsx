@@ -121,7 +121,7 @@ export default function FriendsPage() {
           (the largest text pushed Add off the edge). */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => setMyCode(true)}>
             My code
           </Button>

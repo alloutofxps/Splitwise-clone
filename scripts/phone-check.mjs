@@ -28,7 +28,7 @@
  *
  * Writes <out-dir>/phone-check.txt and results.json and prints the totals.
  * A report: compare totals before and after a change. STRICT=1 exits 1 when
- * any total is not 0.
+ * any total is not 0 (STRICT_SKIP=axe,... leaves kinds out of that).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -42,10 +42,15 @@ const PARTS = (process.env.PARTS ?? "screens,forms,panels").split(",");
 mkdirSync(OUT, { recursive: true });
 const W = 393, H = 852, KB = 336, NOTCH = 59, HOME_BAR = 34;
 
+// Each sign-up from its own address, as smoke.mjs does: sign-ups are limited
+// per address, and in CI every browser shares the machine's otherwise.
+let people = 0;
+const newAddress = () => `198.18.40.${++people}`;
+
 // ---- test data -----------------------------------------------------------------
 
 async function seed(browser) {
-  const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: true, extraHTTPHeaders: { "X-Forwarded-For": newAddress() } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "load" });
   const out = await page.evaluate(async () => {
@@ -102,7 +107,7 @@ async function seed(browser) {
 }
 
 async function emptyIdentity(browser) {
-  const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: true, extraHTTPHeaders: { "X-Forwarded-For": newAddress() } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "load" });
   await page.evaluate(async () => {
@@ -514,4 +519,11 @@ writeFileSync(join(OUT, "phone-check.txt"), `${summary}\n\n${report.join("\n\n")
 console.log(`\nTotals\n${summary}`);
 const failures = results.filter((r) => r.failed).length;
 if (failures) console.log(`${failures} screens couldn't be checked`);
-process.exit(process.env.STRICT && (failures || Object.values(totals).some((v) => v > 0)) ? 1 : 0);
+// STRICT_SKIP=axe leaves a kind out of the strict check while its fixes are
+// still to come (it's still counted and reported).
+const skip = (process.env.STRICT_SKIP ?? "").split(",").filter(Boolean);
+const counted = Object.entries(totals).filter(([key]) => !skip.includes(key.split(" ")[0]));
+const failed = process.env.STRICT && (failures || counted.some(([, v]) => v > 0));
+// In CI the report file isn't kept, so say what failed.
+if (failed) console.log(`\nWhat failed\n${report.join("\n\n")}`);
+process.exit(failed ? 1 : 0);
