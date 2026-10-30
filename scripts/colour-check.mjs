@@ -122,7 +122,29 @@ for (const file of files) {
     }
   });
 }
-rule("C2", "text contrast, 4.5 to 1, nothing faded below its token", c2);
+// Colours written into a component (the last-resort error screen can't use
+// the stylesheet) must be the palette's, or they drift as it changes: the
+// error screen kept an old green button at 3.3 to 1. The logo and the QR
+// code keep their own.
+const palette = new Set();
+for (const t of Object.values(themes)) {
+  for (const key of Object.keys(t)) {
+    const c = colour(t, key);
+    if (c) palette.add(formatHex(c).toLowerCase());
+  }
+}
+const OWN_COLOURS = /app-mark\.tsx$|qr-code\.tsx$/;
+for (const file of files) {
+  if (OWN_COLOURS.test(file.replace(/\\/g, "/"))) continue;
+  readFileSync(file, "utf8").split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(\*|\/\/|\/\*)/.test(line)) return; // comments ("React error #418")
+    for (const m of line.matchAll(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g)) {
+      const hex = m[1].length === 3 ? `#${[...m[1]].map((d) => d + d).join("")}` : `#${m[1]}`;
+      if (!palette.has(hex.toLowerCase())) c2.push(`${file.replace(/\\/g, "/")}:${i + 1} writes ${hex}, not a palette colour`);
+    }
+  });
+}
+rule("C2", "text contrast, 4.5 to 1, nothing faded below its token, written-in colours from the palette", c2);
 rule("C3", "APCA: body 75, secondary and money 60, faintest 45, initials 60", c3);
 
 // ---- C1: the money colours only beside money -----------------------------------
