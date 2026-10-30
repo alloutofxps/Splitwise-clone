@@ -117,7 +117,9 @@ export default function FriendsPage() {
 
   return (
     <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <div className="mb-3 flex items-center justify-between gap-4">
+      {/* The buttons go under the heading when they don't fit beside it
+          (the largest text pushed Add off the edge). */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" variant="secondary" onClick={() => setMyCode(true)}>

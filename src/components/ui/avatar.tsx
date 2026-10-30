@@ -102,23 +102,71 @@ export function Avatar({
  * Reversed flex order so earlier avatars paint *over* later ones - otherwise
  * each new avatar covers the previous one's initials and the stack reads as a
  * single blob.
+ *
+ * With `fit`, it shows only as many as fit across, and counts the rest in the
+ * "+N": with the largest text, a group's six faces ran off the edge of the
+ * screen. It drops one at a time until nothing overflows, and starts again
+ * from `max` when the space around it changes width.
  */
 export function AvatarStack({
   people,
   max = 4,
   size = "sm",
+  fit = false,
   className,
 }: {
   people: PersonDto[];
   max?: number;
   size?: AvatarSize;
+  fit?: boolean;
   className?: string;
 }) {
-  const shown = people.slice(0, max);
+  const stack = React.useRef<HTMLDivElement>(null);
+  const [limit, setLimit] = React.useState(max);
+  // Bumped to measure again even when `limit` is already `max`.
+  const [pass, setPass] = React.useState(0);
+  React.useLayoutEffect(() => {
+    const element = stack.current;
+    if (!fit || !element || limit <= 1) return;
+    // Where the faces are against the stack's own edges: scrollWidth misses
+    // what spills out of a reversed row in Chrome.
+    const box = element.getBoundingClientRect();
+    const spills = [...element.children].some((face) => {
+      const at = face.getBoundingClientRect();
+      return at.left < box.left - 1 || at.right > box.right + 1;
+    });
+    if (spills) setLimit(limit - 1);
+  }, [fit, limit, pass, people, size]);
+  React.useEffect(() => {
+    // Start again from `max` when the room changes (the section it sits in,
+    // not the stack or its button, which change width as faces come and go)
+    // or the faces change size (the text size changed).
+    const element = stack.current;
+    const around = element?.closest("section") ?? document.body;
+    const face = element?.lastElementChild;
+    if (!fit || !face || typeof ResizeObserver === "undefined") return;
+    let seen = `${around.clientWidth} ${face.clientWidth}`;
+    const observer = new ResizeObserver(() => {
+      const now = `${around.clientWidth} ${face.clientWidth}`;
+      if (now === seen) return;
+      seen = now;
+      setLimit(max);
+      setPass((count) => count + 1);
+    });
+    observer.observe(around);
+    observer.observe(face);
+    return () => observer.disconnect();
+  }, [fit, max]);
+
+  const shown = people.slice(0, fit ? Math.min(max, limit) : max);
   const overflow = people.length - shown.length;
 
   return (
-    <div className={cn("flex flex-row-reverse items-center justify-end", className)}>
+    <div
+      ref={stack}
+      // Room for the rings, which overflow-hidden would otherwise clip.
+      className={cn("flex flex-row-reverse items-center justify-end", fit && "-m-0.5 max-w-full overflow-hidden p-0.5", className)}
+    >
       {overflow > 0 ? (
         <span
           className={cn(
@@ -136,7 +184,10 @@ export function AvatarStack({
           size={size}
           ring
           single
-          className="-ml-1.5 first:ml-0"
+          // Each overlaps the one to its left; in this reversed row that is
+          // the next in the list, so the last (leftmost) has none to overlap.
+          // It used to be the first, and the leftmost face stuck out 6px.
+          className="-ml-1.5 last:ml-0"
         />
       ))}
     </div>

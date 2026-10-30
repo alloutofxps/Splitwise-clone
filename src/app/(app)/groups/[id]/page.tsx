@@ -15,7 +15,7 @@ import { TRAVEL_IN_MS, leaveFrom, useArrival } from "@/components/ui/travel";
 import { useWide } from "@/components/ui/use-wide";
 import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
-import { Button, Segmented, haptic, tabPanelProps } from "@/components/ui/primitives";
+import { Button, Segmented, cn, haptic, tabPanelProps } from "@/components/ui/primitives";
 import { GroupSkeleton } from "@/components/screen-skeletons";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
@@ -174,7 +174,10 @@ export default function GroupPage() {
     <GroupHues members={group.members}>
     <div ref={screen} className="pt-[max(0.5rem,env(safe-area-inset-top))]">
       {/* Header ---------------------------------------------------------- */}
-      <header className="-mx-1 flex items-center gap-1 py-2">
+      {/* With the largest text the name gets a line of its own under the
+          buttons (the header is under 18em wide then; 22 at normal sizes),
+          instead of being squeezed down to a letter or two. */}
+      <header className="@container -mx-1 flex flex-wrap items-center gap-1 py-2">
         <button
           onClick={() => {
             haptic();
@@ -186,7 +189,7 @@ export default function GroupPage() {
           <ChevronLeft className="size-6" strokeWidth={1.75} />
         </button>
 
-        <h1 className="flex min-w-0 flex-1 items-center gap-2 px-1 text-title-lg font-semibold tracking-[-0.02em] text-text">
+        <h1 className="flex min-w-0 flex-1 items-center gap-2 px-1 text-title-lg font-semibold tracking-[-0.02em] text-text @max-[18em]:order-last @max-[18em]:basis-full">
           <span aria-hidden data-travel="icon">
             {group.emoji}
           </span>
@@ -196,6 +199,7 @@ export default function GroupPage() {
         </h1>
 
         <HeaderButton
+          className="@max-[18em]:ml-auto"
           label="Invite"
           icon={<UserPlus className="size-[18px]" strokeWidth={1.75} />}
           onClick={() => setInvite(true)}
@@ -215,9 +219,11 @@ export default function GroupPage() {
             haptic();
             setInvite(true);
           }}
-          className="tap-44 relative flex items-center gap-2 rounded-full py-1 pr-1 transition-opacity active:opacity-70"
+          className="tap-44 relative flex max-w-full flex-wrap items-center gap-2 rounded-full py-1 pr-1 transition-opacity active:opacity-70"
         >
-          <AvatarStack people={group.members} size="sm" max={6} />
+          {/* As many faces as fit: with the largest text, six of them ran off
+              the edge and the screen scrolled sideways. */}
+          <AvatarStack people={group.members} size="sm" max={6} fit />
           <span className="text-caption text-subtle">
             {group.memberCount} {group.memberCount === 1 ? "person" : "people"}
           </span>
@@ -405,7 +411,9 @@ function HeaderButton({
   ariaLabel,
   icon,
   onClick,
+  className,
 }: {
+  className?: string;
   label: string;
   ariaLabel?: string;
   icon: React.ReactNode;
@@ -419,7 +427,10 @@ function HeaderButton({
       }}
       aria-label={ariaLabel ?? label}
       // 44 wide, not a wider tap area: Invite and Settings sit 4px apart.
-      className="tap-44 relative flex h-10 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 text-body font-medium text-text transition-colors hover:bg-surface-2"
+      className={cn(
+        "tap-44 relative flex h-10 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 text-body font-medium text-text transition-colors hover:bg-surface-2",
+        className,
+      )}
     >
       {icon}
       <span className="hidden sm:inline">{label}</span>
