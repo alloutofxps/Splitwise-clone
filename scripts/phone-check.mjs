@@ -523,4 +523,7 @@ if (failures) console.log(`${failures} screens couldn't be checked`);
 // still to come (it's still counted and reported).
 const skip = (process.env.STRICT_SKIP ?? "").split(",").filter(Boolean);
 const counted = Object.entries(totals).filter(([key]) => !skip.includes(key.split(" ")[0]));
-process.exit(process.env.STRICT && (failures || counted.some(([, v]) => v > 0)) ? 1 : 0);
+const failed = process.env.STRICT && (failures || counted.some(([, v]) => v > 0));
+// In CI the report file isn't kept, so say what failed.
+if (failed) console.log(`\nWhat failed\n${report.join("\n\n")}`);
+process.exit(failed ? 1 : 0);
