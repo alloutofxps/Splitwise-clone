@@ -286,7 +286,9 @@ export function Switch({
       className={cn(
         "tap-44 relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors duration-200",
         "disabled:opacity-50",
-        checked ? "bg-brand" : "bg-surface-3",
+        // Off: the light track keeps a fine edge that reaches 3 to 1, so the
+        // switch is still there to see (it was 1.2 to 1, 1.02 in a Night panel).
+        checked ? "bg-brand" : "bg-surface-3 ring-[1.5px] ring-inset ring-switch-off",
       )}
     >
       <span
