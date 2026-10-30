@@ -402,7 +402,7 @@ function NudgeButton({
       aria-label={`Remind ${name}`}
       className={cn(
         "flex shrink-0 items-center gap-1 rounded-full px-2 py-1.5 text-body font-medium transition-colors",
-        sent ? "text-positive-text" : "text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40",
+        sent ? "text-text" : "text-muted hover:bg-surface-2 hover:text-text disabled:opacity-40",
       )}
     >
       {sent ? <Check className="size-4" /> : <BellRing className="size-4" strokeWidth={1.75} />}

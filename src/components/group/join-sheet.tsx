@@ -179,7 +179,7 @@ export function JoinSheet({
               </div>
             </div>
           ) : notFound ? (
-            <p className="rounded-[var(--radius-md)] bg-negative-soft px-4 py-3 text-center text-body font-semibold text-negative-text">
+            <p className="rounded-[var(--radius-md)] bg-danger-soft px-4 py-3 text-center text-body font-semibold text-danger">
               That code doesn&rsquo;t match anyone. Check it and try again.
             </p>
           ) : preview?.kind === "group" ? (

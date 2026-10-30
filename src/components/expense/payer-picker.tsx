@@ -85,7 +85,7 @@ export function PayerPicker({
             <p
               className={cn(
                 "mb-2.5 text-center text-body font-semibold",
-                remaining === 0n ? "text-positive-text" : "text-negative-text",
+                remaining === 0n ? "text-muted" : "text-danger",
               )}
             >
               {remaining === 0n

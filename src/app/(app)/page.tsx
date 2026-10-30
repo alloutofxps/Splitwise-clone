@@ -336,7 +336,7 @@ function ThisMonth() {
       </span>
       <span className="mt-2 block h-1 overflow-hidden rounded-full bg-surface-2">
         <span
-          className={cn("block h-full rounded-full", share >= 1 ? "bg-negative" : "bg-text")}
+          className={cn("block h-full rounded-full", share >= 1 ? "bg-danger" : "bg-text")}
           style={{ width: `${share * 100}%` }}
         />
       </span>

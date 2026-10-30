@@ -188,7 +188,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
               Choose the file
             </Button>
             {error ? (
-              <p className="mt-4 flex gap-2 rounded-[var(--radius-md)] bg-negative-soft p-3.5 text-body leading-relaxed text-negative-text">
+              <p className="mt-4 flex gap-2 rounded-[var(--radius-md)] bg-danger-soft p-3.5 text-body leading-relaxed text-danger">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                 {error}
               </p>

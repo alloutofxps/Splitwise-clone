@@ -183,7 +183,7 @@ export function DefaultSplitSheet({
             <p
               className={cn(
                 "mt-3 text-center text-body font-semibold",
-                problem ? "text-negative-text" : "text-positive-text",
+                problem ? "text-danger" : "text-muted",
               )}
             >
               {mode === "PERCENT"

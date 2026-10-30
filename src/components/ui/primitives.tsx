@@ -128,7 +128,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
           size === "md" ? "size-11" : "tap-44 size-9",
           tone === "default" && "text-muted hover:bg-surface-2 hover:text-text",
           tone === "brand" && "text-brand hover:bg-brand-soft",
-          tone === "danger" && "text-negative hover:bg-negative-soft",
+          tone === "danger" && "text-danger hover:bg-danger-soft",
           className,
         )}
         {...props}

@@ -158,7 +158,7 @@ export function ConfirmDeleteSheet({
                 </>
               )}
               {error ? (
-                <p role="alert" className="mt-3 text-body text-negative-text">
+                <p role="alert" className="mt-3 text-body text-danger">
                   {error}
                 </p>
               ) : null}

@@ -59,12 +59,17 @@
   --negative-soft: #fbeee7;
   --negative-text: #b23c0b;
 
-  /* Destructive actions, kept apart from "you owe". */
-  --danger: #b42318;
+  /* Errors and destructive actions, kept apart from "you owe" (RULES C1):
+     crimson, 0.079 from the orange in OKLab (0.075 colour blind). The old
+     #b42318 sat 0.039 from it, near enough to read as the same colour. */
+  --danger: #ca2141;
+  --danger-soft: #fff2f0;
 
   --neutral-soft: #f3f2ef;
 
-  --warning: #b45309;
+  /* Cautions ("save your key"), not money: a deeper, yellower amber than the
+     old #b45309, which was 0.047 from "you owe" orange (now 0.079). */
+  --warning: #975a00;
   --warning-soft: #fdf3e2;
 
   --chart-bar: #141412;
@@ -158,10 +163,13 @@
   /* Rose rather than a lighter orange-red: at the lightness Lc 60 needs,
      danger would otherwise sit 0.04 from "you owe" (now 0.08 in OKLab). */
   --danger: #ff9cb3;
+  --danger-soft: #211014;
 
   --neutral-soft: #1c1c1a;
 
-  --warning: #f5b454;
+  /* Yellower than the old #f5b454, which sat 0.074 from the lighter "you
+     owe" orange. */
+  --warning: #dcb300;
   --warning-soft: #2a1f0d;
 
   --chart-bar: #f3f2ee;
@@ -274,6 +282,7 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
 
   --color-chart-bar: var(--chart-bar);
   --color-chart-grid: var(--chart-grid);

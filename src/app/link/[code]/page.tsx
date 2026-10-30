@@ -56,7 +56,7 @@ export default function LinkPage() {
         </>
       ) : state === "done" ? (
         <>
-          <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-positive-soft text-positive-soft-text">
+          <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-brand-soft text-text">
             <Check className="size-7" strokeWidth={3} />
           </span>
           <h1 className="text-title font-semibold text-text">You&rsquo;re signed in</h1>

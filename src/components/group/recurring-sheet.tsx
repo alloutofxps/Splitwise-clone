@@ -144,7 +144,7 @@ export function RecurringSheet({
                       {!recurrence.active && recurrence.lastError ? (
                         // Why it stopped - somebody left, the currency changed -
                         // so the fix is obvious instead of the rent just vanishing.
-                        <p className="mt-1 text-tiny font-semibold text-negative-text">
+                        <p className="mt-1 text-tiny font-semibold text-danger">
                           {recurrence.lastError}
                         </p>
                       ) : null}
@@ -165,7 +165,7 @@ export function RecurringSheet({
                       <button
                         onClick={() => void remove(recurrence.id)}
                         aria-label="Stop repeating"
-                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
+                        className="flex size-8 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-danger-soft hover:text-danger"
                       >
                         <Trash2 className="size-4" />
                       </button>

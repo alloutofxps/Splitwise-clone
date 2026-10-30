@@ -660,9 +660,9 @@ function RecoveryStep({
         </Button>
       </div>
 
-      <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
-        <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
-        <p className="text-body leading-relaxed text-negative-text">
+      <div className="mt-6 flex gap-3 rounded-[var(--radius-md)] bg-warning-soft p-3.5">
+        <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-warning" />
+        <p className="text-body leading-relaxed text-text">
           Anyone with this key can open your account. Keep it somewhere private,
           like a password manager, and don&rsquo;t share it.
         </p>

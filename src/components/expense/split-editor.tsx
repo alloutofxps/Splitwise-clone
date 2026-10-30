@@ -492,7 +492,7 @@ function RunningTotal({
 }) {
   if (resolved.errors.length > 0) {
     return (
-      <p className="rounded-[var(--radius-sm)] bg-negative-soft px-3 py-2 text-center text-body font-semibold text-negative-text">
+      <p className="rounded-[var(--radius-sm)] bg-danger-soft px-3 py-2 text-center text-body font-semibold text-danger">
         {friendlyError(resolved.errors[0], currency)}
       </p>
     );
@@ -504,7 +504,7 @@ function RunningTotal({
   if (mode === "PERCENT") {
     const percent = local.reduce((sum, entry) => sum + (entry.percent ?? 0), 0);
     return (
-      <p className="text-center text-body font-semibold text-positive-text">
+      <p className="text-center text-body font-semibold text-muted">
         {Math.round(percent * 10) / 10}% split between {included}{" "}
         {included === 1 ? "person" : "people"}
       </p>
@@ -625,7 +625,7 @@ function ItemEditor({
                   setItems((current) => current.filter((entry) => entry.id !== item.id));
                 }}
                 aria-label="Remove item"
-                className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -687,7 +687,7 @@ function ItemEditor({
               of tax and tip, split by how much each person ordered
             </>
           ) : extras < 0n ? (
-            <span className="text-negative-text">
+            <span className="text-danger">
               Items come to more than the total by {formatMoney(-extras, currency)}
             </span>
           ) : (
