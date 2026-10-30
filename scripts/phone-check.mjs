@@ -28,7 +28,7 @@
  *
  * Writes <out-dir>/phone-check.txt and results.json and prints the totals.
  * A report: compare totals before and after a change. STRICT=1 exits 1 when
- * any total is not 0.
+ * any total is not 0 (STRICT_SKIP=axe,... leaves kinds out of that).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -514,4 +514,8 @@ writeFileSync(join(OUT, "phone-check.txt"), `${summary}\n\n${report.join("\n\n")
 console.log(`\nTotals\n${summary}`);
 const failures = results.filter((r) => r.failed).length;
 if (failures) console.log(`${failures} screens couldn't be checked`);
-process.exit(process.env.STRICT && (failures || Object.values(totals).some((v) => v > 0)) ? 1 : 0);
+// STRICT_SKIP=axe leaves a kind out of the strict check while its fixes are
+// still to come (it's still counted and reported).
+const skip = (process.env.STRICT_SKIP ?? "").split(",").filter(Boolean);
+const counted = Object.entries(totals).filter(([key]) => !skip.includes(key.split(" ")[0]));
+process.exit(process.env.STRICT && (failures || counted.some(([, v]) => v > 0)) ? 1 : 0);
