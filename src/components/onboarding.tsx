@@ -138,12 +138,29 @@ function StepShell({ children }: { children: React.ReactNode }) {
 
 // ---------------------------------------------------------------------------
 
+/** Opened as the home-screen app rather than in a browser tab. */
+function openedFromHomeScreen(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+/** How a page is opened doesn't change while it's open. */
+const noChanges = () => () => {};
+
 function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () => void }) {
   const toast = useToast();
   const client = useQueryClient();
   const [passkeyReady, setPasskeyReady] = React.useState(false);
   const [signingIn, setSigningIn] = React.useState(false);
   const [returning, setReturning] = React.useState(false);
+  // Opened from the home screen with nobody signed in: almost always someone
+  // who already uses Divvy. iPhone copies Safari's sign-in to a home-screen
+  // app once, when it's added, and a known iOS 17 fault can drop it later;
+  // "Get started" then made them a second, empty account. So signing back in
+  // comes first there (findings item 34).
+  const fromHomeScreen = React.useSyncExternalStore(noChanges, openedFromHomeScreen, () => false);
 
   /*
    * The passkey button appears only once the device says it actually holds
@@ -204,6 +221,22 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
         </ul>
       </div>
 
+      {fromHomeScreen ? (
+        <div className="space-y-2">
+          <p className="pb-1 text-center text-body text-muted">Already use Divvy? Sign back in.</p>
+          {passkeyReady ? (
+            <Button variant="primary" size="lg" fullWidth loading={signingIn} onClick={() => void withPasskey()}>
+              Sign in with fingerprint or face
+            </Button>
+          ) : null}
+          <Button variant={passkeyReady ? "secondary" : "primary"} size="lg" fullWidth onClick={onRestore}>
+            Sign in with a recovery key
+          </Button>
+          <Button variant="ghost" size="md" fullWidth onClick={onStart}>
+            I&rsquo;m new to Divvy
+          </Button>
+        </div>
+      ) : (
       <div className="space-y-2">
         <Button variant="primary" size="lg" fullWidth onClick={onStart}>
           Get started
@@ -232,6 +265,7 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
           </Button>
         )}
       </div>
+      )}
     </div>
   );
 }

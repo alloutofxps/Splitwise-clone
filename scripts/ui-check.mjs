@@ -1367,6 +1367,31 @@ console.log("\nWho makes up your balance");
   check("a row opens that friend", /\/friends\/[^/]+$/.test(page.url()), page.url());
 }
 
+// Opened from the home screen with nobody signed in, the person almost
+// certainly already uses Divvy: signing back in comes first, not a new account.
+console.log("\nThe home-screen app, signed out");
+{
+  const firstButtons = async (homeScreen) => {
+    const fresh = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    if (homeScreen) await fresh.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
+    const p = await fresh.newPage();
+    await p.goto(BASE, { waitUntil: "networkidle" });
+    await p.waitForTimeout(800);
+    const names = await p.locator("main button, button").evaluateAll((all) =>
+      all.filter((b) => b.offsetParent !== null).map((b) => (b.textContent || "").trim()).filter(Boolean),
+    );
+    await fresh.close();
+    return names;
+  };
+  const installed = await firstButtons(true);
+  const signIn = installed.findIndex((n) => /^Sign in/.test(n));
+  const fresh = installed.findIndex((n) => /new to Divvy/.test(n));
+  check("signing back in comes first", signIn >= 0 && (fresh < 0 || signIn < fresh), installed.join(" / "));
+  check("and someone new can still start", fresh >= 0, installed.join(" / "));
+  const tab = await firstButtons(false);
+  check("in a browser tab, Get started still leads", /^Get started/.test(tab.find((n) => /Get started|Sign in/.test(n)) ?? ""), tab.join(" / "));
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();
