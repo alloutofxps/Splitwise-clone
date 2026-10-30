@@ -272,7 +272,7 @@ export default function AccountPage() {
             }}
             className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
           >
-            <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" strokeWidth={1.75} />
+            <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-warning" strokeWidth={1.75} />
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-medium text-text">Back up your account</span>
               <span className="mt-0.5 block text-caption leading-snug text-muted">
@@ -627,9 +627,9 @@ function RecoverySheet({
               We can&rsquo;t show you your old key again, but you can make a new one.
             </p>
 
-            <div className="mt-5 flex gap-3 rounded-[var(--radius-md)] bg-negative-soft p-3.5">
-              <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
-              <p className="text-body leading-relaxed text-negative-text">
+            <div className="mt-5 flex gap-3 rounded-[var(--radius-md)] bg-warning-soft p-3.5">
+              <TriangleAlert className="mt-0.5 size-[18px] shrink-0 text-warning" />
+              <p className="text-body leading-relaxed text-text">
                 Making a new key stops the old one from working. Any other phone
                 signed in with the old key will be signed out.
               </p>
@@ -726,7 +726,7 @@ function PaymentMethodsSheet({
                   <button
                     onClick={() => void remove(method.id)}
                     aria-label={`Remove ${entry?.label ?? method.kind}`}
-                    className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative"
+                    className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-danger-soft hover:text-danger"
                   >
                     <X className="size-4" />
                   </button>

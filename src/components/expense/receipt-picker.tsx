@@ -176,7 +176,7 @@ export function ReceiptPicker({
                     onChange(attachments.filter((entry) => entry.id !== attachment.id));
                   }}
                   aria-label={`Remove ${attachment.filename}`}
-                  className="absolute -right-1.5 -top-1.5 flex size-7 items-center justify-center rounded-full bg-negative text-inverse shadow-card transition active:opacity-70"
+                  className="absolute -right-1.5 -top-1.5 flex size-7 items-center justify-center rounded-full bg-danger text-inverse shadow-card transition active:opacity-70"
                 >
                   <Trash2 className="size-3.5" />
                 </button>

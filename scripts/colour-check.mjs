@@ -8,8 +8,10 @@
  * STRICT=1 exits 1 when a rule fails; STRICT_SKIP=C3,C7 leaves rules out of
  * that while their fixes are still to come (they're still measured).
  *
- *   C1  green, orange and red each mean one thing: the money colours
- *       (positive, negative) only beside money words in the components;
+ *   C1  green, orange, red and amber each mean one thing: the money
+ *       colours (positive, negative) only beside money words in the
+ *       components (never on alerts, danger styles or hovers), and the four
+ *       far enough apart to read as four, colour blind too;
  *   C2  text contrast (WCAG 2.2 AA, 4.5 to 1) on every surface it sits on,
  *       in Day and Night, and no text colour faded below its token;
  *   C3  APCA as a second opinion: body text Lc 75, secondary text and the
@@ -75,7 +77,7 @@ const TEXT = [
   ["text-subtle", SURFACES, 45],
   ["positive-text", ["bg", "surface", "surface-2", "positive-soft", "elevated"], 60],
   ["negative-text", ["bg", "surface", "surface-2", "negative-soft", "elevated"], 60],
-  ["danger", ["bg", "surface", "surface-2", "elevated"], 60],
+  ["danger", ["bg", "surface", "surface-2", "danger-soft", "elevated"], 60],
   ["warning", ["bg", "surface", "warning-soft", "elevated"], 60],
   ["text-inverse", ["brand", "brand-hover"], 75],
   ["brand-soft-text", ["brand-soft"], 75],
@@ -125,17 +127,32 @@ rule("C3", "APCA: body 75, secondary and money 60, faintest 45, initials 60", c3
 
 // ---- C1: the money colours only beside money -----------------------------------
 
-const MONEY = /owe|owed|lent|\bnet\b|amount|balance|toMe|mine\b|iAmPaying|pays?\b|paid|settle|share|owesYou|direction|tone/i;
+const MONEY = /owe|owed|lent|\bnet\b|amount|balance|toMe|mine\b|iAmPaying|pays?\b|paid|settle|owesYou|direction|tone/i;
+// Never money, whatever words sit nearby: alerts, danger styles, hovers.
+const NOT_MONEY = /TriangleAlert|role="alert"|tone === "danger"|hover:(?:bg|text)-(?:positive|negative)/;
 const c1 = [];
 for (const file of files) {
   const lines = readFileSync(file, "utf8").split(/\r?\n/);
   lines.forEach((line, i) => {
     if (!/(?:text|bg|border|decoration|fill|stroke|ring)-(?:positive|negative)(?:-text|-soft)?\b/.test(line)) return;
     const near = lines.slice(Math.max(0, i - 3), i + 4).join("\n");
-    if (!MONEY.test(near)) c1.push(`${file.replace(/\\/g, "/")}:${i + 1}: ${line.trim().slice(0, 110)}`);
+    if (NOT_MONEY.test(line) || !MONEY.test(near)) c1.push(`${file.replace(/\\/g, "/")}:${i + 1}: ${line.trim().slice(0, 110)}`);
   });
 }
-rule("C1", "green and orange only for money", c1);
+// The four meaning colours far enough apart to read as four, with normal
+// vision and the two commonest colour blindnesses.
+const MEANINGS = ["positive-text", "negative-text", "danger", "warning"];
+const blind = [filterDeficiencyDeuter(1), filterDeficiencyProt(1)];
+for (const [name, t] of Object.entries(themes)) {
+  for (let i = 0; i < MEANINGS.length; i++) {
+    for (let j = i + 1; j < MEANINGS.length; j++) {
+      const a = colour(t, MEANINGS[i]), b = colour(t, MEANINGS[j]);
+      const normal = dE(a, b), cvd = Math.min(...blind.map((f) => dE(f(a), f(b))));
+      if (normal < 0.075 || cvd < 0.045) c1.push(`${name}: ${MEANINGS[i]} and ${MEANINGS[j]} are ${normal.toFixed(3)} apart (${cvd.toFixed(3)} colour blind; need 0.075 and 0.045)`);
+    }
+  }
+}
+rule("C1", "green, orange, red and amber each mean one thing, and look it", c1);
 
 // ---- C4: owing and owed under colour blindness (reported) ----------------------
 

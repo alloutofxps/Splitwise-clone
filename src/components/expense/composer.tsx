@@ -385,7 +385,7 @@ export function ExpenseComposer({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-2 text-center text-caption font-semibold text-negative-text"
+                  className="mb-2 text-center text-caption font-semibold text-muted"
                 >
                   {blockers[0]}
                 </motion.p>
@@ -1028,7 +1028,7 @@ function SentenceButton({
       aria-label={ariaLabel}
       className={cn(
         "tap-44 relative inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1 py-0.5 font-medium underline decoration-1 underline-offset-4 transition-colors hover:bg-surface-2",
-        warning ? "text-negative-text decoration-negative" : "text-text decoration-line-strong",
+        warning ? "text-danger decoration-danger" : "text-text decoration-line-strong",
       )}
     >
       {children}

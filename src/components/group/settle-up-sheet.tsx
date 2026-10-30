@@ -660,7 +660,7 @@ function PayThem({
                     </span>
                   </span>
                   {copied === entry.value ? (
-                    <Check className="size-4 shrink-0 text-positive" strokeWidth={3} />
+                    <Check className="size-4 shrink-0 text-text" strokeWidth={3} />
                   ) : (
                     <Copy className="size-4 shrink-0 text-subtle" />
                   )}

@@ -161,7 +161,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
           onClick={() => void remove()}
           disabled={setBudget.isPending}
           aria-label="Remove this budget"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative-text disabled:opacity-40"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-danger-soft hover:text-danger disabled:opacity-40"
         >
           <Trash2 className="size-4" />
         </button>
@@ -184,7 +184,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
           <div
             className={cn(
               "h-full rounded-full transition-[width] duration-500",
-              over ? "bg-negative" : ratio > 0.8 ? "bg-warning" : "bg-positive",
+              over ? "bg-danger" : ratio > 0.8 ? "bg-warning" : "bg-chart-bar",
             )}
             style={{ width: `${Math.min(100, Math.max(2, ratio * 100))}%` }}
           />
@@ -198,7 +198,7 @@ function BudgetCard({ budget, scopeLabel }: { budget: BudgetDto; scopeLabel: str
               {formatMoney(spent - limit, budget.currency)} over
             </span>
           ) : (
-            <span className="font-semibold text-positive-text">
+            <span className="font-semibold text-text">
               {formatMoney(limit - spent, budget.currency)} left
             </span>
           )}

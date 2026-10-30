@@ -259,7 +259,7 @@ function Row({
         }}
         disabled={busy}
         aria-label={`Remove ${title}`}
-        className="tap-44 relative flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2 hover:text-negative-text disabled:opacity-40"
+        className="tap-44 relative flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition active:opacity-70 hover:bg-surface-2 hover:text-danger disabled:opacity-40"
       >
         <Trash2 className="size-[18px]" />
       </button>

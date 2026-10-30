@@ -375,7 +375,7 @@ export default function FriendPage() {
             disabled={anythingOutstanding}
             className="flex w-full items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card px-3.5 py-3 text-left press disabled:opacity-50"
           >
-            <UserMinus className="mt-0.5 size-[18px] shrink-0 text-negative-text" />
+            <UserMinus className="mt-0.5 size-[18px] shrink-0 text-danger" />
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-semibold text-text">
                 Remove from friends list

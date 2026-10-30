@@ -269,7 +269,7 @@ export function GroupSettingsSheet({
                             ? "They still have a balance in this group"
                             : undefined
                         }
-                        className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-negative-soft hover:text-negative disabled:opacity-30 disabled:hover:bg-transparent"
+                        className="tap-44 relative flex size-8 shrink-0 items-center justify-center rounded-full text-subtle transition active:opacity-70 hover:bg-danger-soft hover:text-danger disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         <X className="size-4" />
                       </button>
@@ -464,14 +464,14 @@ function ActionRow({
       }}
       className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3 text-left transition active:opacity-70 hover:bg-surface-2"
     >
-      <span className={cn("shrink-0", tone === "danger" ? "text-negative" : "text-muted")}>
+      <span className={cn("shrink-0", tone === "danger" ? "text-danger" : "text-muted")}>
         {icon}
       </span>
       <span className="min-w-0 flex-1">
         <span
           className={cn(
             "block text-body-lg font-semibold",
-            tone === "danger" ? "text-negative-text" : "text-text",
+            tone === "danger" ? "text-danger" : "text-text",
           )}
         >
           {label}

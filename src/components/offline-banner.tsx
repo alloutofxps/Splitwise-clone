@@ -119,14 +119,14 @@ export function OfflineBanner() {
               <div
                 role="alert"
                 className={cn(
-                  "rounded-[var(--radius-md)] border border-line bg-negative-soft px-3 py-2.5",
+                  "rounded-[var(--radius-md)] border border-line bg-danger-soft px-3 py-2.5",
                   // Only spaced when it sits under the offline pill.
                   (!online || queue.length > 0) && "mt-2",
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <TriangleAlert className="size-3.5 shrink-0 text-negative-text" />
-                  <p className="flex-1 text-caption font-semibold text-negative-text">
+                  <TriangleAlert className="size-3.5 shrink-0 text-danger" />
+                  <p className="flex-1 text-caption font-semibold text-danger">
                     {failures.length === 1
                       ? "1 change couldn't be saved"
                       : `${failures.length} changes couldn't be saved`}
