@@ -132,9 +132,11 @@
   --wash: rgb(214 168 104 / 0.14);
 
   --text: #f3f2ee;
-  --text-muted: #a8a29e;
-  /* 4.7 to 1 on the lightest surface it sits on (a panel). */
-  --text-subtle: #918c85;
+  /* Night's greys and money colours are set by APCA (RULES C3): secondary
+     text and the money colours Lc 60, the faintest text Lc 45, on the
+     lightest surface each sits on. WCAG alone passed them at Lc 38 to 52. */
+  --text-muted: #bcb6b2;
+  --text-subtle: #a09b93;
   --text-inverse: #0b0b0a;
 
   --border: #2a2926;
@@ -147,13 +149,15 @@
 
   --positive: #4cc9a0;
   --positive-soft: #10261f;
-  --positive-text: #4cc9a0;
+  --positive-text: #4ecba2;
 
   --negative: #f08a5d;
   --negative-soft: #2b1710;
-  --negative-text: #f08a5d;
+  --negative-text: #ff9e75;
 
-  --danger: #f97066;
+  /* Rose rather than a lighter orange-red: at the lightness Lc 60 needs,
+     danger would otherwise sit 0.04 from "you owe" (now 0.08 in OKLab). */
+  --danger: #ff9cb3;
 
   --neutral-soft: #1c1c1a;
 
