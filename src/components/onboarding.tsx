@@ -422,7 +422,7 @@ function ProfileStep({
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
-          className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+          className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
         />
       </div>
       <button
@@ -764,7 +764,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+        className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-field-edge bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
       />
 
       <KeyboardPageFooter className="mt-auto pt-8">

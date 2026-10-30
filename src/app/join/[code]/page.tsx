@@ -290,7 +290,7 @@ export default function JoinPage() {
                   placeholder="Priya"
                   autoFocus
                   enterKeyHint="go"
-                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+                  className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
                 />
               </div>
             </label>

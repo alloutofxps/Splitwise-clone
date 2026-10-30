@@ -161,6 +161,16 @@ const tapAreas = () => {
     if (el.matches("input") && s.opacity === "0" && el.labels?.length) continue; // measured through its label
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     if (cx < 0 || cx > vw || cy < 0 || cy > vh) continue;
+    // Only what's wholly in view: a row half-hidden at the edge of a list
+    // you scroll is measured once it's scrolled into view, not as the
+    // sliver that shows (its tap area there is cut, not small).
+    let clip = { top: 0, bottom: vh, left: 0, right: vw };
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (!/auto|scroll|hidden/.test(getComputedStyle(p).overflowY)) continue;
+      const b = p.getBoundingClientRect();
+      clip = { top: Math.max(clip.top, b.top), bottom: Math.min(clip.bottom, b.bottom), left: Math.max(clip.left, b.left), right: Math.min(clip.right, b.right) };
+    }
+    if (r.top < clip.top - 1 || r.bottom > clip.bottom + 1) continue;
     const owners = [el, ...(el.labels ?? [])];
     const mine = (x, y) => {
       if (x < 0 || y < 0 || x >= vw || y >= vh) return false;
@@ -168,6 +178,9 @@ const tapAreas = () => {
       return !!hit && owners.some((o) => o === hit || o.contains(hit));
     };
     if (!mine(cx, cy)) continue; // covered by something else
+    // Partly under something pinned (a sticky search box over a list
+    // scrolled past it): measured when it's in the clear, not now.
+    if (![[cx, r.top + 1], [cx, r.bottom - 1], [r.left + 1, cy], [r.right - 1, cy]].every(([x, y]) => mine(x, y))) continue;
     const reach = (dx, dy) => { let d = 0; while (d < 60 && mine(cx + dx * (d + 1), cy + dy * (d + 1))) d++; return d; };
     const w = reach(-1, 0) + reach(1, 0) + 1, h = reach(0, -1) + reach(0, 1) + 1;
     if (w < 44 || h < 44) out.push(`${label(el)} (${w}x${h})`);

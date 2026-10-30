@@ -426,7 +426,7 @@ export function ExpenseComposer({
               label the category button, the first thing in it that can be. */}
           <label
             htmlFor={descriptionId}
-            className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 has-[input:focus]:ring-[1.5px] has-[input:focus]:ring-text"
+            className="mt-4 flex items-center gap-3 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3 py-2.5 has-[input:focus]:ring-[1.5px] has-[input:focus]:ring-text"
           >
             <button
               onClick={() => setPanel("category")}
@@ -718,7 +718,7 @@ export function ExpenseComposer({
             autoFocus
             dir="auto"
             placeholder="Add a note…"
-            className="w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-field-edge bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
           />
           <Button
             variant="primary"

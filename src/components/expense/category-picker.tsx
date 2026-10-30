@@ -75,7 +75,7 @@ export function CategoryPicker({
       title="Category"
       tall
       header={
-        <label className="flex items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2.5 focus-within:ring-[1.5px] focus-within:ring-text">
+        <label className="flex items-center gap-2 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3 py-2.5 focus-within:ring-[1.5px] focus-within:ring-text">
           <Search className="size-4 shrink-0 text-subtle" />
           <input
             value={query}

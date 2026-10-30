@@ -364,7 +364,7 @@ export function CompactAmountInput({
   const [text, setText] = useAmountText(value === 0n ? null : value, currency);
 
   return (
-    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] bg-surface-2 px-2 py-1.5 focus-within:ring-[1.5px] focus-within:ring-text">
+    <div className="flex shrink-0 items-baseline gap-0.5 rounded-[var(--radius-xs)] border border-field-edge bg-surface-2 px-2 py-1.5 focus-within:ring-[1.5px] focus-within:ring-text">
       <span className="text-caption font-semibold text-subtle">{currencySymbol(currency)}</span>
       <input
         type="text"

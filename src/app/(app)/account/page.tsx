@@ -769,7 +769,7 @@ function PaymentMethodsSheet({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
             />
             <button
               onClick={() => void add()}

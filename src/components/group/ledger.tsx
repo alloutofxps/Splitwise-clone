@@ -130,7 +130,7 @@ export function GroupLedger({
           <motion.div
             initial={{ opacity: 0, width: "60%" }}
             animate={{ opacity: 1, width: "100%" }}
-            className="flex flex-1 items-center gap-2 rounded-[var(--radius-md)] bg-surface-2 px-3 py-2"
+            className="flex flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3 py-2"
           >
             <Search className="size-4 shrink-0 text-subtle" />
             <input

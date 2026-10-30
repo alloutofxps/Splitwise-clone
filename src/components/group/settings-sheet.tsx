@@ -183,7 +183,7 @@ export function GroupSettingsSheet({
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               onBlur={commitName}
               onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-              className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition focus:ring-[1.5px] focus:ring-text"
+              className="h-12 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition focus:ring-[1.5px] focus:ring-text"
             />
           </label>
 
@@ -316,7 +316,7 @@ export function GroupSettingsSheet({
                   }
                 }}
                 placeholder="Add someone by name"
-                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+                className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3.5 text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
               />
               <button
                 onClick={() => void add()}
