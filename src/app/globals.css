@@ -82,23 +82,27 @@
   --chart-track: #f3f2ef;
 
   /*
-   * People. Ten hues at the same perceived lightness, so nobody looks more
-   * important than anybody else. A person keeps theirs everywhere.
+   * People. Ten hues at nearly the same perceived lightness, so nobody looks
+   * more important than anybody else. A person keeps theirs everywhere.
    *
-   * Dark enough for white initials to read (4.7 to 5.3 to 1; at 0.62 they
-   * were 3.5 to 3.9). Four hues give up a little colour so they stay within
-   * what a screen can show at this lightness.
+   * Not quite the same: at one lightness, colours apart only in hue merge
+   * for colour-blind eyes (amber and olive were 0.008 apart in OKLab with
+   * deuteranopia, violet, plum and orchid under 0.05 for anyone). Lightness
+   * now varies a little (0.48 to 0.55) so every pair is at least 0.077 apart
+   * normally and 0.033 with each colour blindness (RULES C7), each as close
+   * to its old value as that allows (scripts/person-colours.mjs).
+   * White initials read on all of them: 5.0 to 6.6 to 1, Lc 80 and up.
    */
-  --person-azure: oklch(0.545 0.136 245);
-  --person-violet: oklch(0.545 0.14 290);
-  --person-orchid: oklch(0.545 0.14 330);
-  --person-coral: oklch(0.545 0.14 20);
-  --person-amber: oklch(0.545 0.118 70);
-  --person-olive: oklch(0.545 0.118 110);
-  --person-teal: oklch(0.545 0.096 185);
-  --person-cobalt: oklch(0.545 0.15 265);
-  --person-plum: oklch(0.545 0.12 310);
-  --person-sand: oklch(0.545 0.07 55);
+  --person-azure: oklch(0.492 0.121 244);
+  --person-violet: oklch(0.503 0.147 290);
+  --person-orchid: oklch(0.503 0.148 330);
+  --person-coral: oklch(0.546 0.141 19);
+  --person-amber: oklch(0.482 0.104 71);
+  --person-olive: oklch(0.536 0.117 110);
+  --person-teal: oklch(0.526 0.093 185);
+  --person-cobalt: oklch(0.546 0.152 265);
+  --person-plum: oklch(0.552 0.107 310);
+  --person-sand: oklch(0.546 0.067 54);
   /* Initials on a person's disc. */
   --on-person: #ffffff;
 
@@ -182,16 +186,17 @@
   --chart-grid: #2a2926;
   --chart-track: #1c1c1a;
 
-  --person-azure: oklch(0.74 0.126 245);
-  --person-violet: oklch(0.74 0.126 290);
-  --person-orchid: oklch(0.74 0.126 330);
-  --person-coral: oklch(0.74 0.126 20);
-  --person-amber: oklch(0.74 0.117 70);
-  --person-olive: oklch(0.74 0.108 110);
-  --person-teal: oklch(0.74 0.099 185);
-  --person-cobalt: oklch(0.74 0.135 265);
-  --person-plum: oklch(0.74 0.108 310);
-  --person-sand: oklch(0.74 0.063 55);
+  /* Light enough for dark initials (Lc 60 and up), apart as in Day. */
+  --person-azure: oklch(0.748 0.126 235);
+  --person-violet: oklch(0.761 0.132 294);
+  --person-orchid: oklch(0.765 0.126 329);
+  --person-coral: oklch(0.767 0.126 20);
+  --person-amber: oklch(0.756 0.12 71);
+  --person-olive: oklch(0.783 0.107 109);
+  --person-teal: oklch(0.785 0.1 184);
+  --person-cobalt: oklch(0.798 0.101 264);
+  --person-plum: oklch(0.858 0.094 310);
+  --person-sand: oklch(0.788 0.053 54);
   --on-person: #0b0b0a;
 
   /*
