@@ -60,7 +60,7 @@ export default function SearchPage() {
       <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Search</h1>
 
       <StickyBar className="-mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">
-        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--card-border)] bg-surface px-3.5 py-3 focus-within:border-brand focus-within:ring-[1.5px] focus-within:ring-text">
+        <label className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-field-edge bg-surface px-3.5 py-3 focus-within:border-brand focus-within:ring-[1.5px] focus-within:ring-text">
           <Search className="size-[18px] shrink-0 text-subtle" />
           <input
             value={query}

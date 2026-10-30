@@ -182,7 +182,13 @@ for (const [name, t] of Object.entries(themes)) {
     }
   }
 }
-rule("C5", "an off switch and a field's edge reach 3 to 1", c5);
+// And the fields use it: a filled field with an invisible border has no edge.
+for (const file of files) {
+  readFileSync(file, "utf8").split(/\r?\n/).forEach((line, i) => {
+    if (/border-transparent[^"]*bg-surface-2|bg-surface-2[^"]*border-transparent/.test(line)) c5.push(`${file.replace(/\\/g, "/")}:${i + 1}: a filled field without its edge`);
+  });
+}
+rule("C5", "an off switch and a field's edge reach 3 to 1, and fields have it", c5);
 
 // ---- C6: even lightness steps ---------------------------------------------------
 

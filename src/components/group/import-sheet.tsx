@@ -202,7 +202,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 dir="auto"
                 value={name}
                 onChange={(event) => setName(event.target.value.slice(0, 60))}
-                className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none focus:ring-[1.5px] focus:ring-text"
+                className="h-12 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-3.5 text-input font-semibold text-text outline-none focus:ring-[1.5px] focus:ring-text"
               />
             </label>
 

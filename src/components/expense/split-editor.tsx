@@ -604,7 +604,7 @@ function ItemEditor({
                   )
                 }
                 placeholder={`Item ${index + 1}`}
-                className="min-w-0 flex-1 bg-transparent text-input font-semibold text-text outline-none placeholder:text-subtle"
+                className="min-w-0 flex-1 border-b border-field-edge bg-transparent text-input font-semibold text-text outline-none placeholder:text-subtle"
               />
               <CompactAmountInput
                 value={item.amount ?? 0n}
