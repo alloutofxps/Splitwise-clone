@@ -42,10 +42,15 @@ const PARTS = (process.env.PARTS ?? "screens,forms,panels").split(",");
 mkdirSync(OUT, { recursive: true });
 const W = 393, H = 852, KB = 336, NOTCH = 59, HOME_BAR = 34;
 
+// Each sign-up from its own address, as smoke.mjs does: sign-ups are limited
+// per address, and in CI every browser shares the machine's otherwise.
+let people = 0;
+const newAddress = () => `198.18.40.${++people}`;
+
 // ---- test data -----------------------------------------------------------------
 
 async function seed(browser) {
-  const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: true, extraHTTPHeaders: { "X-Forwarded-For": newAddress() } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "load" });
   const out = await page.evaluate(async () => {
@@ -102,7 +107,7 @@ async function seed(browser) {
 }
 
 async function emptyIdentity(browser) {
-  const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: true, extraHTTPHeaders: { "X-Forwarded-For": newAddress() } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "load" });
   await page.evaluate(async () => {

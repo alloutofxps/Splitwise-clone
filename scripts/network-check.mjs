@@ -43,7 +43,9 @@ const phone = { viewport: { width: 393, height: 852 }, isMobile: true, hasTouch:
 
 // Someone with a group, a few expenses and a payment.
 async function seed() {
-  const ctx = await browser.newContext(phone);
+  // Its own address, as smoke.mjs does: sign-ups are limited per address,
+  // and in CI every browser shares the machine's otherwise.
+  const ctx = await browser.newContext({ ...phone, extraHTTPHeaders: { "X-Forwarded-For": "198.18.41.1" } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "load" });
   const data = await page.evaluate(async () => {
