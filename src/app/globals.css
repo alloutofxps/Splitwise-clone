@@ -35,7 +35,7 @@
 
   --text: #141412;          /* ink */
   --text-muted: #57534e;    /* ink-2 */
-  --text-subtle: #6f6a63;   /* ink-3: 4.8 to 1 on the darkest surface it sits on */
+  --text-subtle: #6c6760;   /* ink-3: 4.58 to 1 on the darkest surface, surface-3 */
   --text-inverse: #fafaf8;
 
   --border: #e7e5e1;        /* rule */
