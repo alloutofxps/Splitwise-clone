@@ -207,7 +207,10 @@ export function Segmented<T extends string>({
       role={kind === "tabs" ? "tablist" : "radiogroup"}
       aria-label={label}
       onKeyDown={onKeyDown}
-      className={cn("relative grid border-b border-line", className)}
+      // A container: under 240px across (200% zoom on a phone) the words of
+      // three tabs ran into each other, so they go to the smallest size there
+      // (still twice that on screen, zoomed in).
+      className={cn("@container relative grid border-b border-line", className)}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
@@ -239,7 +242,7 @@ export function Segmented<T extends string>({
           }}
           className={cn(
             "relative font-medium transition-colors duration-150",
-            size === "md" ? "h-11 text-body" : "tap-44 h-9 text-caption",
+            size === "md" ? "h-11 text-body @max-[240px]:text-micro" : "tap-44 h-9 text-caption",
             option.value === value ? "text-text" : "text-subtle hover:text-muted",
           )}
         >
