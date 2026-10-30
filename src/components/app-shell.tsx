@@ -207,7 +207,10 @@ function TabBar({
       className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised shadow-bar pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Main"
     >
-      <div className="mx-auto flex h-16 max-w-[560px] items-stretch justify-around px-1.5">
+      {/* Under 300px across (200% zoom on a phone) the five words ran into
+          each other and "You" was cut off: the icons stay, the words go to
+          screen readers only (each link is named anyway). */}
+      <div className="@container mx-auto flex h-16 max-w-[560px] items-stretch justify-around px-1.5">
         {left.map((destination) => (
           <TabLink key={destination.href} destination={destination} active={isActive(pathname, destination.href)} exact={pathname === destination.href} />
         ))}
@@ -254,7 +257,7 @@ function TabLink({ destination, active, exact }: { destination: Destination; act
         <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.75} />
         {destination.badge ? <Dot count={destination.badge} /> : null}
       </span>
-      <span className={cn("text-micro", active ? "font-semibold" : "font-medium")}>
+      <span className={cn("text-micro @max-[300px]:sr-only", active ? "font-semibold" : "font-medium")}>
         {destination.label}
       </span>
     </Link>
@@ -357,7 +360,9 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2", className)}>
       <AppMark />
-      <span className="text-title-lg font-semibold tracking-[-0.03em] text-text">Divvy</span>
+      {/* Only the mark where there's no room for the name (Home's header
+          at 200% zoom pushed your picture off the edge). */}
+      <span className="text-title-lg font-semibold tracking-[-0.03em] text-text @max-[260px]:sr-only">Divvy</span>
     </span>
   );
 }
