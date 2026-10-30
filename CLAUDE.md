@@ -132,8 +132,7 @@ detail.
   https relay in front of the server (this machine has one, not in git:
   `node perf-runs/tls/proxy.mjs 3443 3100`) and add
   `BASE_WEBKIT=https://localhost:3443`. Compare the totals before and
-  after a change. It runs in CI with `STRICT=1 STRICT_SKIP=axe` (every total
-  but axe must be 0; axe joins once the colour phase fixes item 9).
+  after a change. It runs in CI with `STRICT=1`: every total must be 0.
   `PARTS=screens` (or `forms`, `panels`) runs one part.
 - Colour (RULES C1 to C7; in CI, no server needed):
   `node scripts/colour-check.mjs`. Contrast in Day and Night (WCAG 4.5 to 1
