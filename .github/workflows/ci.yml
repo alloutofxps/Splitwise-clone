@@ -49,6 +49,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Contrast (WCAG and APCA) in Day and Night, what each colour means, the
+      # off switch and field edges, and the person colours under colour
+      # blindness (RULES C1 to C7). Rules whose fixes are still to come are
+      # measured but left out of the pass mark; each fix takes its rule off.
+      - name: Colour rules
+        run: STRICT=1 STRICT_SKIP=C1,C2,C3,C5,C7 node scripts/colour-check.mjs
+
       - name: Unit tests
         run: npm test
 

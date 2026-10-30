@@ -135,6 +135,12 @@ detail.
   after a change. It runs in CI with `STRICT=1 STRICT_SKIP=axe` (every total
   but axe must be 0; axe joins once the colour phase fixes item 9).
   `PARTS=screens` (or `forms`, `panels`) runs one part.
+- Colour (RULES C1 to C7; in CI, no server needed):
+  `node scripts/colour-check.mjs`. Contrast in Day and Night (WCAG 4.5 to 1
+  and APCA), green and orange only beside money in the components, no text
+  faded below its token, the off switch and field edges at 3 to 1, and the
+  person colours apart under colour blindness. CI's `STRICT_SKIP` lists the
+  rules not yet fixed; a fix takes its rule off the list.
 - A slow connection, no connection and Reduce Motion (RULES R5, A5; in CI):
   `node scripts/network-check.mjs <url> <out-dir>`. With Reduce Motion on,
   nothing may change position or size over time; fades, colours and
