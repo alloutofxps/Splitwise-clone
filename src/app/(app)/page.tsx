@@ -718,7 +718,9 @@ function Section({
 }) {
   return (
     <section className="mb-8">
-      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+      {/* Wraps when the heading and its actions don't fit side by side (at
+          200% zoom "New group" ran off the edge). */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
         <h2 className="text-title font-semibold tracking-[-0.01em] text-text">{title}</h2>
         {action}
       </div>
