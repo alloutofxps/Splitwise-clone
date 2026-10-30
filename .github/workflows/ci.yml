@@ -51,10 +51,9 @@ jobs:
 
       # Contrast (WCAG and APCA) in Day and Night, what each colour means, the
       # off switch and field edges, and the person colours under colour
-      # blindness (RULES C1 to C7). Rules whose fixes are still to come are
-      # measured but left out of the pass mark; each fix takes its rule off.
+      # blindness (RULES C1 to C7). Every rule must pass.
       - name: Colour rules
-        run: STRICT=1 STRICT_SKIP=C3,C7 node scripts/colour-check.mjs
+        run: STRICT=1 node scripts/colour-check.mjs
 
       - name: Unit tests
         run: npm test

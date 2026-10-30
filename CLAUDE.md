@@ -138,8 +138,10 @@ detail.
   `node scripts/colour-check.mjs`. Contrast in Day and Night (WCAG 4.5 to 1
   and APCA), green and orange only beside money in the components, no text
   faded below its token, the off switch and field edges at 3 to 1, and the
-  person colours apart under colour blindness. CI's `STRICT_SKIP` lists the
-  rules not yet fixed; a fix takes its rule off the list.
+  person colours apart under colour blindness. CI runs it with `STRICT=1`:
+  every rule must pass. A new colour token is added to its list in the
+  script; the person colours were found with
+  `perf-runs/evidence/person-solve.mjs` (not in git) if they need redoing.
 - A slow connection, no connection and Reduce Motion (RULES R5, A5; in CI):
   `node scripts/network-check.mjs <url> <out-dir>`. With Reduce Motion on,
   nothing may change position or size over time; fades, colours and
