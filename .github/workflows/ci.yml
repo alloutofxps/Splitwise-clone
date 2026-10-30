@@ -108,11 +108,10 @@ jobs:
 
       # Every screen, form and panel on an iPhone-sized screen: tap areas of
       # 44 points, 200% text and zoom, the notch and home bar, and the
-      # keyboard over every form (RULES R2 to R6, A1, A4). axe is reported but
-      # left out of the pass mark until the colour phase fixes its last
-      # findings (faint text, findings item 9).
+      # keyboard over every form, and axe in Day and Night (RULES R2 to R6,
+      # A1, A4).
       - name: Phone and accessibility checks
-        run: STRICT=1 STRICT_SKIP=axe node scripts/phone-check.mjs http://localhost:3000 phone-check
+        run: STRICT=1 node scripts/phone-check.mjs http://localhost:3000 phone-check
 
       # A cold start on a slow phone network, opening with no connection,
       # and nothing moving with Reduce Motion on (RULES R5, A5).

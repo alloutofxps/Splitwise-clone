@@ -250,7 +250,7 @@ export function AmountInput({
           size !== "hero" && "w-full",
           // Suppressed here because the wrapper above carries the focus ring.
           "outline-none focus-visible:outline-none",
-          "placeholder:text-subtle/60",
+          "placeholder:text-subtle",
           size === "md" && "text-title-lg",
           size === "lg" && "text-display",
           size === "hero" && "text-display leading-none tracking-[-0.03em]",
@@ -382,7 +382,7 @@ export function CompactAmountInput({
           onChange(masked === "" ? 0n : (parseAmount(masked, currency) ?? 0n));
         }}
         className={cn(
-          "tabular w-[84px] bg-transparent text-right text-input font-semibold text-text outline-none placeholder:text-subtle/60",
+          "tabular w-[84px] bg-transparent text-right text-input font-semibold text-text outline-none placeholder:text-subtle",
           className,
         )}
       />

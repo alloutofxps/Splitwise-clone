@@ -123,7 +123,7 @@ export function ConfirmDeleteSheet({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="mt-3 w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3 font-mono text-input text-text outline-none transition placeholder:text-subtle/60 focus:ring-[1.5px] focus:ring-text"
+                    className="mt-3 w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
                   />
                   <button
                     className={cn(danger, "mt-3")}

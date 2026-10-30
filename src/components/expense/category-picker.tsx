@@ -82,7 +82,7 @@ export function CategoryPicker({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search categories"
             aria-label="Search categories"
-            className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
+            className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle"
           />
           {query ? (
             <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="text-subtle">

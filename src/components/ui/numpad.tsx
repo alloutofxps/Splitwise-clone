@@ -127,7 +127,7 @@ export function AmountPad({
           style={{ width: `${Math.max(1, (shown || "0").length)}ch` }}
           // At least 44 by 44 to tap (a lone "0" is narrower, the digits
           // 40 tall), without moving anything around it.
-          className="display-number -my-1 min-w-11 bg-transparent py-1 text-center text-display font-semibold leading-none tracking-[-0.03em] text-text outline-none placeholder:text-subtle/60"
+          className="display-number -my-1 min-w-11 bg-transparent py-1 text-center text-display font-semibold leading-none tracking-[-0.03em] text-text outline-none placeholder:text-subtle"
           aria-label="Amount"
         />
         </span>
