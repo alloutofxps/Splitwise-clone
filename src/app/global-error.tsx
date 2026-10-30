@@ -38,8 +38,9 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "2rem",
+          // The palette written out (bg, text): the stylesheet is gone here.
           background: "#fafaf8",
-          color: "#17161a",
+          color: "#141412",
           fontFamily:
             "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
         }}
@@ -47,8 +48,10 @@ export default function GlobalError({
         <style>{`
           @media (prefers-color-scheme: dark) {
             body { background: #0b0b0a !important; color: #f3f2ee !important; }
-            .divvy-muted { color: #a3a1ab !important; }
-            .divvy-secondary { background: #26242c !important; color: #f4f3f6 !important; border-color: #37343f !important; }
+            .divvy-muted { color: #bcb6b2 !important; }
+            .divvy-faint { color: #a09b93 !important; }
+            .divvy-primary { background: #f3f2ee !important; color: #0b0b0a !important; }
+            .divvy-secondary { background: #141413 !important; color: #f3f2ee !important; border-color: #3b3a36 !important; }
           }
         `}</style>
         <main style={{ maxWidth: "24rem", textAlign: "center" }}>
@@ -61,7 +64,7 @@ export default function GlobalError({
               margin: "0.5rem 0 0",
               fontSize: "0.875rem",
               lineHeight: 1.6,
-              color: "#6c6a75",
+              color: "#57534e",
             }}
           >
             Your data is safe. Reloading the page usually fixes this.
@@ -76,6 +79,7 @@ export default function GlobalError({
           >
             <button
               type="button"
+              className="divvy-primary"
               onClick={() => window.location.reload()}
               style={{
                 appearance: "none",
@@ -84,8 +88,8 @@ export default function GlobalError({
                 padding: "0.6875rem 1rem",
                 fontSize: "0.9375rem",
                 fontWeight: 600,
-                background: "#16a34a",
-                color: "#fff",
+                background: "#141412",
+                color: "#fafaf8",
                 cursor: "pointer",
               }}
             >
@@ -98,12 +102,12 @@ export default function GlobalError({
               style={{
                 appearance: "none",
                 borderRadius: "0.75rem",
-                border: "1px solid #e4e2e8",
+                border: "1px solid #d4d1cb",
                 padding: "0.6875rem 1rem",
                 fontSize: "0.9375rem",
                 fontWeight: 600,
-                background: "#f1eff3",
-                color: "#17161a",
+                background: "#ffffff",
+                color: "#141412",
                 cursor: "pointer",
               }}
             >
@@ -112,11 +116,11 @@ export default function GlobalError({
           </div>
           {error.digest ? (
             <p
-              className="divvy-muted"
+              className="divvy-faint"
               style={{
                 marginTop: "1.5rem",
                 fontSize: "0.6875rem",
-                color: "#8a8892",
+                color: "#6c6760",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
