@@ -70,7 +70,7 @@ export default function SearchPage() {
             aria-label="Search expenses"
             autoFocus
             enterKeyHint="search"
-            className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
+            className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle"
           />
           {query ? (
             <button

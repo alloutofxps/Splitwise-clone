@@ -229,7 +229,7 @@ export function BalancesPanel({
                             an argument. Someone not on Divvy can't receive one. */}
                         {toMe ? (
                           from.isGhost ? (
-                            <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
+                            <span className="shrink-0 px-1 text-body text-subtle" aria-hidden>
                               Remind
                             </span>
                           ) : (
@@ -286,7 +286,7 @@ export function BalancesPanel({
                           an argument. Someone not on Divvy can't receive one. */}
                       {toMe ? (
                         from.isGhost ? (
-                          <span className="shrink-0 px-1 text-body text-subtle/60" aria-hidden>
+                          <span className="shrink-0 px-1 text-body text-subtle" aria-hidden>
                             Remind
                           </span>
                         ) : (

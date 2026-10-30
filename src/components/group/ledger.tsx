@@ -138,7 +138,7 @@ export function GroupLedger({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search this group"
               autoFocus
-              className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle/70"
+              className="min-w-0 flex-1 bg-transparent text-input text-text outline-none placeholder:text-subtle"
             />
             <button
               onClick={() => {

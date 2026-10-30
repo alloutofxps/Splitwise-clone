@@ -455,7 +455,7 @@ export function ExpenseComposer({
               onFocus={() => setKeypad(false)}
               placeholder="What was it for?"
               enterKeyHint="done"
-              className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle/70"
+              className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle"
             />
           </label>
 
@@ -718,7 +718,7 @@ export function ExpenseComposer({
             autoFocus
             dir="auto"
             placeholder="Add a note…"
-            className="w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
+            className="w-full resize-none rounded-[var(--radius-md)] border border-transparent bg-surface-2 p-3.5 text-input leading-relaxed text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
           />
           <Button
             variant="primary"

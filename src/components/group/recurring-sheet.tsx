@@ -303,7 +303,7 @@ function NewRecurrenceSheet({
           onChange={(event) => setDescription(event.target.value.slice(0, 140))}
           placeholder="Rent"
           autoFocus
-          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition placeholder:text-subtle/70 focus:ring-[1.5px] focus:ring-text"
+          className="h-12 w-full rounded-[var(--radius-md)] border border-transparent bg-surface-2 px-3.5 text-input font-semibold text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
         />
 
         <div className="mt-3 rounded-[var(--radius-lg)] bg-surface-2 px-4 py-5">
