@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Copy, ExternalLink, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Copy, ExternalLink, Users, Wallet } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { AmountInput } from "../ui/money";
 import { Avatar, usePersonHue } from "../ui/avatar";
@@ -322,15 +322,18 @@ export function SettleUpSheet({
               meId={meId}
               label={amount && amount > 0n ? formatMoney(amount, payCurrency) : null}
             />
+            {/* A button that looks like one, like "Paying in" below it: grey
+                text here read as a caption under the drawing. */}
             {!fixedPersonId && others.length > 0 ? (
               <button
                 onClick={() => {
                   haptic();
                   setSelected(null);
                 }}
-                className="tap-44 relative mx-auto mt-1 block rounded-[var(--radius-sm)] px-2 py-1 text-caption font-medium text-muted underline-offset-2 hover:text-text hover:underline"
+                className="tap-44 relative mx-auto mt-2 flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-caption font-medium text-text"
               >
-                Someone else
+                <Users className="size-3.5" strokeWidth={1.75} aria-hidden />
+                Choose someone else
               </button>
             ) : null}
 

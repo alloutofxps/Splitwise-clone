@@ -164,8 +164,11 @@ console.log("\nSettling up");
     check("tapping it opens the sheet on that exact amount", prefilled === "30.00", prefilled);
 
     // …and the counterparty is never locked while the group holds anyone else.
-    const change = page.getByRole("button", { name: /^(Someone else|Change)$/ });
+    const change = page.getByRole("button", { name: "Choose someone else", exact: true });
     check("the counterparty can still be changed", (await change.count()) > 0);
+    // It read as a caption under the drawing: grey text with no edge.
+    const looks = await change.evaluate((el) => { const s = getComputedStyle(el); return { edge: s.borderTopStyle !== "none" && parseFloat(s.borderTopWidth) > 0, colour: s.color, muted: getComputedStyle(document.documentElement).getPropertyValue("--text-muted") }; }).catch(() => null);
+    check("and looks like a button, with an edge", Boolean(looks?.edge), JSON.stringify(looks));
 
     if ((await change.count()) > 0) {
       await change.click();
