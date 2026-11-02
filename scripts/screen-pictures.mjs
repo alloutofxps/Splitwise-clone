@@ -21,7 +21,8 @@
  * Every run must take the same pictures, so the data, dates and clock are
  * fixed: a new account with the same groups and expenses each time, the
  * browser's clock held at one moment, the times the server stamps on things
- * replaced with fixed ones, the motion reduced and the service worker off.
+ * replaced with fixed ones, the motion reduced and the service worker off,
+ * text always smoothed the same way, and every fade finished first.
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -152,7 +153,11 @@ async function take(browser, data, [name, path, signedIn, setup, sizes = [PHONE]
       if (setup) await setup(page);
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(700);
+      // Until every fade has finished: a panel's shading caught mid-fade
+      // differs by a shade or two from run to run. Anything that never
+      // stops (a spinner) just ends the wait.
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(500);
       // Covered: what is new for every account or machine, not part of the looks.
       const mask = [page.getByText(/^me-[a-z0-9-]+/), page.getByText(/Using [\d.,]+ [KMG]?B/)];
       writeFileSync(join(OUT, "new", file), await page.screenshot({ fullPage: true, animations: "disabled", caret: "hide", mask }));
@@ -195,7 +200,9 @@ function compare(file) {
   return { verdict: "changed", detail: `${changed} pixels${size}` };
 }
 
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+// Grey-edged text always: the browser otherwise picks coloured edges or grey
+// ones depending on how it happened to layer the page, which differs by run.
+const browser = await chromium.launch({ args: ["--disable-lcd-text"], ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
 const data = await seed(browser);
 const files = [];
 for (const picture of pictures(data)) {
