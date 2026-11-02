@@ -35,7 +35,7 @@ async function tour(theme, viewport, tag) {
   if (tag.startsWith("phone-light")) {
     await page.getByRole("button", { name: "Get started" }).click();
     await shot("01-name");
-    await page.locator('input[placeholder="Priya"]').fill("Priya Shah");
+    await page.getByLabel("Your name").fill("Priya Shah");
     await shot("01b-name-filled");
     await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Save a recovery key instead" }).waitFor({ timeout: 15000 }).catch(() => {}); await shot("01c-protect");

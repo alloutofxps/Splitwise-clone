@@ -417,8 +417,11 @@ function ProfileStep({
           value={name}
           onChange={(event) => setName(event.target.value.slice(0, 60))}
           onKeyDown={(event) => void (event.key === "Enter" && submit())}
-          placeholder="Priya"
+          // A hint, not a name: an example name in the box read as already
+          // filled in, beside a Continue that wouldn't press.
+          placeholder="Your first name"
           aria-label="Your name"
+          aria-describedby={name.trim() ? undefined : "name-needed"}
           autoFocus
           autoComplete="given-name"
           enterKeyHint="done"
@@ -472,6 +475,11 @@ function ProfileStep({
       />
 
       <KeyboardPageFooter className="mt-auto pt-8">
+        {name.trim() ? null : (
+          <p id="name-needed" className="mb-2 text-center text-caption font-semibold text-muted">
+            Type your name to continue
+          </p>
+        )}
         <Button
           variant="primary"
           size="lg"
