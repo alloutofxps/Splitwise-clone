@@ -117,6 +117,22 @@ jobs:
       - name: Slow, offline and Reduce Motion checks
         run: node scripts/network-check.mjs http://localhost:3000 network-check
 
+      # The main screens, panels and states in Day and Night, compared with
+      # the approved pictures in tests/screens (RULES L4). Fixed data and a
+      # held clock, so only a change to the looks moves a pixel.
+      - name: Picture comparison
+        run: node scripts/screen-pictures.mjs http://localhost:3000 screen-pictures
+
+      # When the looks changed on purpose, the new pictures to approve are
+      # here (new/), with each change marked in red (diff/).
+      - name: Keep the pictures
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screen-pictures
+          path: screen-pictures
+          retention-days: 14
+
       # After everything above has written to it, the database must still pass
       # every rule: undamaged, nothing pointing at a missing row, every bill's
       # shares and payers adding up. Read-only, counts only.
