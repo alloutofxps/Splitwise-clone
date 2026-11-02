@@ -17,7 +17,7 @@ import { ReceiptPicker } from "./receipt-picker";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import { CategoryGlyph } from "./category-glyph";
 import { keys, useDashboard, useCreateExpense, useDeleteExpense, useUpdateExpense } from "@/lib/client/queries";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, minorUnitScale } from "@/lib/money";
 import { ConversionNote } from "../ui/conversion-note";
 import { resolveSplit, type SplitMode, type SplitParticipant } from "@/lib/split";
 import { startingSplit, type DefaultSplit } from "@/lib/default-split";
@@ -123,6 +123,9 @@ export function ExpenseComposer({
   // so whether closing it should ask first rather than throw that away.
   const changed = React.useRef(false);
   const [askToDiscard, setAskToDiscard] = React.useState(false);
+  // A very large amount is asked about once before saving: a slipped finger
+  // or a pasted number, not usually a real bill.
+  const [askHuge, setAskHuge] = React.useState(false);
 
   // Rebuild the draft when the sheet opens, so a cancelled entry never leaks
   // into the next one.
@@ -276,6 +279,12 @@ export function ExpenseComposer({
     else onClose();
   };
 
+  // Save, unless the amount is big enough to ask about first.
+  const trySave = () => {
+    if (canSave && !saving && draft && hugeAmount(draft.amount ?? 0n, draft.currency)) setAskHuge(true);
+    else void save();
+  };
+
   const save = async () => {
     if (!canSave || saving) return;
 
@@ -412,7 +421,7 @@ export function ExpenseComposer({
               fullWidth
               disabled={!canSave}
               loading={saving}
-              onClick={() => void save()}
+              onClick={trySave}
             >
               {expense ? "Save changes" : "Add expense"}
             </Button>
@@ -480,7 +489,7 @@ export function ExpenseComposer({
               value={draft.amount}
               onChange={(value) => patch({ amount: value })}
               currency={draft.currency}
-              onSubmit={() => void save()}
+              onSubmit={trySave}
               open={keypad}
               onOpenChange={setKeypad}
               leading={
@@ -747,6 +756,20 @@ export function ExpenseComposer({
       </Sheet>
 
       <ConfirmSheet
+        open={askHuge}
+        onClose={() => setAskHuge(false)}
+        onConfirm={() => {
+          setAskHuge(false);
+          void save();
+        }}
+        title={`${formatMoney(amount, draft.currency)}?`}
+        description="That's a lot bigger than most expenses. Is the amount right?"
+        cancelLabel="Change it"
+        confirmLabel="Yes, save it"
+        tone="primary"
+      />
+
+      <ConfirmSheet
         open={askToDiscard}
         onClose={() => setAskToDiscard(false)}
         onConfirm={() => {
@@ -760,6 +783,22 @@ export function ExpenseComposer({
       />
     </>
   );
+}
+
+/**
+ * Currencies whose unit is worth little enough that a seven-figure bill is
+ * ordinary (¥1,000,000 is a hotel stay, not a typo).
+ */
+const SMALL_UNITS = new Set([
+  "JPY", "KRW", "IDR", "VND", "IRR", "COP", "CLP", "HUF", "ISK", "PYG", "UGX", "TZS", "LAK",
+  "MMK", "KHR", "MNT", "UZS", "LBP", "IQD", "SLE", "SLL", "GNF", "MGA", "RWF", "KZT", "NGN",
+  "ARS", "INR", "PKR", "LKR", "BDT", "NPR", "XOF", "XAF", "KES", "AMD", "RSD", "DZD",
+]);
+
+/** Big enough to ask about before saving: a million, or a billion in small-unit currencies. */
+function hugeAmount(amount: bigint, currency: string): boolean {
+  const whole = amount / minorUnitScale(currency);
+  return whole >= (SMALL_UNITS.has(currency) ? 1_000_000_000n : 1_000_000n);
 }
 
 // ---------------------------------------------------------------------------
@@ -1144,9 +1183,11 @@ function SplitPreview({
             const net = (paidBy.get(split.personId) ?? 0n) - split.amount;
 
             return (
-              <li key={split.personId} className="flex items-center gap-2.5">
+              // Wraps, so a long figure moves under the name rather than past
+              // the panel's edge.
+              <li key={split.personId} className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
                 <Avatar person={person} size="xs" />
-                <span dir="auto" className="min-w-0 flex-1 truncate text-left text-body font-medium text-text">
+                <span dir="auto" className="min-w-16 flex-1 truncate text-left text-body font-medium text-text">
                   {split.personId === meId ? "You" : person.displayName}
                 </span>
                 <span className="tabular text-body font-semibold text-muted">
@@ -1155,14 +1196,14 @@ function SplitPreview({
                 {net !== 0n ? (
                   <span
                     className={cn(
-                      "tabular min-w-[68px] shrink-0 text-right text-caption font-semibold",
+                      "tabular ml-auto min-w-[68px] shrink-0 text-right text-caption font-semibold",
                       net > 0n ? "text-positive-text" : "text-negative-text",
                     )}
                   >
                     {formatMoney(net, currency, { signed: true })}
                   </span>
                 ) : (
-                  <span className="min-w-[68px] shrink-0 text-right text-caption font-semibold text-subtle">
+                  <span className="ml-auto min-w-[68px] shrink-0 text-right text-caption font-semibold text-subtle">
                     even
                   </span>
                 )}

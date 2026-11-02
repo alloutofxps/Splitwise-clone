@@ -1313,6 +1313,34 @@ console.log("\nPanels by keyboard");
   await p6.keyboard.press("Escape");
 }
 
+// 99,999,999,999 went through without a question, and its "who owes what"
+// figures ran off the panel's edge.
+console.log("\nA very large amount");
+{
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: /Add an expense/ }).last().click();
+  await page.waitForTimeout(900);
+  await page.getByLabel("Amount").first().fill("99999999999");
+  await page.getByPlaceholder(/What was it for/).first().fill("Typo test");
+  await page.waitForTimeout(400);
+  const overflow = await page.evaluate(() => {
+    const panel = [...document.querySelectorAll('[role="dialog"]')].pop().getBoundingClientRect();
+    return [...document.querySelectorAll('[role="dialog"] li span')].filter((el) => el.getBoundingClientRect().right > panel.right + 0.5).length;
+  });
+  check("its figures stay inside the panel", overflow === 0, `${overflow} past the edge`);
+  await page.getByRole("button", { name: /^Add expense$/ }).last().click();
+  await page.waitForTimeout(700);
+  const asked = page.getByRole("dialog", { name: /99,999,999,999/ });
+  check("saving it asks first", (await asked.count()) === 1);
+  await page.getByRole("button", { name: "Change it" }).click();
+  await page.waitForTimeout(600);
+  check("Change it goes back with it all still there", (await page.getByPlaceholder(/What was it for/).first().inputValue()) === "Typo test");
+  await page.getByLabel("Amount").first().fill("50");
+  await page.getByRole("button", { name: /^Add expense$/ }).last().click();
+  check("an everyday amount saves without a question", await page.getByText("Added Typo test").first().waitFor({ timeout: 5000 }).then(() => true, () => false));
+}
+
 // A group's tabs: one Tab stop, moved through with the arrow keys.
 console.log("\nTabs by keyboard");
 {
