@@ -529,6 +529,7 @@ export function ConfirmSheet({
   title,
   description,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   tone = "danger",
   loading,
 }: {
@@ -538,6 +539,8 @@ export function ConfirmSheet({
   title: string;
   description?: string;
   confirmLabel?: string;
+  /** The way back, e.g. "Keep editing" when the question is about losing work. */
+  cancelLabel?: string;
   tone?: "danger" | "primary";
   loading?: boolean;
 }) {
@@ -553,7 +556,7 @@ export function ConfirmSheet({
             onClick={onClose}
             className="h-11 flex-1 rounded-[var(--radius-md)] border border-line bg-surface-2 text-subhead font-semibold text-text transition active:opacity-70"
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { CalendarDays, Camera, Check, ChevronDown, NotebookPen, Plus } from "lucide-react";
-import { Sheet } from "../ui/sheet";
+import { ConfirmSheet, Sheet } from "../ui/sheet";
 import { AmountPad } from "../ui/numpad";
 import { Avatar } from "../ui/avatar";
 import { Button, cn, haptic } from "../ui/primitives";
@@ -119,6 +119,10 @@ export function ExpenseComposer({
   const [keypad, setKeypad] = React.useState(true);
   // Item lines read off a receipt photo, offered as a split by item.
   const [foundItems, setFoundItems] = React.useState<{ name: string; amount: bigint }[] | null>(null);
+  // Whether anything has been typed or picked since the sheet opened, and
+  // so whether closing it should ask first rather than throw that away.
+  const changed = React.useRef(false);
+  const [askToDiscard, setAskToDiscard] = React.useState(false);
 
   // Rebuild the draft when the sheet opens, so a cancelled entry never leaks
   // into the next one.
@@ -138,6 +142,8 @@ export function ExpenseComposer({
   // appears already open, and must still build its draft.
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
+    changed.current = false;
+    setAskToDiscard(false);
     setFoundItems(null);
     setKeypad(!expense);
     if (expense) {
@@ -247,7 +253,8 @@ export function ExpenseComposer({
    * Several payers is a genuine choice, and the mismatch warning is doing real
    * work there, so those are left exactly as entered.
    */
-  const patch = (changes: Partial<Draft>) =>
+  const patch = (changes: Partial<Draft>) => {
+    changed.current = true;
     setDraft((current) => {
       if (!current) return current;
       const next = { ...current, ...changes };
@@ -260,6 +267,14 @@ export function ExpenseComposer({
       }
       return next;
     });
+  };
+
+  // Closing by ×, Escape, a tap outside or a swipe down. With nothing changed
+  // it just closes; otherwise it asks, so a slip doesn't lose what was typed.
+  const requestClose = () => {
+    if (changed.current && !saving) setAskToDiscard(true);
+    else onClose();
+  };
 
   const save = async () => {
     if (!canSave || saving) return;
@@ -374,7 +389,7 @@ export function ExpenseComposer({
     <>
       <Sheet
         open={open}
-        onClose={onClose}
+        onClose={requestClose}
         tall
         title={expense ? "Edit expense" : "Add an expense"}
         footer={
@@ -730,6 +745,19 @@ export function ExpenseComposer({
           </Button>
         </div>
       </Sheet>
+
+      <ConfirmSheet
+        open={askToDiscard}
+        onClose={() => setAskToDiscard(false)}
+        onConfirm={() => {
+          setAskToDiscard(false);
+          onClose();
+        }}
+        title={expense ? "Discard your changes?" : "Discard this expense?"}
+        description={expense ? "The expense stays as it was." : "What you've typed won't be saved."}
+        cancelLabel="Keep editing"
+        confirmLabel="Discard"
+      />
     </>
   );
 }

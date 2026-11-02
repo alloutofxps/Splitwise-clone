@@ -1435,6 +1435,57 @@ console.log("\nThe home-screen app, signed out");
   check("in a browser tab, Get started still leads", /^Get started/.test(tab.find((n) => /Get started|Sign in/.test(n)) ?? ""), tab.join(" / "));
 }
 
+// Closing a half-typed expense used to throw it away without a word: a tap
+// outside, Escape or the × lost "Taxi, 12.40" for good.
+console.log("\nClosing an expense that's been typed into");
+{
+  const dialog = (name) => page.getByRole("dialog", { name });
+  const composer = () => dialog(/Add an expense|Edit expense/);
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1200);
+  await page.getByRole("button", { name: /Add an expense/ }).last().click();
+  await page.waitForTimeout(900);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+  check("with nothing typed, it just closes", (await composer().count()) === 0 && (await dialog(/Discard/).count()) === 0);
+
+  await page.getByRole("button", { name: /Add an expense/ }).last().click();
+  await page.waitForTimeout(900);
+  await page.getByLabel("Amount").first().fill("12.40");
+  await page.getByPlaceholder(/What was it for/).first().fill("Taxi to the airport");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+  check("with something typed, Escape asks first", (await dialog("Discard this expense?").count()) === 1);
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await page.waitForTimeout(700);
+  check("and Keep editing keeps what was typed", (await page.getByPlaceholder(/What was it for/).first().inputValue()) === "Taxi to the airport");
+  await page.getByRole("button", { name: "Close" }).first().click();
+  await page.waitForTimeout(700);
+  check("the × asks too", (await dialog("Discard this expense?").count()) === 1);
+  await page.getByRole("button", { name: "Discard", exact: true }).click();
+  await page.waitForTimeout(900);
+  check("Discard closes it", (await composer().count()) === 0);
+  await page.getByRole("button", { name: /Add an expense/ }).last().click();
+  await page.waitForTimeout(900);
+  check("and the next one starts empty", (await page.getByPlaceholder(/What was it for/).first().inputValue()) === "");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+
+  await page.getByText("Dinner").first().click();
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: /^Edit$/ }).first().click();
+  await page.waitForTimeout(900);
+  await page.getByPlaceholder(/What was it for/).first().fill("Dinner, changed");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+  check("changing an expense, then Escape, asks too", (await dialog("Discard your changes?").count()) === 1);
+  await page.getByRole("button", { name: "Discard", exact: true }).click();
+  await page.waitForTimeout(900);
+  check("and the expense stays as it was", (await page.getByText("Dinner, changed").count()) === 0);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
+}
+
 // With twelve people the balances drawing put names and amounts on top of
 // each other. Nothing on it may sit on anything else or leave its card, with
 // Simplify on or off; an amount that can't be placed is left to the list
