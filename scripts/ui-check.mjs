@@ -1419,8 +1419,7 @@ console.log("\nThe home-screen app, signed out");
 // each other. Nothing on it may sit on anything else or leave its card, with
 // Simplify on or off; an amount that can't be placed is left to the list
 // below, and the drawing says so.
-console.log("
-A balances drawing with twelve people");
+console.log("\nA balances drawing with twelve people");
 {
   const big = await page.evaluate(async () => {
     const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
