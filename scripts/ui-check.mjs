@@ -1486,6 +1486,34 @@ console.log("\nClosing an expense that's been typed into");
   await page.waitForTimeout(500);
 }
 
+// A brand new group said "Everyone is settled up" before anything had been
+// spent in it.
+console.log("\nA new group's headline");
+{
+  const fresh = await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const group = (await post("/api/groups", { name: "Fresh", currency: "EUR", placeholderNames: ["Kit"] })).group;
+    return group.id;
+  });
+  await page.goto(`${BASE}/groups/${fresh}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  check("before anything is spent: Nothing spent yet", (await page.getByText("Nothing spent yet", { exact: true }).count()) === 1);
+  check("not settled up", (await page.getByText("Everyone is settled up").count()) === 0);
+  check("and the list asks for the first expense", (await page.getByText("Add the first expense").count()) === 1);
+  await page.evaluate(async (groupId) => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const detail = await (await fetch(`/api/groups/${groupId}`)).json();
+    const me = (await (await fetch("/api/identity")).json()).me.id;
+    const kit = detail.group.members.find((m) => m.displayName === "Kit").id;
+    await post("/api/expenses", { groupId, description: "Bread", amount: "400", currency: "EUR", splitMode: "EQUAL",
+      payers: [{ personId: me, amount: "400" }], splits: [{ personId: me, amount: "200" }, { personId: kit, amount: "200" }] });
+    await post("/api/settlements", { groupId, fromPersonId: kit, toPersonId: me, amount: "200", currency: "EUR" });
+  }, fresh);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  check("spent and paid back: Everyone is settled up", (await page.getByText("Everyone is settled up").count()) === 1);
+}
+
 // With twelve people the balances drawing put names and amounts on top of
 // each other. Nothing on it may sit on anything else or leave its card, with
 // Simplify on or off; an amount that can't be placed is left to the list
