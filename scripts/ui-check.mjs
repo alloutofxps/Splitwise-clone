@@ -1326,6 +1326,26 @@ console.log("\nTabs by keyboard");
   check("the part it shows is named after its tab", labelled === "Balances", String(labelled));
 }
 
+// The tabs lift with a shadow once the list is passing under them. On a
+// short screen they sit below the bottom edge at first, covering nothing,
+// and used to show the shadow anyway.
+console.log("\nThe tab bar's shadow");
+{
+  const lifted = (p) => p.locator(".sticky", { has: p.getByRole("tab", { name: "Expenses" }) }).first().evaluate((el) => el.className.includes("shadow-raised"));
+  const short = await browser.newContext({ viewport: { width: 390, height: 200 }, storageState: await ctx.storageState() });
+  const p = await short.newPage();
+  await p.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await p.waitForTimeout(600);
+  check("flat while it sits below the bottom of a short screen", !(await lifted(p)));
+  await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await p.waitForTimeout(600);
+  check("lifted once the list is passing under it", await lifted(p));
+  await short.close();
+  await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+  check("flat in its place on a phone, at the top of the page", !(await lifted(page)));
+}
+
 // Every screen used to share one name, so screen readers announced nothing on
 // moving between them.
 console.log("\nPage names");

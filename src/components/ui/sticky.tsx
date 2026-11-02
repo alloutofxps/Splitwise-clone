@@ -36,11 +36,14 @@ export function StickyBar({
     if (!element || !bar.current || typeof IntersectionObserver === "undefined") return;
     // The marker sits just above the bar; once it has scrolled up past where
     // the bar sticks (the notch's height, 0 without one), the bar is stuck
-    // and covering content.
+    // and covering content. Out of sight below the screen doesn't count: on
+    // a short screen the bar sits there in its place, covering nothing. So
+    // what is watched reaches far below the screen, and only passing its top
+    // edge changes anything, however fast the page jumps.
     const inset = Number.parseFloat(getComputedStyle(bar.current).top) || 0;
     const observer = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting), {
       threshold: 0,
-      rootMargin: `-${inset}px 0px 0px 0px`,
+      rootMargin: `-${inset}px 0px 100000px 0px`,
     });
     observer.observe(element);
     return () => observer.disconnect();
