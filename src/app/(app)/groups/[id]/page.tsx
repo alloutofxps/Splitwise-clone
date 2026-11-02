@@ -17,6 +17,7 @@ import { StickyBar } from "@/components/ui/sticky";
 import { AvatarStack, GroupHues } from "@/components/ui/avatar";
 import { Button, Segmented, cn, haptic, tabPanelProps } from "@/components/ui/primitives";
 import { GroupSkeleton } from "@/components/screen-skeletons";
+import { LoadFailed } from "@/components/error-screen";
 import { GroupLedger } from "@/components/group/ledger";
 import { BalancesPanel } from "@/components/group/balances-panel";
 import { useComposer } from "@/components/expense/composer-context";
@@ -54,7 +55,8 @@ export default function GroupPage() {
   const router = useRouter();
   const groupId = params.id;
 
-  const { data: group, isLoading } = useGroup(groupId);
+  const groupQuery = useGroup(groupId);
+  const { data: group, isLoading } = groupQuery;
   const { data: dashboard } = useDashboard();
   const markRead = useMarkGroupRead(groupId);
   const composer = useComposer();
@@ -121,8 +123,11 @@ export default function GroupPage() {
     return () => leaveFrom(node, `back:/groups/${groupId}`);
   }, [ready, groupId]);
 
-  if (isLoading) return <GroupSkeleton />;
-  if (!group || !dashboard) return null;
+  // Trying again after a failure keeps the failure, its button working.
+  if (isLoading && !groupQuery.errorUpdateCount) return <GroupSkeleton />;
+  // Failed, deleted, no longer yours, or opened offline: never a blank page.
+  // (The dashboard is always here: AppGate shows nothing inside without it.)
+  if (!group || !dashboard) return <LoadFailed query={groupQuery} />;
 
   const net = BigInt(group.yourNet);
   const meId = dashboard.me.id;

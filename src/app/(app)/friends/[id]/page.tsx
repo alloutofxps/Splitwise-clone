@@ -14,6 +14,7 @@ import { Amount } from "@/components/ui/money";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, EmptyState, cn, haptic } from "@/components/ui/primitives";
 import { FriendSkeleton } from "@/components/screen-skeletons";
+import { LoadFailed } from "@/components/error-screen";
 import { ExpenseRow, SettlementRow } from "@/components/group/ledger";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";
 import { SettleAcrossSheet } from "@/components/friends/settle-across-sheet";
@@ -47,7 +48,8 @@ export default function FriendPage() {
   const router = useRouter();
   const composer = useComposer();
 
-  const { data, isLoading } = useFriend(params.id);
+  const friendQuery = useFriend(params.id);
+  const { data, isLoading } = friendQuery;
   const prefetch = usePrefetch();
   const open = useOpenScreen();
   const { data: dashboard } = useDashboard();
@@ -76,6 +78,9 @@ export default function FriendPage() {
     return () => leaveFrom(node, `back:/friends/${params.id}`);
   }, [ready, params.id]);
 
+  // Failed, removed, or opened offline: the error state, not the outline
+  // forever. Trying again keeps it, its button working.
+  if (!data && (!isLoading || friendQuery.errorUpdateCount)) return <LoadFailed query={friendQuery} />;
   if (isLoading || !data || !dashboard) {
     return <FriendSkeleton name={people.get(params.id)?.displayName} />;
   }

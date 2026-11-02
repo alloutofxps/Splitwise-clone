@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { AppGate } from "@/components/app-gate";
 import { FlowDoodle } from "@/components/ui/doodle";
+import { IDENTITY_COOKIE } from "@/lib/identity";
 
 /**
  * A URL that does not resolve.
@@ -12,28 +15,45 @@ import { FlowDoodle } from "@/components/ui/doodle";
  * needs a way back to it, which Next's bare "404 | This page could not be
  * found" does not give them.
  *
- * A server component on purpose: nothing here needs the client bundle, and this
- * is the one screen that must render even when something else is badly wrong.
+ * Signed in, it sits inside the app, with the tab bar or sidebar there to go
+ * anywhere else. Signed out it stands alone: inside the app it would be
+ * replaced by the welcome, and the message would never be seen.
  */
-export default function NotFound() {
+export default async function NotFound() {
+  if ((await cookies()).has(IDENTITY_COOKIE)) {
+    return (
+      <AppGate signedIn>
+        <div className="flex min-h-[60dvh] flex-col items-center justify-center px-8 text-center">
+          <NothingHere />
+        </div>
+      </AppGate>
+    );
+  }
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
-      <FlowDoodle />
+      <NothingHere />
+    </main>
+  );
+}
 
-      <h1 className="mt-6 text-heading font-semibold tracking-[-0.03em] text-text">
-        Nothing here
-      </h1>
-      <p className="mt-2 text-body-lg leading-relaxed text-muted">
+function NothingHere() {
+  return (
+    <>
+      {/* Drawn as the other "couldn't load" screens are (LoadFailed). */}
+      <FlowDoodle className="mb-5" />
+
+      <h1 className="text-title font-semibold text-text">Nothing here</h1>
+      <p className="mt-1.5 max-w-[34ch] text-body-lg leading-relaxed text-muted">
         This link may be old, or what it pointed to was deleted. Your groups
         and expenses are fine.
       </p>
 
       <Link
         href="/"
-        className="mt-7 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-6 text-subhead font-semibold text-inverse transition active:opacity-70"
+        className="mt-5 flex h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-4 text-subhead font-semibold text-inverse transition active:opacity-70"
       >
         Back to Divvy
       </Link>
-    </main>
+    </>
   );
 }
