@@ -269,8 +269,8 @@ export function GroupLedger({
         ) : (
           <EmptyState
             icon={<Receipt className="size-6" />}
-            title="No expenses yet"
-            description="Add the first one and everyone's balance updates right away."
+            title="Add the first expense"
+            description="Everyone's balance updates as soon as it's in."
             action={
               <Button variant="primary" onClick={onAdd}>
                 Add an expense

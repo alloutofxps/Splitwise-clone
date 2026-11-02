@@ -164,8 +164,11 @@ console.log("\nSettling up");
     check("tapping it opens the sheet on that exact amount", prefilled === "30.00", prefilled);
 
     // …and the counterparty is never locked while the group holds anyone else.
-    const change = page.getByRole("button", { name: /^(Someone else|Change)$/ });
+    const change = page.getByRole("button", { name: "Choose someone else", exact: true });
     check("the counterparty can still be changed", (await change.count()) > 0);
+    // It read as a caption under the drawing: grey text with no edge.
+    const looks = await change.evaluate((el) => { const s = getComputedStyle(el); return { edge: s.borderTopStyle !== "none" && parseFloat(s.borderTopWidth) > 0, colour: s.color, muted: getComputedStyle(document.documentElement).getPropertyValue("--text-muted") }; }).catch(() => null);
+    check("and looks like a button, with an edge", Boolean(looks?.edge), JSON.stringify(looks));
 
     if ((await change.count()) > 0) {
       await change.click();
@@ -942,7 +945,13 @@ console.log("\nThings that only show up on a phone");
   await p2.getByRole("button", { name: "🦖" }).first().click();
   await p2.waitForTimeout(600);
 
-  await p2.getByPlaceholder("Priya").fill("Reload Tester");
+  // An example name in the box ("Priya") read as already filled in, beside a
+  // Continue that wouldn't press and didn't say why.
+  const nameBox = p2.getByLabel("Your name");
+  check("the name box holds a hint, not a name", (await nameBox.getAttribute("placeholder")) === "Your first name");
+  check("an empty name says what Continue is waiting for", (await p2.getByText("Type your name to continue").count()) === 1);
+  await nameBox.fill("Reload Tester");
+  check("and stops saying it once there is one", (await p2.getByText("Type your name to continue").count()) === 0);
   await p2.getByRole("button", { name: /Continue|Next|Done/i }).first().click();
   // Sign-up now asks how to protect the account; take the recovery key.
   await p2.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
@@ -1338,6 +1347,24 @@ console.log("\nAdding an expense with a keyboard");
   await phone.close();
 }
 
+// Deleting an account with money still owed said "You still owe money, or
+// someone owes you": it knew who, and said neither.
+console.log("\nDeleting an account with money still owed");
+{
+  await page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await page.waitForTimeout(1500);
+  const dialog = page.getByRole("dialog", { name: "Delete your account?" });
+  check("it says to settle up first", (await dialog.getByText("Settle up first").count()) === 1);
+  const audit = dialog.getByRole("link", { name: /Audit/ });
+  check("naming the group, and the amount", (await audit.count()) === 1 && /€|\$|owe/.test(await audit.innerText()), await audit.innerText().catch(() => "no row"));
+  await audit.click();
+  await page.waitForTimeout(1500);
+  check("which opens that group's Settle up", page.url().includes(`/groups/${seeded.groupId}`) && (await page.getByRole("dialog", { name: "Settle up" }).count()) === 1, page.url());
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
+}
+
 // A group's tabs: one Tab stop, moved through with the arrow keys.
 console.log("\nTabs by keyboard");
 {
@@ -1515,6 +1542,34 @@ console.log("\nClosing an expense that's been typed into");
   check("and the expense stays as it was", (await page.getByText("Dinner, changed").count()) === 0);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(500);
+}
+
+// A brand new group said "Everyone is settled up" before anything had been
+// spent in it.
+console.log("\nA new group's headline");
+{
+  const fresh = await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const group = (await post("/api/groups", { name: "Fresh", currency: "EUR", placeholderNames: ["Kit"] })).group;
+    return group.id;
+  });
+  await page.goto(`${BASE}/groups/${fresh}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  check("before anything is spent: Nothing spent yet", (await page.getByText("Nothing spent yet", { exact: true }).count()) === 1);
+  check("not settled up", (await page.getByText("Everyone is settled up").count()) === 0);
+  check("and the list asks for the first expense", (await page.getByText("Add the first expense").count()) === 1);
+  await page.evaluate(async (groupId) => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const detail = await (await fetch(`/api/groups/${groupId}`)).json();
+    const me = (await (await fetch("/api/identity")).json()).me.id;
+    const kit = detail.group.members.find((m) => m.displayName === "Kit").id;
+    await post("/api/expenses", { groupId, description: "Bread", amount: "400", currency: "EUR", splitMode: "EQUAL",
+      payers: [{ personId: me, amount: "400" }], splits: [{ personId: me, amount: "200" }, { personId: kit, amount: "200" }] });
+    await post("/api/settlements", { groupId, fromPersonId: kit, toPersonId: me, amount: "200", currency: "EUR" });
+  }, fresh);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  check("spent and paid back: Everyone is settled up", (await page.getByText("Everyone is settled up").count()) === 1);
 }
 
 // With twelve people the balances drawing put names and amounts on top of

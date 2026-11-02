@@ -54,7 +54,7 @@ async function onboard() {
   const start = page.getByRole("button", { name: /get started|create/i }).first();
   if (await start.count()) {
     await start.click();
-    await page.locator('input[placeholder="Priya"]').fill("Tester");
+    await page.getByLabel("Your name").fill("Tester");
     await page.getByRole("button", { name: "Continue" }).click();
     // Sign-up now asks how to protect the account; take the recovery key.
     await page.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });
@@ -206,7 +206,7 @@ console.log("\nA share that lands on a device with no identity");
   // Now onboard — all of it, including saving the recovery key, which is what
   // actually hands the screen over to the app — and it should be collected.
   await freshPage.getByRole("button", { name: /get started|create/i }).first().click();
-  await freshPage.locator('input[placeholder="Priya"]').fill("Newcomer");
+  await freshPage.getByLabel("Your name").fill("Newcomer");
   await freshPage.getByRole("button", { name: "Continue" }).click();
   // Sign-up now asks how to protect the account; take the recovery key.
   await freshPage.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });

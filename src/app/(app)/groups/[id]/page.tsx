@@ -239,7 +239,12 @@ export default function GroupPage() {
         {/* The balance shrinks to fit this row (Amount's `fit`); Settle up
             moves under it when both don't fit. */}
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3 [container-type:inline-size]">
-          <Standing net={net} currency={group.currency} everyone={group.balances.pairwise.length === 0} />
+          <Standing
+            net={net}
+            currency={group.currency}
+            everyone={group.balances.pairwise.length === 0}
+            fresh={BigInt(group.totalSpend) === 0n}
+          />
           {/* Adding an expense is the tab bar's job (it opens in this group);
               a second Add button here only made people wonder which to use. */}
           {canSettle ? (
@@ -365,9 +370,10 @@ export default function GroupPage() {
 /**
  * Where you stand in the group. Rolls to each new figure once the panel that
  * changed it has gone, and only says "settled up" when the roll reaches zero,
- * so paying off the last of it is something you watch happen.
+ * so paying off the last of it is something you watch happen. Before anything
+ * has been spent there is nothing to be settled, so it says that instead.
  */
-function Standing({ net, currency, everyone }: { net: bigint; currency: string; everyone: boolean }) {
+function Standing({ net, currency, everyone, fresh }: { net: bigint; currency: string; everyone: boolean; fresh: boolean }) {
   const [rest, setRest] = React.useState(net);
   // Colour, arrow and wording follow `rest`, the figure the roll is at rest
   // on, so they change once, when it lands, not halfway through it.
@@ -382,7 +388,7 @@ function Standing({ net, currency, everyone }: { net: bigint; currency: string; 
           transition={{ duration: DURATION.fade }}
           className="text-display font-semibold tracking-[-0.03em] text-text"
         >
-          {everyone ? "Everyone is settled up" : "You’re settled up"}
+          {fresh ? "Nothing spent yet" : everyone ? "Everyone is settled up" : "You’re settled up"}
         </motion.p>
       ) : (
         <motion.p
