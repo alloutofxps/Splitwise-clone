@@ -143,6 +143,19 @@ const pictures = (data) => [
   ["nothing-here", "/this-is-not-a-page", true],
 ];
 
+/** Panels are pictured as the screen shows them: the panel is the point. */
+const PANELS = new Set(["composer", "settle-up"]);
+
+/** Fonts in, and every fade finished. */
+async function settle(page) {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
+  // A panel's shading caught mid-fade differs by a shade or two from run to
+  // run. Anything that never stops (a spinner) just ends the wait.
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(500);
+}
+
 async function take(browser, data, [name, path, signedIn, setup, sizes = [PHONE]], scheme) {
   const taken = [];
   for (const size of sizes) {
@@ -151,18 +164,23 @@ async function take(browser, data, [name, path, signedIn, setup, sizes = [PHONE]
     try {
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
       if (setup) await setup(page);
-      await page.waitForLoadState("networkidle");
-      await page.evaluate(() => document.fonts.ready);
-      // Until every fade has finished: a panel's shading caught mid-fade
-      // differs by a shade or two from run to run. Anything that never
-      // stops (a spinner) just ends the wait.
-      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
-      await page.waitForTimeout(500);
+      await settle(page);
+      // The whole page: the window made as tall as the page, then pictured
+      // as it is. Asking the browser for a whole-page picture instead has it
+      // stretch the window while it takes it, and the tab bar, seeing the
+      // window change, can lift halfway through.
+      if (!PANELS.has(name)) {
+        const tall = await page.evaluate(() => document.documentElement.scrollHeight);
+        if (tall > size.height) {
+          await page.setViewportSize({ width: size.width, height: tall });
+          await settle(page);
+        }
+      }
       const lifted = await page.evaluate(() => ({ scrollY, bars: document.querySelectorAll(".sticky.shadow-raised").length }));
       if (lifted.bars) console.log(`  ! ${file}: a bar is lifted with the page scrolled ${lifted.scrollY}`);
       // Covered: what is new for every account or machine, not part of the looks.
       const mask = [page.getByText(/^me-[a-z0-9-]+/), page.getByText(/Using [\d.,]+ [KMG]?B/)];
-      writeFileSync(join(OUT, "new", file), await page.screenshot({ fullPage: true, animations: "disabled", caret: "hide", mask }));
+      writeFileSync(join(OUT, "new", file), await page.screenshot({ animations: "disabled", caret: "hide", mask }));
       taken.push(file);
     } catch (error) {
       console.log(`  ✗ ${file}: could not take it (${String(error).split("\n")[0]})`);
