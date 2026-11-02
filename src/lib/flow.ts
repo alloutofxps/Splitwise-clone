@@ -22,25 +22,59 @@ export interface Point {
 /**
  * People spaced evenly round a circle, the first at the top, going clockwise.
  * One person sits in the middle; two face each other across it.
+ *
+ * Given a `height` taller than `size` (wide), the circle stretches into an
+ * oval, and people are spaced evenly along its length rather than by angle:
+ * by angle, those near the top and bottom of a tall oval bunch together.
  */
-export function ringPositions(ids: string[], size: number, padding: number): Map<string, Point> {
-  const centre = size / 2;
-  const radius = Math.max(0, centre - padding);
+export function ringPositions(ids: string[], size: number, padding: number, height = size): Map<string, Point> {
+  const cx = size / 2;
+  const cy = height / 2;
+  const rx = Math.max(0, cx - padding);
+  const ry = Math.max(0, cy - padding);
   const result = new Map<string, Point>();
   if (ids.length === 1) {
-    result.set(ids[0], { x: centre, y: centre });
+    result.set(ids[0], { x: cx, y: cy });
     return result;
   }
-  ids.forEach((id, index) => {
-    // Two people side by side read better than one above the other.
-    const start = ids.length === 2 ? Math.PI : -Math.PI / 2;
-    const angle = start + (index / ids.length) * Math.PI * 2;
-    result.set(id, {
-      x: round(centre + radius * Math.cos(angle)),
-      y: round(centre + radius * Math.sin(angle)),
+  // Two people side by side read better than one above the other.
+  const start = ids.length === 2 ? Math.PI : -Math.PI / 2;
+  const at = (angle: number) => ({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) });
+  if (rx === ry) {
+    ids.forEach((id, index) => {
+      const point = at(start + (index / ids.length) * Math.PI * 2);
+      result.set(id, { x: round(point.x), y: round(point.y) });
     });
+    return result;
+  }
+  // The oval's length, measured in small steps, then a person every
+  // 1/n of it.
+  const STEPS = 720;
+  const lengths = [0];
+  let previous = at(start);
+  for (let step = 1; step <= STEPS; step++) {
+    const point = at(start + (step / STEPS) * Math.PI * 2);
+    lengths.push(lengths[step - 1] + Math.hypot(point.x - previous.x, point.y - previous.y));
+    previous = point;
+  }
+  let step = 0;
+  ids.forEach((id, index) => {
+    const target = (index / ids.length) * lengths[STEPS];
+    while (lengths[step + 1] < target) step++;
+    const part = (target - lengths[step]) / (lengths[step + 1] - lengths[step] || 1);
+    const point = at(start + ((step + part) / STEPS) * Math.PI * 2);
+    result.set(id, { x: round(point.x), y: round(point.y) });
   });
   return result;
+}
+
+/**
+ * How tall the flow map is for `count` people, `size` wide. Up to eight fit
+ * round a circle; past that it grows taller, since on a phone it can't grow
+ * wider, so neighbours and their names keep their room.
+ */
+export function mapHeight(count: number, size: number): number {
+  return count <= 8 ? size : size + Math.min(count - 8, 16) * 26;
 }
 
 /**
@@ -115,8 +149,9 @@ const LABEL_STOPS = [0.5, ...[0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.3
 
 /** What a label must keep clear of, besides the other labels. */
 export interface LabelSurroundings {
-  /** The drawing's width and height: a label stays inside it. */
+  /** The drawing's width (and height, unless given): a label stays inside it. */
   size?: number;
+  height?: number;
   /** People's dots, which a label must not cover. */
   dots?: Point[];
   dotRadius?: number;
@@ -132,7 +167,9 @@ export interface LabelSurroundings {
  * takes the one that costs least: on top of another label, a person's dot
  * or a name costs most, then running out of the drawing, then lying over somebody
  * else's line (it would hide that line), and last, distance from the middle.
- * When every spot on its line is taken, it may sit just beside the line.
+ * When every spot on its line is taken, it may sit just beside the line, or
+ * failing that a label further aside (a short line between neighbours has
+ * no room on it at all).
  * Either label of a pair may be the one that moves: a short line often has
  * nowhere to go, while the line crossing it does. With many people the best
  * spot can still touch something; it is then the least bad one, and kept
@@ -146,6 +183,7 @@ export function placeLabels(
   gap = 4,
 ): Point[] {
   const { size, dots = [], dotRadius = 18, blocks = [] } = surroundings;
+  const tall = surroundings.height ?? size;
   const spots = lines.map(({ from, to }) => pointOnEdge(from, to, inset, 0.5));
   // Points along every line, to tell whether a label would lie over one.
   const traces = lines.map(({ from, to }) =>
@@ -180,7 +218,7 @@ export function placeLabels(
     }
     if (size !== undefined) {
       const spill =
-        Math.max(0, half - at.x) + Math.max(0, at.x + half - size) + Math.max(0, height / 2 - at.y) + Math.max(0, at.y + height / 2 - size);
+        Math.max(0, half - at.x) + Math.max(0, at.x + half - size) + Math.max(0, height / 2 - at.y) + Math.max(0, at.y + height / 2 - (tall ?? 0));
       total += spill * 10;
     }
     return total;
@@ -199,9 +237,9 @@ export function placeLabels(
       const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
       for (const t of LABEL_STOPS) {
         const onLine = pointOnEdge(from, to, inset, t);
-        for (const side of [0, 1, -1]) {
+        for (const side of [0, 1, -1, 2, -2]) {
           const candidate = { x: onLine.x + normal.x * side * (height / 2 + 6), y: onLine.y + normal.y * side * (height / 2 + 6) };
-          const price = cost(index, candidate, t) + (side === 0 ? 0 : 60);
+          const price = cost(index, candidate, t) + (side === 0 ? 0 : Math.abs(side) === 1 ? 60 : 120);
           if (price < best[index] - 0.01) {
             spots[index] = candidate;
             along[index] = t;
@@ -221,9 +259,72 @@ export function placeLabels(
     const half = lines[index].width / 2;
     return {
       x: Math.min(Math.max(x, half + 1), size - half - 1),
-      y: Math.min(Math.max(y, height / 2 + 1), size - height / 2 - 1),
+      y: Math.min(Math.max(y, height / 2 + 1), (tall ?? size) - height / 2 - 1),
     };
   });
+}
+
+/**
+ * Which placed labels to draw: those clear of every other drawn label, every
+ * person's dot and every name.
+ *
+ * With many lines there may be no clear spot for every amount. A few that
+ * can't be placed are left out, worst first, one at a time (dropping one may
+ * clear its neighbour). If more than `budget` of them would go, none are
+ * drawn: a drawing with most of its amounts missing reads as broken, and the
+ * list under the map has every one either way.
+ */
+export function labelsToShow(
+  lines: { width: number }[],
+  spots: Point[],
+  surroundings: LabelSurroundings = {},
+  budget = 0.25,
+  height = 20,
+): boolean[] {
+  const shown = spots.map(() => true);
+  const clashes = (index: number) => clashesOf(lines, spots, shown, index, surroundings, height);
+  // At most one label goes per round, so this ends; with no lines at all
+  // (nobody owes anybody) there is nothing to drop.
+  for (let round = 0; round < spots.length; round++) {
+    const counts = spots.map((_, index) => (shown[index] ? clashes(index) : 0));
+    const worst = counts.reduce((best, count, index) => (count > counts[best] ? index : best), 0);
+    if (!(counts[worst] > 0)) break;
+    shown[worst] = false;
+  }
+  const dropped = shown.filter((show) => !show).length;
+  return dropped > lines.length * budget ? shown.map(() => false) : shown;
+}
+
+/** What one shown label sits on: other shown labels, dots and names. */
+function clashesOf(
+  lines: { width: number }[],
+  spots: Point[],
+  shown: boolean[],
+  index: number,
+  surroundings: LabelSurroundings,
+  height: number,
+): number {
+  const { dots = [], dotRadius = 18, blocks = [] } = surroundings;
+  const at = spots[index];
+  const half = lines[index].width / 2;
+  const onLabel = spots.filter(
+    (there, other) =>
+      other !== index &&
+      shown[other] &&
+      Math.abs(at.x - there.x) * 2 < lines[index].width + lines[other].width &&
+      Math.abs(at.y - there.y) < height,
+  ).length;
+  const onDot = dots.filter((dot) => {
+    const nearestX = Math.max(at.x - half, Math.min(dot.x, at.x + half));
+    const nearestY = Math.max(at.y - height / 2, Math.min(dot.y, at.y + height / 2));
+    return Math.hypot(dot.x - nearestX, dot.y - nearestY) < dotRadius;
+  }).length;
+  const onBlock = blocks.filter(
+    (block) =>
+      Math.abs(block.x - at.x) * 2 < block.width + lines[index].width &&
+      Math.abs(block.y - at.y) * 2 < block.height + height,
+  ).length;
+  return onLabel + onDot + onBlock;
 }
 
 /**

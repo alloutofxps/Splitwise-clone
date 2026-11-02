@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barSegments, edgePath, placeLabels, pointOnEdge, ringPositions, strokeFor } from "../flow";
+import { barSegments, edgePath, labelsToShow, mapHeight, placeLabels, pointOnEdge, ringPositions, strokeFor } from "../flow";
 
 describe("ringPositions", () => {
   it("puts one person in the middle", () => {
@@ -21,6 +21,55 @@ describe("ringPositions", () => {
       expect(point.y).toBeGreaterThanOrEqual(40);
       expect(point.y).toBeLessThanOrEqual(260);
     }
+  });
+
+  it("spaces twelve people evenly round a tall oval, nobody touching", () => {
+    const ids = Array.from({ length: 12 }, (_, index) => String(index));
+    const height = mapHeight(12, 320);
+    const at = [...ringPositions(ids, 320, 68, height).values()];
+    expect(at[0]).toEqual({ x: 160, y: 68 });
+    const gaps = at.map((point, index) => {
+      const next = at[(index + 1) % at.length];
+      return Math.hypot(next.x - point.x, next.y - point.y);
+    });
+    // Evenly along its length: neighbours all about the same distance apart,
+    // and well clear of two dots (36) touching.
+    expect(Math.min(...gaps)).toBeGreaterThan(50);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(6);
+    for (const point of at) {
+      expect(point.y).toBeGreaterThanOrEqual(68);
+      expect(point.y).toBeLessThanOrEqual(height - 68);
+    }
+  });
+});
+
+describe("mapHeight", () => {
+  it("stays square up to eight people, then grows taller", () => {
+    expect(mapHeight(8, 320)).toBe(320);
+    expect(mapHeight(12, 320)).toBeGreaterThan(320);
+    expect(mapHeight(40, 320)).toBe(mapHeight(24, 320));
+  });
+});
+
+describe("labelsToShow", () => {
+  const lines = [{ width: 60 }, { width: 60 }, { width: 60 }, { width: 60 }, { width: 60 }];
+  it("drops a label that sits on another, keeping the rest", () => {
+    const spots = [{ x: 50, y: 50 }, { x: 70, y: 52 }, { x: 200, y: 50 }, { x: 50, y: 200 }, { x: 200, y: 200 }];
+    expect(labelsToShow(lines, spots).filter(Boolean)).toHaveLength(4);
+  });
+
+  it("has nothing to do when nobody owes anybody", () => {
+    expect(labelsToShow([], [])).toEqual([]);
+  });
+
+  it("drops a label on a person", () => {
+    const spots = [{ x: 50, y: 50 }, { x: 300, y: 50 }, { x: 200, y: 50 }, { x: 50, y: 200 }, { x: 200, y: 200 }];
+    expect(labelsToShow(lines, spots, { dots: [{ x: 300, y: 60 }] })).toEqual([true, false, true, true, true]);
+  });
+
+  it("draws none when most can't be placed", () => {
+    const spots = lines.map((_, index) => ({ x: 50 + index * 10, y: 50 }));
+    expect(labelsToShow(lines, spots)).toEqual([false, false, false, false, false]);
   });
 });
 

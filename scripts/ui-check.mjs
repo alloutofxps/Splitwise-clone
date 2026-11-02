@@ -1415,6 +1415,62 @@ console.log("\nThe home-screen app, signed out");
   check("in a browser tab, Get started still leads", /^Get started/.test(tab.find((n) => /Get started|Sign in/.test(n)) ?? ""), tab.join(" / "));
 }
 
+// With twelve people the balances drawing put names and amounts on top of
+// each other. Nothing on it may sit on anything else or leave its card, with
+// Simplify on or off; an amount that can't be placed is left to the list
+// below, and the drawing says so.
+console.log("
+A balances drawing with twelve people");
+{
+  const big = await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const names = ["Ana", "Ben", "Chloé", "Dev", "Emeka", "Farah", "Gus", "Hana", "Ivo", "Jae", "Kofi"];
+    const group = (await post("/api/groups", { name: "Twelve", currency: "GBP", placeholderNames: names })).group;
+    const all = (await (await fetch(`/api/groups/${group.id}`)).json()).group.members.map((m) => m.id);
+    for (let i = 0; i < 12; i++) {
+      const amount = 1000 + i * 1371;
+      await post("/api/expenses", {
+        groupId: group.id, description: `Shared cost ${i + 1}`, amount: String(amount), currency: "GBP", splitMode: "EQUAL",
+        payers: [{ personId: all[i], amount: String(amount) }],
+        splits: all.map((p, j) => ({ personId: p, amount: String(Math.floor(amount / 12) + (j < amount % 12 ? 1 : 0)) })),
+      });
+    }
+    return group.id;
+  });
+  const clashes = () => page.evaluate(() => {
+    const figure = document.querySelector("figure:has(svg)");
+    const card = figure.closest("section").getBoundingClientRect();
+    const parts = (name) => [...figure.querySelectorAll(`svg [data-part="${name}"]`)].map((el) => el.getBoundingClientRect());
+    const people = parts("person").map((r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }));
+    const boxes = [...parts("name"), ...parts("amount")];
+    const meet = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const onCircle = (c, r) => Math.hypot(c.x - Math.max(r.left, Math.min(c.x, r.right)), c.y - Math.max(r.top, Math.min(c.y, r.bottom))) < c.r - 0.5;
+    let count = 0;
+    people.forEach((a, i) => people.slice(i + 1).forEach((b) => { if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r - 0.5) count += 1; }));
+    boxes.forEach((a, i) => {
+      boxes.slice(i + 1).forEach((b) => { if (meet(a, b)) count += 1; });
+      people.forEach((p) => { if (onCircle(p, a)) count += 1; });
+      if (a.left < card.left || a.right > card.right || a.top < card.top || a.bottom > card.bottom) count += 1;
+    });
+    return { count, people: people.length, amounts: parts("amount").length, note: /in the list below/.test(figure.textContent) };
+  });
+  await page.goto(`${BASE}/groups/${big}`, { waitUntil: "networkidle" });
+  await page.getByRole("tab", { name: "Balances" }).click();
+  await page.waitForTimeout(1500);
+  for (const turn of [false, true]) {
+    if (turn) {
+      await page.getByRole("switch").first().click();
+      await page.waitForTimeout(1500);
+    }
+    const on = (await page.getByRole("switch").first().getAttribute("aria-checked")) === "true";
+    const seen = await clashes();
+    const label = `with Simplify ${on ? "on" : "off"}`;
+    check(`all twelve people are drawn ${label}`, seen.people === 12, `${seen.people} drawn`);
+    check(`nothing on it overlaps ${label}`, seen.count === 0, `${seen.count} overlaps`);
+    check(`it shows amounts, or says they're in the list ${label}`, seen.amounts > 0 || seen.note, `${seen.amounts} amounts`);
+  }
+}
+
 // A screen whose data doesn't arrive says so inside the app, with the tab
 // bar still there and a way to try again: never a blank page or an outline
 // that loads forever. Its own context, so the failed requests it causes on
