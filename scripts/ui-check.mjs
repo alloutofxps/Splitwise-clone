@@ -63,18 +63,18 @@ console.log("\nUndoing a payment from the ledger");
 await page.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
 await page.waitForTimeout(2500);
 
-const row = page.getByRole("button", { name: /paid.*Remove this payment/i });
+const row = page.getByRole("button", { name: /paid.*Delete this payment/i });
 check("the payment row is an actual control", await row.count() > 0);
 
 if (await row.count() > 0) {
   await row.first().click();
   await page.waitForTimeout(700);
-  const sheet = page.getByText("Remove this payment?");
+  const sheet = page.getByText("Delete this payment?");
   check("tapping it asks for confirmation", await sheet.count() > 0);
   const body = await page.locator("body").innerText();
   check("the prompt names the amount", /50\.00|\$50/.test(body), body.slice(0, 160).replace(/\n/g, " | "));
 
-  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.waitForTimeout(3000);
 
   const net = await page.evaluate(async (g) => {
@@ -83,7 +83,7 @@ if (await row.count() > 0) {
   }, seeded.groupId);
   check("the payment is really gone server-side", net[seeded.meId] === "2500", JSON.stringify(net));
 
-  const gone = await page.getByRole("button", { name: /paid.*Remove this payment/i }).count();
+  const gone = await page.getByRole("button", { name: /paid.*Delete this payment/i }).count();
   check("and the row disappears from the ledger", gone === 0, `${gone} rows left`);
 }
 

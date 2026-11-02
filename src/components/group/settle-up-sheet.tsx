@@ -212,7 +212,7 @@ export function SettleUpSheet({
                 removeSettlement.mutate(
                   { id: saved.id, groupId: group?.id ?? null },
                   {
-                    onSuccess: () => toast({ tone: "success", title: "Payment removed" }),
+                    onSuccess: () => toast({ tone: "success", title: "Payment deleted" }),
                     onError: () => toast({ tone: "error", title: "Couldn\u2019t undo that" }),
                   },
                 ),

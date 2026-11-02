@@ -188,7 +188,7 @@ export function messageFor(activity: PendingActivity, recipientId: string): Push
       return { title, url, tag, body: `${who} saved a payment of ${amount} from you.` };
     }
     case "settlement.deleted":
-      return { title, url, tag, body: `${who} removed a payment.` };
+      return { title, url, tag, body: `${who} deleted a payment.` };
     case "nudge.sent": {
       const amount = money(data.amount, data.currency);
       return { title, url, tag, body: `${who} reminded you that you owe ${amount ?? "them money"}.` };
