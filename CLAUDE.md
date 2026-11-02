@@ -145,6 +145,15 @@ detail.
   `node scripts/network-check.mjs <url> <out-dir>`. With Reduce Motion on,
   nothing may change position or size over time; fades, colours and
   instant changes may.
+- Picture comparison (RULES L4; in CI): `node scripts/screen-pictures.mjs <url> <out-dir>`
+  takes 32 pictures (main screens, panels and states, Day and Night, phone
+  and computer) on fixed data with a held clock, and compares them with
+  `tests/screens/`. The approved pictures come from Linux in CI; Windows
+  pictures never match them. When the looks change on purpose, the check
+  fails: download the run's `screen-pictures` artifact
+  (`gh run download <run-id> -n screen-pictures`), look at `diff/` (approved,
+  new, changes in red), then copy `new/` into `tests/screens/` and commit.
+  A new screen added to the list needs its pictures approved the same way.
 - Browser suites: `node scripts/ui-check.mjs <url>`,
   `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
   Many sign-ups from localhost hit a rate limit (429); restarting the server
