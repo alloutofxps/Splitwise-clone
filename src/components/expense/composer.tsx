@@ -335,7 +335,7 @@ export function ExpenseComposer({
                     remove.mutate(
                       { id: payload.id, groupId: payload.groupId },
                       {
-                        onSuccess: () => toast({ tone: "success", title: `Removed ${payload.description}` }),
+                        onSuccess: () => toast({ tone: "success", title: `${payload.description} deleted` }),
                         onError: () => toast({ tone: "error", title: "Couldn\u2019t undo that" }),
                       },
                     ),

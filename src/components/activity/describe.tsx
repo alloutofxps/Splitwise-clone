@@ -167,7 +167,7 @@ export function describeActivity(
       return {
         icon: <ArrowLeftRight className="size-[16px]" />,
         tone: "negative",
-        sentence: <>{strong(actorName)} removed a payment{amount ? <> of <span className="tabular">{amount}</span></> : null}</>,
+        sentence: <>{strong(actorName)} deleted a payment{amount ? <> of <span className="tabular">{amount}</span></> : null}</>,
       };
 
     case "comment.created":

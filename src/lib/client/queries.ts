@@ -826,7 +826,7 @@ export function useDeleteSettlement() {
             path: `/api/settlements/${id}`,
             method: "DELETE",
             body: undefined,
-            label: "Removed payment",
+            label: "Deleted payment",
           });
           return;
         }

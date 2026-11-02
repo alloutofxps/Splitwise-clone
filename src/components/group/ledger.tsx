@@ -387,7 +387,7 @@ export function ExpenseRow(props: ExpenseRowProps) {
         onSuccess: () =>
           toast({
             tone: "success",
-            title: `Deleted ${expense.description}`,
+            title: `${expense.description} deleted`,
             action: {
               label: "Undo",
               onClick: () => restore.mutate({ id: expense.id, groupId: expense.groupId }),
@@ -586,7 +586,7 @@ export function SettlementRow({
       {
         onSuccess: () => {
           setConfirming(false);
-          toast({ tone: "success", title: "Payment removed" });
+          toast({ tone: "success", title: "Payment deleted" });
         },
         onError: (error) => {
           setConfirming(false);
@@ -619,7 +619,7 @@ export function SettlementRow({
           `${fromShown} paid ${toShown}`,
           [settlement.method, settlement.note].filter(Boolean).join(" · ") || null,
           formatMoney(BigInt(settlement.amount), settlement.currency),
-        ].filter(Boolean).join(", ")}. Remove this payment.`}
+        ].filter(Boolean).join(", ")}. Delete this payment.`}
         className={cn(
           "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
           pending ? "opacity-60" : "hover:bg-surface-2 active:bg-surface-2",
@@ -659,9 +659,9 @@ export function SettlementRow({
         onClose={() => setConfirming(false)}
         onConfirm={undo}
         loading={remove.isPending}
-        title="Remove this payment?"
-        description={`${fromLabel} paid ${toLabel} ${formatMoney(BigInt(settlement.amount), settlement.currency)}. If you remove it, that amount will be owed again.`}
-        confirmLabel="Remove"
+        title="Delete this payment?"
+        description={`${fromLabel} paid ${toLabel} ${formatMoney(BigInt(settlement.amount), settlement.currency)}. If you delete it, that amount will be owed again.`}
+        confirmLabel="Delete"
       />
     </>
   );

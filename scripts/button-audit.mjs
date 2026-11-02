@@ -28,7 +28,7 @@ const BASE = process.argv[2] ?? "http://localhost:3000";
 const SETTLE_MS = 1100;
 
 /** Labels never pressed inside a sheet: these would actually destroy or leave. */
-const NEVER_CONFIRM = /^(Delete|Remove|Sign out|Leave|Delete my account|Sign out and discard|Delete group|Remove this payment|Revoke|Rotate|Turn off|Disable)/i;
+const NEVER_CONFIRM = /^(Delete|Remove|Sign out|Leave|Delete my account|Sign out and discard|Delete group|Delete this payment|Revoke|Rotate|Turn off|Disable)/i;
 
 const browser = await chromium.launch(
   process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
