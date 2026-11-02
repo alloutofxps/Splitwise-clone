@@ -46,6 +46,7 @@ export function AmountPad({
   open: openProp,
   onOpenChange,
   leading,
+  inputId,
 }: {
   /** Minor units. */
   value: bigint | null;
@@ -62,6 +63,8 @@ export function AmountPad({
   onOpenChange?: (open: boolean) => void;
   /** Shown to the left of the figure, such as the currency chip. */
   leading?: React.ReactNode;
+  /** For moving the cursor here from another field. */
+  inputId?: string;
 }) {
   const decimals = decimalsFor(currency);
   const symbol = currencySymbol(currency);
@@ -114,6 +117,7 @@ export function AmountPad({
           autoCorrect="off"
           spellCheck={false}
           ref={inputRef}
+          id={inputId}
           value={shown}
           placeholder="0"
           onChange={onGroupedChange}

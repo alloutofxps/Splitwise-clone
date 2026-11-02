@@ -1316,6 +1316,37 @@ console.log("\nPanels by keyboard");
   await p6.keyboard.press("Escape");
 }
 
+// On a computer, "Add an expense" opened with nothing ready for typing:
+// typing went nowhere, Tab reached Close, and Enter then shut the panel.
+console.log("\nAdding an expense with a keyboard");
+{
+  const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, storageState: await ctx.storageState() });
+  const d = await desk.newPage();
+  await d.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await d.waitForTimeout(1000);
+  await d.getByRole("button", { name: /Add (an )?expense/ }).first().click();
+  await d.waitForTimeout(1000);
+  const where = () => d.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  check("on a computer it starts in What was it for?", (await where()) === "What was it for?", String(await where()));
+  await d.keyboard.type("Keyboard lunch");
+  await d.keyboard.press("Enter");
+  check("Enter goes on to the amount", (await where()) === "Amount", String(await where()));
+  await d.keyboard.type("18.40");
+  await d.keyboard.press("Enter");
+  check("and Enter there saves it", await d.getByText("Added Keyboard lunch").first().waitFor({ timeout: 5000 }).then(() => true, () => false));
+  await desk.close();
+
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await ctx.storageState() });
+  const p = await phone.newPage();
+  await p.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await p.waitForTimeout(1000);
+  await p.getByRole("button", { name: /Add an expense/ }).last().click();
+  await p.waitForTimeout(1000);
+  check("on a phone no field takes the cursor, so no keyboard pops up", !["What was it for?", "Amount"].includes(await p.evaluate(() => document.activeElement?.getAttribute("aria-label"))));
+  check("and the number pad shows", (await p.getByRole("button", { name: "Decimal point" }).count()) === 1);
+  await phone.close();
+}
+
 // Deleting an account with money still owed said "You still owe money, or
 // someone owes you": it knew who, and said neither.
 console.log("\nDeleting an account with money still owed");
