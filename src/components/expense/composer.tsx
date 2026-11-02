@@ -102,6 +102,7 @@ export function ExpenseComposer({
   const update = useUpdateExpense(expense?.id ?? "", expense?.groupId);
   const remove = useDeleteExpense();
   const descriptionId = React.useId();
+  const amountId = React.useId();
 
   const [panel, setPanel] = React.useState<
     null | "split" | "payer" | "category" | "currency" | "notes" | "receipt"
@@ -126,6 +127,17 @@ export function ExpenseComposer({
   // A very large amount is asked about once before saving: a slipped finger
   // or a pasted number, not usually a real bill.
   const [askHuge, setAskHuge] = React.useState(false);
+  // On a computer the panel starts in "What was it for?", ready for typing;
+  // a phone keeps its number pad and no keyboard until a field is tapped.
+  const [openings, setOpenings] = React.useState(0);
+  React.useEffect(() => {
+    if (openings === 0 || !onComputer()) return;
+    // A frame after the panel has taken focus itself, as it does when it opens.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => document.getElementById(descriptionId)?.focus({ preventScroll: true }));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [openings, descriptionId]);
 
   // Rebuild the draft when the sheet opens, so a cancelled entry never leaks
   // into the next one.
@@ -146,6 +158,7 @@ export function ExpenseComposer({
   useResetOnOpen(open && Boolean(me && data), () => {
     if (!me || !data) return;
     changed.current = false;
+    setOpenings((count) => count + 1);
     setAskToDiscard(false);
     setFoundItems(null);
     setKeypad(!expense);
@@ -477,6 +490,13 @@ export function ExpenseComposer({
                 });
               }}
               onFocus={() => setKeypad(false)}
+              // On a computer, Enter goes on to the amount, where Enter saves:
+              // "Lunch", Enter, "18.40", Enter.
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" || !onComputer() || event.nativeEvent.isComposing) return;
+                event.preventDefault();
+                document.getElementById(amountId)?.focus();
+              }}
               placeholder="What was it for?"
               enterKeyHint="done"
               className="min-w-0 flex-1 bg-transparent text-input font-medium text-text outline-none placeholder:text-subtle"
@@ -486,6 +506,7 @@ export function ExpenseComposer({
           {/* Amount --------------------------------------------------------- */}
           <div className="mt-4">
             <AmountPad
+              inputId={amountId}
               value={draft.amount}
               onChange={(value) => patch({ amount: value })}
               currency={draft.currency}
@@ -799,6 +820,11 @@ const SMALL_UNITS = new Set([
 function hugeAmount(amount: bigint, currency: string): boolean {
   const whole = amount / minorUnitScale(currency);
   return whole >= (SMALL_UNITS.has(currency) ? 1_000_000_000n : 1_000_000n);
+}
+
+/** A mouse or trackpad and a keyboard, rather than a touch screen. */
+function onComputer(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
 // ---------------------------------------------------------------------------

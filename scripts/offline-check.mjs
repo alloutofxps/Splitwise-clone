@@ -112,6 +112,9 @@ console.log("\n1. Several changes offline");
   // Add.
   await page.getByRole("button", { name: "Add an expense" }).first().click();
   await page.waitForTimeout(900);
+  // On a computer the panel starts in the description; the pad shows once
+  // the amount is chosen.
+  await page.getByLabel("Amount").first().click();
   for (const digit of ["2", "0"]) {
     await page.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();
   }
@@ -216,6 +219,9 @@ console.log("\n3. A change refused when it finally arrives");
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Add an expense" }).first().click();
   await page.waitForTimeout(900);
+  // On a computer the panel starts in the description; the pad shows once
+  // the amount is chosen.
+  await page.getByLabel("Amount").first().click();
   for (const digit of ["9"]) {
     await page.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();
   }
@@ -247,6 +253,9 @@ console.log("\n4. A new version arrives while typing an expense");
   await page.evaluate(() => { window.__notReloaded = true; });
   await page.getByRole("button", { name: "Add an expense" }).first().click();
   await page.waitForTimeout(900);
+  // On a computer the panel starts in the description; the pad shows once
+  // the amount is chosen.
+  await page.getByLabel("Amount").first().click();
   for (const digit of ["1", "5"]) {
     await page.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();
   }

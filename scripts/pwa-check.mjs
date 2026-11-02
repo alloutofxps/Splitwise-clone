@@ -314,6 +314,9 @@ console.log("\nAn expense added offline");
   await off.waitForTimeout(500);
   await off.getByRole("button", { name: "Add an expense" }).first().click();
   await off.waitForTimeout(900);
+  // On a computer the panel starts in the description; the pad shows once
+  // the amount is chosen.
+  await off.getByLabel("Amount").first().click();
   for (const digit of ["4", "2"]) {
     await off.getByLabel("Amount keypad").getByRole("button", { name: digit, exact: true }).click();
   }

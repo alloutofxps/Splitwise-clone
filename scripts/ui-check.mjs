@@ -164,8 +164,11 @@ console.log("\nSettling up");
     check("tapping it opens the sheet on that exact amount", prefilled === "30.00", prefilled);
 
     // …and the counterparty is never locked while the group holds anyone else.
-    const change = page.getByRole("button", { name: /^(Someone else|Change)$/ });
+    const change = page.getByRole("button", { name: "Choose someone else", exact: true });
     check("the counterparty can still be changed", (await change.count()) > 0);
+    // It read as a caption under the drawing: grey text with no edge.
+    const looks = await change.evaluate((el) => { const s = getComputedStyle(el); return { edge: s.borderTopStyle !== "none" && parseFloat(s.borderTopWidth) > 0, colour: s.color, muted: getComputedStyle(document.documentElement).getPropertyValue("--text-muted") }; }).catch(() => null);
+    check("and looks like a button, with an edge", Boolean(looks?.edge), JSON.stringify(looks));
 
     if ((await change.count()) > 0) {
       await change.click();
@@ -1339,6 +1342,55 @@ console.log("\nA very large amount");
   await page.getByLabel("Amount").first().fill("50");
   await page.getByRole("button", { name: /^Add expense$/ }).last().click();
   check("an everyday amount saves without a question", await page.getByText("Added Typo test").first().waitFor({ timeout: 5000 }).then(() => true, () => false));
+}
+
+// On a computer, "Add an expense" opened with nothing ready for typing:
+// typing went nowhere, Tab reached Close, and Enter then shut the panel.
+console.log("\nAdding an expense with a keyboard");
+{
+  const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, storageState: await ctx.storageState() });
+  const d = await desk.newPage();
+  await d.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await d.waitForTimeout(1000);
+  await d.getByRole("button", { name: /Add (an )?expense/ }).first().click();
+  await d.waitForTimeout(1000);
+  const where = () => d.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  check("on a computer it starts in What was it for?", (await where()) === "What was it for?", String(await where()));
+  await d.keyboard.type("Keyboard lunch");
+  await d.keyboard.press("Enter");
+  check("Enter goes on to the amount", (await where()) === "Amount", String(await where()));
+  await d.keyboard.type("18.40");
+  await d.keyboard.press("Enter");
+  check("and Enter there saves it", await d.getByText("Added Keyboard lunch").first().waitFor({ timeout: 5000 }).then(() => true, () => false));
+  await desk.close();
+
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await ctx.storageState() });
+  const p = await phone.newPage();
+  await p.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await p.waitForTimeout(1000);
+  await p.getByRole("button", { name: /Add an expense/ }).last().click();
+  await p.waitForTimeout(1000);
+  check("on a phone no field takes the cursor, so no keyboard pops up", !["What was it for?", "Amount"].includes(await p.evaluate(() => document.activeElement?.getAttribute("aria-label"))));
+  check("and the number pad shows", (await p.getByRole("button", { name: "Decimal point" }).count()) === 1);
+  await phone.close();
+}
+
+// Deleting an account with money still owed said "You still owe money, or
+// someone owes you": it knew who, and said neither.
+console.log("\nDeleting an account with money still owed");
+{
+  await page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await page.waitForTimeout(1500);
+  const dialog = page.getByRole("dialog", { name: "Delete your account?" });
+  check("it says to settle up first", (await dialog.getByText("Settle up first").count()) === 1);
+  const audit = dialog.getByRole("link", { name: /Audit/ });
+  check("naming the group, and the amount", (await audit.count()) === 1 && /€|\$|owe/.test(await audit.innerText()), await audit.innerText().catch(() => "no row"));
+  await audit.click();
+  await page.waitForTimeout(1500);
+  check("which opens that group's Settle up", page.url().includes(`/groups/${seeded.groupId}`) && (await page.getByRole("dialog", { name: "Settle up" }).count()) === 1, page.url());
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
 }
 
 // A group's tabs: one Tab stop, moved through with the arrow keys.
