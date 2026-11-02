@@ -48,8 +48,35 @@ export function KeyboardPage({ className, children }: { className?: string; chil
   );
 }
 
-/** The page's main button: held at the bottom edge while the keyboard is up. */
-export function KeyboardPageFooter({ className, children }: { className?: string; children: React.ReactNode }) {
+/**
+ * The page's main button: held at the bottom edge while the keyboard is up.
+ *
+ * `pinned` holds it there with the keyboard down too, for a page that can run
+ * longer than the screen while the button is the reason for the page (an
+ * invite with a "which one are you?" list: Join was below the first screen,
+ * findings item 41). It then carries the page's bottom margin itself, clear
+ * of the home bar, and what scrolls under it fades out at its top edge.
+ */
+export function KeyboardPageFooter({
+  className,
+  pinned = false,
+  children,
+}: {
+  className?: string;
+  pinned?: boolean;
+  children: React.ReactNode;
+}) {
   const fitted = React.useContext(Fitted);
-  return <div className={cn(className, fitted && "sticky bottom-0 bg-bg pb-3")}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        className,
+        pinned &&
+          "sticky bottom-0 z-10 bg-bg pb-[max(1.5rem,env(safe-area-inset-bottom))] before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-linear-to-t before:from-bg before:to-transparent",
+        fitted && "sticky bottom-0 bg-bg pb-3",
+      )}
+    >
+      {children}
+    </div>
+  );
 }

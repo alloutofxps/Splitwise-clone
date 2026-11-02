@@ -57,6 +57,7 @@ export default function JoinPage() {
   const [claimId, setClaimId] = React.useState<string | null>(null);
   const [joining, setJoining] = React.useState(false);
   const [name, setName] = React.useState("");
+  const nameField = React.useRef<HTMLInputElement>(null);
 
   // Load the invite and the viewer's identity together: which of the two paths
   // this page takes depends on both.
@@ -90,6 +91,17 @@ export default function JoinPage() {
       cancelled = true;
     };
   }, [code]);
+
+  /*
+   * Ready to type a name on arrival, without scrolling to it: the page shows
+   * what you're joining first. Not when there are names to pick from, which
+   * come before typing one (picking one fills it in).
+   */
+  const pickFirst = preview?.kind === "group" && preview.group.unclaimedMembers.length > 0;
+  const typeFirst = Boolean(preview) && me === null && !pickFirst;
+  React.useEffect(() => {
+    if (typeFirst) nameField.current?.focus({ preventScroll: true });
+  }, [typeFirst]);
 
   const join = async (claim?: string | null) => {
     setJoining(true);
@@ -163,7 +175,7 @@ export default function JoinPage() {
   }
 
   return (
-    <KeyboardPage className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))]">
+    <KeyboardPage className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pt-[max(2.5rem,env(safe-area-inset-top))]">
       <Wordmark className="mb-8" />
 
       <div className="flex flex-1 flex-col">
@@ -287,8 +299,8 @@ export default function JoinPage() {
                   value={name}
                   onChange={(event) => setName(event.target.value.slice(0, 60))}
                   onKeyDown={(event) => void (event.key === "Enter" && createAndJoin())}
+                  ref={nameField}
                   placeholder="Priya"
-                  autoFocus
                   enterKeyHint="go"
                   className="h-12 min-w-0 flex-1 rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-input font-medium text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
                 />
@@ -302,7 +314,9 @@ export default function JoinPage() {
         ) : null}
       </div>
 
-      <KeyboardPageFooter className="pt-8">
+      {/* Pinned: the button is what this page is for, and a list of names to
+          claim can push it below the first screen. */}
+      <KeyboardPageFooter className="pt-5" pinned>
         <Button
           variant="primary"
           size="lg"
