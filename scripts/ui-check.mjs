@@ -1367,6 +1367,29 @@ console.log("\nWho makes up your balance");
   check("a row opens that friend", /\/friends\/[^/]+$/.test(page.url()), page.url());
 }
 
+// An invite is for joining: on the smallest iPhone, with a long list of names
+// to claim, the group still leads and Join is on the first screen.
+console.log("\nAn invite on a small phone");
+{
+  const code = await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(r => r.json());
+    const group = (await post("/api/groups", { name: "Long trip", currency: "USD", placeholderNames: ["Ana", "Ben", "Cleo", "Dev", "Eli", "Fay"] })).group;
+    return (await (await fetch(`/api/groups/${group.id}`)).json()).group.inviteCode;
+  });
+  const fresh = await browser.newContext({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+  const p = await fresh.newPage();
+  await p.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  const join = p.getByRole("button", { name: /^Join / });
+  await join.waitFor({ timeout: 10000 }).catch(() => {});
+  const box = await join.boundingBox();
+  check("Join is on the first screen", Boolean(box) && box.y >= 0 && box.y + box.height <= 667, JSON.stringify(box));
+  const heading = await p.getByRole("heading", { name: /Long trip/ }).boundingBox();
+  check("and the group it's for is too", Boolean(heading) && heading.y >= 0 && heading.y + heading.height <= 667, JSON.stringify(heading));
+  await p.getByRole("button", { name: /Fay/ }).click();
+  check("picking a name further down keeps Join in view", await join.evaluate((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }));
+  await fresh.close();
+}
+
 // Opened from the home screen with nobody signed in, the person almost
 // certainly already uses Divvy: signing back in comes first, not a new account.
 console.log("\nThe home-screen app, signed out");
