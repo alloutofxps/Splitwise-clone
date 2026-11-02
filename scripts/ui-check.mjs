@@ -1392,6 +1392,69 @@ console.log("\nThe home-screen app, signed out");
   check("in a browser tab, Get started still leads", /^Get started/.test(tab.find((n) => /Get started|Sign in/.test(n)) ?? ""), tab.join(" / "));
 }
 
+// A screen whose data doesn't arrive says so inside the app, with the tab
+// bar still there and a way to try again: never a blank page or an outline
+// that loads forever. Its own context, so the failed requests it causes on
+// purpose stay out of the console check above, carrying the sign-in but no
+// saved copy of Home, and with the service worker off so its answers can't
+// stand in for the failures.
+console.log("\nWhen a screen can't load");
+{
+  const failing = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", storageState: { cookies: (await ctx.storageState()).cookies, origins: [] } });
+  const p = await failing.newPage();
+  const fail500 = (r) => r.fulfill({ status: 500, contentType: "application/json", body: '{"error":"Something went wrong."}' });
+  // Retries take about six seconds before a failure shows.
+  const shown = (text) => p.getByText(text, { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  const tabBar = async () => (await p.getByRole("navigation", { name: "Main" }).count()) > 0;
+
+  await p.route(`**/api/groups/${seeded.groupId}`, fail500);
+  await p.goto(`${BASE}/groups/${seeded.groupId}`);
+  check("a group that fails to load says so", await shown("Couldn't load this"));
+  check("inside the app, with the tab bar", await tabBar());
+  await p.unroute(`**/api/groups/${seeded.groupId}`);
+  await p.getByRole("button", { name: "Try again" }).click();
+  check("and Try again loads it", await p.getByRole("heading", { name: "Audit" }).first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+
+  await p.goto(`${BASE}/friends/c${"0".repeat(24)}`);
+  check("a friend who isn't there is Nothing here", await shown("Nothing here"));
+  check("with the way back, not Try again", (await p.getByRole("link", { name: "Back to Divvy" }).count()) > 0 && (await p.getByRole("button", { name: "Try again" }).count()) === 0);
+  check("inside the app, with the tab bar", await tabBar());
+
+  await p.route("**/api/activity**", fail500);
+  await p.goto(`${BASE}/activity`);
+  check("an Activity feed that fails says so", await shown("Couldn't load this"));
+  check("rather than claiming nothing has happened", (await p.getByText("Nothing here yet").count()) === 0);
+  await p.unroute("**/api/activity**");
+
+  await p.goto(`${BASE}/this-is-not-a-page`);
+  check("an unknown address is Nothing here", await shown("Nothing here"));
+  check("inside the app, with the tab bar", await tabBar());
+
+  let asked = 0;
+  p.on("request", (r) => { if (r.url().endsWith("/api/dashboard")) asked += 1; });
+  await p.route("**/api/dashboard", fail500);
+  await p.goto(BASE);
+  check("Home that fails to load says so", await shown("Couldn't load this"));
+  check("inside the app, with the tab bar", await tabBar());
+  const settled = asked;
+  await p.waitForTimeout(8000);
+  check("and stops asking until told to", asked === settled && settled <= 3, `${settled} requests, then ${asked - settled} more`);
+  check("not blaming the connection when Divvy answered", (await p.getByText("Couldn't reach Divvy").count()) === 0);
+  await p.getByRole("button", { name: "Add an expense" }).first().click();
+  check("Add says why it can't open yet", await shown("Divvy needs to load first"));
+  await p.unroute("**/api/dashboard");
+  await p.getByRole("button", { name: "Try again" }).click();
+  check("and Try again opens Home", await p.locator("main h1").first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+
+  // A refresh that fails keeps the screen it already has.
+  await p.waitForTimeout(5500);
+  await p.route("**/api/dashboard", fail500);
+  await p.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  await p.waitForTimeout(9000);
+  check("a failed refresh leaves Home on screen", (await p.getByText("Couldn't load this").count()) === 0 && (await p.locator("main h1").count()) === 1);
+  await failing.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

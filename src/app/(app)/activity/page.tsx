@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/toast";
 import { useOpenScreen } from "@/components/ui/open-screen";
 
 import { ApiError } from "@/lib/client/api";
+import { LoadFailed } from "@/components/error-screen";
 import { groupByDay } from "@/lib/day-groups";
 import { Avatar } from "@/components/ui/avatar";
 import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
@@ -35,7 +36,8 @@ import type { ActivityDto, PersonDto } from "@/lib/types";
  * looking for what changed.
  */
 export default function ActivityPage() {
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useActivity();
+  const activity = useActivity();
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = activity;
   const { data: dashboard } = useDashboard();
   const markSeen = useMarkActivitySeen();
   const [openExpenseId, setOpenExpenseId] = React.useState<string | null>(null);
@@ -53,6 +55,9 @@ export default function ActivityPage() {
     [dashboard?.people],
   );
 
+  // A feed that failed, or was opened offline, says so instead of "nothing
+  // has happened yet".
+  if (!data && (!isLoading || activity.errorUpdateCount)) return <LoadFailed query={activity} />;
   if (isLoading || !dashboard) {
     return (
       <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">

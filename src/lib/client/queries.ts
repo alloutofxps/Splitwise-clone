@@ -79,6 +79,11 @@ export function useDashboard() {
     // window longer than a few seconds shows people the wrong number.
     staleTime: 5_000,
     retry: (count, error) => !(error instanceof ApiError && error.isUnauthorized) && count < 2,
+    // When it has failed with nothing to show, the app frame appears around
+    // the failure, and the frame reads this too. Fetching again because a
+    // reader appeared turned that into a loop: fetch, opening outline, frame,
+    // fetch. Try again, focus and reconnecting still fetch.
+    retryOnMount: false,
   });
 }
 

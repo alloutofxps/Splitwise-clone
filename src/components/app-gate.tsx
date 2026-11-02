@@ -11,6 +11,7 @@ import { useMounted } from "@/components/ui/primitives";
 import { ComposerContext } from "@/components/expense/composer-context";
 import { useLaunchIntent } from "@/components/launch-intent";
 import { useToast } from "@/components/ui/toast";
+import { LoadFailed } from "@/components/error-screen";
 import { setBadge } from "@/lib/client/badge";
 import { stashedRecoveryKey } from "@/lib/client/recovery";
 import type { PendingAttachment } from "@/lib/client/attachments";
@@ -32,7 +33,8 @@ import type { ExpenseDto } from "@/lib/types";
  * data has arrived (see app/(app)/layout.tsx).
  */
 export function AppGate({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
-  const { data, isLoading, error } = useDashboard();
+  const dashboard = useDashboard();
+  const { data, isLoading, error } = dashboard;
   const pathname = usePathname();
 
   // Activity is fetched alongside the dashboard rather than after it, so Home
@@ -149,9 +151,14 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
   // Fetched at once on a device with no account, otherwise only when needed.
   const setup = useOnboardingScreen(!signedIn || needsSetup);
 
+  // Trying again after a failure: the failure stays, its button working,
+  // rather than the opening's outline coming back. (A fetch with nothing yet
+  // to show counts as loading again, error cleared.)
+  const retrying = !data && dashboard.errorUpdateCount > 0 && !needsSetup;
+
   // Still the opening's outline while sign-up arrives: the same element in the
   // same place, so its drawing carries on rather than starting again.
-  if (isLoading || (needsSetup && !setup.Screen && !setup.failed)) {
+  if ((isLoading && !retrying) || (needsSetup && !setup.Screen && !setup.failed)) {
     return signedIn ? <BootSkeleton pathname={pathname} /> : <WelcomeSkeleton />;
   }
 
@@ -161,8 +168,22 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
     return <Unreachable offline={!navigator.onLine} />;
   }
 
-  if (error || !data) {
-    return <Unreachable offline={error instanceof ApiError && error.isOffline} />;
+  /*
+   * Only when there is nothing to show. A refresh that fails (on returning to
+   * the app while the server restarts, say) keeps its error beside the last
+   * good answer, and that answer stays on screen rather than the whole app
+   * giving way to an error.
+   *
+   * Inside the app frame, so the tab bar and sidebar stay. Every screen reads
+   * the dashboard, so the failure takes each one's place, and Add says why it
+   * can't open: the composer builds its draft from the dashboard.
+   */
+  if (!data) {
+    return (
+      <AppShell onAddExpense={() => toast({ tone: "error", title: "Divvy needs to load first", description: "Tap Try again, then add your expense." })}>
+        <LoadFailed query={dashboard} />
+      </AppShell>
+    );
   }
 
   return (
@@ -181,7 +202,7 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
   );
 }
 
-/** The app can't start: the dashboard, or the sign-up screens, couldn't be fetched. */
+/** Setup can't start: the sign-up screens couldn't be fetched. */
 function Unreachable({ offline }: { offline: boolean }) {
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col items-center justify-center px-6 text-center">
