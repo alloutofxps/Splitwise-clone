@@ -1316,6 +1316,24 @@ console.log("\nPanels by keyboard");
   await p6.keyboard.press("Escape");
 }
 
+// Deleting an account with money still owed said "You still owe money, or
+// someone owes you": it knew who, and said neither.
+console.log("\nDeleting an account with money still owed");
+{
+  await page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await page.waitForTimeout(1500);
+  const dialog = page.getByRole("dialog", { name: "Delete your account?" });
+  check("it says to settle up first", (await dialog.getByText("Settle up first").count()) === 1);
+  const audit = dialog.getByRole("link", { name: /Audit/ });
+  check("naming the group, and the amount", (await audit.count()) === 1 && /€|\$|owe/.test(await audit.innerText()), await audit.innerText().catch(() => "no row"));
+  await audit.click();
+  await page.waitForTimeout(1500);
+  check("which opens that group's Settle up", page.url().includes(`/groups/${seeded.groupId}`) && (await page.getByRole("dialog", { name: "Settle up" }).count()) === 1, page.url());
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
+}
+
 // A group's tabs: one Tab stop, moved through with the arrow keys.
 console.log("\nTabs by keyboard");
 {
