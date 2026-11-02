@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { edgeKey, edgePath, placeLabels, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
+import { edgeKey, edgePath, labelsToShow, mapHeight, placeLabels, ringPositions, strokeFor, type FlowEdge, type Point } from "@/lib/flow";
 import { formatMoney } from "@/lib/money";
 import { initials } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
@@ -12,6 +12,8 @@ import { DURATION, EASE_ENTER, EASE_STANDARD } from "../ui/motion";
 import { untilClear, useStage } from "../ui/stage";
 
 const DOT = 18;
+/** From the edge of the drawing to the ring of people: room for names. */
+const RING_PAD = DOT + 50;
 /**
  * The width of an amount's pill at 11.5px, plus padding: figures about 6.8px,
  * commas and points 2.2px, letters and symbols about 8px (measured). A flat 7px
@@ -30,17 +32,20 @@ const nameWidthFor = (name: string) => name.length * 7;
  * Where a person's first name goes: outside the ring, away from the lines,
  * which all run inwards; under the dot for someone alone in the middle, or
  * whose name would run past the edge of the drawing (and out of its card).
+ * "Outside" is square to the ring where the person sits, which on a tall
+ * oval is more sideways than straight out from its middle.
  */
-function nameSpot(person: PersonDto, at: Point, size: number, isMe: boolean) {
-  const centre = size / 2;
+function nameSpot(person: PersonDto, at: Point, size: number, height: number, isMe: boolean) {
   const first = isMe ? "You" : person.displayName.split(" ")[0];
   const text = first.length > 10 ? `${first.slice(0, 9)}…` : first;
   const width = nameWidthFor(text);
-  const dx = at.x - centre;
-  const dy = at.y - centre;
+  const rx = Math.max(1, size / 2 - RING_PAD);
+  const ry = Math.max(1, height / 2 - RING_PAD);
+  const dx = (at.x - size / 2) / (rx * rx);
+  const dy = (at.y - height / 2) / (ry * ry);
   const away = Math.hypot(dx, dy);
-  const ux = away < 1 ? 0 : dx / away;
-  const uy = away < 1 ? 1 : dy / away;
+  const ux = away < 1e-6 ? 0 : dx / away;
+  const uy = away < 1e-6 ? 1 : dy / away;
   let x = at.x + ux * (DOT + 12);
   let y = at.y + uy * (DOT + 12) + 4;
   let anchor: "start" | "end" | "middle" = ux > 0.35 ? "start" : ux < -0.35 ? "end" : "middle";
@@ -123,15 +128,19 @@ export function FlowMap({
   className?: string;
 }) {
   const reduce = useReducedMotion();
+  // Taller with many people: the phone sets the width, not the height.
+  const height = mapHeight(people.length, size);
   const positions = React.useMemo(
-    () => ringPositions(people.map((person) => person.id), size, DOT + 50),
-    [people, size],
+    () => ringPositions(people.map((person) => person.id), size, RING_PAD, height),
+    [people, size, height],
   );
   const byId = React.useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
   const largest = edges.reduce((max, edge) => (edge.amount > max ? edge.amount : max), 0n);
   // Each amount sits at the middle of its line unless that would cover another
   // amount; then it slides along its own line until it is clear.
-  const labelSpots = React.useMemo(() => {
+  // Only amounts that sit clear of everything are drawn (a pile of them
+  // can't be read); the list under the map has every one.
+  const { labelSpots, missing } = React.useMemo(() => {
     const drawn = edges.flatMap((edge) => {
       const from = positions.get(edge.fromPersonId);
       const to = positions.get(edge.toPersonId);
@@ -141,17 +150,22 @@ export function FlowMap({
     // each other.
     const names = people.flatMap((person) => {
       const at = positions.get(person.id);
-      return at ? [nameSpot(person, at, size, person.id === meId).box] : [];
+      return at ? [nameSpot(person, at, size, height, person.id === meId).box] : [];
     });
-    const spots = placeLabels(drawn, DOT + 4, { size, dots: [...positions.values()], dotRadius: DOT, blocks: names });
-    return new Map(drawn.map((line, index) => [line.key, spots[index]]));
-  }, [edges, positions, currency, size, people, meId]);
+    const around = { size, height, dots: [...positions.values()], dotRadius: DOT, blocks: names };
+    const spots = placeLabels(drawn, DOT + 4, around);
+    const shown = labelsToShow(drawn, spots, around);
+    return {
+      labelSpots: new Map(drawn.flatMap((line, index) => (shown[index] ? [[line.key, spots[index]] as const] : []))),
+      missing: shown.filter((show) => !show).length,
+    };
+  }, [edges, positions, currency, size, height, people, meId]);
   const nameOf = (id: string) => (id === meId ? "You" : (byId.get(id)?.displayName ?? "Someone"));
 
   return (
     <figure className={cn("relative", className)}>
       <svg
-        viewBox={`0 0 ${size} ${size}`}
+        viewBox={`0 0 ${size} ${height}`}
         className="mx-auto block w-full max-w-[360px] overflow-visible"
         aria-hidden="true"
       >
@@ -189,7 +203,7 @@ export function FlowMap({
         {people.map((person) => {
           const at = positions.get(person.id);
           return at ? (
-            <PersonNode key={person.id} person={person} at={at} centre={size / 2} isMe={person.id === meId} />
+            <PersonNode key={person.id} person={person} at={at} size={size} height={height} isMe={person.id === meId} />
           ) : null;
         })}
 
@@ -207,6 +221,14 @@ export function FlowMap({
           />
         ) : null}
       </svg>
+
+      {labels && missing > 0 ? (
+        <p aria-hidden className="mt-1 text-center text-caption text-subtle">
+          {missing === edges.length
+            ? "Too many lines to label. Every amount is in the list below."
+            : `${missing === 1 ? "One amount doesn't" : `${missing} amounts don't`} fit here. Every amount is in the list below.`}
+        </p>
+      ) : null}
 
       <figcaption className="sr-only">
         {edges.length === 0 ? (
@@ -291,7 +313,7 @@ function EdgeLabel({ label, at, reduce }: { label: string; at: Point; reduce: bo
       exit={{ opacity: 0 }}
       transition={{ duration: DURATION.fade, ease: EASE_STANDARD, delay: reduce ? 0 : 0.18 }}
     >
-      <rect x={at.x - width / 2} y={at.y - 10} width={width} height={20} rx={10} fill="var(--surface)" stroke="var(--border)" />
+      <rect data-part="amount" x={at.x - width / 2} y={at.y - 10} width={width} height={20} rx={10} fill="var(--surface)" stroke="var(--border)" />
       <text x={at.x} y={at.y + 4} textAnchor="middle" className="tabular" fill="var(--text)" fontSize={11.5} fontWeight={500}>
         {label}
       </text>
@@ -302,19 +324,22 @@ function EdgeLabel({ label, at, reduce }: { label: string; at: Point; reduce: bo
 function PersonNode({
   person,
   at,
-  centre,
+  size,
+  height,
   isMe,
 }: {
   person: PersonDto;
   at: Point;
-  centre: number;
+  size: number;
+  height: number;
   isMe: boolean;
 }) {
   const hue = usePersonHue(person);
-  const name = nameSpot(person, at, centre * 2, isMe);
+  const name = nameSpot(person, at, size, height, isMe);
   return (
     <g>
       <circle
+        data-part="person"
         cx={at.x}
         cy={at.y}
         r={DOT}
@@ -332,7 +357,7 @@ function PersonNode({
       >
         {person.avatarEmoji ?? initials(person.displayName)}
       </text>
-      <text x={name.x} y={name.y} textAnchor={name.anchor} fontSize={12} fill="var(--text-muted)">
+      <text data-part="name" x={name.x} y={name.y} textAnchor={name.anchor} fontSize={12} fill="var(--text-muted)">
         {name.text}
       </text>
     </g>
