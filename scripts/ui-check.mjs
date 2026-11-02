@@ -942,7 +942,13 @@ console.log("\nThings that only show up on a phone");
   await p2.getByRole("button", { name: "🦖" }).first().click();
   await p2.waitForTimeout(600);
 
-  await p2.getByPlaceholder("Priya").fill("Reload Tester");
+  // An example name in the box ("Priya") read as already filled in, beside a
+  // Continue that wouldn't press and didn't say why.
+  const nameBox = p2.getByLabel("Your name");
+  check("the name box holds a hint, not a name", (await nameBox.getAttribute("placeholder")) === "Your first name");
+  check("an empty name says what Continue is waiting for", (await p2.getByText("Type your name to continue").count()) === 1);
+  await nameBox.fill("Reload Tester");
+  check("and stops saying it once there is one", (await p2.getByText("Type your name to continue").count()) === 0);
   await p2.getByRole("button", { name: /Continue|Next|Done/i }).first().click();
   // Sign-up now asks how to protect the account; take the recovery key.
   await p2.getByRole("button", { name: "Save a recovery key instead" }).click({ timeout: 15000 });

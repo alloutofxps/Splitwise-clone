@@ -275,7 +275,7 @@ console.log("\nProtecting a new account");
   const p = await fresh.newPage();
   await p.goto(BASE, { waitUntil: "networkidle" });
   await p.getByRole("button", { name: "Get started" }).click();
-  await p.locator('input[placeholder="Priya"]').fill("Later Person");
+  await p.getByLabel("Your name").fill("Later Person");
   await p.getByRole("button", { name: "Continue" }).click();
   await p.getByText("Protect your account").waitFor({ timeout: 15000 });
   check("sign-up asks how to protect the account", true);
