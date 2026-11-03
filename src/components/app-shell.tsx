@@ -62,6 +62,9 @@ function useDirection(pathname: string): Direction {
  */
 const STILL = "translateX(0px) scale(1)";
 
+/** The first screen, taking over from an outline that already showed its figures. */
+const SHOWN = { initial: { opacity: 1, transform: STILL }, transition: { duration: 0 } };
+
 function arrival(direction: Direction, reduce: boolean): { initial: TargetAndTransition; transition: Transition } {
   // Every start states its transform, even when it is "none at all": blending
   // from no transform to one starts at scale 0, and the screen grows from a
@@ -90,9 +93,16 @@ interface Destination {
 export function AppShell({
   children,
   onAddExpense,
+  figuresShown = false,
 }: {
   children: React.ReactNode;
   onAddExpense: () => void;
+  /**
+   * The opening outline already showed this screen's balances, from the
+   * numbers the page arrived with: the first screen takes over without the
+   * fade, which would dim figures that aren't changing (MOTION-SPEC 5).
+   */
+  figuresShown?: boolean;
 }) {
   const pathname = usePathname();
   const { data } = useDashboard();
@@ -125,7 +135,7 @@ export function AppShell({
     if (covered && page.current) page.current.style.transformOrigin = `50% ${middle.current}px`;
   }, [covered]);
   const stepBack = covered && !reduce;
-  const enter = arrival(direction, reduce);
+  const enter = direction === "first" && figuresShown ? SHOWN : arrival(direction, reduce);
 
   const destinations: Destination[] = [
     { href: "/", label: "Home", icon: Home },

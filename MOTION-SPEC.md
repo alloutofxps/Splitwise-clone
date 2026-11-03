@@ -27,6 +27,11 @@ Three layers, and every movement agrees with them.
 - No blank screens between screens. The old screen stays until the new one is
   ready; past 300ms, a still outline shaped like the coming screen, then a
   150ms fade into it.
+- The app opening on Home: the page arrives with Home's balances, so its
+  outline shows them already, in the place and size Home draws them. Home
+  then replaces the outline at once, without the fade, because the figures
+  aren't changing and a fade would dim them (section 5). A copy of the page
+  kept for offline use shows the plain outline and fades as before.
 - Going back returns you to the same scroll position, with nothing reshuffling.
 
 ## 2. Depth

@@ -91,6 +91,14 @@ for (const device of DEVICES) {
       const page = await context.newPage();
       // The outline stays up for as long as the dashboard hasn't answered.
       await page.route("**/api/dashboard**", () => new Promise(() => {}));
+      // Home arrives with its own numbers, and its outline draws them: one
+      // person's. A launch image is everyone's, so the page is marked as a
+      // kept copy (as public/sw.js marks one offline), whose outline has the
+      // plain lines and which the app doesn't fill in from the page.
+      await page.route((url) => url.pathname === "/", async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({ response, body: (await response.text()).replace(/<html\b/i, "<html data-offline-copy") });
+      });
       const cdp = await context.newCDPSession(page);
       await cdp.send("Emulation.setSafeAreaInsetsOverride", {
         insets: { top: device.top, bottom: device.bottom, left: 0, right: 0 },

@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ExpenseComposer } from "@/components/expense/composer-after-load";
-import { useDashboard, usePrefetch } from "@/lib/client/queries";
-import { SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
+import { keys, useDashboard, usePrefetch, type DashboardPayload } from "@/lib/client/queries";
+import { SidebarFrame, SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
 import { ApiError } from "@/lib/client/api";
-import { useMounted } from "@/components/ui/primitives";
+import { cn, useMounted } from "@/components/ui/primitives";
 import { ComposerContext } from "@/components/expense/composer-context";
 import { useLaunchIntent } from "@/components/launch-intent";
 import { useToast } from "@/components/ui/toast";
@@ -30,12 +31,46 @@ import type { ExpenseDto } from "@/lib/types";
  *
  * `signedIn` comes from the server, which sees the identity cookie with the
  * very first request: it decides which outline the opening shows before any
- * data has arrived (see app/(app)/layout.tsx).
+ * data has arrived (see app/(app)/layout.tsx). `opening` is the dashboard
+ * the server worked out with the page, when it could.
  */
-export function AppGate({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
+export function AppGate({
+  children,
+  signedIn,
+  opening,
+}: {
+  children: React.ReactNode;
+  signedIn: boolean;
+  opening?: { dashboard: DashboardPayload; at: number } | null;
+}) {
   const dashboard = useDashboard();
   const { data, isLoading, error } = dashboard;
   const pathname = usePathname();
+
+  /*
+   * The dashboard the page arrived with becomes the app's first answer once
+   * the page has come to life, so Home is complete the moment the code is
+   * ready instead of a round trip later. After that first draw, not during
+   * it: the page as sent shows the opening outline, and the first draw must
+   * match it. The request the app has just sent carries on and replaces it.
+   * Not from a copy kept for offline use, whose numbers are old (public/sw.js).
+   */
+  const client = useQueryClient();
+  // Whether the opening outline drew Home's balances (screen-skeletons.tsx),
+  // so Home can take over from it without dimming them. Never read while
+  // drawing the page as sent: until the dashboard is in, the outline shows.
+  const [figuresShown] = React.useState(
+    () =>
+      Boolean(opening) &&
+      pathname === "/" &&
+      typeof document !== "undefined" &&
+      !document.documentElement.hasAttribute("data-offline-copy"),
+  );
+  React.useEffect(() => {
+    if (!opening || document.documentElement.hasAttribute("data-offline-copy")) return;
+    if (client.getQueryData(keys.dashboard)) return;
+    client.setQueryData(keys.dashboard, opening.dashboard, { updatedAt: opening.at });
+  }, [client, opening]);
 
   // Activity is fetched alongside the dashboard rather than after it, so Home
   // opens with "Needs you" complete instead of growing a moment later.
@@ -159,7 +194,7 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
   // Still the opening's outline while sign-up arrives: the same element in the
   // same place, so its drawing carries on rather than starting again.
   if ((isLoading && !retrying) || (needsSetup && !setup.Screen && !setup.failed)) {
-    return signedIn ? <BootSkeleton pathname={pathname} /> : <WelcomeSkeleton />;
+    return signedIn ? <BootSkeleton pathname={pathname} standing={opening?.dashboard} /> : <WelcomeSkeleton />;
   }
 
   if (needsSetup) {
@@ -188,7 +223,9 @@ export function AppGate({ children, signedIn }: { children: React.ReactNode; sig
 
   return (
     <ComposerContext.Provider value={composerContext}>
-      <AppShell onAddExpense={() => openComposer()}>{children}</AppShell>
+      <AppShell onAddExpense={() => openComposer()} figuresShown={figuresShown}>
+        {children}
+      </AppShell>
 
       <ExpenseComposer
         open={composer.open}
@@ -254,12 +291,23 @@ function useOnboardingScreen(wanted: boolean): { Screen: OnboardingScreen | null
  * same frame and with the tab bar already in place, so the first paint settles
  * into the real content instead of being replaced by a different shape.
  */
-function BootSkeleton({ pathname }: { pathname: string }) {
+function BootSkeleton({ pathname, standing }: { pathname: string; standing?: DashboardPayload }) {
+  // The app frame's own measurements (AppShell), so the screen that replaces
+  // this starts exactly where its outline was.
   return (
-    <div className="relative flex min-h-[100dvh] flex-col">
-      <main className="mx-auto w-full max-w-[560px] flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:max-w-[720px] lg:px-8">
-        <SkeletonFor pathname={pathname} opening />
-      </main>
+    <div className="relative flex min-h-[100dvh] flex-col lg:flex-row">
+      <SidebarFrame />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main
+          className={cn(
+            "mx-auto w-full max-w-[560px] flex-1 px-4 lg:px-8",
+            pathname === "/" || pathname.startsWith("/groups/") ? "lg:max-w-[1120px]" : "lg:max-w-[720px]",
+            "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:pb-12",
+          )}
+        >
+          <SkeletonFor pathname={pathname} opening standing={standing} />
+        </main>
+      </div>
       <TabBarFrame />
     </div>
   );

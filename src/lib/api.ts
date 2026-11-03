@@ -23,7 +23,7 @@ import { log } from "./log";
 import { isKnownCurrency } from "./money";
 
 /** Recursively replaces BigInt with string and Date with an ISO string. */
-function serialize(value: unknown): unknown {
+export function serialize(value: unknown): unknown {
   if (typeof value === "bigint") return value.toString();
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(serialize);
