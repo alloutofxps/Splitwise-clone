@@ -101,14 +101,28 @@ export function AppShell({
 
   // While a panel is open the page steps back a little (MOTION-SPEC 1): it is
   // still there, underneath, and you'll come back to it. It shrinks about the
-  // middle of what's on screen, measured as the panel opens; the page can't
-  // scroll while a panel is up, so that stays true until it closes.
+  // middle of what's on screen; the page can't scroll while a panel is up, so
+  // that stays true until it closes. The middle is kept up to date as the page
+  // scrolls rather than read as the panel opens: reading the scroll position
+  // then made the browser lay out the page mid-tap, before the panel had been
+  // drawn once.
   const covered = useStageCovered();
   const page = React.useRef<HTMLElement>(null);
+  const middle = React.useRef(0);
+  React.useEffect(() => {
+    const measure = () => (middle.current = window.scrollY + window.innerHeight / 2);
+    // Once the first screen has been drawn, then with every scroll and resize.
+    const first = window.setTimeout(measure, 0);
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearTimeout(first);
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   React.useLayoutEffect(() => {
-    if (covered && page.current) {
-      page.current.style.transformOrigin = `50% ${window.scrollY + window.innerHeight / 2}px`;
-    }
+    if (covered && page.current) page.current.style.transformOrigin = `50% ${middle.current}px`;
   }, [covered]);
   const stepBack = covered && !reduce;
   const enter = arrival(direction, reduce);

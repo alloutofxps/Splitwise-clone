@@ -1375,6 +1375,31 @@ console.log("\nAdding an expense with a keyboard");
   await phone.close();
 }
 
+// A row's swipe starts up the first time it is pressed, not as the page opens
+// (Motion's drag measured the whole page as each row appeared).
+console.log("\nSwiping a row");
+{
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await ctx.storageState() });
+  const p = await phone.newPage();
+  await p.goto(`${BASE}/groups/${seeded.groupId}`, { waitUntil: "networkidle" });
+  await p.waitForTimeout(1200);
+  const action = p.locator('button[aria-label^="Delete "][aria-hidden]').first();
+  const row = action.locator("xpath=following-sibling::div[1]");
+  const box = await row.boundingBox();
+  const drag = async (from, to) => {
+    await p.mouse.move(from, box.y + box.height / 2);
+    await p.mouse.down();
+    for (let i = 1; i <= 10; i++) await p.mouse.move(from + ((to - from) * i) / 10, box.y + box.height / 2);
+    await p.mouse.up();
+    await p.waitForTimeout(700);
+  };
+  await drag(box.x + box.width - 40, box.x + box.width - 200);
+  check("swiping a row left shows its Delete", (await action.getAttribute("aria-hidden")) === "false");
+  await drag(box.x + box.width - 200, box.x + box.width - 40);
+  check("and swiping it back hides it again", (await action.getAttribute("aria-hidden")) === "true");
+  await phone.close();
+}
+
 // Deleting an account with money still owed said "You still owe money, or
 // someone owes you": it knew who, and said neither.
 console.log("\nDeleting an account with money still owed");
