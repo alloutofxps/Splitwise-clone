@@ -8,12 +8,21 @@
 //   transition frame by frame.
 // timing — the same flows with the CPU slowed 4x (a mid-range Android phone),
 //   measuring every frame the browser draws during each interaction:
-//   out/timing.json. A frame over 25ms is a dropped frame at 60fps.
+//   out/timing.json. A frame over 25ms is a dropped frame at 60fps. A flow
+//   that loads its screen first counts from `mark("ready")`, once that
+//   screen has settled; the app starting is measured once, by 01-opening
+//   and 08-first-run.
 //
 // SLOW=1 slows the CPU 4x for frames too, to see what a mid-range phone
 // shows: a slide the browser runs itself keeps moving while the app is busy.
 //
 // SCHEME=dark records at Night (the phone's dark setting); Day otherwise.
+//
+// DETAIL=1 with timing also writes out/late.json and prints, for each late
+// frame, when it came (from the start of the flow) and how long it was, with
+// the code the browser says ran in it: its Long Animation Frames report,
+// which covers frames over 50ms. A frame here counts as late whenever the
+// page's own work held it up, whether or not anything was moving.
 //
 // Seeds its own data: four people, two groups, a direct expense.
 import { chromium } from "playwright";
@@ -99,6 +108,7 @@ const FLOWS = {
   "03-add-expense": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
+    mark("ready");
     await page.getByRole("button", { name: "Add an expense" }).first().click();
     await page.waitForTimeout(900);
     await page.getByPlaceholder("What was it for?").pressSequentially("Tapas", { delay: 60 });
@@ -115,6 +125,7 @@ const FLOWS = {
   "04-settle-up": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
+    mark("ready");
     await page.getByRole("button", { name: "Settle up" }).first().click();
     await page.waitForTimeout(900);
     const pick = page.locator('[role="dialog"] button').filter({ hasText: /pays you|^Pay / }).first();
@@ -135,7 +146,7 @@ const FLOWS = {
     await page.waitForTimeout(2600);
   },
   // Pull to refresh, as in the installed app: pulled, held, let go.
-  "09-pull-refresh": async (page) => {
+  "09-pull-refresh": async (page, seedData, mark) => {
     await page.addInitScript(() => {
       const real = window.matchMedia.bind(window);
       window.matchMedia = (query) =>
@@ -143,6 +154,7 @@ const FLOWS = {
     });
     await page.reload({ waitUntil: "networkidle" });
     await page.waitForTimeout(800);
+    mark("ready");
     const touch = (type, y) =>
       page.evaluate(
         ([type, y]) => {
@@ -165,6 +177,7 @@ const FLOWS = {
   "07-payment": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
+    mark("ready");
     await page.getByRole("button", { name: "Settle up" }).first().click();
     await page.waitForTimeout(900);
     const pick = page.locator('[role="dialog"] button').filter({ hasText: /pays you|^Pay / }).first();
@@ -205,15 +218,17 @@ const FLOWS = {
   "10-group-tabs": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
+    mark("ready");
     mark("save");
     for (const name of ["Balances", "Insights", "Expenses"]) {
       await page.getByRole("tab", { name }).click();
       await page.waitForTimeout(900);
     }
   },
-  "06-panels": async (page, seedData) => {
+  "06-panels": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(1200);
+    mark("ready");
     await page.getByRole("button", { name: /Dinner at Cervejaria/ }).first().click();
     await page.waitForTimeout(1200);
     await page.keyboard.press("Escape");
@@ -232,6 +247,7 @@ const FLOWS = {
   "12-paid": async (page, seedData, mark) => {
     await page.goto(`${BASE}/groups/${seedData.trip}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(800);
+    mark("ready");
     await page.getByRole("tab", { name: "Balances" }).click();
     await page.waitForTimeout(1000);
     await page.getByRole("button", { name: /^Settle, Sam Lee pays you/ }).click();
@@ -264,6 +280,7 @@ const FLOWS = {
     await page.context().addCookies([{ name: "divvy_id", value: a.cookie, url: BASE }]);
     await page.goto(`${BASE}/groups/${group.id}`, { waitUntil: "networkidle" });
     await page.waitForTimeout(600);
+    mark("ready");
     await page.getByRole("tab", { name: "Balances" }).click();
     await page.waitForTimeout(2200);
     mark("save");
@@ -278,6 +295,7 @@ const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePa
 mkdirSync(OUT, { recursive: true });
 const only = process.env.FLOW;
 const timing = {};
+const lateFrames = {};
 
 for (const [name, flow] of Object.entries(FLOWS)) {
   if (only && !name.includes(only)) continue;
@@ -322,6 +340,33 @@ for (const [name, flow] of Object.entries(FLOWS)) {
       };
       setInterval(flush, 200);
       addEventListener("pagehide", flush);
+    });
+  }
+  // What ran in each long frame, for DETAIL=1.
+  const longFrames = [];
+  if (MODE === "timing" && process.env.DETAIL) {
+    await page.exposeFunction("__reportLongFrames", (batch) => {
+      longFrames.push(...batch);
+    });
+    await page.addInitScript(() => {
+      new PerformanceObserver((list) => {
+        const batch = list.getEntries().map((entry) => ({
+          at: performance.timeOrigin + entry.startTime,
+          ms: Math.round(entry.duration),
+          scripts: entry.scripts
+            .filter((script) => script.duration > 4)
+            .sort((a, b) => b.duration - a.duration)
+            .slice(0, 3)
+            .map((script) => ({
+              ms: Math.round(script.duration),
+              layout: Math.round(script.forcedStyleAndLayoutDuration),
+              what: `${script.invokerType} ${script.invoker}`.slice(0, 60),
+              file: (script.sourceURL || "").split("/").pop(),
+              fn: script.sourceFunctionName,
+            })),
+        }));
+        if (window.__reportLongFrames) window.__reportLongFrames(batch);
+      }).observe({ type: "long-animation-frame", buffered: true });
     });
   }
   if (name !== "01-opening") {
@@ -373,8 +418,14 @@ for (const [name, flow] of Object.entries(FLOWS)) {
     await video(name, frames, 0.25);
   } else {
     await page.evaluate(() => new Promise((r) => setTimeout(r, 250))).catch(() => {});
-    const times = [...frameTimes].sort((a, b) => a - b);
+    // From the moment the flow's screen was ready, when it loads one first:
+    // the flow is about its taps and animations, and starting the app is
+    // judged once, in the opening flows (MOTION-SPEC 8).
+    const from = marks.ready === undefined ? -Infinity : started + marks.ready;
+    const times = [...frameTimes].filter((t) => t >= from).sort((a, b) => a - b);
     timing[name] = summarise(times);
+    // The whole flow too, the app starting included, as counted before.
+    if (marks.ready !== undefined) timing[name].wholeFlow = summarise([...frameTimes].sort((x, y) => x - y));
     // The moment itself, apart from the page loading before it: the 2.5s
     // after Save, when the panel leaves and the money moves.
     if (marks.save !== undefined) {
@@ -382,6 +433,22 @@ for (const [name, flow] of Object.entries(FLOWS)) {
       timing[name].afterSave = summarise(times.filter((t) => t >= saveAt && t <= saveAt + 2500));
     }
     console.log(name, JSON.stringify(timing[name]));
+    if (process.env.DETAIL) {
+      // Each late gap, and the long frame it overlaps, if any.
+      const late = [];
+      for (let i = 1; i < times.length; i++) {
+        const gap = times[i] - times[i - 1];
+        if (gap <= 25 || gap >= 1000) continue;
+        const cause = longFrames.find((frame) => frame.at < times[i] && frame.at + frame.ms > times[i - 1]);
+        late.push({ at: Math.round(times[i - 1] - started), ms: Math.round(gap), cause: cause ?? null });
+      }
+      lateFrames[name] = { marks, late };
+      for (const { at, ms, cause } of late)
+        console.log(
+          `  ${String(at).padStart(6)}ms  ${String(ms).padStart(4)}ms late  ` +
+            (cause ? cause.scripts.map((s) => `[${s.ms}ms ${s.what} ${s.file} ${s.fn ?? ""}${s.layout ? ` layout ${s.layout}` : ""}]`).join(" ") || "(no script: the browser's own work)" : "(under 50ms: not reported)"),
+        );
+    }
   }
   await context.close();
 }
@@ -411,6 +478,7 @@ function summarise(times) {
 }
 
 if (MODE === "timing") writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 2));
+if (MODE === "timing" && process.env.DETAIL) writeFileSync(`${OUT}/late.json`, JSON.stringify(lateFrames, null, 2));
 await browser.close();
 
 // A video made from the captured frames, each held for as long as it was on
