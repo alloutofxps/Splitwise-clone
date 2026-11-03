@@ -1446,6 +1446,43 @@ console.log("\nHome's balances come with the page");
   }
 }
 
+// A group's faces: as many as fit, the rest counted in "+N". They are first
+// measured once the browser has laid the page out, not while it is built.
+console.log("\nA group's faces fit");
+{
+  const crowd = await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const names = ["Ana", "Ben", "Cleo", "Dev", "Eli", "Fay", "Gus", "Hana", "Ivo", "Jun"];
+    return (await post("/api/groups", { name: "Crowd", currency: "USD", placeholderNames: names })).group.id;
+  });
+  const look = async (p) => {
+    await p.goto(`${BASE}/groups/${crowd}`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(800);
+    return p.evaluate(() => {
+      const chip = [...document.querySelectorAll("main span")].find((el) => /^\+\d+$/.test(el.textContent ?? ""));
+      const stack = chip?.parentElement;
+      if (!stack) return null;
+      const box = stack.getBoundingClientRect();
+      const faces = [...stack.children];
+      return {
+        shown: faces.length - 1,
+        more: Number(chip.textContent.slice(1)),
+        spill: faces.some((face) => { const at = face.getBoundingClientRect(); return at.left < box.left - 1 || at.right > box.right + 1; }),
+      };
+    });
+  };
+  const narrow = await browser.newContext({ viewport: { width: 320, height: 700 }, storageState: await ctx.storageState() });
+  const n = await look(await narrow.newPage());
+  check("on a narrow phone the faces stay inside their row", n !== null && !n.spill, JSON.stringify(n));
+  check("and the rest are counted, eleven in all", n !== null && n.shown + n.more === 11, JSON.stringify(n));
+  // The largest text: fewer fit, and still nothing spills.
+  const big = await narrow.newPage();
+  await big.addInitScript(() => document.addEventListener("DOMContentLoaded", () => (document.documentElement.style.fontSize = "200%")));
+  const b = await look(big);
+  check("with the text twice the size, still inside", b !== null && !b.spill && b.shown + b.more === 11, JSON.stringify(b));
+  await narrow.close();
+}
+
 // Deleting an account with money still owed said "You still owe money, or
 // someone owes you": it knew who, and said neither.
 console.log("\nDeleting an account with money still owed");

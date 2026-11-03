@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { cn } from "./primitives";
 import { hueVar, initials, resolveHues, type AvatarColor } from "@/lib/avatar";
 import type { PersonDto } from "@/lib/types";
@@ -97,6 +98,18 @@ export function Avatar({
 }
 
 /**
+ * Whether a stack's faces run past its own edges: scrollWidth misses what
+ * spills out of a reversed row in Chrome.
+ */
+function spills(element: HTMLElement) {
+  const box = element.getBoundingClientRect();
+  return [...element.children].some((face) => {
+    const at = face.getBoundingClientRect();
+    return at.left < box.left - 1 || at.right > box.right + 1;
+  });
+}
+
+/**
  * Overlapping avatars for a group row.
  *
  * Reversed flex order so earlier avatars paint *over* later ones - otherwise
@@ -125,29 +138,39 @@ export function AvatarStack({
   const [limit, setLimit] = React.useState(max);
   // Bumped to measure again even when `limit` is already `max`.
   const [pass, setPass] = React.useState(0);
+  /*
+   * The first look is the observer's, below: it reports once the browser has
+   * laid the page out anyway, before anything is drawn. Measuring as the
+   * stack first appeared instead made the browser lay out the whole new
+   * screen in the middle of building it, and again after: about 130ms of
+   * opening a group with the processor slowed 4x. After that first look,
+   * dropping a face and a change of faces are measured here at once, which
+   * only costs anything when they really do spill.
+   */
+  const looked = React.useRef(typeof ResizeObserver === "undefined");
   React.useLayoutEffect(() => {
     const element = stack.current;
-    if (!fit || !element || limit <= 1) return;
-    // Where the faces are against the stack's own edges: scrollWidth misses
-    // what spills out of a reversed row in Chrome.
-    const box = element.getBoundingClientRect();
-    const spills = [...element.children].some((face) => {
-      const at = face.getBoundingClientRect();
-      return at.left < box.left - 1 || at.right > box.right + 1;
-    });
-    if (spills) setLimit(limit - 1);
+    if (!fit || !element || limit <= 1 || !looked.current) return;
+    if (spills(element)) setLimit(limit - 1);
   }, [fit, limit, pass, people, size]);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     // Start again from `max` when the room changes (the section it sits in,
     // not the stack or its button, which change width as faces come and go)
-    // or the faces change size (the text size changed).
+    // or the faces change size (the text size changed). Set up here rather
+    // than after drawing, so its first report comes before the first frame.
     const element = stack.current;
     const around = element?.closest("section") ?? document.body;
     const face = element?.lastElementChild;
-    if (!fit || !face || typeof ResizeObserver === "undefined") return;
-    let seen = `${around.clientWidth} ${face.clientWidth}`;
+    if (!fit || !element || !face || typeof ResizeObserver === "undefined") return;
+    let seen: string | null = null;
     const observer = new ResizeObserver(() => {
       const now = `${around.clientWidth} ${face.clientWidth}`;
+      if (seen === null) {
+        seen = now;
+        looked.current = true;
+        if (spills(element)) flushSync(() => setLimit((count) => Math.max(1, count - 1)));
+        return;
+      }
       if (now === seen) return;
       seen = now;
       setLimit(max);
