@@ -254,6 +254,11 @@ drawings.
   (`node scripts/motion-record.mjs <url> <out> timing`), and on a real
   Android phone. Read `lateShareAt60Hz`: it counts against the frames a 60Hz
   phone would draw, so a fast desktop screen doesn't flatter the result.
+  A flow that loads its screen first is counted from when that screen is
+  ready, so it judges its taps and animations; the app starting is judged
+  once, in the opening flows (01, 08). Decided 3 November 2026: until then
+  every flow's count included the app starting, 3 to 7 late frames each
+  (PERF-BASELINE 29).
 - Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
 - Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
   frame-exact (`scripts/motion-video.mjs`).
