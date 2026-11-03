@@ -172,7 +172,15 @@ detail.
   compressed figure can move by about 0.6 KB with no code change (the build
   numbers its pieces differently), so when a result is that close to a
   limit, check `ScriptRaw`, which only moves when code does
-  (PERF-BASELINE 22).
+  (PERF-BASELINE 22). CI runs `size-report.mjs` with `STRICT=1`: Home and a
+  group must stay within their limits.
+- Phone speed (RULES S3; by hand): `node scripts/phone-speed.mjs <url>`
+  times balances on screen on a first and a next visit, and tapping + and a
+  group, on a slowed phone profile. A local server speaks HTTP/1.1 and makes
+  a first visit look about a second slower than live, so measure through an
+  HTTP/2 relay (this machine has one, not in git:
+  `node perf-runs/tls/proxy-h2.mjs 3444 3100`, then https://localhost:3444).
+  `DETAIL=1` names the code in each slow frame.
 - iPhone launch screens: after changing Home's outline, the tab bar or the
   colours, run `node scripts/launch-screens.mjs <url>` against a production
   build and commit `public/launch/` and `src/app/launch-screens.ts`.
