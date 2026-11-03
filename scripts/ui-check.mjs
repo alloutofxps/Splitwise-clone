@@ -1836,6 +1836,39 @@ console.log("\nWhen a screen can't load");
   await failing.close();
 }
 
+// A new screen starts at the top, and the back button returns to where you
+// were. The app does this itself rather than Next.js (screen-link.tsx), so
+// that opening a screen doesn't make the browser lay the page out mid-build.
+console.log("\nA new screen starts at the top");
+{
+  await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    for (let i = 0; i < 8; i++) await post("/api/groups", { name: `Long list ${i}`, currency: "EUR", placeholderNames: ["Ana"] });
+  });
+  const short = await browser.newContext({ viewport: { width: 390, height: 600 }, storageState: await ctx.storageState() });
+  const p = await short.newPage();
+  await p.addInitScript(() => localStorage.setItem("divvy-install-dismissed", String(Date.now())));
+  await p.goto(BASE, { waitUntil: "networkidle" });
+  await p.waitForTimeout(800);
+  const row = p.locator('a[href^="/groups/"]').last();
+  await row.scrollIntoViewIfNeeded();
+  await p.waitForTimeout(400);
+  const left = await p.evaluate(() => Math.round(scrollY));
+  await row.click();
+  await p.waitForURL("**/groups/**");
+  await p.waitForTimeout(1200);
+  check("a group opened from a scrolled Home starts at the top", left > 0 && (await p.evaluate(() => scrollY)) === 0, `Home at ${left}`);
+  await p.goBack();
+  await p.waitForTimeout(1500);
+  const back = await p.evaluate(() => Math.round(scrollY));
+  check("and Back returns to where Home was", Math.abs(back - left) <= 2, `${back} against ${left}`);
+  await p.getByRole("link", { name: "Friends" }).first().click();
+  await p.waitForURL("**/friends");
+  await p.waitForTimeout(1000);
+  check("a tab opened from there starts at the top too", (await p.evaluate(() => scrollY)) === 0);
+  await short.close();
+}
+
 check("no console errors throughout", errors.length === 0, errors.slice(0, 2).join(" | "));
 console.log(`\n${pass} passed, ${fail} failed\n`);
 await browser.close();

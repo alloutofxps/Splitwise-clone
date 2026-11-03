@@ -106,7 +106,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
         description: `${result.imported.expenses} expenses and ${result.imported.payments} payments are in ${name.trim()}.`,
       });
       onClose();
-      router.push(`/groups/${result.group.id}`);
+      router.push(`/groups/${result.group.id}`, { scroll: false });
     } catch (e) {
       toast({
         tone: "error",

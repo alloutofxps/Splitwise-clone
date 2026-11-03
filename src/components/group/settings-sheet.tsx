@@ -140,7 +140,7 @@ export function GroupSettingsSheet({
       setConfirmLeave(false);
       onClose();
       toast({ tone: "success", title: `You left ${group.name}` });
-      router.push("/");
+      router.push("/", { scroll: false });
     } catch (error) {
       setConfirmLeave(false);
       toast({
@@ -158,7 +158,7 @@ export function GroupSettingsSheet({
       setConfirmDelete(false);
       onClose();
       toast({ tone: "success", title: "Group deleted" });
-      router.push("/");
+      router.push("/", { scroll: false });
     } catch (error) {
       setConfirmDelete(false);
       toast({

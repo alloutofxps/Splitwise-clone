@@ -33,7 +33,8 @@ export function useOpenScreen() {
       const go = () => {
         if (moved) return;
         moved = true;
-        router.push(href);
+        // The app shell brings the new screen to the top (screen-link.tsx).
+        router.push(href, { scroll: false });
       };
       ready.then(go, go);
       window.setTimeout(go, HOLD_MS);

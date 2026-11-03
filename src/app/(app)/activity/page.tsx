@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { Button, EmptyState, Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { LoadMore } from "@/components/ui/load-more";
 import { ExpenseDetailSheet } from "@/components/expense/detail-sheet";

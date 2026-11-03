@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -526,9 +526,9 @@ function GroupRow({ group, meId }: { group: GroupSummaryDto; meId: string }) {
       title={`${group.emoji} ${group.name}`}
       actions={[
         ...(net !== 0n
-          ? [{ label: "Settle up", onPress: () => router.push(`/groups/${group.id}?open=settle`) }]
+          ? [{ label: "Settle up", onPress: () => router.push(`/groups/${group.id}?open=settle`, { scroll: false }) }]
           : []),
-        { label: "Invite people", onPress: () => router.push(`/groups/${group.id}?open=invite`) },
+        { label: "Invite people", onPress: () => router.push(`/groups/${group.id}?open=invite`, { scroll: false }) },
         group.archivedAt
           ? { label: "Unarchive", onPress: () => archive(false) }
           : { label: "Archive", onPress: () => archive(true) },

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { ArrowDownLeft, ArrowUpRight, Check, Plus, SlidersHorizontal } from "lucide-react";
 import { Amount } from "@/components/ui/money";
 import { Avatar, usePersonHue } from "@/components/ui/avatar";

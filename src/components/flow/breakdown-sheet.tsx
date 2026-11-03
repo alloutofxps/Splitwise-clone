@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { ChevronRight } from "lucide-react";
 import { usePrefetch } from "@/lib/client/queries";
 import type { PersonDto } from "@/lib/types";
