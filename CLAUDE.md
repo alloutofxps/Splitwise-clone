@@ -17,7 +17,9 @@ on SQLite, hosted on Railway (deploys automatically from `main`).
    - Section 7, download limits: Home 312 KB, a group 333 KB of scripts,
      compressed, measured with `node scripts/size-report.mjs <url>`.
    - Section 8, smoothness: under 2% of frames over 25ms with the processor
-     slowed 4x (`node scripts/motion-record.mjs <url> <out> timing`).
+     slowed 4x (`node scripts/smoothness.mjs <url> <out>`: three
+     recordings, the middle kept; CI runs it, and its numbers are the ones to
+     compare, since this laptop drifts through a day).
    A change to motion that the spec doesn't describe updates the spec in the
    same PR.
 3. `PERF-BASELINE.md`: the size, smoothness, Lighthouse and trace numbers

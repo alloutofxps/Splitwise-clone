@@ -251,8 +251,9 @@ drawings.
 ## 8. Proof
 
 - Smoothness: under 2% of frames over 25ms with the processor slowed 4x
-  (`node scripts/motion-record.mjs <url> <out> timing`), and on a real
-  Android phone. Read `lateShareAt60Hz`: it counts against the frames a 60Hz
+  (`node scripts/smoothness.mjs <url> <out>`: each flow recorded three
+  times, the middle result kept; CI runs it on every change, on the same kind
+  of machine each time), and on a real Android phone. Read `lateShareAt60Hz`: it counts against the frames a 60Hz
   phone would draw, so a fast desktop screen doesn't flatter the result.
   A flow that loads its screen first is counted from when that screen is
   ready, so it judges its taps and animations; the app starting is judged
