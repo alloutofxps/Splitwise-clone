@@ -93,6 +93,11 @@ jobs:
       - name: Install a browser
         run: npx playwright install --with-deps chromium
 
+      # The scripts a phone downloads to show Home and a group, compressed,
+      # within their limits: Home 312 KB, a group 333 KB (RULES S1).
+      - name: Download size
+        run: STRICT=1 node scripts/size-report.mjs http://localhost:3000
+
       - name: UI checks
         run: node scripts/ui-check.mjs http://localhost:3000
 

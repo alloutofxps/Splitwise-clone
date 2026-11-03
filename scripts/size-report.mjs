@@ -11,6 +11,9 @@
 // (needed to show the screen) and those after (fetched early for the next one).
 // DETAIL=1 also lists every script with its size, on stderr.
 //
+// STRICT=1 (in CI) fails when the scripts needed to show a screen pass its
+// limit (MOTION-SPEC 7): Home 312 KB, a group 333 KB.
+//
 // ScriptRaw and ScriptRawAfterLoad are the same scripts uncompressed. The
 // compressed figures can move by about 0.6 KB with no code change: the build
 // numbers its pieces differently in another folder, or after unrelated server
@@ -22,6 +25,7 @@
 import { chromium } from "playwright";
 
 const BASE = process.argv[2] ?? "http://localhost:3100";
+const LIMITS = { Home: 312, Group: 333 };
 
 let ip = 10 + Math.floor(Math.random() * 200);
 function client() {
@@ -121,3 +125,11 @@ for (const [name, path] of [
 }
 console.log(JSON.stringify(report));
 await browser.close();
+let over = false;
+for (const [name, limit] of Object.entries(LIMITS)) {
+  const toShow = +((report[name].Script ?? 0) - report[name].ScriptAfterLoad).toFixed(1);
+  const pass = toShow <= limit;
+  if (!pass) over = true;
+  console.log(`${name}: ${toShow} KB of scripts to show it, limit ${limit} KB, ${pass ? "passes" : "OVER"}`);
+}
+process.exitCode = process.env.STRICT && over ? 1 : 0;
