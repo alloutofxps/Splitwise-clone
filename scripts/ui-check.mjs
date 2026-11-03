@@ -1386,11 +1386,18 @@ console.log("\nSwiping a row");
   const action = p.locator('button[aria-label^="Delete "][aria-hidden]').first();
   const row = action.locator("xpath=following-sibling::div[1]");
   const box = await row.boundingBox();
+  // A finger, not a mouse: letting go of a mouse after a swipe also clicks,
+  // which opens the expense on top of the row.
+  const cdp = await phone.newCDPSession(p);
   const drag = async (from, to) => {
-    await p.mouse.move(from, box.y + box.height / 2);
-    await p.mouse.down();
-    for (let i = 1; i <= 10; i++) await p.mouse.move(from + ((to - from) * i) / 10, box.y + box.height / 2);
-    await p.mouse.up();
+    const y = box.y + box.height / 2;
+    const touch = (type, x) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+    await touch("touchStart", from);
+    for (let i = 1; i <= 10; i++) {
+      await touch("touchMove", from + ((to - from) * i) / 10);
+      await p.waitForTimeout(16);
+    }
+    await touch("touchEnd", to);
     await p.waitForTimeout(700);
   };
   await drag(box.x + box.width - 40, box.x + box.width - 200);
