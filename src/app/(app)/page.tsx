@@ -29,6 +29,7 @@ import { FlowDoodle } from "@/components/ui/doodle";
 import { Skeleton, cn, haptic } from "@/components/ui/primitives";
 import { lazyAfterLoad } from "@/components/ui/after-load";
 import { Wordmark } from "@/components/app-shell";
+import { Standing, standingLines } from "@/components/home-standing";
 import { FlowBar } from "@/components/flow/flow-bar";
 import { GroupMark } from "@/components/group/group-mark";
 import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
@@ -211,104 +212,38 @@ export default function HomePage() {
 // Balance
 
 /**
- * Where you stand: what you're owed and what you owe, one line each per
- * currency, with the flow bar of who makes it up underneath.
+ * Where you stand (`Standing`), with the flow bar of who makes it up under
+ * each line, which opens the list of who that is.
  */
 function Balance({ data }: { data: DashboardPayload }) {
-  const currencies = Object.keys(data.totals);
-  const nothingYet = data.groups.length === 0 && data.friends.length === 0;
   // Which currency's bar was tapped, for the list of who makes it up. Kept
   // after closing, so the list doesn't empty while it slides away.
   const [breakdown, setBreakdown] = React.useState<string | null>(null);
   const [breakdownOpen, setBreakdownOpen] = React.useState(false);
 
-  if (currencies.length === 0) {
-    return (
-      <section className="mb-8">
-        <p className="text-hero font-semibold leading-[1.1] tracking-[-0.035em] text-text">
-          {nothingYet ? "Nothing owed yet" : "All settled up"}
-        </p>
-        <p className="mt-2 text-body text-muted">
-          {nothingYet
-            ? "Add what people paid and Divvy works out who owes who."
-            : "Nobody owes anybody anything."}
-        </p>
-      </section>
-    );
-  }
-
-  // Split by direction, per currency, from the people who make it up: a
-  // single net figure hides that you can be owed by some and owe others.
-  const lines = currencies.map((currency) => {
-    const entries = data.friends
-      .filter((friend) => friend.net[currency])
-      .map((friend) => ({ person: friend.person, amount: BigInt(friend.net[currency]) }));
-    const owed = entries.reduce((sum, entry) => (entry.amount > 0n ? sum + entry.amount : sum), 0n);
-    const owe = entries.reduce((sum, entry) => (entry.amount < 0n ? sum - entry.amount : sum), 0n);
-    return { currency, owed, owe, entries };
-  });
-
-  const approx = data.approxTotal ? BigInt(data.approxTotal.amount) : null;
-
   return (
-    <section className="mb-8">
-      <div className="space-y-5">
-        {lines.map((line) => (
-          <div key={line.currency}>
-            {line.owed > 0n ? (
-              <BalanceLine label="You're owed" amount={line.owed} currency={line.currency} />
-            ) : null}
-            {line.owe > 0n ? (
-              <BalanceLine label="You owe" amount={-line.owe} currency={line.currency} />
-            ) : null}
-            <FlowBar
-              className="mt-3"
-              currency={line.currency}
-              entries={line.entries}
-              onOpen={() => {
-                haptic();
-                setBreakdown(line.currency);
-                setBreakdownOpen(true);
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {approx !== null && data.approxTotal ? (
-        <p className="mt-3 text-body text-muted">
-          About {formatMoney(abs(approx), data.approxTotal.currency)}{" "}
-          {approx >= 0n ? "owed to you" : "that you owe"} overall
-        </p>
-      ) : null}
-
+    <Standing
+      data={data}
+      bar={(line) => (
+        <FlowBar
+          className="mt-3"
+          currency={line.currency}
+          entries={line.entries}
+          onOpen={() => {
+            haptic();
+            setBreakdown(line.currency);
+            setBreakdownOpen(true);
+          }}
+        />
+      )}
+    >
       <BreakdownSheet
         open={breakdownOpen}
         onClose={() => setBreakdownOpen(false)}
         currency={breakdown ?? ""}
-        entries={lines.find((line) => line.currency === breakdown)?.entries ?? []}
+        entries={standingLines(data).find((line) => line.currency === breakdown)?.entries ?? []}
       />
-    </section>
-  );
-}
-
-function BalanceLine({ label, amount, currency }: { label: string; amount: bigint; currency: string }) {
-  return (
-    // The label always beside the figure, which shrinks to fit the rest of
-    // the line. It used to wrap under the label only when long, so the labels
-    // sat in two different places.
-    <p className="flex items-baseline gap-x-2">
-      <span className="shrink-0 text-body text-muted">{label}</span>
-      <span className="min-w-0 flex-1 [container-type:inline-size]">
-        <Amount
-          value={amount}
-          currency={currency}
-          arrow
-          fit="hero"
-          className="text-hero font-semibold leading-[1.15] tracking-[-0.035em]"
-        />
-      </span>
-    </p>
+    </Standing>
   );
 }
 

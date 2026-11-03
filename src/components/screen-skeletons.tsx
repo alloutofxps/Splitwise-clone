@@ -1,6 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import { AppMark } from "./app-mark";
 import { Skeleton, cn } from "./ui/primitives";
+import { Standing, type StandingData } from "./home-standing";
 
 /**
  * Still outlines shaped like the screen that's coming (MOTION-SPEC 1).
@@ -71,7 +72,31 @@ export function WelcomeSkeleton() {
   );
 }
 
-function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) {
+function HomeSkeleton({
+  late,
+  opening,
+  standing,
+}: {
+  late?: boolean;
+  opening?: boolean;
+  standing?: StandingData;
+}) {
+  // Grey lines where the balance goes, unless the page brought the numbers.
+  const lines = (
+    <>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-11 w-44" />
+        </div>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-11 w-40" />
+        </div>
+      </div>
+      <Skeleton className="mb-10 mt-4 h-2 w-full rounded-full" />
+    </>
+  );
   return (
     <div aria-hidden className={cn("pt-[max(1rem,env(safe-area-inset-top))]", late && "appear-late")}>
       <div className="mb-5 flex h-10 items-center justify-between">
@@ -85,21 +110,32 @@ function HomeSkeleton({ late, opening }: { late?: boolean; opening?: boolean }) 
         )}
         <Skeleton className="size-9 rounded-full" />
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-11 w-44" />
+      {/* Home's own columns, so the balance stays where Home then draws it. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-10">
+        <div className="min-w-0 lg:order-2">
+          {standing ? (
+            <>
+              {/* A copy of the page kept for offline use shows the lines
+                  instead: its numbers are from whenever it was kept. */}
+              <div className="offline-copy:hidden">
+                <Standing
+                  data={standing}
+                  bar={(line) => (line.entries.length > 0 ? <Skeleton className="mt-3 h-2.5 w-full rounded-full" /> : null)}
+                />
+              </div>
+              <div className="hidden offline-copy:block">{lines}</div>
+            </>
+          ) : (
+            lines
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-11 w-40" />
+        <div className="min-w-0 lg:order-1">
+          <Skeleton className="mb-3 h-5 w-24" />
+          <Rows count={3} avatar="round" />
+          <Skeleton className="mb-3 mt-10 h-5 w-20" />
+          <Rows count={2} />
         </div>
       </div>
-      <Skeleton className="mt-4 h-2 w-full rounded-full" />
-      <Skeleton className="mb-3 mt-10 h-5 w-24" />
-      <Rows count={3} avatar="round" />
-      <Skeleton className="mb-3 mt-10 h-5 w-20" />
-      <Rows count={2} />
     </div>
   );
 }
@@ -174,15 +210,39 @@ export function SkeletonFor({
   pathname,
   late,
   opening,
+  standing,
 }: {
   pathname: string;
   late?: boolean;
   opening?: boolean;
+  /** Home's numbers, when the page arrived with them. */
+  standing?: StandingData;
 }) {
-  if (pathname === "/") return <HomeSkeleton late={late} opening={opening} />;
+  if (pathname === "/") return <HomeSkeleton late={late} opening={opening} standing={standing} />;
   if (pathname.startsWith("/groups/")) return <GroupSkeleton late={late} />;
   if (/^\/friends\/[^/]+/.test(pathname)) return <FriendSkeleton late={late} />;
   return <ListSkeleton late={late} />;
+}
+
+/**
+ * The sidebar's outline on a computer, for while the app opens: the screen
+ * beside it starts where it will stay, rather than 260px to the left.
+ */
+export function SidebarFrame() {
+  return (
+    <div
+      aria-hidden
+      className="sticky top-0 hidden h-[100dvh] w-[260px] shrink-0 flex-col border-r border-line bg-surface px-4 py-6 lg:flex"
+    >
+      <Skeleton className="mb-7 ml-2 h-7 w-24" />
+      <span className="mb-6 h-11 rounded-[var(--radius-md)] bg-brand" />
+      <div className="space-y-3 px-2">
+        {[0, 1, 2, 3].map((index) => (
+          <Skeleton key={index} className="h-5 w-28" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /**

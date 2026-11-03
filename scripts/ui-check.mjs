@@ -1407,6 +1407,45 @@ console.log("\nSwiping a row");
   await phone.close();
 }
 
+// Home's balances come with the page, so they are on screen before the app's
+// code has arrived (RULES S3): the page as sent already says what Home says.
+console.log("\nHome's balances come with the page");
+{
+  await page.evaluate(async () => {
+    const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
+    const g = (await post("/api/groups", { name: "Owing", currency: "EUR", placeholderNames: ["Lou"] })).group;
+    const d = await (await fetch(`/api/groups/${g.id}`)).json();
+    const lou = d.group.members.find((m) => m.displayName === "Lou").id;
+    const me = d.group.members.find((m) => m.displayName !== "Lou").id;
+    await post("/api/expenses", { groupId: g.id, description: "Ferry", amount: "4200", currency: "EUR", splitMode: "EQUAL", payers: [{ personId: lou, amount: "4200" }], splits: [{ personId: me, amount: "2100" }, { personId: lou, amount: "2100" }] });
+  });
+  const lines = (p) =>
+    p.evaluate(() =>
+      [...document.querySelectorAll("main section p")]
+        .filter((el) => /You.re owed|You owe/.test(el.textContent ?? ""))
+        .map((el) => el.textContent.replace(/\s+/g, " ").trim()),
+    );
+  for (const [label, width] of [["a phone", 390], ["a computer", 1280]]) {
+    const sent = await browser.newContext({ viewport: { width, height: 844 }, javaScriptEnabled: false, storageState: await ctx.storageState() });
+    const before = await sent.newPage();
+    await before.goto(BASE, { waitUntil: "load" });
+    const asSent = await lines(before);
+    const where = (p) => p.evaluate(() => { const el = [...document.querySelectorAll("main section p")].find((e) => /You owe/.test(e.textContent ?? "")); const r = el?.getBoundingClientRect(); return r ? `${Math.round(r.x)},${Math.round(r.y)}` : null; });
+    const sentAt = await where(before);
+    await sent.close();
+    const live = await browser.newContext({ viewport: { width, height: 844 }, storageState: await ctx.storageState() });
+    const after = await live.newPage();
+    await after.goto(BASE, { waitUntil: "networkidle" });
+    await after.waitForTimeout(800);
+    const drawn = await lines(after);
+    const drawnAt = await where(after);
+    await live.close();
+    check(`on ${label}, the page as sent shows what you owe`, asSent.some((line) => /You owe.*21\.00/.test(line)), JSON.stringify(asSent));
+    check(`and Home then shows the same lines`, JSON.stringify(asSent) === JSON.stringify(drawn), `${JSON.stringify(asSent)} vs ${JSON.stringify(drawn)}`);
+    check(`in the same place`, sentAt !== null && sentAt === drawnAt, `${sentAt} vs ${drawnAt}`);
+  }
+}
+
 // Deleting an account with money still owed said "You still owe money, or
 // someone owes you": it knew who, and said neither.
 console.log("\nDeleting an account with money still owed");
@@ -1725,9 +1764,19 @@ console.log("\nWhen a screen can't load");
   check("an unknown address is Nothing here", await shown("Nothing here"));
   check("inside the app, with the tab bar", await tabBar());
 
+  // Home arrives with its numbers, so its own request failing still leaves
+  // Home on screen, from those.
+  await p.route("**/api/dashboard", fail500);
+  await p.goto(BASE);
+  check("Home whose request fails still opens, from the numbers the page brought", await p.locator("main h1").first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+  // Without them (a copy of the page kept for offline use, marked as one by
+  // the service worker), there is nothing to show but the failure.
+  await p.route((url) => url.pathname === "/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace(/<html\b/i, "<html data-offline-copy") });
+  });
   let asked = 0;
   p.on("request", (r) => { if (r.url().endsWith("/api/dashboard")) asked += 1; });
-  await p.route("**/api/dashboard", fail500);
   await p.goto(BASE);
   check("Home that fails to load says so", await shown("Couldn't load this"));
   check("inside the app, with the tab bar", await tabBar());

@@ -3,7 +3,8 @@
 //
 //   node scripts/phone-speed.mjs <base-url> [runs]
 //
-// Cold: a first visit, nothing cached. Warm: the next visit, with the
+// Also when the whole of Home is there, its groups listed (no limit: for
+// comparison). Cold: a first visit, nothing cached. Warm: the next visit, with the
 // browser's cache and the service worker. Taps, once Home has settled: the +
 // button and opening a group, timed by the browser's own Event Timing (the
 // measure behind Interaction to Next Paint). Prints every run and the median.
@@ -26,7 +27,7 @@ const BASE = process.argv[2] ?? "http://localhost:3100";
 const RUNS = Number(process.argv[3] ?? 3);
 // DevTools' "Slow 4G", the network Lighthouse's mobile run stands for.
 const SLOW_4G = { offline: false, latency: 562.5, downloadThroughput: (1474.56 * 1024) / 8, uploadThroughput: (675 * 1024) / 8 };
-const LIMITS = { balancesAt: 2500, plus: 200, group: 200 };
+const LIMITS = { balancesAt: 2500, homeAt: null, plus: 200, group: 200 };
 
 const browser = await chromium.launch({
   ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
@@ -74,7 +75,9 @@ async function seed() {
 /** Runs in the page from its first moment: when the balance headline shows, and what the taps cost. */
 const watch = () => {
   window.__balancesAt = null;
+  window.__homeAt = null;
   const look = () => {
+    if (window.__homeAt === null && document.querySelector('main a[href^="/groups/"]')) window.__homeAt = performance.now();
     if (window.__balancesAt !== null) return;
     const headline = [...document.querySelectorAll("main h1, main p, main span")].find(
       (el) => /You.re owed|You owe|All settled|Nothing owed/.test(el.textContent || "") && el.getBoundingClientRect().height > 0,
@@ -124,8 +127,8 @@ async function visit(state, warm) {
   await cdp.send("Network.emulateNetworkConditions", SLOW_4G);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.goto(BASE, { waitUntil: "load" });
-  await page.waitForFunction(() => window.__balancesAt !== null, null, { timeout: 30000 }).catch(() => {});
-  const balancesAt = await page.evaluate(() => window.__balancesAt);
+  await page.waitForFunction(() => window.__balancesAt !== null && window.__homeAt !== null, null, { timeout: 30000 }).catch(() => {});
+  const { balancesAt, homeAt } = await page.evaluate(() => ({ balancesAt: window.__balancesAt, homeAt: window.__homeAt }));
   await page.waitForTimeout(3500);
   const detail = [];
   const tap = async (label, locator) => {
@@ -144,7 +147,7 @@ async function visit(state, warm) {
   await page.waitForTimeout(1500);
   const group = await tap("tap a group", page.getByRole("link", { name: /Lisbon 2026/ }).first());
   await context.close();
-  return { balancesAt, plus, group, detail };
+  return { balancesAt, homeAt, plus, group, detail };
 }
 
 const median = (values) => {
@@ -161,13 +164,19 @@ for (const warm of [false, true]) {
   console.log(warm ? "Next visit (cached)" : "First visit (nothing cached)");
   for (const [key, label] of [
     ["balancesAt", "balances on screen"],
+    ["homeAt", "all of Home"],
     ["plus", "tap +"],
     ["group", "tap a group"],
   ]) {
     const middle = median(runs.map((r) => r[key]));
+    const runsText = runs.map((r) => ms(r[key])).join(", ");
+    if (LIMITS[key] === null) {
+      console.log(`  ${label}: ${ms(middle)} (${runsText})`);
+      continue;
+    }
     const pass = middle !== null && middle <= LIMITS[key];
     if (!pass) failed = true;
-    console.log(`  ${label}: ${ms(middle)} (${runs.map((r) => ms(r[key])).join(", ")}), limit ${LIMITS[key]}ms, ${pass ? "passes" : "FAILS"}`);
+    console.log(`  ${label}: ${ms(middle)} (${runsText}), limit ${LIMITS[key]}ms, ${pass ? "passes" : "FAILS"}`);
   }
   if (process.env.DETAIL)
     for (const [i, run] of runs.entries())

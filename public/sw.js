@@ -175,6 +175,28 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+/**
+ * A kept page, marked as one.
+ *
+ * Home arrives carrying its numbers, so they are on screen before the app's
+ * code has loaded. A copy kept for offline use carries the numbers from
+ * whenever it was kept: marked, its opening outline shows plain lines in
+ * their place and the app doesn't take them as current (app-gate.tsx), and
+ * the app's own saved answers, tagged with their age, fill the screen as
+ * before.
+ */
+async function markedCopy(response) {
+  if (!(response.headers.get("Content-Type") || "").includes("text/html")) return response;
+  const html = await response.text();
+  const headers = new Headers(response.headers);
+  headers.delete("Content-Length");
+  return new Response(html.replace(/<html\b/i, "<html data-offline-copy"), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function isStaticAsset(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
@@ -204,7 +226,7 @@ async function handleNavigation(event) {
       (await caches.match("/offline"));
 
     return (
-      cached ??
+      (cached && (await markedCopy(cached))) ??
       new Response(
         "<!doctype html><meta charset=utf-8><title>Offline</title><p>You are offline.",
         { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },

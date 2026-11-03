@@ -1047,3 +1047,54 @@ its Delete and swiping back hides it (a new ui-check). ui-check (161),
 ui-features (32), pwa-check (37), offline-check (20), phone-check (every
 total 0), network-check (nothing moves with Reduce Motion) and
 keyboard-check (27 panels) pass.
+
+## 28. Home's balances come with the page (3 November 2026)
+
+Findings item 53. Before: main at `13ebb47`. After: the same plus the change.
+Both built and served side by side (main from a copy of its build), through
+the HTTP/2 relay, `phone-speed.mjs` three runs per round, two rounds
+alternating; processor 4x slower, Slow 4G.
+
+On a first visit Home asked for its numbers only once all the app's code
+had arrived and run (section 26), so they appeared at about 4.7 seconds. The
+server now works out the dashboard with the page (`app/(app)/layout.tsx`,
+the same answer `/api/dashboard` gives). The opening outline draws the
+balances from it (`components/home-standing.tsx`, shared with Home), and
+the app starts from those numbers once it has come to life, while its own
+request is still on its way.
+
+| | Main | Change |
+|---|---|---|
+| Balances on screen, first visit | 4.73 s, 4.68 s | 1.38 s, 1.35 s |
+| All of Home, first visit | 4.64 s, 4.59 s | 4.03 s, 3.93 s |
+| Balances on screen, next visit | 1.21 s, 1.41 s | 0.67 s, 0.68 s |
+| All of Home, next visit | 1.18 s, 1.38 s | 1.16 s, 1.36 s |
+| Tap + (the first after load) | 200 ms, 200 ms | 200 ms, 224 ms |
+
+"All of Home" is the groups listed, new in `phone-speed.mjs`, with no
+limit. The + tap is the same on both: what is left of item 54 is the form's
+code running for the first time.
+
+What else changed with it:
+
+- The opening outline has the app's frame on a computer: the sidebar's
+  outline and Home's width and columns. The balance sits exactly where
+  Home then draws it, on a phone and on a computer (ui-check compares the
+  page as sent with Home: the same lines, in the same place).
+- Home takes over from that outline without the opening fade, which would
+  dim figures that aren't changing (MOTION-SPEC 1 and 5). Recorded frame by
+  frame: the figures are on screen from the first frame and stay still
+  until Home is complete.
+- The service worker marks a copy of a page it kept for offline use
+  (`data-offline-copy`). Its outline shows the plain lines and the app
+  doesn't take its old numbers as current (pwa-check).
+- The page is sent `private, no-store`, as every signed-in page already
+  was. The server's work for it is the dashboard's own two queries.
+- The launch images are taken from the plain outline, so they never show
+  anyone's numbers. The iPad ones changed, since iPads get the computer
+  layout; the iPhone ones differ from the old by at most 2 shades in a few
+  pixels, so they were left as they were.
+
+Download size: Home 280.1 KB to show it (limit 312), a group 295.8 KB.
+ui-check (168), pwa-check (41), ui-features (32), offline-check (20),
+phone-check (every total 0) and network-check pass.
