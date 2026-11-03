@@ -381,24 +381,24 @@ console.log("\nAn expense added offline");
  */
 console.log("\nHome's numbers, online and from the offline copy");
 {
-  const kept = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  // The account signed in above: a new one here would meet the sign-up limit.
+  const kept = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: { cookies: (await context.storageState()).cookies, origins: [] } });
   const p = await kept.newPage();
   await p.goto(BASE, { waitUntil: "networkidle" });
   await p.evaluate(async () => {
     const post = (u, b) => fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json());
-    const me = (await post("/api/identity", { displayName: "Kept" })).me;
-    sessionStorage.removeItem("divvy-recovery-key");
-    localStorage.removeItem("divvy-recovery-pending");
-    const g = (await post("/api/groups", { name: "Kept", currency: "USD", placeholderNames: ["Pat"] })).group;
+    const me = (await (await fetch("/api/dashboard")).json()).me;
+    // A currency of its own, so its line is this group's alone.
+    const g = (await post("/api/groups", { name: "Kept", currency: "CHF", placeholderNames: ["Pat"] })).group;
     const d = await (await fetch(`/api/groups/${g.id}`)).json();
     const pat = d.group.members.find((m) => m.displayName === "Pat").id;
-    await post("/api/expenses", { groupId: g.id, description: "Lunch", amount: "3000", currency: "USD", splitMode: "EQUAL", payers: [{ personId: me.id, amount: "3000" }], splits: [{ personId: me.id, amount: "1500" }, { personId: pat, amount: "1500" }] });
+    await post("/api/expenses", { groupId: g.id, description: "Lunch", amount: "3000", currency: "CHF", splitMode: "EQUAL", payers: [{ personId: me.id, amount: "3000" }], splits: [{ personId: me.id, amount: "1500" }, { personId: pat, amount: "1500" }] });
     await navigator.serviceWorker.ready;
   });
   // What the outline shows the moment the page is read, before the app runs.
   await p.addInitScript(() => {
     document.addEventListener("DOMContentLoaded", () => {
-      const owed = [...document.querySelectorAll("main [aria-hidden] p")].find((el) => /You.re owed/.test(el.textContent ?? ""));
+      const owed = [...document.querySelectorAll("main [aria-hidden] p")].find((el) => /You.re owed.*CHF/.test(el.textContent ?? ""));
       window.__outline = {
         marked: document.documentElement.hasAttribute("data-offline-copy"),
         figures: owed && owed.getBoundingClientRect().height > 0 ? owed.textContent.replace(/\s+/g, " ").trim() : null,
@@ -409,14 +409,14 @@ console.log("\nHome's numbers, online and from the offline copy");
   await p.goto(BASE, { waitUntil: "networkidle" });
   await p.goto(BASE, { waitUntil: "networkidle" });
   const online = await p.evaluate(() => window.__outline);
-  check("online, the outline shows the balance before the app runs", online?.marked === false && /\$15\.00/.test(online?.figures ?? ""), JSON.stringify(online));
+  check("online, the outline shows the balance before the app runs", online?.marked === false && /CHF\s?15\.00/.test(online?.figures ?? ""), JSON.stringify(online));
   await kept.setOffline(true);
   await p.reload({ waitUntil: "domcontentloaded" });
   const offline = await p.evaluate(() => window.__outline);
   check("offline, the kept copy is marked", offline?.marked === true, JSON.stringify(offline));
   check("and its outline shows plain lines, not the kept numbers", offline?.figures === null, JSON.stringify(offline));
   await p.waitForTimeout(2500);
-  check("then the app still fills Home from its saved answers", /\$15\.00/.test(await p.locator("main").first().innerText()));
+  check("then the app still fills Home from its saved answers", /CHF\s?15\.00/.test(await p.locator("main").first().innerText()));
   await kept.setOffline(false);
   await kept.close();
 }
