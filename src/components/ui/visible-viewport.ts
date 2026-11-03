@@ -54,15 +54,15 @@ export function useVisibleViewport(): { top: number; height: number } | null {
     if (!viewport) return;
 
     const update = () => {
+      // The field first: reading the viewport's size makes the browser lay the
+      // page out, and as a panel opens that was mid-tap, before the panel had
+      // been drawn once. Opening one, the focus is still on what was tapped.
+      if (!summonsKeyboard(document.activeElement)) return setRect(null);
       const covered = window.innerHeight - viewport.height - viewport.offsetTop;
       // A few stray pixels are not a keyboard, and re-rendering on every scroll
       // frame of sub-pixel noise would make the sheet judder.
       const shrunk = covered > 24 || viewport.offsetTop > 1;
-      setRect(
-        shrunk && summonsKeyboard(document.activeElement)
-          ? { top: Math.round(viewport.offsetTop), height: Math.round(viewport.height) }
-          : null,
-      );
+      setRect(shrunk ? { top: Math.round(viewport.offsetTop), height: Math.round(viewport.height) } : null);
     };
 
     update();

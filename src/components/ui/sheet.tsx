@@ -6,13 +6,13 @@ import {
   AnimatePresence,
   motion,
   useReducedMotion,
-  useDragControls,
   useIsPresent,
   useMotionValue,
   useTransform,
   type PanInfo,
 } from "motion/react";
 import { X } from "lucide-react";
+import { useGrab } from "./grab";
 import { cn, haptic, IconButton, useMounted } from "./primitives";
 import { DURATION, EASE_ENTER, EASE_EXIT } from "./motion";
 import { coverStage, PANEL_EXIT_MS } from "./stage";
@@ -348,9 +348,10 @@ function SheetBody({
    * competing with a scroll. Scrolling up to see the field you were typing in
    * would sometimes throw the sheet off the bottom of the screen instead, and
    * lose what had been typed. The grab handle is what the affordance already
-   * promises, so make it the only thing that means it.
+   * promises, so make it the only thing that means it. Drag itself starts up
+   * the first time one of them is pressed (see `useGrab`).
    */
-  const dragControls = useDragControls();
+  const { grabbable, grab, controls: dragControls } = useGrab();
 
   /*
    * Bring the focused field into view once the keyboard has taken its space —
@@ -450,7 +451,7 @@ function SheetBody({
         // and dimmed by the other's backdrop (MOTION-SPEC 1).
         animate={{ scale: covered && !reduce ? 0.95 : 1 }}
         transition={ENTER}
-        drag="y"
+        drag={grabbable ? "y" : false}
         dragControls={dragControls}
         // The handle starts the gesture; the body never does.
         dragListener={false}
@@ -477,7 +478,7 @@ function SheetBody({
           scroll before Motion sees it.
         */}
         <div
-          onPointerDown={(event) => dragControls.start(event)}
+          onPointerDown={grab}
           style={{ touchAction: "none" }}
           className="flex shrink-0 cursor-grab justify-center px-5 pb-1 pt-2.5 active:cursor-grabbing"
         >
@@ -486,7 +487,7 @@ function SheetBody({
 
         {title ? (
           <div
-            onPointerDown={(event) => dragControls.start(event)}
+            onPointerDown={grab}
             style={{ touchAction: "none" }}
             className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-1"
           >

@@ -982,3 +982,68 @@ drawn:
 All measured on this laptop with the processor slowed 4x; the trace and
 timings are noisy from run to run, so every fix is compared side by side
 with main, alternating.
+
+## 27. A panel opens without measuring the page (3 November 2026)
+
+Findings items 54 and 55. Before: main at `0f76059`. After: the same plus
+the change. Both built and served side by side (main from a copy of its
+build), processor slowed 4x, alternating between the two.
+
+Opening a panel made the browser lay out the whole page and the new panel in
+the middle of the tap, several times over, and once more before the frame
+could be drawn (section 26):
+
+- Motion's drag measured the page as each panel, and each swipeable row,
+  started up. Drag now starts up the first time the handle, the title bar or
+  the row is pressed (`components/ui/grab.ts`), when the page is already laid
+  out and the same measuring costs next to nothing.
+- The visible-screen hook read the viewport's size as each panel opened. It
+  now reads it only while a field that raises the keyboard has focus, which
+  is the only time the answer can be anything but "nothing covered".
+- The page's step-back read the scroll position as each panel opened. The
+  middle of the screen is now kept up to date as the page scrolls.
+
+Removing one alone only moves the cost to the next reader in the same frame;
+all three had to go.
+
+| Tapping + on Home | Main | Change |
+|---|---|---|
+| Layout forced by code, browser trace | 30 to 65 ms, 10 passes | 1 to 3 ms, 2 passes |
+| Main thread busy for the tap, 4 traces | 99 to 195 ms (median 140) | 77 to 114 ms (median 88) |
+| Tap to next frame, 20 taps each | median 104 ms | median 80 ms |
+| The same, 16 more taps each | median 112 ms | median 104 ms |
+| Settle up, tap to next frame, 16 taps | median 112 ms | median 104 ms |
+
+These are taps after the first. The first + after the page loads stays
+slow (200 to 270 ms on both): that is the form's code running for the first
+time, a separate cause.
+
+Smoothness (`motion-record.mjs` timing, three runs each, alternating,
+median late frames at 60Hz):
+
+| Flow | Main | Change |
+|---|---|---|
+| Opening the app | 3.1% | 3.1% |
+| Home to a group | 2.8% | 2.6% |
+| Adding an expense | 4.2% | 2.8% |
+| Settling up | 3.8% | 2.9% |
+| Friend page | 0.7% | 1.0% |
+| Panels | 2.4% | 2.3% |
+| A payment | 2.9% | 2.2% |
+| First run | 2.4% | 2.4% |
+| Pull to refresh | 1.2% | 1.2% |
+| A group's tabs | 3.3% | 2.4% |
+| A group's rows | 1.9% | 1.4% |
+| Paid off | 3.1% | 2.5% |
+| Arriving (the hop) | 2.8% | 2.3% |
+| Settled (the hop) | 3.0% | 2.5% |
+
+The friend page's 0.7 to 1.0% is one frame either way in about 300; its runs
+were 0.7, 0.7, 1.0 on main and 0.7, 1.0, 1.0 with the change.
+
+Dragging a panel down by its handle still closes it, and a firm swipe over
+its content still doesn't (ui-check); swiping a row left with a finger shows
+its Delete and swiping back hides it (a new ui-check). ui-check (161),
+ui-features (32), pwa-check (37), offline-check (20), phone-check (every
+total 0), network-check (nothing moves with Reduce Motion) and
+keyboard-check (27 panels) pass.

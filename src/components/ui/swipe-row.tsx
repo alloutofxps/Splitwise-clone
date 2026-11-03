@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "motion/react";
+import { useGrab } from "./grab";
 import { Sheet, WhileOpen } from "./sheet";
 import { cn, haptic } from "./primitives";
 
@@ -26,6 +27,7 @@ export function SwipeRow({
 }) {
   const x = useMotionValue(0);
   const reduce = useReducedMotion();
+  const { grabbable, grab, controls } = useGrab();
   const [open, setOpen] = React.useState(false);
   // Lifted one level while it is off its resting place (MOTION-SPEC 2):
   // you're holding this row, and the action sits underneath it.
@@ -60,7 +62,11 @@ export function SwipeRow({
         {action.label}
       </button>
       <motion.div
-        drag="x"
+        // Drag starts up when the row is first pressed (see `useGrab`).
+        drag={grabbable ? "x" : false}
+        dragControls={controls}
+        dragListener={false}
+        onPointerDown={grab}
         dragDirectionLock
         dragConstraints={{ left: -REVEAL, right: 0 }}
         dragElastic={0.08}
