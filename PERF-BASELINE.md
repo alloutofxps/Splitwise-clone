@@ -1098,3 +1098,58 @@ What else changed with it:
 Download size: Home 280.1 KB to show it (limit 312), a group 295.8 KB.
 ui-check (168), pwa-check (41), ui-features (32), offline-check (20),
 phone-check (every total 0) and network-check pass.
+
+## 29. Smoothness counted from when each screen is ready, in CI (3 November 2026)
+
+Findings item 55, RULES S2. Measured by CI's new `smoothness` job on
+`ec4587a` (PR #165, run 41711493151): `scripts/smoothness.mjs` records every
+flow three times with the processor slowed 4x and keeps the middle result.
+
+Two changes to how it is counted, decided by the person on 3 November:
+
+- A flow that loads its screen first is counted from when that screen is
+  ready (`mark("ready")`), so it judges its own taps and animations.
+  Starting the app is judged once, in the opening flows 01 and 08. Before,
+  every flow's count included the app starting, 3 to 7 late frames each.
+  `timing.json` still keeps the old count as `wholeFlow`.
+- The numbers to compare come from CI. This laptop drifted to about half
+  speed through one afternoon, plugged in and idle: the same build's adding
+  an expense went from 3.3% at 14:00 to 6.1% at 16:30. Side by side runs on
+  it still compare fairly; its absolute numbers can't settle a 2% rule.
+
+Late frames (over 25ms, against the frames a 60Hz phone would draw), the
+middle of three runs:
+
+| Flow | From ready | Whole flow | Worst frame |
+|---|---|---|---|
+| 01 Opening the app | 4.8% | (same) | 200 ms |
+| 08 First time opening | 3.3% | (same) | 150 ms |
+| 02 Home to a group and back | 2.6% | (same) | 67 ms |
+| 13 Arriving, the drawing | 2.6% | (same) | 133 ms |
+| 11 A group's row into its header | 2.2% | (same) | 67 ms |
+| 03 Adding an expense | 1.9% | 3.3% | 117 ms |
+| 04 Settling up | 1.8% | 2.9% | 83 ms |
+| 06 Panels | 1.6% | 2.6% | 100 ms |
+| 12 Paid | 1.6% | 2.8% | 84 ms |
+| 10 A group's tabs | 1.5% | 3.2% | 83 ms |
+| 07 A payment | 1.4% | 2.8% | 83 ms |
+| 05 A friend's page | 1.3% | (same) | 50 ms |
+| 09 Pull to refresh | 0.0% | 1.9% | 17 ms |
+| 14 Settled, then a hop | 0.0% | 2.6% | 17 ms |
+
+"(same)": the flow starts on a screen already loaded (02, 05, 11) or is
+about the app starting (01, 08), so it has no ready mark. 13 has none
+either: its drawing plays while the screen arrives, so the two can't be
+told apart.
+
+9 of 14 pass. What the five over the limit spend their late frames on
+(`late.json` in the run's `smoothness` artifact):
+
+- 01, 08 and 13: the app's code arriving and starting (chunk 1255, React
+  and Next.js, 145 to 400ms of script) and React's first render of the
+  screen.
+- 02 and 11: opening a group from Home and going back, React rendering the
+  next screen (50 to 120ms) and Next.js handling the back button.
+
+The job reports without failing for now. Once every flow passes it runs
+with `STRICT=1`.
