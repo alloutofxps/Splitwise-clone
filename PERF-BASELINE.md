@@ -916,3 +916,69 @@ alternating, five runs; Panels three; median late frames at 60Hz):
 No change the runs can separate: each side's spread covers the other's median
 (after Save, adding an expense ran 1.3 to 4.7% on main and 2.7 to 4.0% with
 the change).
+
+## 26. Speed against RULES S1 to S3 (3 November 2026)
+
+Main at `0f76059`. The numbers the speed fixes that follow are measured
+against.
+
+**S1, download size** (`size-report.mjs`, now in CI with `STRICT=1`):
+
+| | Scripts to show it | Limit |
+|---|---|---|
+| Home | 278.5 KB (371.2 in all, 92.7 after load) | 312 KB |
+| A group | 295.7 KB (346.8 in all, 51.1 after load) | 333 KB |
+
+**S3, a mid-range phone** (`phone-speed.mjs`, five runs, median, through an
+HTTP/2 relay as live is; processor 4x slower, Slow 4G):
+
+| | First visit | Next visit | Limit |
+|---|---|---|---|
+| Balances on screen | 5.28 s (5.16 to 5.59) | 2.03 s (1.68 to 2.20) | 2.5 s |
+| Tap + | 360 ms (144 to 432) | 312 ms (232 to 416) | 200 ms |
+| Tap a group | 64 ms (40 to 80) | 48 ms (24 to 64) | 200 ms |
+
+Without the relay, `next start` fetches six files at a time and the first
+visit measures about a second slower than live. On that first visit Home
+asks for its numbers only once every script has arrived and run, about 4.2 s
+in; the answer takes the rest. The + tap is slowest the first time, while
+the form's code runs for the first time: 200 to 270 ms here, against about
+100 ms for every tap after.
+
+**S2, smoothness** (`motion-record.mjs` timing, three runs, median late
+frames at 60Hz; limit 2%):
+
+| Flow | Late frames |
+|---|---|
+| Opening the app | 3.1% |
+| Home to a group | 2.8% |
+| Adding an expense | 4.2% |
+| Settling up | 3.8% |
+| Friend page | 0.7% |
+| Panels | 2.4% |
+| A payment | 2.9% |
+| First run | 2.4% |
+| Pull to refresh | 1.2% |
+| A group's tabs | 3.3% |
+| A group's rows | 1.9% |
+| Paid off | 3.1% |
+| Arriving (the hop) | 2.8% |
+| Settled (the hop) | 3.0% |
+
+**Why the taps are slow.** A browser trace of tapping +, opening a group and
+opening Settle up lists every time code made the browser lay the page out in
+the middle of its work, which then has to be done again before the frame is
+drawn:
+
+- Motion's drag measured the page as each panel, and each swipeable row,
+  started up: about 75 ms of the + tap.
+- The page's step-back read the scroll position, and the visible-screen hook
+  read the viewport's size, as each panel opened.
+- A group's faces measured whether they fit as the group page was built:
+  about 130 ms of opening a group.
+- Settle up's amount takes the focus as it appears, which lays the page out
+  once; with the others gone, that is work the frame needs anyway.
+
+All measured on this laptop with the processor slowed 4x; the trace and
+timings are noisy from run to run, so every fix is compared side by side
+with main, alternating.
