@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
-import { ExpenseComposer } from "@/components/expense/composer-after-load";
+import { ComposerRehearsal, ExpenseComposer } from "@/components/expense/composer-after-load";
 import { keys, useDashboard, usePrefetch, type DashboardPayload } from "@/lib/client/queries";
 import { SidebarFrame, SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
 import { ApiError } from "@/lib/client/api";
@@ -235,6 +235,7 @@ export function AppGate({
         template={composer.template}
         onClose={() => setComposer({ open: false })}
       />
+      <ComposerRehearsal />
     </ComposerContext.Provider>
   );
 }
