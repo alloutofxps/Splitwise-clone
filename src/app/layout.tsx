@@ -17,10 +17,15 @@ const geist = Geist({
   variable: "--font-geist",
 });
 
-/** For the things people read out or copy: invite codes, the recovery key. */
+/**
+ * For the things people read out or copy: invite codes, the recovery key.
+ * Fetched only on a screen that shows them. Built with Turbopack, Next.js
+ * asked for it on every first visit: 22.6 KB most screens never use.
+ */
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
+  preload: false,
   variable: "--font-geist-mono",
 });
 
@@ -111,7 +116,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The Content-Security-Policy only lets scripts carrying this request's
-  // nonce run (see `middleware.ts`), so the one inline script carries it.
+  // nonce run (see `proxy.ts`), so the one inline script carries it.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (

@@ -55,7 +55,7 @@ const nextConfig: NextConfig = {
   // There are no Server Actions in this app. The 12 MB `serverActions` limit
   // that used to sit here looked like a request-size cap and was not one: it
   // applies only to Server Actions, not to route handlers. Request bodies are
-  // capped in `lib/api.ts` (`readBody`) and `middleware.ts` instead.
+  // capped in `lib/api.ts` (`readBody`) and `proxy.ts` instead.
   poweredByHeader: false,
   // `async` with nothing to await, because `NextConfig` types `headers` as
   // returning a promise and this is the shape Next's own documentation uses.
@@ -80,7 +80,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         // The Content-Security-Policy and HSTS are set per request in
-        // `middleware.ts`, because the CSP carries a fresh nonce each time.
+        // `proxy.ts`, because the CSP carries a fresh nonce each time.
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

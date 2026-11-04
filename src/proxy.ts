@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Runs in front of every request.
+ * Runs in front of every request (Next.js 16 calls this the proxy; it was
+ * `middleware.ts` before, and runs in the server's own Node.js now).
  *
  * Three jobs:
  *
@@ -20,7 +21,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const MAX_DECLARED_BODY = 34 * 1024 * 1024;
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (declared > MAX_DECLARED_BODY) {
     return NextResponse.json(
