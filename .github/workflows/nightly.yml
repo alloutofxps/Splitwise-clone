@@ -2,11 +2,16 @@ name: Nightly
 
 # The checks too long for every change (RULES V1, V2; findings item 17): bad
 # input at every route, about 30,000 calls and half an hour. Once a day on
-# main, and by hand from the Actions tab.
+# main, by hand from the Actions tab, and on a pull request that changes the
+# check itself.
 on:
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/nightly.yml
+      - scripts/fuzz-routes.mjs
 
 jobs:
   fuzz:
