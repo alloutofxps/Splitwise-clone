@@ -180,6 +180,14 @@ async function take(browser, data, [name, path, signedIn, setup, sizes = [PHONE]
       const lifted = await page.evaluate(() => ({ scrollY, bars: document.querySelectorAll(".sticky.shadow-raised").length }));
       if (lifted.bars) console.log(`  ! ${file}: a bar is lifted with the page scrolled ${lifted.scrollY}`);
       // Covered: what is new for every account or machine, not part of the looks.
+      // The invite code is random, and a narrower one moved its cover a few
+      // pixels, which failed the comparison by chance. So it's swapped for a
+      // fixed one first, and its cover is always the same size.
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll("span")) {
+          if (el.childElementCount === 0 && /^me-[a-z0-9-]+$/.test(el.textContent ?? "")) el.textContent = "me-calm-otter-x7k2pq";
+        }
+      });
       const mask = [page.getByText(/^me-[a-z0-9-]+/), page.getByText(/Using [\d.,]+ [KMG]?B/)];
       writeFileSync(join(OUT, "new", file), await page.screenshot({ animations: "disabled", caret: "hide", mask }));
       taken.push(file);
