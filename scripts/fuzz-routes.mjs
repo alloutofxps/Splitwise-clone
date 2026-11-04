@@ -17,7 +17,8 @@
  *   DIVVY_RATE_LIMIT_SCALE=1000 on the server, then
  *   node scripts/fuzz-routes.mjs http://localhost:3000 [path part]
  *
- * About 30,000 calls and half an hour, so it runs by hand rather than in CI.
+ * About 30,000 calls and half an hour, so CI runs it once a day
+ * (.github/workflows/nightly.yml) rather than on every change.
  * Use a copy of the test database: it leaves a lot of junk behind.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
