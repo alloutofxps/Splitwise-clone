@@ -1153,3 +1153,44 @@ told apart.
 
 The job reports without failing for now. Once every flow passes it runs
 with `STRICT=1`.
+
+## 30. One CI machine against the next, and the fair comparison (4 November 2026)
+
+Findings item 55, RULES S2. Main was measured twice in CI with the same app
+code: `ec4587a` (run 41726880550) and `b97eb1c` (run 41731177164), which
+changed only this file. Late frames, the middle of three runs each:
+
+| Flow | Run on ec4587a | Run on b97eb1c |
+|---|---|---|
+| 01 Opening the app | 3.1% | 5.2% |
+| 08 First time opening | 2.4% | 4.2% |
+| 13 Arriving, the drawing | 1.9% | 2.6% |
+| 02 Home to a group and back | 1.4% | 3.1% |
+| 11 A group's row into its header | 1.4% | 2.2% |
+| 06 Panels | 1.1% | 2.3% |
+| 12 Paid | 0.8% | 2.4% |
+| 05 A friend's page | 0.7% | 1.7% |
+| 04 Settling up | 0.6% | 2.5% |
+| 07 A payment | 0.6% | 2.0% |
+| 10 A group's tabs | 0.5% | 1.5% |
+| 03 Adding an expense | 0.3% | 2.2% |
+| 09 Pull to refresh | 0.0% | 0.0% |
+| 14 Settled, then a hop | 0.0% | 0.4% |
+| Over the limit | 2 of 14 | 9 of 14 |
+
+GitHub hands each job a machine of the same size, not the same speed. So a
+number from one job can't be held against a number from another: PR #167's
+own run (7 of 14 over) looked worse than the first and better than the
+second.
+
+From this change, on every pull request the `smoothness` job builds main as
+it stands beside the change, serves both, and records them in turns on the
+one machine, five rounds: main then the change, then the change then main,
+so a machine slowing through the job slows both alike. It shows main, the
+change and the difference (the middle of each round's own difference), on
+the run's summary page. That difference is what a change is judged by. A
+push to main still records main alone, three times.
+
+The 2% limit itself can only be judged on a known machine, or as "no flow
+worse than main". Which of the two the job enforces with `STRICT=1` is
+decided once the five flows over the limit are brought down.
