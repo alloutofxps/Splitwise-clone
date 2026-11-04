@@ -14,9 +14,12 @@
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 # Prisma 7's migration engine is still a native program linked against
-# OpenSSL, and Prisma's system requirements list it.
+# OpenSSL, and Prisma's system requirements list it. Python, make and g++ let
+# the SQLite driver build itself when its ready-made copy can't be fetched:
+# that copy comes from GitHub, and GitHub's outage on 4 November failed a
+# deploy ("Could not find any Python installation to use", findings item 56).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && apt-get install -y --no-install-recommends openssl ca-certificates python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
@@ -91,7 +94,13 @@ COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
 # `--omit=dev`, installed here rather than copied from the build stage, so
 # better-sqlite3's built-in program and the migration engine match this image.
-RUN npm ci --omit=dev && npm cache clean --force
+# The build tools are there only for the driver's fallback (see the first
+# stage) and leave in the same step, so the image doesn't grow.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && npm ci --omit=dev && npm cache clean --force \
+ && apt-get purge -y python3 make g++ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
