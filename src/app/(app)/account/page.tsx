@@ -10,6 +10,7 @@ import {
   Database,
   Download,
   EyeOff,
+  FileText,
   Bell,
   Coins,
   Heart,
@@ -320,9 +321,14 @@ export default function AccountPage() {
         <a href="/privacy" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
           <Heart className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
           <span className="min-w-0 flex-1">
-            <span className="block text-body-lg font-medium text-text">What Divvy stores about you</span>
-            <span className="mt-0.5 block text-caption text-subtle">Free to use. No ads, no tracking.</span>
+            <span className="block text-body-lg font-medium text-text">Privacy Policy</span>
+            <span className="mt-0.5 block text-caption text-subtle">What Divvy stores about you. No ads, no tracking.</span>
           </span>
+          <ChevronRight className="size-4 shrink-0 text-subtle" />
+        </a>
+        <a href="/terms" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+          <FileText className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
+          <span className="min-w-0 flex-1 text-body-lg font-medium text-text">Terms of Use</span>
           <ChevronRight className="size-4 shrink-0 text-subtle" />
         </a>
         {/*

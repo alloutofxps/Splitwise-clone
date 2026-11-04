@@ -150,7 +150,7 @@ detail.
   nothing may change position or size over time; fades, colours and
   instant changes may.
 - Picture comparison (RULES L4; in CI): `node scripts/screen-pictures.mjs <url> <out-dir>`
-  takes 32 pictures (main screens, panels and states, Day and Night, phone
+  takes 34 pictures (main screens, panels and states, Day and Night, phone
   and computer) on fixed data with a held clock, and compares them with
   `tests/screens/`. The approved pictures come from Linux in CI; Windows
   pictures never match them. When the looks change on purpose, the check

@@ -125,6 +125,7 @@ const screensFor = (data, empty) => [
   ["welcome", "/", null],
   ["join-invite-fresh", `/join/${data.invite}`, null],
   ["privacy", "/privacy", null],
+  ["terms", "/terms", null],
   ["home-empty", "/", empty],
   ["home", "/", data.state],
   ["group", `/groups/${data.tripId}`, data.state],
