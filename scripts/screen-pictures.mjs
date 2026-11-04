@@ -140,6 +140,7 @@ const pictures = (data) => [
   ["activity", "/activity", true],
   ["account", "/account", true],
   ["privacy", "/privacy", false],
+  ["terms", "/terms", false],
   ["nothing-here", "/this-is-not-a-page", true],
 ];
 
