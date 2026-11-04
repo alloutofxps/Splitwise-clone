@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
  *
  * Written to be true of this codebase rather than borrowed boilerplate: the
  * backups are docker-entrypoint.sh (Litestream, whose old copies go after 24
- * hours, and the five copies taken as the server starts), notifications are
+ * hours, and the five copies taken as the server starts) and server/jobs.ts
+ * (a copy a day and at each start, the newest seven), notifications are
  * server/push.ts, crash reports api/client-errors. Whoever runs a deployment
  * should add who they are and how to reach them (set `DIVVY_CONTACT`), and
  * have it reviewed for their jurisdiction before charging anyone.
@@ -66,9 +67,10 @@ export default function PrivacyPage() {
       </p>
       <p className="mt-3 text-muted">
         Anything deleted is gone from the backup at Cloudflare within about a day. The server
-        also keeps a copy of everything from each of the last five times it started, in case an
-        update goes wrong. It starts again with every update to Divvy, so those copies are
-        replaced as new updates come out.
+        also keeps its own copies of everything, in case something goes wrong. It takes one a
+        day and keeps the newest seven, so anything deleted is gone from those within about a
+        week. It also keeps one from each of the last five times it started, which happens with
+        every update to Divvy, so those are replaced as new updates come out.
       </p>
 
       {contact ? (
