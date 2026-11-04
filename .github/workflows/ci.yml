@@ -209,10 +209,41 @@ jobs:
           echo "server did not start within 30s"
           exit 1
 
+      # On a pull request, main as it stands is built and served beside the
+      # change, and the two are recorded in turns on this one machine: GitHub
+      # hands each job a different machine, so one job's numbers can't be
+      # compared with another's (PERF-BASELINE 30). Outside the checkout, so
+      # the change's build never sees main's files.
+      - name: Build main beside it
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          git worktree add ../main FETCH_HEAD
+          cd ../main
+          npm ci
+          npm run build
+
+      - name: Start main's server
+        if: github.event_name == 'pull_request'
+        run: |
+          (cd ../main && npx next start --port 3001 &)
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3001/; then
+              echo "main's server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "main's server did not start within 30s"
+          exit 1
+
       - name: Install a browser
         run: npx playwright install --with-deps chromium
 
       - name: Smoothness
+        env:
+          COMPARE: ${{ github.event_name == 'pull_request' && 'http://localhost:3001' || '' }}
+          RUNS: ${{ github.event_name == 'pull_request' && '5' || '3' }}
         run: node scripts/smoothness.mjs http://localhost:3000 smoothness
 
       # Each run's numbers and every late frame with the code that ran in it.

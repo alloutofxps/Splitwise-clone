@@ -18,8 +18,10 @@ on SQLite, hosted on Railway (deploys automatically from `main`).
      compressed, measured with `node scripts/size-report.mjs <url>`.
    - Section 8, smoothness: under 2% of frames over 25ms with the processor
      slowed 4x (`node scripts/smoothness.mjs <url> <out>`: three
-     recordings, the middle kept; CI runs it, and its numbers are the ones to
-     compare, since this laptop drifts through a day).
+     recordings, the middle kept). On a pull request CI records main and the
+     change in turns on one machine and shows the difference: that is the
+     number to judge a change by. GitHub's machines differ too much from one
+     job to the next, and this laptop drifts through a day (PERF-BASELINE 30).
    A change to motion that the spec doesn't describe updates the spec in the
    same PR.
 3. `PERF-BASELINE.md`: the size, smoothness, Lighthouse and trace numbers
