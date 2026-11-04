@@ -125,9 +125,10 @@ detail.
 - Permission table, every action as every kind of person (in CI):
   `node scripts/permissions.mjs <url>`.
 - Bad input at every route (no 500s, nothing internal leaked; about 30,000
-  calls, half an hour, by hand): serve a copy of the test database with
-  `DIVVY_RATE_LIMIT_SCALE=1000`, then `node scripts/fuzz-routes.mjs <url>`,
-  optionally with part of a path (no leading slash in Git Bash) to rerun one.
+  calls, in CI as the `fuzz` job, half an hour on this laptop): serve a copy
+  of the test database with `DIVVY_RATE_LIMIT_SCALE=1000`, then
+  `node scripts/fuzz-routes.mjs <url>`, optionally with part of a path (no
+  leading slash in Git Bash) to rerun one.
 - Phones and accessibility (RULES R2 to R6, A1, A4; about ten minutes):
   `node scripts/phone-check.mjs <url> <out-dir>` reports real tap areas
   under 44 points, axe in Day and Night, 200% text and zoom, the notch and

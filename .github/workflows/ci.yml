@@ -316,3 +316,51 @@ jobs:
             exit 1
           fi
           echo "refused, as it should"
+
+  # Bad input at every route (RULES V1, V2): about 30,000 calls, signed out and
+  # signed in, with junk in the path, the query and the body. Never a 500,
+  # nothing internal in an answer, every answer within five seconds, and the
+  # database still sound afterwards. About two minutes here. Its own job, so
+  # it runs beside `verify` rather than after it.
+  fuzz:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: file:./dev.db
+      DIVVY_SECRET: ci-only-secret-not-used-for-anything-real
+      # Every allowance times 1,000, so the calls test validation, not the
+      # rate limits.
+      DIVVY_RATE_LIMIT_SCALE: "1000"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000/; then
+              echo "server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not start within 30s"
+          exit 1
+
+      - name: Bad input at every route
+        run: node scripts/fuzz-routes.mjs http://localhost:3000
+
+      - name: Database still sound
+        run: node scripts/db-check.mjs
