@@ -111,7 +111,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The Content-Security-Policy only lets scripts carrying this request's
-  // nonce run (see `middleware.ts`), so the one inline script carries it.
+  // nonce run (see `proxy.ts`), so the one inline script carries it.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
