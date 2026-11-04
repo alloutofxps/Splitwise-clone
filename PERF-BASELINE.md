@@ -1194,3 +1194,39 @@ push to main still records main alone, three times.
 The 2% limit itself can only be judged on a known machine, or as "no flow
 worse than main". Which of the two the job enforces with `STRICT=1` is
 decided once the five flows over the limit are brought down.
+
+## 31. Next.js 16, built with Turbopack (4 November 2026)
+
+Findings item 54 needs React's `Activity`, which the React inside Next.js 15
+doesn't have (it crashed: React error 130). Next.js 16.4.5 ships React 19.3
+with it. Measured on this laptop with `size-report.mjs`, main and the
+change served side by side, compressed:
+
+| | Main (Next.js 15, webpack) | Next.js 16, webpack | Next.js 16, Turbopack |
+|---|---|---|---|
+| Home, scripts to show it | 280.1 KB | 307.7 KB | 288.9 KB |
+| A group, scripts to show it | 295.8 KB | 323.1 KB | 302.0 KB |
+| Home, scripts after load | 89.2 KB | 87.5 KB | 113.0 KB |
+| A group, scripts after load | 51.8 KB | 51.0 KB | 68.3 KB |
+| Fonts | 29.8 KB | 29.8 KB | 29.8 KB |
+
+With webpack, Next.js 16 adds about 27 KB to every screen, all of it its
+own code and React's (React's part 55.1 to 64.8 KB, Next.js's 47.1 to
+67.6 KB), leaving Home 4 KB under its limit. Turbopack, Next.js 16's own
+builder, chosen by the person on 4 November, gives most of that back.
+
+What Turbopack does differently:
+
+- It ignores `webpackChunkName`, so the panels fetched after the page come
+  in more, smaller files (Home 15 instead of 10) and about 24 KB more in
+  all. They arrive after the screen is showing, so the limits don't count
+  them, but a phone still downloads them. The names are gone from the code.
+- It asked the browser for the code font (Geist Mono) on every first visit:
+  22.6 KB that only invite codes and the recovery key use. That font now
+  has `preload: false`, so it comes when a screen shows it, as before.
+- It warns twice that `server/jobs.ts` reads the backup folder, which makes
+  its file tracing take in the whole project. The image doesn't use file
+  tracing (the Dockerfile copies `node_modules`), so nothing changes.
+
+`middleware.ts` is `proxy.ts`, the name Next.js 16 gives it, and runs in the
+server's own Node.js rather than a separate cut-down engine.

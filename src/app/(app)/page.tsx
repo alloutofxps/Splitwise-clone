@@ -41,18 +41,18 @@ import { isolate } from "@/lib/bidi";
 import { initials } from "@/lib/avatar";
 
 // Panels nobody sees until they tap: fetched once Home has loaded rather than
-// with it, in one file (components/ui/after-load.tsx).
+// with it (components/ui/after-load.tsx).
 const NewGroupSheet = lazyAfterLoad(() =>
-  import(/* webpackChunkName: "home-panels" */ "@/components/group/new-group-sheet").then((m) => m.NewGroupSheet),
+  import("@/components/group/new-group-sheet").then((m) => m.NewGroupSheet),
 );
 const JoinSheet = lazyAfterLoad(() =>
-  import(/* webpackChunkName: "home-panels" */ "@/components/group/join-sheet").then((m) => m.JoinSheet),
+  import("@/components/group/join-sheet").then((m) => m.JoinSheet),
 );
 const ImportSheet = lazyAfterLoad(() =>
-  import(/* webpackChunkName: "home-panels" */ "@/components/group/import-sheet").then((m) => m.ImportSheet),
+  import("@/components/group/import-sheet").then((m) => m.ImportSheet),
 );
 const BreakdownSheet = lazyAfterLoad(() =>
-  import(/* webpackChunkName: "home-panels" */ "@/components/flow/breakdown-sheet").then((m) => m.BreakdownSheet),
+  import("@/components/flow/breakdown-sheet").then((m) => m.BreakdownSheet),
 );
 
 /**
