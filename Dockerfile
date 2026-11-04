@@ -23,8 +23,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-# Proof only, removed before merging: skip the ready-made copy.
-ENV npm_config_build_from_source=true
 RUN npm ci
 
 # --- build -----------------------------------------------------------------
@@ -100,7 +98,7 @@ COPY prisma ./prisma
 # stage) and leave in the same step, so the image doesn't grow.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
- && npm_config_build_from_source=true npm ci --omit=dev && npm cache clean --force \
+ && npm ci --omit=dev && npm cache clean --force \
  && apt-get purge -y python3 make g++ && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
