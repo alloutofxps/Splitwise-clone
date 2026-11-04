@@ -186,6 +186,18 @@ export function AppGate({
   // Fetched at once on a device with no account, otherwise only when needed.
   const setup = useOnboardingScreen(!signedIn || needsSetup);
 
+  /*
+   * The app takes over from the opening outline in a transition, so React
+   * builds it in short pieces and the browser can draw between them. Built in
+   * one go, at the moment the dashboard arrives, it held the screen for about
+   * 200ms with the processor slowed 4x. The outline stays meanwhile, and the
+   * balances it shows are the same ones (screen-skeletons.tsx).
+   */
+  const [built, setBuilt] = React.useState(false);
+  React.useEffect(() => {
+    if (data && !built) React.startTransition(() => setBuilt(true));
+  }, [data, built]);
+
   // Trying again after a failure: the failure stays, its button working,
   // rather than the opening's outline coming back. (A fetch with nothing yet
   // to show counts as loading again, error cleared.)
@@ -193,7 +205,7 @@ export function AppGate({
 
   // Still the opening's outline while sign-up arrives: the same element in the
   // same place, so its drawing carries on rather than starting again.
-  if ((isLoading && !retrying) || (needsSetup && !setup.Screen && !setup.failed)) {
+  if ((isLoading && !retrying) || (needsSetup && !setup.Screen && !setup.failed) || (data && !built && !needsSetup)) {
     return signedIn ? <BootSkeleton pathname={pathname} standing={opening?.dashboard} /> : <WelcomeSkeleton />;
   }
 
