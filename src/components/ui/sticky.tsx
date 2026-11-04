@@ -40,13 +40,29 @@ export function StickyBar({
     // a short screen the bar sits there in its place, covering nothing. So
     // what is watched reaches far below the screen, and only passing its top
     // edge changes anything, however fast the page jumps.
-    const inset = Number.parseFloat(getComputedStyle(bar.current).top) || 0;
-    const observer = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting), {
-      threshold: 0,
-      rootMargin: `-${inset}px 0px 100000px 0px`,
+    //
+    // Where the bar sticks is read once the screen has been drawn, when the
+    // browser already knows it. Read as the page came to life, it made the
+    // browser lay out the whole group there and then: 66ms with the
+    // processor slowed 4x. Until then the bar is in its place, flat.
+    let observer: IntersectionObserver | undefined;
+    let timer = 0;
+    const frame = requestAnimationFrame(() => {
+      timer = window.setTimeout(() => {
+        if (!bar.current) return;
+        const inset = Number.parseFloat(getComputedStyle(bar.current).top) || 0;
+        observer = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting), {
+          threshold: 0,
+          rootMargin: `-${inset}px 0px 100000px 0px`,
+        });
+        observer.observe(element);
+      }, 0);
     });
-    observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
   }, []);
 
   return (
