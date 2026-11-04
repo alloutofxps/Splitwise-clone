@@ -1230,3 +1230,35 @@ What Turbopack does differently:
 
 `middleware.ts` is `proxy.ts`, the name Next.js 16 gives it, and runs in the
 server's own Node.js rather than a separate cut-down engine.
+
+## 32. Judging a change by the side-by-side difference (4 November 2026)
+
+Findings items 54 and 55. Six pull requests have now been measured beside
+main on one machine (section 30). What a difference means:
+
+- Main against main (#169) moved no flow by more than 0.4 points.
+- The two startup flows, 01 Opening the app and 08 First time opening,
+  swing further by chance: up to about a point. #173 measured 08 at -0.6
+  and then 0.0, and 01 at +1.1 on its second run, with no change to the
+  code between them. Each is one recording of a page loading, so a single
+  late frame moves it by about half a point.
+- So a change is judged on a second run whenever a flow moves by more than
+  about half a point, or a startup flow by more than a point. #167, #171,
+  #172, #173 and #174 were closed on that basis; #176 and #177 merged.
+
+PR #177 builds the expense form once, out of sight, when the page is quiet
+(item 54). The first tap on +, with the processor slowed 4x, against main:
+
+| | Main | #177 |
+|---|---|---|
+| All work for the tap | 174 to 182 ms | 142 to 160 ms |
+| Turning code into machine code | 28 to 30 ms | 11 to 14 ms |
+| Running the code | about 90 ms | about 70 ms |
+| Slowed phone, first visit (`phone-speed.mjs`) | 208 ms | 200 ms |
+| Slowed phone, next visit | 184 ms | 120 ms |
+
+Styles and layout are still worked out for the first time on the first tap
+(about 28 and 18 ms, against 10 and 3 on the second), because a hidden form
+is never styled. The first visit sits right at the 200 ms limit. Beside main
+on CI (run 41860185984) no flow moved by more than 0.4 points, and 5 of 14
+were over the limit against main's 6.
