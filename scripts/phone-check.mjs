@@ -5,7 +5,8 @@
  *
  * WebKit keeps the app's Secure cookie only over https: serve it through a
  * local https relay and pass BASE_WEBKIT=https://localhost:<port> to include
- * Safari's engine. Without it, only Chrome's engine runs.
+ * Safari's engine. Without it, only Chrome's engine runs. ENGINES=webkit runs
+ * Safari's engine alone (CI runs Chrome's in its own step).
  *
  * On 23 screens and states, at iPhone 15 size:
  *   - tap:     every control whose real tap area is under 44 points either
@@ -390,6 +391,7 @@ const count = (engine, kind, n) => { const key = `${kind} (${engine})`; totals[k
 
 const engines = [["chromium", chromium, process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}]];
 if (process.env.BASE_WEBKIT) engines.push(["webkit", webkit, {}]);
+if (process.env.ENGINES === "webkit") engines.shift();
 
 for (const [engine, launcher, opts] of engines) {
   BASE = engine === "webkit" ? process.env.BASE_WEBKIT : BASE_ARG;
