@@ -120,7 +120,7 @@ export function NewGroupSheet({
       haptic([8, 30, 8]);
       toast({ tone: "success", title: `${name.trim()} created` });
       onClose();
-      router.push(`/groups/${result.group.id}`);
+      router.push(`/groups/${result.group.id}`, { scroll: false });
     } catch (error) {
       toast({
         tone: "error",

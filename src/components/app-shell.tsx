@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "motion/react";
 import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "lucide-react";
@@ -119,18 +119,38 @@ export function AppShell({
   const covered = useStageCovered();
   const page = React.useRef<HTMLElement>(null);
   const middle = React.useRef(0);
+  const scrolled = React.useRef(0);
+  // The screen the back or forward button is returning to: the browser puts
+  // it back where it was left, so it isn't brought to the top.
+  const returningTo = React.useRef<string | null>(null);
   React.useEffect(() => {
-    const measure = () => (middle.current = window.scrollY + window.innerHeight / 2);
+    const measure = () => {
+      scrolled.current = window.scrollY;
+      middle.current = scrolled.current + window.innerHeight / 2;
+    };
+    const returning = () => (returningTo.current = window.location.pathname);
     // Once the first screen has been drawn, then with every scroll and resize.
     const first = window.setTimeout(measure, 0);
     window.addEventListener("scroll", measure, { passive: true });
     window.addEventListener("resize", measure);
+    window.addEventListener("popstate", returning);
     return () => {
       window.clearTimeout(first);
       window.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
+      window.removeEventListener("popstate", returning);
     };
   }, []);
+  // A new screen starts at the top, as a link's would (screen-link.tsx),
+  // without asking the browser where the page is while it is being built.
+  const shown = React.useRef(pathname);
+  React.useLayoutEffect(() => {
+    if (shown.current === pathname) return;
+    shown.current = pathname;
+    const returning = returningTo.current === pathname;
+    returningTo.current = null;
+    if (!returning && scrolled.current > 0) window.scrollTo(0, 0);
+  }, [pathname]);
   React.useLayoutEffect(() => {
     if (covered && page.current) page.current.style.transformOrigin = `50% ${middle.current}px`;
   }, [covered]);

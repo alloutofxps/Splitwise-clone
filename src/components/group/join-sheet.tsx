@@ -119,7 +119,7 @@ export function JoinSheet({
 
       if (result.kind === "group" && result.groupId) {
         toast({ tone: "success", title: "You're in" });
-        router.push(`/groups/${result.groupId}`);
+        router.push(`/groups/${result.groupId}`, { scroll: false });
       } else {
         toast({ tone: "success", title: "Friend added" });
       }

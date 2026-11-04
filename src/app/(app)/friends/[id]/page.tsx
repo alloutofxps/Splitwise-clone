@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/components/ui/screen-link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -406,7 +406,7 @@ export default function FriendPage() {
               onSuccess: () => {
                 setRemoving(false);
                 toast({ tone: "success", title: `Removed ${data.person.displayName}` });
-                router.push("/friends");
+                router.push("/friends", { scroll: false });
               },
               onError: (error) => {
                 setRemoving(false);
