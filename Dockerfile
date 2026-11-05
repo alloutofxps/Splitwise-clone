@@ -57,6 +57,11 @@ ARG RAILWAY_GIT_COMMIT_SHA
 RUN NEXT_PUBLIC_BUILD_ID="${BUILD_ID:-${RAILWAY_GIT_COMMIT_SHA:-build-$(date -u +%Y%m%d%H%M%S)}}" \
     npm run build:app
 
+# --- backup program ---------------------------------------------------------
+# Litestream 0.5.17, pinned by digest, so a changed or tampered image fails
+# the build instead of shipping. The digest covers both amd64 and arm64.
+FROM litestream/litestream:0.5.17@sha256:4b02b9859a6b6b4087d8b8944e15f7e984bd7957cba322bbeee38b0e27b9656a AS litestream
+
 # --- runtime ---------------------------------------------------------------
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
@@ -65,28 +70,18 @@ ENV NODE_ENV=production \
     PORT=3000 \
     DATABASE_URL=file:/data/divvy.db
 # gosu: steps down from root to the `node` user after fixing the volume's
-# ownership (see the entrypoint). Litestream: streams every database change to
-# object storage when LITESTREAM_REPLICA_URL is set - the off-site backup a
-# single SQLite file on one disk otherwise lacks. Pinned to a release and
-# checked against GitHub's published digest, so a tampered download fails the
-# build instead of shipping.
-ARG LITESTREAM_VERSION=0.5.17
-ARG LITESTREAM_SHA256_AMD64=a191a0928884d1820fab1f866ede1d0d5811c323d0587bf863a43481a82a7668
-ARG LITESTREAM_SHA256_ARM64=7d34ed3356844fe3dd127462b9f4ea7e79ef14679eadf2fed6c737dcb797358e
+# ownership (see the entrypoint).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl ca-certificates gosu curl \
- && arch="$(dpkg --print-architecture)" \
- && case "$arch" in \
-      amd64) file="litestream-${LITESTREAM_VERSION}-linux-x86_64.deb"; sum="$LITESTREAM_SHA256_AMD64" ;; \
-      arm64) file="litestream-${LITESTREAM_VERSION}-linux-arm64.deb"; sum="$LITESTREAM_SHA256_ARM64" ;; \
-      *) echo "no litestream build for $arch" >&2; exit 1 ;; \
-    esac \
- && curl -fsSL -o /tmp/litestream.deb "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/${file}" \
- && echo "${sum}  /tmp/litestream.deb" | sha256sum -c - \
- && dpkg -i /tmp/litestream.deb \
- && rm /tmp/litestream.deb \
- && apt-get purge -y curl && apt-get autoremove -y \
+ && apt-get install -y --no-install-recommends openssl ca-certificates gosu \
  && rm -rf /var/lib/apt/lists/*
+# Litestream: streams every database change to object storage when
+# LITESTREAM_REPLICA_URL is set - the off-site backup a single SQLite file on
+# one disk otherwise lacks. Copied from Litestream's own image on Docker Hub,
+# where the Node.js base image also comes from, rather than downloaded from
+# GitHub: GitHub's outage on 4 November failed a deploy (findings item 56),
+# and this was the other download that could. The program is self-contained
+# (statically linked), so it runs on this Debian as it does on its own.
+COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 
 # `prisma.config.ts` says where the schema and migrations are; the CLI reads it
 # both here and when the entrypoint runs `migrate deploy`.

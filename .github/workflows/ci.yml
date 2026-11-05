@@ -458,6 +458,46 @@ jobs:
           fi
           echo "refused, as it should"
 
+      # Litestream is the off-site backup, and nothing else here runs it. One
+      # container backs up to a folder while the smoke test writes people,
+      # groups and expenses; a second starts on an empty disk and must restore
+      # every row from that folder, then serve the app. The folder stands in
+      # for the storage bucket the live site uses.
+      - name: Back up and restore with Litestream
+        run: |
+          docker run --rm --entrypoint litestream divvy:ci version
+          docker run --rm -v divvy-ci-replica:/replica --entrypoint chown divvy:ci node:node /replica
+          run() {
+            docker run -d --name "$1" -p "$2":3000 \
+              -e DIVVY_SECRET=ci-only-secret-not-used-for-anything-real \
+              -e LITESTREAM_REPLICA_URL=file:///replica/divvy \
+              -v "divvy-ci-$1":/data -v divvy-ci-replica:/replica divvy:ci
+            for i in $(seq 1 60); do
+              curl -sf -o /dev/null "http://localhost:$2/" && return 0
+              sleep 2
+            done
+            docker logs "$1"; return 1
+          }
+          rows() {
+            docker run --rm -v "divvy-ci-$1":/data --entrypoint node divvy:ci -e '
+              const db = new (require("better-sqlite3"))("/data/divvy.db");
+              console.log(["Person", "Group", "Expense", "Settlement", "Activity"]
+                .map((t) => t + " " + db.prepare(`select count(*) n from "${t}"`).get().n).join(", "));'
+          }
+          run primary 3001
+          node scripts/smoke.mjs http://localhost:3001
+          sleep 5
+          docker stop -t 30 primary
+          before="$(rows primary)"
+          run restored 3002
+          docker logs restored 2>&1 | grep "Restoring /data/divvy.db"
+          docker stop -t 30 restored
+          after="$(rows restored)"
+          echo "backed up: $before"
+          echo "restored:  $after"
+          case "$before" in "Person 0"*) echo "the smoke test wrote nothing"; exit 1 ;; esac
+          [ "$before" = "$after" ] || { echo "the restore lost rows"; exit 1; }
+
   # Bad input at every route (RULES V1, V2): about 30,000 calls, signed out and
   # signed in, with junk in the path, the query and the body. Never a 500,
   # nothing internal in an answer, every answer within five seconds, and the
