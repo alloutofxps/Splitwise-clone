@@ -257,12 +257,19 @@ const FLOWS = {
     await page.waitForTimeout(3500);
   },
   // An empty list's drawing arriving (a new account's Friends), then a tap
-  // to make the three hop.
+  // to make the three hop. Reached by the Friends tab from Home, as a new
+  // person gets there, so the count is the drawing's and not the app
+  // starting, which the opening flows judge (MOTION-SPEC 8). It used to open
+  // Friends cold, and every late frame it had was the app starting.
   "13-arrive-hop": async (page, seedData, mark) => {
     const fresh = client();
     await fresh.call("/api/identity", { displayName: "Noor Ali", avatarColor: "teal", defaultCurrency: "EUR" });
     await page.context().addCookies([{ name: "divvy_id", value: fresh.cookie, url: BASE }]);
-    await page.goto(`${BASE}/friends`, { waitUntil: "commit" });
+    await page.goto(BASE, { waitUntil: "networkidle" });
+    await page.waitForTimeout(1200);
+    mark("ready");
+    await page.getByRole("link", { name: "Friends" }).first().click();
+    await page.waitForURL("**/friends");
     await page.waitForTimeout(2200);
     mark("save");
     await page.locator("svg.doodle").first().click();
