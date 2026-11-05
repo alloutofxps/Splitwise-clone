@@ -177,7 +177,7 @@ export default function GroupPage() {
 
   return (
     <GroupHues members={group.members}>
-    <div ref={screen} className="pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div ref={screen} className="pt-[max(0.5rem,var(--top-safe))]">
       {/* Header ---------------------------------------------------------- */}
       {/* With the largest text the name gets a line of its own under the
           buttons (the header is under 18em wide then; 22 at normal sizes),

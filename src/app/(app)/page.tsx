@@ -94,7 +94,7 @@ export default function HomePage() {
   const firstRun = active.length === 0 && archived.length === 0 && data.friends.length === 0;
 
   return (
-    <div className="pt-[max(1rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1rem,var(--top-safe))]">
       {/* The wordmark stands in for this on screen; speech still needs it. */}
       <h1 className="sr-only">Home</h1>
       <header className="@container mb-5 flex items-center justify-between gap-3">

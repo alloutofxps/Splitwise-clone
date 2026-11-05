@@ -16,9 +16,10 @@
  *   - axe:     axe's WCAG 2.2 AA rules, in Day and Night;
  *   - text:    text at 200%: sideways scrolling, and words drawn over words;
  *   - zoom:    200% zoom (the phone layout at half width): the same;
- *   - notch:   controls and words the notch or home bar covers for good: at
- *              the very top or bottom of a screen, or pinned in place (Chrome
- *              only: it can pretend to have a notch);
+ *   - notch:   controls and words the notch, the blur iOS draws below it, or
+ *              the home bar covers for good: at the very top or bottom of a
+ *              screen, or pinned in place (Chrome only: it can pretend to
+ *              have a notch);
  *   - keyboard: every field of 9 forms with an iPhone-like keyboard up: is
  *              the field in view, and the form's Save button (and the forms'
  *              tap areas);
@@ -42,6 +43,9 @@ let BASE = BASE_ARG;
 const PARTS = (process.env.PARTS ?? "screens,forms,panels").split(",");
 mkdirSync(OUT, { recursive: true });
 const W = 393, H = 852, KB = 336, NOTCH = 59, HOME_BAR = 34;
+// iOS 26 blurs the top of an app that runs under the status bar, a little way
+// below the clock (--top-safe in globals.css).
+const BLUR_BELOW_NOTCH = 32;
 
 // Each sign-up from its own address, as smoke.mjs does: sign-ups are limited
 // per address, and in CI every browser shares the machine's otherwise.
@@ -431,12 +435,12 @@ for (const [engine, launcher, opts] of engines) {
           Object.assign(rec, await page.evaluate(layout));
           await page.screenshot({ path: join(OUT, `${engine}-zoom-${name}.png`) });
         } else if (run.kind === "notch") {
-          rec.atTop = await page.evaluate(underInsets, [NOTCH, HOME_BAR, false]);
+          rec.atTop = await page.evaluate(underInsets, [NOTCH + BLUR_BELOW_NOTCH, HOME_BAR, false]);
           await page.screenshot({ path: join(OUT, `${engine}-notch-${name}-top.png`) });
           await page.mouse.move(W / 2, H / 2);
           for (let i = 0; i < 4; i++) await page.mouse.wheel(0, 5000);
           await page.waitForTimeout(700);
-          rec.scrolled = await page.evaluate(underInsets, [NOTCH, HOME_BAR, true]);
+          rec.scrolled = await page.evaluate(underInsets, [NOTCH + BLUR_BELOW_NOTCH, HOME_BAR, true]);
           await page.screenshot({ path: join(OUT, `${engine}-notch-${name}-end.png`) });
         }
       } catch (e) {
