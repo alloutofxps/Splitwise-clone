@@ -1262,3 +1262,39 @@ Styles and layout are still worked out for the first time on the first tap
 is never styled. The first visit sits right at the 200 ms limit. Beside main
 on CI (run 41860185984) no flow moved by more than 0.4 points, and 5 of 14
 were over the limit against main's 6.
+
+## 33. The opening, judged by what's seen (5 November 2026)
+
+Opening the app (01) and the first-time run (08) are now judged by the
+frames the screen shows while the opening drawing is moving
+(`motion-record.mjs <url> <out> seen`; MOTION-SPEC 8), and the drawing is
+rebuilt so the browser moves it by itself.
+
+Why: on CI the page's own count for these two was 4.7 to 5.3% and 3.3 to
+3.6% (run 42070428105). Each late frame there is one task: about 150ms
+reading the main framework script (234 KB, React and Next.js's router),
+then 140 to 170ms building the first screen, at 4x. No change to Divvy's
+code can split a script's first run, so that count can't pass while the
+app starts. What a person sees in that time is the drawing, and it stopped
+with the page, because its line was drawn by its dash and its two people
+moved inside one SVG.
+
+Now the line lies whole under an ink cover that slides off it, and each
+person is two plain layers (one pops in, one breathes), all moved by
+transform and opacity. Chrome hands such animations to its compositor,
+except when one element has two transform animations, which is why each
+person is two layers.
+
+Measured on this laptop, main and the change in turns, three rounds, CPU
+4x, late frames on screen while the drawing moves:
+
+| Flow | Main | This change |
+|---|---|---|
+| 01 opening | 18.2%, 16.8%, 17.4% (5 gaps of 29 to 146ms each) | 0, 0, 0 (worst frame 13 to 17ms) |
+| 08 first run | 8.2%, 8.4%, 15.1% | 0, 0, 0 (worst 13ms) |
+| Drawing held while the first screen takes over | 190 to 300ms | 8 to 13ms |
+
+The page's own count for these flows is still shown beside them in CI's
+table, for information. On a cold start the browser holds the page's first picture for
+about 50ms before the drawing's animations begin (both builds); nothing is
+moving yet, so that wait isn't counted.

@@ -182,7 +182,11 @@ animation engine, no player to download.
 | App opening | drawing (the logo draws its line from one person to the other), waiting (the two breathe), ready (Home replaces it) | "ready" the moment data arrives |
 
 The opening needs no script at all, so it moves from the very first frame,
-before the app has even started.
+before the app has even started. Every part of it moves by transform and
+opacity alone, each on a layer of its own (the line is whole under an ink
+cover that slides off it), so the browser keeps it moving while the app is
+busy starting. Drawn by its dash, or inside one SVG, it stopped for 100ms
+and more at a time on a mid-range phone.
 
 On iPhone and iPad, opening from the home screen, iOS first shows a launch
 image (`public/launch/`, made by `node scripts/launch-screens.mjs`). Each is
@@ -267,6 +271,19 @@ drawings.
   once, in the opening flows (01, 08). Decided 3 November 2026: until then
   every flow's count included the app starting, 3 to 7 late frames each
   (PERF-BASELINE 29).
+- The opening flows (01, 08) are judged by what the screen shows: every
+  frame the browser puts on screen while the opening drawing is moving,
+  from its first change to the first screen taking over, under the same
+  2% (`motion-record.mjs <url> <out> seen`; `smoothness.mjs` uses it for
+  those two). Decided 5 November 2026. Starting the app means reading its
+  scripts and building the first screen in single tasks of 100 to 170ms
+  on a mid-range phone, which the page's own count always calls late, and
+  no change to the app's code can split them. What a person sees then is
+  the drawing, so the drawing has to keep moving through them. The page's
+  own count is still shown beside it, and RULES S3 (phone speed) judges
+  how long the start takes. On a cold start the browser holds the page's
+  first picture for about 50ms before the drawing begins; nothing is
+  moving yet, so that wait isn't counted.
 - Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
 - Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
   frame-exact (`scripts/motion-video.mjs`).
