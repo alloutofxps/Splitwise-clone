@@ -12,6 +12,13 @@
 //   that loads its screen first counts from `mark("ready")`, once that
 //   screen has settled; the app starting is measured once, by 01-opening
 //   and 08-first-run.
+// seen — the two opening flows only (01, 08), with the CPU slowed 4x,
+//   judged by what the screen shows rather than by the page's own work
+//   (MOTION-SPEC 8): every frame the browser put on screen while the
+//   opening drawing was there, out/seen.json. The app starting has to read
+//   its scripts and build the first screen in tasks of 100ms and more, so
+//   the page's own count can't pass while it starts; the drawing is made to
+//   keep moving through them, and this checks that it does.
 //
 // SLOW=1 slows the CPU 4x for frames too, to see what a mid-range phone
 // shows: a slide the browser runs itself keeps moving while the app is busy.
@@ -33,6 +40,7 @@ const BASE = process.argv[2] ?? "http://localhost:3100";
 const OUT = process.argv[3] ?? "motion-out";
 const MODE = process.argv[4] ?? "frames";
 const VIEWPORT = { width: 390, height: 844 };
+const SEEN_FLOWS = ["01-opening", "08-first-run"];
 
 // ---------------------------------------------------------------------------
 // Seed: API clients with their own addresses, so the sign-up limit isn't hit.
@@ -296,9 +304,11 @@ mkdirSync(OUT, { recursive: true });
 const only = process.env.FLOW;
 const timing = {};
 const lateFrames = {};
+const seen = {};
 
 for (const [name, flow] of Object.entries(FLOWS)) {
   if (only && !name.includes(only)) continue;
+  if (MODE === "seen" && !SEEN_FLOWS.includes(name)) continue;
   const seedData = await seed();
   const context = await browser.newContext({
     viewport: VIEWPORT,
@@ -369,13 +379,37 @@ for (const [name, flow] of Object.entries(FLOWS)) {
       }).observe({ type: "long-animation-frame", buffered: true });
     });
   }
+  // For `seen`: when the opening drawing went into the page and when the
+  // first screen took it out, by the page's clock.
+  const markTimes = {};
+  if (MODE === "seen") {
+    await page.exposeFunction("__reportMark", (what, at) => {
+      markTimes[what] ??= at;
+    });
+    await page.addInitScript(() => {
+      let shown = false;
+      let gone = false;
+      const check = () => {
+        const here = Boolean(document.querySelector(".mark-draw"));
+        const now = performance.timeOrigin + performance.now();
+        if (here && !shown) {
+          shown = true;
+          window.__reportMark?.("shown", now);
+        } else if (!here && shown && !gone) {
+          gone = true;
+          window.__reportMark?.("gone", now);
+        }
+      };
+      new MutationObserver(check).observe(document, { childList: true, subtree: true });
+    });
+  }
   if (name !== "01-opening") {
     await page.goto(BASE, { waitUntil: "networkidle" });
     await page.waitForTimeout(1500);
   }
 
   const cdp = await context.newCDPSession(page);
-  if (MODE === "timing" || process.env.SLOW) {
+  if (MODE === "timing" || MODE === "seen" || process.env.SLOW) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     frameTimes.length = 0;
   }
@@ -387,6 +421,18 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   const mark = (label) => {
     marks[label] = Date.now() - started;
   };
+  // When the screen showed each new frame. The browser draws a frame only
+  // when something on it changed, and while the opening drawing is on screen
+  // something always is.
+  const drawnAt = [];
+  for (const key of Object.keys(markTimes)) delete markTimes[key];
+  if (MODE === "seen") {
+    cdp.on("Page.screencastFrame", async (frame) => {
+      drawnAt.push(frame.metadata?.timestamp ? frame.metadata.timestamp * 1000 : Date.now());
+      await cdp.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {});
+    });
+    await cdp.send("Page.startScreencast", { format: "jpeg", quality: 30, maxWidth: 195, maxHeight: 422, everyNthFrame: 1 });
+  }
   if (MODE === "frames") {
     cdp.on("Page.screencastFrame", async (frame) => {
       // When the browser drew it, not when it reached us: frames can arrive
@@ -404,7 +450,35 @@ for (const [name, flow] of Object.entries(FLOWS)) {
     console.error(`${name}: ${error.message.split("\n")[0]}`);
   }
 
-  if (MODE === "frames") {
+  if (MODE === "seen") {
+    await cdp.send("Page.stopScreencast").catch(() => {});
+    const times = [...drawnAt].sort((a, b) => a - b);
+    const { shown, gone } = markTimes;
+    if (shown === undefined) {
+      console.error(`${name}: the opening drawing never appeared`);
+      seen[name] = null;
+    } else {
+      // From the first frame in which the drawing moved to the last before
+      // the first screen replaced it. Not counted: the page arriving, and
+      // its first picture, which the browser holds for about 50ms on a cold
+      // start before the drawing's animations begin, while nothing is moving
+      // yet. The moment of handing over is reported on its own.
+      const during = times.filter((t) => t >= shown && t <= (gone ?? Infinity)).slice(1);
+      const next = gone === undefined ? undefined : times.find((t) => t > gone);
+      seen[name] = {
+        ...summarise(during),
+        onScreenMs: during.length ? Math.round(during[during.length - 1] - during[0]) : 0,
+        handOverMs: next !== undefined && during.length ? Math.round(next - during[during.length - 1]) : null,
+        // Each gap over 25ms: how long after the drawing's first frame it
+        // began, and how long it was.
+        late: during
+          .slice(1)
+          .map((t, i) => ({ at: Math.round(during[i] - during[0]), ms: Math.round(t - during[i]) }))
+          .filter((gap) => gap.ms > 25),
+      };
+    }
+    console.log(name, JSON.stringify(seen[name]));
+  } else if (MODE === "frames") {
     await cdp.send("Page.stopScreencast").catch(() => {});
     const dir = `${OUT}/frames/${name}`;
     mkdirSync(dir, { recursive: true });
@@ -478,6 +552,7 @@ function summarise(times) {
 }
 
 if (MODE === "timing") writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 2));
+if (MODE === "seen") writeFileSync(`${OUT}/seen.json`, JSON.stringify(seen, null, 2));
 if (MODE === "timing" && process.env.DETAIL) writeFileSync(`${OUT}/late.json`, JSON.stringify(lateFrames, null, 2));
 await browser.close();
 

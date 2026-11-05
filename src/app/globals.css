@@ -622,15 +622,12 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(0.82); }
 }
-.doodle circle,
-.mark-draw circle {
+.doodle circle {
   transform-box: fill-box;
   transform-origin: center;
 }
 .doodle[data-play] circle,
-.doodle[data-play] path,
-.mark-draw circle,
-.mark-draw path {
+.doodle[data-play] path {
   animation-fill-mode: both;
 }
 
@@ -664,9 +661,21 @@
  * The app opening: the mark draws itself, its line from one person to the
  * other, then breathes until the first screen is ready.
  */
-.mark-draw path { animation: divvy-draw 520ms var(--ease-enter) 120ms both; }
-.mark-draw circle { animation: divvy-pop 380ms var(--ease-standard) both, divvy-breathe 1400ms var(--ease-standard) 900ms infinite; }
-.mark-draw circle:nth-of-type(2) { animation-delay: 420ms, 1100ms; }
+/*
+ * Transform and opacity only, on layers of their own (components/app-mark.tsx),
+ * so the browser keeps it moving while the app is still busy starting. The
+ * cover slides from the line's left end (x 135 of 512) to past its right end
+ * (377): 242 of its own 377 units.
+ */
+@keyframes divvy-uncover {
+  from { transform: translateX(0); }
+  to { transform: translateX(64.2%); }
+}
+.mark-cover { animation: divvy-uncover 520ms var(--ease-enter) 120ms both; }
+.mark-person { animation: divvy-pop 380ms var(--ease-standard) both; }
+.mark-breath { animation: divvy-breathe 1400ms var(--ease-standard) 900ms infinite; }
+.mark-person:last-child { animation-delay: 420ms; }
+.mark-person:last-child .mark-breath { animation-delay: 1100ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .doodle *,
