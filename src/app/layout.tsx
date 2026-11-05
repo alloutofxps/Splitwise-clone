@@ -70,8 +70,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    // Lets the app's own header sit under the status bar instead of beside it.
-    statusBarStyle: "black-translucent",
+    // The app starts below the status bar. "black-translucent" ran it under
+    // the status bar, and iOS 26 then blurs the top of the app, with no style
+    // to turn that off. iOS reads this when the app is added to the home
+    // screen, so older installs keep it (--top-safe in globals.css).
+    statusBarStyle: "default",
     title: "Divvy",
     // Shown by iOS while the app starts from the home screen: the app's own
     // first frame, so it appears over an identical picture rather than a
