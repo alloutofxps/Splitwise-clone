@@ -23,6 +23,11 @@ Three layers, and every movement agrees with them.
 | One step in | A group, a friend | Slides in 32px from the right with a fade (300ms). Back reverses it (250ms). The row you tapped carries its icon, name and amount into the new header (400ms). |
 | Panels | Add expense, Settle up, an expense's details, Split | Rise from the bottom over everything (400ms) and leave downwards (250ms). The screen underneath dims and steps back. A panel opened from a panel makes the first one step back too. |
 
+- A screen's arrival is a CSS animation (`components/app-shell.tsx`,
+  `app/globals.css`), so the browser starts it with the new screen's first
+  picture and runs it itself while the app is still setting the screen up.
+  Started from the app's scripts, a group's screen stood still for up to
+  150ms on a mid-range phone before it began to move (PERF-BASELINE 34).
 - The bottom tab bar and the top bar never move during navigation.
 - No blank screens between screens. The old screen stays until the new one is
   ready; past 300ms, a still outline shaped like the coming screen, then a
@@ -284,6 +289,16 @@ drawings.
   how long the start takes. On a cold start the browser holds the page's
   first picture for about 50ms before the drawing begins; nothing is
   moving yet, so that wait isn't counted.
+- Opening a group (02, 11) is judged by what the screen shows too: every
+  frame from each new screen's first picture until everything moving for
+  it has stopped (its slide, and the row's pieces travelling into the
+  header, or back into the row), under the same 2%. Decided 5 November
+  2026. Building a group's screen takes the page about 150 to 500ms on a
+  mid-range phone, and the old screen stays still while it does, as
+  section 1 asks; no change to the app's code has shortened it beyond
+  chance (PERF-BASELINE 32). Not counted: that wait, which is reported on
+  its own (`waitMs`). Counted: a new screen that stands still before its
+  slide starts, and any frame held while it moves.
 - Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
 - Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
   frame-exact (`scripts/motion-video.mjs`).

@@ -12,13 +12,22 @@
 //   that loads its screen first counts from `mark("ready")`, once that
 //   screen has settled; the app starting is measured once, by 01-opening
 //   and 08-first-run.
-// seen — the two opening flows only (01, 08), with the CPU slowed 4x,
-//   judged by what the screen shows rather than by the page's own work
-//   (MOTION-SPEC 8): every frame the browser put on screen while the
-//   opening drawing was there, out/seen.json. The app starting has to read
-//   its scripts and build the first screen in tasks of 100ms and more, so
-//   the page's own count can't pass while it starts; the drawing is made to
-//   keep moving through them, and this checks that it does.
+// seen — the opening flows (01, 08) and opening a group (02, 11), with the
+//   CPU slowed 4x, judged by what the screen shows rather than by the page's
+//   own work (MOTION-SPEC 8), out/seen.json:
+//   - 01 and 08: every frame the browser put on screen while the opening
+//     drawing was there. The app starting has to read its scripts and build
+//     the first screen in tasks of 100ms and more, so the page's own count
+//     can't pass while it starts; the drawing is made to keep moving through
+//     them, and this checks that it does.
+//   - 02 and 11: every frame from each new screen's first picture until the
+//     last thing moving for it stops (its slide, and any piece travelling
+//     into its header). Building a group's screen takes the page a few
+//     hundred milliseconds that nothing on screen can hide; a still screen
+//     during that wait isn't a stutter, a stalled slide is. The wait itself
+//     is reported on its own (waitMs), and a new screen that sits still
+//     before its slide starts still counts against it. heldMs is that
+//     stand, and movingMs how long the movement lasted.
 //
 // SLOW=1 slows the CPU 4x for frames too, to see what a mid-range phone
 // shows: a slide the browser runs itself keeps moving while the app is busy.
@@ -40,7 +49,11 @@ const BASE = process.argv[2] ?? "http://localhost:3100";
 const OUT = process.argv[3] ?? "motion-out";
 const MODE = process.argv[4] ?? "frames";
 const VIEWPORT = { width: 390, height: 844 };
-const SEEN_FLOWS = ["01-opening", "08-first-run"];
+// Judged by what's seen (MOTION-SPEC 8): while the opening drawing shows,
+// and while a new screen moves in.
+const OPENING_FLOWS = ["01-opening", "08-first-run"];
+const CHANGE_FLOWS = ["02-home-to-group", "11-group-row"];
+const SEEN_FLOWS = [...OPENING_FLOWS, ...CHANGE_FLOWS];
 
 // ---------------------------------------------------------------------------
 // Seed: API clients with their own addresses, so the sign-up limit isn't hit.
@@ -389,7 +402,7 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   // For `seen`: when the opening drawing went into the page and when the
   // first screen took it out, by the page's clock.
   const markTimes = {};
-  if (MODE === "seen") {
+  if (MODE === "seen" && OPENING_FLOWS.includes(name)) {
     await page.exposeFunction("__reportMark", (what, at) => {
       markTimes[what] ??= at;
     });
@@ -408,6 +421,51 @@ for (const [name, flow] of Object.entries(FLOWS)) {
         }
       };
       new MutationObserver(check).observe(document, { childList: true, subtree: true });
+    });
+  }
+  // For `seen` on 02 and 11: when each new screen went into the page, and
+  // when each animation the browser runs itself started and ends (the
+  // screen's slide, and the pieces that travel), by the page's clock.
+  const changes = [];
+  if (MODE === "seen" && CHANGE_FLOWS.includes(name)) {
+    await page.exposeFunction("__reportChange", (entry) => {
+      changes.push(entry);
+    });
+    await page.addInitScript(() => {
+      const report = (kind, animation) =>
+        animation.ready
+          .then(() => {
+            const end = animation.effect?.getComputedTiming().endTime;
+            if (animation.startTime === null || !Number.isFinite(end)) return;
+            const start = performance.timeOrigin + animation.startTime;
+            window.__reportChange?.({ kind, start, end: start + end });
+          })
+          .catch(() => {});
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes)
+            if (node.nodeType === 1 && node.matches("[data-screen]"))
+              // A slide in CSS starts with the screen's first picture and
+              // lasts what the screen says. Read from its own style, so
+              // nothing here makes the browser style the page or draw an
+              // extra frame.
+              window.__reportChange?.({
+                kind: "screen",
+                at: performance.timeOrigin + performance.now(),
+                cssMs: parseFloat(node.style.animationDuration) || null,
+              });
+      }).observe(document, { childList: true, subtree: true });
+      // When the person asked for the change: a tap, or the Back button.
+      const asked = () => window.__reportChange?.({ kind: "asked", at: performance.timeOrigin + performance.now() });
+      addEventListener("click", asked, true);
+      addEventListener("popstate", asked, true);
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (...args) {
+        const animation = animate.apply(this, args);
+        // A slide started from the page's code (Motion), or a travelling piece.
+        report(this.matches("[data-screen]") ? "slide" : "travel", animation);
+        return animation;
+      };
     });
   }
   if (name !== "01-opening") {
@@ -433,6 +491,7 @@ for (const [name, flow] of Object.entries(FLOWS)) {
   // something always is.
   const drawnAt = [];
   for (const key of Object.keys(markTimes)) delete markTimes[key];
+  changes.length = 0;
   if (MODE === "seen") {
     cdp.on("Page.screencastFrame", async (frame) => {
       drawnAt.push(frame.metadata?.timestamp ? frame.metadata.timestamp * 1000 : Date.now());
@@ -457,7 +516,62 @@ for (const [name, flow] of Object.entries(FLOWS)) {
     console.error(`${name}: ${error.message.split("\n")[0]}`);
   }
 
-  if (MODE === "seen") {
+  if (MODE === "seen" && CHANGE_FLOWS.includes(name)) {
+    await page.waitForTimeout(300);
+    await cdp.send("Page.stopScreencast").catch(() => {});
+    const times = [...drawnAt].sort((a, b) => a - b);
+    const moves = changes.filter((entry) => (entry.kind === "slide" || entry.kind === "travel") && entry.start >= started);
+    const asks = changes.filter((entry) => entry.kind === "asked" && entry.at >= started);
+    const steps = changes
+      .filter((entry) => entry.kind === "screen" && entry.at >= started)
+      .map((screen) => {
+        // The change lasts until its slide, and everything else that
+        // started moving for it before the next tap, has finished. An
+        // animation's start is the start of the frame it began in, which can
+        // be a few milliseconds before the page reports the screen going in.
+        const from = screen.at - 50;
+        const until = Math.min(asks.find((entry) => entry.at > screen.at)?.at ?? Infinity, from + 1500);
+        const mine = moves.filter((move) => move.start >= from && move.start < until);
+        // A slide started from the page's code (Motion) is one of those; a
+        // slide in CSS starts with the new screen's first picture.
+        const first = times.find((t) => t >= screen.at);
+        const slide =
+          mine.find((move) => move.kind === "slide") ??
+          (screen.cssMs && first !== undefined ? { start: first, end: first + screen.cssMs } : null);
+        if (!slide) return null;
+        const end = Math.max(slide.end, ...mine.map((move) => move.end));
+        const during = times.filter((t) => t >= screen.at && t <= end);
+        const ask = asks.filter((entry) => entry.at <= screen.at).pop();
+        return {
+          during,
+          // From the tap (or Back) to the new screen's first picture, while
+          // it was being built, and how long the new screen stood before its
+          // slide began.
+          waitMs: ask && during.length ? Math.round(during[0] - ask.at) : null,
+          heldMs: during.length ? Math.round(Math.max(0, slide.start - during[0])) : null,
+          movingMs: Math.round(end - slide.start),
+        };
+      });
+    if (steps.length === 0 || steps.some((step) => step === null)) {
+      console.error(`${name}: a new screen didn't slide in`);
+      seen[name] = null;
+    } else {
+      seen[name] = {
+        ...summariseGaps(steps.flatMap((step) => gapsOf(step.during))),
+        changes: steps.map(({ during, ...step }) => ({
+          ...step,
+          frames: Math.max(0, during.length - 1),
+          // Each gap over 25ms: how long after the new screen's first
+          // picture it began, and how long it was.
+          late: during
+            .slice(1)
+            .map((t, i) => ({ at: Math.round(during[i] - during[0]), ms: Math.round(t - during[i]) }))
+            .filter((gap) => gap.ms > 25),
+        })),
+      };
+    }
+    console.log(name, JSON.stringify(seen[name]));
+  } else if (MODE === "seen") {
     await cdp.send("Page.stopScreencast").catch(() => {});
     const times = [...drawnAt].sort((a, b) => a - b);
     const { shown, gone } = markTimes;
@@ -543,7 +657,15 @@ for (const [name, flow] of Object.entries(FLOWS)) {
  * runs on different screens can be compared.
  */
 function summarise(times) {
-  const gaps = times.slice(1).map((t, i) => t - times[i]).filter((g) => g < 1000);
+  return summariseGaps(gapsOf(times));
+}
+
+/** The gaps between frame times, leaving out pauses of a second or more. */
+function gapsOf(times) {
+  return times.slice(1).map((t, i) => t - times[i]).filter((g) => g < 1000);
+}
+
+function summariseGaps(gaps) {
   const sorted = [...gaps].sort((a, b) => a - b);
   const late = gaps.filter((g) => g > 25).length;
   const seconds = gaps.reduce((sum, g) => sum + g, 0) / 1000;
