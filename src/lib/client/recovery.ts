@@ -74,6 +74,39 @@ export function stashedRecoveryKey(): string | null {
 export function clearStashedRecoveryKey(): void {
   try {
     window.sessionStorage.removeItem(PENDING_KEY);
+    window.sessionStorage.removeItem(ASK_FIRST_KEY);
+  } catch {
+    // Nothing to do; it will go when the tab does.
+  }
+}
+
+/**
+ * Someone who joined from an invite link has just made an account without
+ * seeing how to get back into it. The app asks them next, once, starting with
+ * the easy way (a passkey) rather than the key itself. Choosing the key clears
+ * this, so a reload comes back to the key.
+ */
+const ASK_FIRST_KEY = "divvy-recovery-ask-first";
+
+export function askHowToProtectFirst(): void {
+  try {
+    window.sessionStorage.setItem(ASK_FIRST_KEY, "1");
+  } catch {
+    // Without storage the key can't be stashed either; Home's reminder remains.
+  }
+}
+
+export function shouldAskHowToProtectFirst(): boolean {
+  try {
+    return window.sessionStorage.getItem(ASK_FIRST_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearAskHowToProtectFirst(): void {
+  try {
+    window.sessionStorage.removeItem(ASK_FIRST_KEY);
   } catch {
     // Nothing to do; it will go when the tab does.
   }

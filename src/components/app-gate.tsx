@@ -130,6 +130,9 @@ export function AppGate({
    */
   const unauthorized = error instanceof ApiError && error.isUnauthorized;
   const [setupOpen, setSetupOpen] = React.useState(false);
+  // A setup resumed from the stash never latched that flag, so clearing it
+  // changes nothing: this is what redraws the app once setup is done.
+  const [, setupFinished] = React.useReducer((count: number) => count + 1, 0);
   const mounted = useMounted();
 
   // Latched during render, so onboarding is up on the first frame.
@@ -198,7 +201,16 @@ export function AppGate({
   }
 
   if (needsSetup) {
-    if (setup.Screen) return <setup.Screen onFinished={() => setSetupOpen(false)} />;
+    if (setup.Screen) {
+      return (
+        <setup.Screen
+          onFinished={() => {
+            setSetupOpen(false);
+            setupFinished();
+          }}
+        />
+      );
+    }
     // Never the app instead: an interrupted setup must show its recovery key.
     return <Unreachable offline={!navigator.onLine} />;
   }
