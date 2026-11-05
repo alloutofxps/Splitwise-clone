@@ -13,7 +13,9 @@
  * Then adding an expense and settling up with keys alone, and the arrow keys
  * on a group's tabs. Writes <out-dir>/keyboard.txt and prints the totals.
  *
- * A report, not a pass/fail test: compare the totals before and after a change.
+ * STRICT=1 (as CI runs it) fails when any of it falls short: a button not
+ * found, a panel that keeps focus out, lets Tab leave, ignores Escape or loses
+ * focus on closing, a task that doesn't save, or tabs the arrows don't move.
  */
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -36,6 +38,7 @@ const log = (line) => {
   lines.push(line);
 };
 const totals = { panels: 0, movedIn: 0, staysInside: 0, escapeCloses: 0, focusBack: 0 };
+const problems = [];
 
 /** Where focus is: in the top panel, a lower one, the page behind, or nowhere. */
 const active = () =>
@@ -69,6 +72,7 @@ async function panel(label, path, getOpener) {
   const opener = (await getOpener()).first();
   if (!(await opener.count())) {
     log(`${label}: button not found`);
+    problems.push(`${label}: button not found`);
     return;
   }
   await opener.evaluate((el) => el.setAttribute("data-kbd-opener", ""));
@@ -78,6 +82,7 @@ async function panel(label, path, getOpener) {
   await page.waitForTimeout(700);
   if ((await dialogCount()) <= before) {
     log(`${label}: Enter opened no panel`);
+    problems.push(`${label}: Enter opened no panel`);
     await page.evaluate(() => document.querySelector("[data-kbd-opener]")?.removeAttribute("data-kbd-opener"));
     return;
   }
@@ -104,6 +109,7 @@ async function panel(label, path, getOpener) {
   totals.staysInside += left === 0 ? 1 : 0;
   totals.escapeCloses += closed ? 1 : 0;
   totals.focusBack += back.opener ? 1 : 0;
+  if (!movedIn || left > 0 || !closed || !back.opener) problems.push(label);
   log(
     `${label}: moved in ${movedIn ? "yes" : `no (${tabsIn} Tabs to reach it)`} | Tab left it ${left}/30 | Escape closed ${closed ? "yes" : "no"} | focus after: ${back.opener ? "back on its button" : `${back.where} "${back.name}"`}`,
   );
@@ -177,7 +183,9 @@ await page.waitForTimeout(500);
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2500);
   const after = await active();
-  steps.push(`saved: ${(await page.getByText("Keyboard lunch").count()) > 0 ? "yes" : "no"}; focus after: ${after.opener ? "its button" : `${after.where} "${after.name}"`}`);
+  const saved = (await page.getByText("Keyboard lunch").count()) > 0;
+  if (!saved) problems.push("Adding an expense didn't save");
+  steps.push(`saved: ${saved ? "yes" : "no"}; focus after: ${after.opener ? "its button" : `${after.where} "${after.name}"`}`);
   log(`Task, add an expense: ${steps.join(" | ")}`);
 }
 
@@ -204,7 +212,9 @@ await page.waitForTimeout(500);
   await page.keyboard.press("Enter");
   await page.waitForTimeout(3200);
   const after = await active();
-  steps.push(`saved: ${(await dialogCount()) === 0 ? "yes" : "no"}; focus after: ${after.where} "${after.name}"`);
+  const saved = (await dialogCount()) === 0;
+  if (!saved) problems.push("Settling up didn't save");
+  steps.push(`saved: ${saved ? "yes" : "no"}; focus after: ${after.where} "${after.name}"`);
   log(`Task, settle up: ${steps.join(" | ")}`);
 }
 
@@ -217,10 +227,13 @@ await page.waitForTimeout(500);
   await page.keyboard.press("ArrowRight");
   await page.waitForTimeout(500);
   const selected = await page.locator('[role="tab"][aria-selected="true"]').first().innerText();
+  if (selected.trim() === first) problems.push("ArrowRight didn't move the group's tabs");
   log(`Group tabs: ArrowRight from ${first} -> focus "${(await active()).name}", selected "${selected.trim()}"`);
 }
 
 const t = totals;
 log(`\nTotals over ${t.panels} panels: focus moved in ${t.movedIn}, Tab stayed inside ${t.staysInside}, Escape closed ${t.escapeCloses}, focus came back ${t.focusBack}`);
+log(problems.length ? `Falls short: ${problems.join("; ")}` : "Nothing falls short");
 writeFileSync(`${OUT}/keyboard.txt`, lines.join("\n") + "\n");
 await browser.close();
+if (process.env.STRICT === "1" && problems.length) process.exit(1);

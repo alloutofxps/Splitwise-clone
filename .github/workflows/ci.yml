@@ -169,6 +169,147 @@ jobs:
           # run fewer cases here than in `npm test`.
           MONEY_RUNS: 300
 
+  # The suites `verify` has no room for (RULES Q1, Q3; findings item 17): the
+  # money audits, the Splitwise features, every panel by keyboard at computer
+  # and phone size, what a screen reader is told, long names and amounts, and
+  # the phone checks again in Safari's engine. Its own job, so it runs beside
+  # `verify` rather than after it.
+  suites:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: file:./dev.db
+      DIVVY_SECRET: ci-only-secret-not-used-for-anything-real
+      # These suites sign up hundreds of people from one address; `verify`
+      # already checks the limits themselves.
+      DIVVY_RATE_LIMIT_SCALE: "1000"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Safari's engine drops the app's Secure cookie over plain http, so it
+      # reaches the server through a local https relay with a throwaway
+      # certificate.
+      - name: Start server
+        run: |
+          npm start &
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+            -keyout "$RUNNER_TEMP/key.pem" -out "$RUNNER_TEMP/cert.pem" 2>/dev/null
+          node scripts/https-relay.mjs 3443 3000 "$RUNNER_TEMP/key.pem" "$RUNNER_TEMP/cert.pem" &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000/ && curl -skf -o /dev/null https://localhost:3443/; then
+              echo "server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not start within 30s"
+          exit 1
+
+      # 250 random steps (every split mode, several payers, other currencies,
+      # edits, deletes, restores, payments), checking after each that the
+      # balances add up everywhere they're shown; then the edge cases and the
+      # Splitwise features over the API (RULES M1, M8).
+      - name: Money audits
+        run: |
+          npx tsx scripts/audit-invariants.ts http://localhost:3000
+          npx tsx scripts/audit-edges.ts http://localhost:3000
+          npx tsx scripts/audit-features.ts http://localhost:3000
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      # A group's usual split, paying in another currency, importing a
+      # Splitwise export and reading a receipt photo.
+      - name: Feature checks
+        run: node scripts/ui-features.mjs http://localhost:3000
+
+      # Every panel by keyboard: focus moves in, Tab stays inside, Escape
+      # closes it, focus comes back; then adding an expense and settling up
+      # with keys alone (RULES A2).
+      - name: Keyboard, computer size
+        run: STRICT=1 node scripts/keyboard-check.mjs http://localhost:3000 reports/keyboard
+
+      - name: Keyboard, phone size
+        run: STRICT=1 WIDTH=390 node scripts/keyboard-check.mjs http://localhost:3000 reports/keyboard-phone
+
+      # Every screen's title, language and named controls, panels that hide
+      # the page behind them, and saving announced (RULES A3).
+      - name: Screen reader
+        run: STRICT=1 node scripts/a11y-tree.mjs http://localhost:3000 reports/screen-reader
+
+      # 40-letter names, 9,999,999.99 in five currencies, Arabic and Hebrew,
+      # at 390, 320 and 1280 wide: nothing runs off the screen.
+      - name: Long text
+        run: STRICT=1 node scripts/long-text.mjs http://localhost:3000 reports/long-text
+
+      # The phone checks again in Safari's engine (RULES R2, R4, Q3).
+      - name: Phone checks in Safari's engine
+        run: STRICT=1 ENGINES=webkit BASE_WEBKIT=https://localhost:3443 node scripts/phone-check.mjs http://localhost:3000 reports/phone-webkit
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: suites
+          path: reports
+          retention-days: 14
+
+  # Every control on every screen, tapped from a freshly loaded screen: none
+  # may do nothing (an overlay in the way, a handler that returns without a
+  # word). The slowest suite, so it has a job of its own.
+  buttons:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: file:./dev.db
+      DIVVY_SECRET: ci-only-secret-not-used-for-anything-real
+      DIVVY_RATE_LIMIT_SCALE: "1000"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000/; then
+              echo "server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not start within 30s"
+          exit 1
+
+      - name: Install a browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Every button does something
+        run: node scripts/button-audit.mjs http://localhost:3000
+
   # Smoothness (RULES S2, MOTION-SPEC 8): every flow recorded three times with
   # the processor slowed 4x, the middle of the three kept per flow. GitHub's
   # machines are the same kind every run, so these numbers can be compared

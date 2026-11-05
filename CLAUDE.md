@@ -134,10 +134,12 @@ detail.
   under 44 points, axe in Day and Night, 200% text and zoom, the notch and
   home bar, and the keyboard over every form. WebKit drops the app's
   Secure cookie over plain http, so to include Safari's engine put a local
-  https relay in front of the server (this machine has one, not in git:
-  `node perf-runs/tls/proxy.mjs 3443 3100`) and add
-  `BASE_WEBKIT=https://localhost:3443`. Compare the totals before and
-  after a change. It runs in CI with `STRICT=1`: every total must be 0.
+  https relay in front of the server
+  (`node scripts/https-relay.mjs 3443 3100 perf-runs/tls/key.pem perf-runs/tls/cert.pem`;
+  this machine's certificate isn't in git, and any self-signed one will
+  do) and add `BASE_WEBKIT=https://localhost:3443`; `ENGINES=webkit` runs
+  Safari's engine alone. Compare the totals before and after a change. CI
+  runs both engines with `STRICT=1`: every total must be 0.
   `PARTS=screens` (or `forms`, `panels`) runs one part.
 - Colour (RULES C1 to C7; in CI, no server needed):
   `node scripts/colour-check.mjs`. Contrast in Day and Night (WCAG 4.5 to 1
@@ -159,16 +161,21 @@ detail.
   (`gh run download <run-id> -n screen-pictures`), look at `diff/` (approved,
   new, changes in red), then copy `new/` into `tests/screens/` and commit.
   A new screen added to the list needs its pictures approved the same way.
-- Browser suites: `node scripts/ui-check.mjs <url>`,
-  `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`.
-  Many sign-ups from localhost hit a rate limit (429); restarting the server
-  clears it.
-- Accessibility and long-text reports (each takes `<url> <out-dir>`; compare
-  before and after a change): `scripts/keyboard-check.mjs` (every panel by
-  keyboard; `WIDTH=390` for the phone layout), `scripts/a11y-tree.mjs` (what a
-  screen reader is told), `scripts/focus-rings.mjs` (Day and Night close-ups),
-  `scripts/long-text.mjs` (40-letter names, 9,999,999.99 in five currencies,
-  Arabic and Hebrew).
+- Browser suites (all in CI): `node scripts/ui-check.mjs <url>`,
+  `node scripts/ui-features.mjs <url>`, `node scripts/pwa-check.mjs <url>`,
+  `node scripts/button-audit.mjs <url>` (every control tapped; slow, about
+  an hour on this laptop). Many sign-ups from localhost hit a rate limit
+  (429); restarting the server clears it, or serve with
+  `DIVVY_RATE_LIMIT_SCALE=1000` as CI's `suites` and `buttons` jobs do.
+- Money audits over the API (in CI): `npx tsx scripts/audit-invariants.ts <url>`,
+  `audit-edges.ts`, `audit-features.ts`.
+- Accessibility and long-text checks (each takes `<url> <out-dir>`; in CI
+  with `STRICT=1`, which fails on anything falling short):
+  `scripts/keyboard-check.mjs` (every panel by keyboard; `WIDTH=390` for the
+  phone layout), `scripts/a11y-tree.mjs` (what a screen reader is told),
+  `scripts/long-text.mjs` (40-letter names, 9,999,999.99 in five
+  currencies, Arabic and Hebrew). `scripts/focus-rings.mjs` (Day and Night
+  close-ups) is a picture to look at, by hand.
 - A server started from a worktree needs `DIVVY_SECRET` (it has no `.env`);
   any 64 hex characters will do for a test database.
 - Stopping a background shell doesn't stop the server. In PowerShell:
