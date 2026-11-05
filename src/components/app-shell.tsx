@@ -63,7 +63,7 @@ function useDirection(pathname: string): Direction {
  * A CSS animation (globals.css, "A screen arriving"), so the browser starts it
  * with the new screen's first picture and runs it on its own animation
  * engine. Started from the page's code, it waited for the new screen's setup
- * to finish: a group's screen stood still for up to 60ms on a mid-range
+ * to finish: a group's screen stood still for up to 150ms on a mid-range
  * phone before it began to move (PERF-BASELINE 34).
  */
 type Arrival = { name: string; ms: number } | null;

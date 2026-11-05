@@ -293,7 +293,7 @@ drawings.
   frame from each new screen's first picture until everything moving for
   it has stopped (its slide, and the row's pieces travelling into the
   header, or back into the row), under the same 2%. Decided 5 November
-  2026. Building a group's screen takes the page 150 to 350ms on a
+  2026. Building a group's screen takes the page about 150 to 500ms on a
   mid-range phone, and the old screen stays still while it does, as
   section 1 asks; no change to the app's code has shortened it beyond
   chance (PERF-BASELINE 32). Not counted: that wait, which is reported on
