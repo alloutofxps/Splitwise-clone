@@ -31,6 +31,29 @@ export function recoveryPending(): boolean {
   return readStored(KEY) === "1";
 }
 
+/**
+ * Someone with an older account has told this device they do have their key
+ * (the server can't tell: server/backup.ts).
+ */
+const CONFIRMED_KEY = "divvy-backup-confirmed";
+
+export function confirmBackup(): void {
+  writeStored(CONFIRMED_KEY, "1");
+}
+
+export function backupConfirmed(): boolean {
+  return readStored(CONFIRMED_KEY) === "1";
+}
+
+export function clearBackupConfirmed(): void {
+  removeStored(CONFIRMED_KEY);
+}
+
+/** Should Home ask this person to back up? */
+export function backupNeeded(unconfirmed: boolean | undefined): boolean {
+  return recoveryPending() || (Boolean(unconfirmed) && !backupConfirmed());
+}
+
 // ---------------------------------------------------------------------------
 
 /**

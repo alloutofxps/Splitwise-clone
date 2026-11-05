@@ -346,6 +346,8 @@ export interface DashboardDto {
   groups: GroupSummaryDto[];
   friends: FriendDto[];
   unreadActivityCount: number;
+  /** An older account the server can't tell has a way back in (server/backup.ts). */
+  backupUnconfirmed?: boolean;
 }
 
 // ---------------------------------------------------------------------------

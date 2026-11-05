@@ -37,7 +37,7 @@ import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
 import { ConfirmDeleteSheet } from "@/components/identity/confirm-delete";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
-import { clearRecoveryPending, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
+import { backupConfirmed, clearRecoveryPending, confirmBackup, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
@@ -75,7 +75,11 @@ export default function AccountPage() {
   // localStorage, so it is read without an effect and hidden once a new one is.
   const keyPending = useClientValue(recoveryPending, false);
   const [keySaved, setKeySaved] = React.useState(false);
-  const keyUnsaved = keyPending && !keySaved;
+  // An older account the server can't tell has a way back in. Unlike a key
+  // known to be unsaved, this one the person can answer themselves.
+  const keyConfirmed = useClientValue(backupConfirmed, false);
+  const keyUnsure = Boolean(data?.backupUnconfirmed) && !keyPending && !keyConfirmed && !keySaved;
+  const keyUnsaved = (keyPending && !keySaved) || keyUnsure;
   const [emojiOpen, setEmojiOpen] = React.useState(false);
 
 
@@ -277,9 +281,23 @@ export default function AccountPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-medium text-text">Back up your account</span>
               <span className="mt-0.5 block text-caption leading-snug text-muted">
-                You haven&rsquo;t saved a recovery key. Without it you can&rsquo;t get back in on a new phone.
+                {keyUnsure
+                  ? "Divvy can\u2019t tell if you saved your recovery key. Without it, or a passkey, you can\u2019t get back in on a new phone."
+                  : "You haven\u2019t saved a recovery key. Without it you can\u2019t get back in on a new phone."}
               </span>
             </span>
+          </button>
+        ) : null}
+        {keyUnsure ? (
+          <button
+            onClick={() => {
+              haptic();
+              confirmBackup();
+              setKeySaved(true);
+            }}
+            className="tap-44 relative w-full px-4 py-2 text-left text-body font-semibold text-muted"
+          >
+            I&rsquo;ve already saved it
           </button>
         ) : null}
         <Row
@@ -291,7 +309,7 @@ export default function AccountPage() {
         <Row
           icon={<KeyRound className="size-[18px]" strokeWidth={1.75} />}
           label="Recovery key"
-          value={keyUnsaved ? "Not saved" : "Manage"}
+          value={keyUnsure ? "Check" : keyUnsaved ? "Not saved" : "Manage"}
           onClick={() => setRecovery(true)}
         />
       </Group>
@@ -383,7 +401,10 @@ export default function AccountPage() {
       <RecoverySheet
         open={recovery}
         onClose={() => setRecovery(false)}
-        onSaved={() => setKeySaved(true)}
+        onSaved={() => {
+          confirmBackup();
+          setKeySaved(true);
+        }}
       />
 
       <PaymentMethodsSheet
