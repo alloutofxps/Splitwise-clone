@@ -1298,3 +1298,53 @@ The page's own count for these flows is still shown beside them in CI's
 table, for information. On a cold start the browser holds the page's first picture for
 about 50ms before the drawing's animations begin (both builds); nothing is
 moving yet, so that wait isn't counted.
+
+## 34. Opening a group, judged by what's seen (5 November 2026)
+
+Flows 02 (a "Needs you" row into the group and back) and 11 (the group's
+own row, whose icon, name and amount travel into the header) are now
+judged like the opening flows (MOTION-SPEC 8): every frame on screen from
+each new screen's first picture until everything moving for it has
+stopped. The wait while the page builds the group's screen, 150 to 350ms
+at 4x with the old screen still, isn't counted; it is reported as
+`waitMs`.
+
+Judged that way, main still failed, and showed why: the slide was started
+by Motion from the page's code once the new screen had been set up, and a
+group's screen stood still, faded and 32px to the right, for 2 to 147ms
+(`heldMs`) before it began to move. Nearly every late frame came in the
+first 150ms of the slide into the group.
+
+The screen's arrival is now a CSS animation, which the browser starts with
+the new screen's first picture: `heldMs` is 0 on every run. Same distances,
+fades, durations and curves.
+
+Measured on this laptop, main and the change in turns, five rounds, CPU
+4x, the middle result (each run's figure in brackets):
+
+| Flow | Main | This change |
+|---|---|---|
+| 02 into the group and back | 6.1% (5.6, 9.0, 6.1, 6.1, 3.0) | 3.1% (3.1, 3.1, 6.2, 9.1, 3.1) |
+| 11 the group's row and back | 5.3% (5.3, 5.3, 7.9, 8.1, 5.1) | 5.3% (5.3, 2.5, 8.0, 10.0, 2.6) |
+
+Late frames over the five rounds:
+
+| | Main | This change |
+|---|---|---|
+| 02, into the group | 10 | 5 |
+| 11, into the group | 10 | 6 |
+| 02, back to Home | 0 | 2 |
+| 11, back to Home | 2 | 5 |
+
+Into a group is better; back to Home a little worse, because the slide now
+runs while Home is still being rebuilt rather than after it.
+
+What's left is one frame held 29 to 50ms, most often the first after the
+new screen appears. A trace (Edge, headless, CPU 4x) shows the page's
+compositor getting no request to draw for about 32ms then, with two frames
+already sent waiting to be shown, while the display side kept its 4ms
+ticks; none of Divvy's code ran on that side. A bare page with no app code
+(300 rows sliding in by CSS, with 300ms of work after, or every row
+rewritten the frame after) never held a frame. So it comes from putting
+the group's new content on screen in this browser without a graphics chip,
+and how a real phone fares there isn't measured.

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, useReducedMotion, type TargetAndTransition, type Transition } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Activity, Home, Plus, Search, User, Users, type LucideIcon } from "lucide-react";
 import { cn, haptic } from "./ui/primitives";
 import { useDashboard } from "@/lib/client/queries";
@@ -59,27 +59,27 @@ function useDirection(pathname: string): Direction {
  * It starts partly visible, never at nothing. With the old screen gone in one
  * frame, a fade from zero made that first frame empty paper: the blank flash
  * this was meant to remove.
+ *
+ * A CSS animation (globals.css, "A screen arriving"), so the browser starts it
+ * with the new screen's first picture and runs it on its own animation
+ * engine. Started from the page's code, it waited for the new screen's setup
+ * to finish: a group's screen stood still for up to 60ms on a mid-range
+ * phone before it began to move (PERF-BASELINE 34).
  */
-const STILL = "translateX(0px) scale(1)";
+type Arrival = { name: string; ms: number } | null;
 
-/** The first screen, taking over from an outline that already showed its figures. */
-const SHOWN = { initial: { opacity: 1, transform: STILL }, transition: { duration: 0 } };
-
-function arrival(direction: Direction, reduce: boolean): { initial: TargetAndTransition; transition: Transition } {
-  // Every start states its transform, even when it is "none at all": blending
-  // from no transform to one starts at scale 0, and the screen grows from a
-  // dot. With motion off, that is the last thing anyone should see.
-  if (reduce) return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: DURATION.fade } };
+function arrival(direction: Direction, reduce: boolean): Arrival {
+  if (reduce) return { name: "screen-fade", ms: DURATION.fade * 1000 };
   switch (direction) {
     case "forward":
-      return { initial: { opacity: 0.3, transform: "translateX(32px) scale(1)" }, transition: { duration: DURATION.arrive, ease: EASE_ENTER } };
+      return { name: "screen-forward", ms: DURATION.arrive * 1000 };
     case "back":
-      return { initial: { opacity: 0.3, transform: "translateX(-32px) scale(1)" }, transition: { duration: DURATION.change, ease: EASE_ENTER } };
+      return { name: "screen-back", ms: DURATION.change * 1000 };
     case "across":
-      return { initial: { opacity: 0.4, transform: "translateX(0px) scale(0.98)" }, transition: { duration: DURATION.quick, ease: EASE_ENTER } };
+      return { name: "screen-across", ms: DURATION.quick * 1000 };
     default:
       // The first screen after the app opens takes over from its placeholder.
-      return { initial: { opacity: 0.4, transform: STILL }, transition: { duration: DURATION.fade } };
+      return { name: "screen-fade", ms: DURATION.fade * 1000 };
   }
 }
 
@@ -135,7 +135,9 @@ export function AppShell({
     if (covered && page.current) page.current.style.transformOrigin = `50% ${middle.current}px`;
   }, [covered]);
   const stepBack = covered && !reduce;
-  const enter = direction === "first" && figuresShown ? SHOWN : arrival(direction, reduce);
+  // The first screen, taking over from an outline that already showed its
+  // figures, arrives at once.
+  const enter = direction === "first" && figuresShown ? null : arrival(direction, reduce);
 
   const destinations: Destination[] = [
     { href: "/", label: "Home", icon: Home },
@@ -177,18 +179,14 @@ export function AppShell({
             "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] lg:pb-12",
           )}
         >
-          <motion.div
+          <div
             key={pathname}
             data-screen
-            initial={enter.initial}
-            // Whole transform strings rather than x and scale, so the browser
-            // runs the movement on the compositor: it stays smooth while the
-            // new screen is still being drawn on the main thread.
-            animate={{ opacity: 1, transform: STILL, transitionEnd: { transform: "none" } }}
-            transition={enter.transition}
+            className={enter?.name}
+            style={enter ? { animationDuration: `${enter.ms}ms` } : undefined}
           >
             {children}
-          </motion.div>
+          </div>
         </motion.main>
       </div>
 

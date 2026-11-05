@@ -22,7 +22,11 @@
 // the opening drawing is on it (motion-record's `seen`, MOTION-SPEC 8): the
 // app starting reads its scripts and builds its first screen in tasks of
 // 100ms and more, so the page's own count can't pass there, and the drawing
-// is made to keep moving through them. Their page count is still shown.
+// is made to keep moving through them. Opening a group (02, 11) is judged
+// the same way, from each new screen's first picture until everything moving
+// for it has stopped: building a group's screen takes the page a few hundred
+// milliseconds that nothing on screen can hide. Their page count is still
+// shown.
 //
 // RUNS=n records n times instead of three. FLOW=<name> records one flow.
 // STRICT=1 fails when any flow is over the limit.
@@ -34,7 +38,9 @@ const OUT = process.argv[3] ?? "smoothness";
 const MAIN = process.env.COMPARE;
 const RUNS = Number(process.env.RUNS ?? 3);
 const LIMIT = 0.02;
-const SEEN_FLOWS = ["01-opening", "08-first-run"];
+const OPENING_FLOWS = ["01-opening", "08-first-run"];
+const CHANGE_FLOWS = ["02-home-to-group", "11-group-row"];
+const SEEN_FLOWS = [...OPENING_FLOWS, ...CHANGE_FLOWS];
 
 function record(base, dir, mode = "timing") {
   const run = spawnSync(process.execPath, ["scripts/motion-record.mjs", base, dir, mode], {
@@ -47,13 +53,15 @@ function record(base, dir, mode = "timing") {
   }
   const timing = JSON.parse(readFileSync(`${dir}/${mode}.json`, "utf8"));
   if (mode !== "timing") return timing;
-  // The opening flows: what was seen, in place of the page's own count.
+  // The opening flows and opening a group: what was seen, in place of the
+  // page's own count.
   const seen = record(base, dir, "seen");
   for (const flow of SEEN_FLOWS) {
     if (!timing[flow]) continue;
     timing[flow] = seen[flow]
       ? { ...seen[flow], page: timing[flow].lateShareAt60Hz }
-      : // The drawing never showed: counted as failing, not left out.
+      : // The drawing never showed, or no new screen slid in: counted as
+        // failing, not left out.
         { ...timing[flow], lateShareAt60Hz: 1, page: timing[flow].lateShareAt60Hz };
   }
   return timing;
@@ -133,7 +141,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       `### Smoothness: late frames, the middle of ${RUNS} runs (limit under ${percent(LIMIT)})`,
       "",
       ...(MAIN ? ["Main and this change recorded in turns on the same machine. Difference: points of late frames, the middle of each round's own difference; minus is better.", ""] : []),
-      `${SEEN_FLOWS.join(" and ")}: late frames on screen while the opening drawing shows (MOTION-SPEC 8), not the page's own count.`,
+      `${OPENING_FLOWS.join(" and ")}: late frames on screen while the opening drawing shows; ${CHANGE_FLOWS.join(" and ")}: late frames on screen while the group's screen moves in (MOTION-SPEC 8). Not the page's own count.`,
       "",
       ...rows,
       "",
