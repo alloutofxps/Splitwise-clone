@@ -136,7 +136,7 @@ Evidence referred to below:
 
 | Item | Status | Evidence |
 |---|---|---|
-| 14.1 The build is reproducible and hardened | Met | Docker image from `npm ci --omit=dev`, runs as the `node` user, Litestream checked against a SHA-256 |
+| 14.1 The build is reproducible and hardened | Met | Docker image from `npm ci --omit=dev`, runs as the `node` user, Litestream copied from its official image, pinned by digest |
 | 14.2 Dependencies up to date | Met | CI audit; Next.js and Prisma kept current |
 | 14.3 No debug output in production | Met | Production build; errors generic |
 | 14.4 Security headers | Met | Content policy with nonces and `strict-dynamic`, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin` |
