@@ -11,7 +11,7 @@
  * Accounts made since have the reminder from the moment they're made, so they
  * are never asked this.
  */
-export const ASK_ACCOUNTS_MADE_BEFORE = new Date("2026-11-05T23:00:00Z");
+export const ASK_ACCOUNTS_MADE_BEFORE = new Date("2026-11-05T22:30:00Z");
 
 /** A key made this soon after the account is the one made with it. */
 const SAME_KEY_WITHIN_MS = 60_000;
