@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateGhostCode, generateInviteCode, generatePersonalCode } from "../codes";
-import { codeFromScan, normalizeInviteCode } from "../invite-code";
+import { codeFromText, inviteCodeIn, inviteMessage, normalizeInviteCode } from "../invite-code";
 
 describe("codes", () => {
   it("invite codes are readable words with an unguessable tail", () => {
@@ -30,17 +30,63 @@ describe("codes", () => {
   });
 });
 
-describe("codeFromScan", () => {
+describe("codeFromText", () => {
   it("takes the code out of an invite link", () => {
-    expect(codeFromScan("https://divvy.up.railway.app/join/mango-tiger-42")).toBe("mango-tiger-42");
-    expect(codeFromScan("https://divvy.up.railway.app/join/mango-tiger-42?x=1")).toBe("mango-tiger-42");
+    expect(codeFromText("https://divvy.up.railway.app/join/mango-tiger-42")).toBe("mango-tiger-42");
+    expect(codeFromText("https://divvy.up.railway.app/join/mango-tiger-42?x=1")).toBe("mango-tiger-42");
   });
 
   it("keeps a bare code as it is", () => {
-    expect(codeFromScan("  mango-tiger-42 ")).toBe("mango-tiger-42");
+    expect(codeFromText("  mango-tiger-42 ")).toBe("mango-tiger-42");
   });
 
   it("never throws on a broken link", () => {
-    expect(codeFromScan("https://x/join/%E0%A4%A")).toBe("%E0%A4%A");
+    expect(codeFromText("https://x/join/%E0%A4%A")).toBe("%E0%A4%A");
+  });
+
+  it("leaves a code alone while it's being typed", () => {
+    for (const typing of ["mango", "mango-tiger", "mango-tiger-", "mango-tiger-42-", "mango tiger 42"]) {
+      expect(codeFromText(typing)).toBe(typing);
+    }
+    expect(codeFromText("mango-tiger-42-k")).toBe("mango-tiger-42-k");
+  });
+});
+
+describe("inviteCodeIn", () => {
+  const url = "https://divvy.up.railway.app/join/bright-canyon-51-mqk4";
+
+  it("finds the code in the message Divvy shares", () => {
+    const message = inviteMessage('Join "Lisbon 2026" on Divvy so we can split costs.', url, "bright-canyon-51-mqk4");
+    expect(inviteCodeIn(message)).toBe("bright-canyon-51-mqk4");
+  });
+
+  it("finds a person's code in their message", () => {
+    const code = "me-calm-otter-x7k2pq";
+    const message = inviteMessage("Add me on Divvy to split expenses.", `https://divvy.up.railway.app/join/${code}`, code);
+    expect(inviteCodeIn(message)).toBe(code);
+  });
+
+  it("finds the code in a message from before the wording changed", () => {
+    expect(inviteCodeIn(`Join "Flat" on Divvy so we can split costs.\n\nCode: bright-canyon-51-mqk4\n${url}`)).toBe("bright-canyon-51-mqk4");
+    expect(inviteCodeIn("Code: BRIGHT-CANYON-51-MQK4")).toBe("BRIGHT-CANYON-51-MQK4");
+  });
+
+  it("finds the code without a link", () => {
+    expect(inviteCodeIn("Already have Divvy? Open it, tap Join and enter this code.\nbright-canyon-51-mqk4")).toBe("bright-canyon-51-mqk4");
+  });
+
+  it("isn't fooled by a group's name", () => {
+    const message = inviteMessage('Join "see /join/wrong-code-11 or fair-otter-12" on Divvy.', url, "bright-canyon-51-mqk4");
+    expect(inviteCodeIn(message)).toBe("bright-canyon-51-mqk4");
+  });
+
+  it("copes with a link that has picked up punctuation", () => {
+    expect(normalizeInviteCode(inviteCodeIn(`Here you go: ${url}.`) ?? "")).toBe("bright-canyon-51-mqk4");
+  });
+
+  it("finds nothing in anything else", () => {
+    for (const text of ["", "hello there", "dvy_Abc-def_123", "my password", "well-known-fact", "see you at 7"]) {
+      expect(inviteCodeIn(text)).toBeNull();
+    }
   });
 });
