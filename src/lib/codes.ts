@@ -13,7 +13,7 @@
 import { randomBytes, randomInt, createHash } from "node:crypto";
 
 // Re-exported so server code has one import site for anything code-related.
-export { normalizeInviteCode, formatRecoveryKey } from "./invite-code";
+export { normalizeInviteCode, normalizeSignInCode, formatRecoveryKey } from "./invite-code";
 
 // Words chosen to be short, concrete, unambiguous when spoken, and free of
 // pairs that sound alike over a noisy table.
@@ -85,6 +85,19 @@ export function generateInviteCode(): string {
  */
 export function generatePersonalCode(): string {
   return `me-${pick(ADJECTIVES)}-${pick(NOUNS)}-${suffix(6)}`;
+}
+
+/**
+ * A sign-in code: "k7fqm2xp", shown as "k7fq-m2xp".
+ *
+ * Short enough to copy by hand onto a computer, which a recovery key isn't. It's
+ * eight characters of 32, about 1.1 x 10^12 values, and it only has to hold for
+ * a moment: it dies in five minutes, works once, and the claim is limited per
+ * address. That makes guessing a live one hopeless, unlike a recovery key, which
+ * lasts for ever and so needs all its length.
+ */
+export function generateSignInCode(): string {
+  return suffix(8);
 }
 
 /**

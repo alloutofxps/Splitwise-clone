@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateGhostCode, generateInviteCode, generatePersonalCode } from "../codes";
-import { codeFromText, inviteCodeIn, inviteMessage, normalizeInviteCode } from "../invite-code";
+import { generateGhostCode, generateInviteCode, generatePersonalCode, generateSignInCode } from "../codes";
+import { codeFromText, formatSignInCode, inviteCodeIn, inviteMessage, normalizeInviteCode, normalizeSignInCode, signInCodeIn } from "../invite-code";
 
 describe("codes", () => {
   it("invite codes are readable words with an unguessable tail", () => {
@@ -27,6 +27,37 @@ describe("codes", () => {
     const b = generateGhostCode();
     expect(a).toMatch(/^ghost-/);
     expect(a).not.toBe(b);
+  });
+});
+
+describe("sign-in codes", () => {
+  it("are eight easy-to-read characters", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const code = generateSignInCode();
+      expect(code).toMatch(/^[2-9a-kmnp-z]{8}$/);
+      seen.add(code);
+    }
+    expect(seen.size).toBe(200);
+  });
+
+  it("read the same however they're typed", () => {
+    for (const typed of ["k7fq-m2xp", "K7FQ-M2XP", " k7fq m2xp ", "k7fqm2xp"]) {
+      expect(normalizeSignInCode(typed)).toBe("k7fqm2xp");
+    }
+  });
+
+  it("leave a long code from before alone", () => {
+    expect(normalizeSignInCode(" dvy_AbC-d_1 ")).toBe("dvy_AbC-d_1");
+  });
+
+  it("show in two parts", () => {
+    expect(formatSignInCode("k7fqm2xp")).toBe("k7fq-m2xp");
+  });
+
+  it("come out of a whole link", () => {
+    expect(signInCodeIn("https://divvy.up.railway.app/link/k7fqm2xp")).toBe("k7fqm2xp");
+    expect(signInCodeIn("K7FQ-M2XP")).toBe("k7fqm2xp");
   });
 });
 

@@ -485,6 +485,58 @@ console.log("\nAn invite, for someone who already has Divvy");
   check("already a member, so nobody was added twice", after === before, `${before} then ${after}`);
   await browserTab.close();
 
+  // Between the browser and the home-screen app on one phone: a camera can't
+  // help, so the code is copied across.
+  const signedInThere = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await signedInThere.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const there = await signedInThere.newPage();
+  there.on("pageerror", (error) => errors.push(error.message));
+  await there.goto(BASE, { waitUntil: "networkidle" });
+  const coder = await there.evaluate(async () => (await (await fetch("/api/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName: "Cody Code", defaultCurrency: "EUR" }) })).json()).me.id);
+  const makeCode = async () => {
+    await there.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+    await there.getByRole("button", { name: /Your devices/ }).click({ timeout: 8000 });
+    await there.getByRole("button", { name: "Add another device" }).click({ timeout: 8000 });
+    await there.getByRole("button", { name: "Copy sign-in code" }).click({ timeout: 8000 });
+    await there.getByRole("button", { name: "Copied" }).waitFor({ timeout: 3000 }).catch(() => {});
+    return there.evaluate(() => navigator.clipboard.readText());
+  };
+  const firstCode = await makeCode();
+  check("a sign-in code is short, in two parts", /^[2-9a-kmnp-z]{4}-[2-9a-kmnp-z]{4}$/.test(firstCode), firstCode);
+
+  const homeApp = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await homeApp.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
+  const app = await homeApp.newPage();
+  app.on("pageerror", (error) => errors.push(error.message));
+  await app.goto(BASE, { waitUntil: "networkidle" });
+  await app.getByRole("button", { name: "Sign in with a code" }).click({ timeout: 8000 });
+  await app.getByPlaceholder("k7fq-m2xp").fill("aaaa-aaaa");
+  await app.getByRole("button", { name: "Sign in", exact: true }).click();
+  await app.getByText("That code didn").first().waitFor({ timeout: 5000 }).catch(() => {});
+  check("a wrong code says so, and stays signed out", (await app.getByText("That code didn").count()) > 0 && (await app.getByPlaceholder("k7fq-m2xp").count()) === 1);
+  await app.getByPlaceholder("k7fq-m2xp").fill(firstCode.toUpperCase());
+  await app.getByRole("button", { name: "Sign in", exact: true }).click();
+  await app.getByPlaceholder("k7fq-m2xp").waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+  check("the home-screen app signs in with it, as the same person", (await app.evaluate(async () => (await (await fetch("/api/identity")).json()).me?.id)) === coder);
+  await homeApp.close();
+
+  const again = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const a = await again.newPage();
+  a.on("pageerror", (error) => errors.push(error.message));
+  await a.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await a.getByRole("button", { name: "I already have Divvy" }).click();
+  await a.getByRole("button", { name: "Sign in with a code" }).click();
+  await a.getByPlaceholder("k7fq-m2xp").fill(firstCode);
+  await a.getByRole("button", { name: "Sign in", exact: true }).click();
+  await a.getByText("already been used").first().waitFor({ timeout: 5000 }).catch(() => {});
+  check("the same code doesn't work twice", (await a.getByText("already been used").count()) > 0);
+  await a.getByPlaceholder("k7fq-m2xp").fill(await makeCode());
+  await a.getByRole("button", { name: "Sign in", exact: true }).click();
+  await a.getByText("Joining as").waitFor({ timeout: 10000 }).catch(() => {});
+  check("a new one signs in on an invite, ready to join", /Joining as\s+Cody Code/.test(await a.locator("body").innerText()));
+  await again.close();
+  await signedInThere.close();
+
   // Changing your mind, and nothing about a home-screen app to copy into.
   const change = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const c = await change.newPage();

@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { KeyboardPageFooter } from "@/components/ui/keyboard-page";
 import { api, ApiError } from "@/lib/client/api";
 import { openedFromHomeScreen } from "@/lib/client/home-screen";
+import { SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
 import { clearRecoveryPending } from "@/lib/client/recovery";
 import type { MeDto } from "@/lib/types";
 
@@ -38,8 +39,9 @@ export function AlreadyHaveDivvy({
   const [passkeyReady, setPasskeyReady] = React.useState(false);
   const [signingIn, setSigningIn] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
-  const [typingKey, setTypingKey] = React.useState(false);
+  const [typing, setTyping] = React.useState<"key" | "code" | null>(null);
   const [key, setKey] = React.useState("");
+  const [signInCode, setSignInCode] = React.useState("");
   const title = React.useRef<HTMLParagraphElement>(null);
 
   // The button that was tapped has gone, so keyboard and screen reader users
@@ -63,10 +65,10 @@ export function AlreadyHaveDivvy({
     };
   }, []);
 
-  const signedIn = (me: MeDto) => {
-    // Whichever way they came in, they have a way back: anything this device
-    // remembers about a key not being saved is out of date.
-    clearRecoveryPending();
+  const signedIn = (me: MeDto, hasWayBack: boolean) => {
+    // Anything this device remembers about a key not being saved is out of date.
+    // Not after a sign-in code, which says nothing about having a way back.
+    if (hasWayBack) clearRecoveryPending();
     haptic([10, 40, 10]);
     toast({ tone: "success", title: "Welcome back" });
     onSignedIn(me);
@@ -89,7 +91,7 @@ export function AlreadyHaveDivvy({
     setSigningIn(true);
     try {
       const { signInWithPasskey } = await import("./passkey");
-      signedIn(await signInWithPasskey());
+      signedIn(await signInWithPasskey(), true);
     } catch (caught) {
       if ((caught as Error).name !== "PasskeyCancelled") {
         toast({
@@ -107,7 +109,7 @@ export function AlreadyHaveDivvy({
     setSigningIn(true);
     try {
       const { me } = await api.post<{ me: MeDto }>("/api/identity/restore", { recoveryKey: key.trim() });
-      signedIn(me);
+      signedIn(me, true);
     } catch (caught) {
       toast({
         tone: "error",
@@ -118,7 +120,63 @@ export function AlreadyHaveDivvy({
     }
   };
 
-  if (typingKey) {
+  const withCode = async () => {
+    if (!signInCode.trim() || signingIn) return;
+    setSigningIn(true);
+    try {
+      signedIn(await claimSignInCode(signInCode), false);
+    } catch (caught) {
+      toast({
+        tone: "error",
+        title: "That code didn't work",
+        description: caught instanceof ApiError ? caught.message : "Check it and try again.",
+      });
+      setSigningIn(false);
+    }
+  };
+
+  if (typing === "code") {
+    return (
+      <>
+        <div className="flex flex-1 flex-col">
+          {children}
+          <label className="mt-7 block">
+            <span className="mb-1.5 block text-body font-semibold text-muted">Your sign-in code</span>
+            <input
+              value={signInCode}
+              onChange={(event) => setSignInCode(event.target.value)}
+              onKeyDown={(event) => void (event.key === "Enter" && withCode())}
+              placeholder="k7fq-m2xp"
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              className="h-14 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-center font-mono text-title-lg font-medium text-text outline-none transition placeholder:font-medium placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+            />
+          </label>
+          <p className="mt-2 text-caption leading-relaxed text-subtle">{SIGN_IN_CODE_HELP}</p>
+        </div>
+        <KeyboardPageFooter className="pt-5" pinned>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={signingIn}
+            disabled={!signInCode.trim()}
+            onClick={() => void withCode()}
+          >
+            Sign in
+          </Button>
+          <Button variant="ghost" size="md" fullWidth className="mt-2" onClick={() => setTyping(null)}>
+            Back
+          </Button>
+        </KeyboardPageFooter>
+      </>
+    );
+  }
+
+  if (typing === "key") {
     return (
       <>
         <div className="flex flex-1 flex-col">
@@ -149,7 +207,7 @@ export function AlreadyHaveDivvy({
           >
             Sign in
           </Button>
-          <Button variant="ghost" size="md" fullWidth className="mt-2" onClick={() => setTypingKey(false)}>
+          <Button variant="ghost" size="md" fullWidth className="mt-2" onClick={() => setTyping(null)}>
             Back
           </Button>
         </KeyboardPageFooter>
@@ -199,8 +257,11 @@ export function AlreadyHaveDivvy({
               Sign in with fingerprint or face
             </Button>
           ) : null}
-          <Button variant="secondary" size="lg" fullWidth onClick={() => setTypingKey(true)}>
+          <Button variant="secondary" size="lg" fullWidth onClick={() => setTyping("key")}>
             Sign in with a recovery key
+          </Button>
+          <Button variant="secondary" size="lg" fullWidth onClick={() => setTyping("code")}>
+            Sign in with a code
           </Button>
         </div>
       </div>
