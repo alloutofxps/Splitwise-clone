@@ -236,6 +236,10 @@ jobs:
       - name: Feature checks
         run: node scripts/ui-features.mjs http://localhost:3000
 
+      # New phone, app removed, a lost key, 180 days unused, an in-app browser.
+      - name: Real situations
+        run: node scripts/situations.mjs http://localhost:3000
+
       # Every panel by keyboard: focus moves in, Tab stays inside, Escape
       # closes it, focus comes back; then adding an expense and settling up
       # with keys alone (RULES A2).
