@@ -96,11 +96,15 @@ async function main() {
     // Euro rows: Ana 60-15-30+5+100 = 120.00, plus the cent from the taxi row
     // (which is a cent off zero, and the biggest entry absorbs it); Ben
     // -30+30+30-5+50 = 75.00; Cy -30-15-0.01-150 = -195.01. The dollar row then
-    // moves $50 from Ben to Cy at today's rate.
+    // makes Ben owe Cy half of the $100 bill at today's rate. The whole bill is
+    // converted and then split, so on a day it comes to an odd number of cents
+    // the two halves differ by one (at 0.89048: 8905 into 4453 and 4452).
     const eurOnly = { ana: 12001n, ben: 7500n, cy: -19501n };
-    const usdShift = convert(5000n, "USD", "EUR", rate ?? "0.92");
+    const usdBill = convert(10000n, "USD", "EUR", rate ?? "0.92");
+    const usdHalves = [usdBill / 2n, usdBill - usdBill / 2n];
+    const benNet = BigInt(net[byName.get("Ben Ortiz") as string]);
     check("Ana's balance matches the file", BigInt(net[A.id]) === eurOnly.ana, `${net[A.id]}`);
-    check("Ben's matches, with the dollar row at today's rate", BigInt(net[byName.get("Ben Ortiz") as string]) === eurOnly.ben - usdShift, `${net[byName.get("Ben Ortiz") as string]} vs ${eurOnly.ben - usdShift}`);
+    check("Ben's matches, with the dollar row at today's rate", usdHalves.includes(eurOnly.ben - benNet), `${benNet} vs ${usdHalves.map((half) => eurOnly.ben - half).join(" or ")}`);
     const total = Object.values(net).reduce((t, v) => t + BigInt(v), 0n);
     check("and the balances add up to zero", total === 0n, String(total));
     const items = (await A.call(`/api/groups/${imported.body.group.id}/expenses`)).body.items;
