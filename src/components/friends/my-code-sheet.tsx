@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, Copy, Share2 } from "lucide-react";
+import { inviteMessage } from "@/lib/invite-code";
 import { Sheet } from "../ui/sheet";
 import { Button, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
@@ -29,7 +30,7 @@ export function MyCodeSheet({
   const [copied, setCopied] = React.useState(false);
 
   const url = typeof window !== "undefined" ? `${window.location.origin}/join/${me.inviteCode}` : "";
-  const message = `Add me on Divvy to split expenses.\n\nCode: ${me.inviteCode}\n${url}`;
+  const message = inviteMessage("Add me on Divvy to split expenses.", url, me.inviteCode);
 
   const copy = async (value: string) => {
     try {
