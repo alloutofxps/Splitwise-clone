@@ -21,6 +21,7 @@ import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
+import { openedFromHomeScreen } from "@/lib/client/home-screen";
 import {
   clearRecoveryPending,
   clearAskHowToProtectFirst,
@@ -147,14 +148,6 @@ function StepShell({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-
-/** Opened as the home-screen app rather than in a browser tab. */
-function openedFromHomeScreen(): boolean {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
 
 /** How a page is opened doesn't change while it's open. */
 const noChanges = () => () => {};

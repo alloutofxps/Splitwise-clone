@@ -303,6 +303,7 @@ console.log("\nJoining from an invite link");
   const p = await fresh.newPage();
   p.on("pageerror", (error) => errors.push(error.message));
   await p.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: /new to Divvy/ }).click();
   await p.getByPlaceholder("Priya").fill("Noor Invite");
   await p.getByRole("button", { name: /^Join / }).click();
   await heading(p, "Protect your account").waitFor({ timeout: 15000 }).catch(() => {});
@@ -324,6 +325,7 @@ console.log("\nJoining from an invite link");
   const q = await later.newPage();
   q.on("pageerror", (error) => errors.push(error.message));
   await q.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await q.getByRole("button", { name: /new to Divvy/ }).click();
   await q.getByPlaceholder("Priya").fill("Leo Invite");
   await q.getByRole("button", { name: /^Join / }).click();
   await q.getByRole("button", { name: "Not now" }).click({ timeout: 15000 });
@@ -335,6 +337,115 @@ console.log("\nJoining from an invite link");
   check("and Home asks you to back up later", /Back up your account/.test(await q.locator("body").innerText()));
   check("the unseen key isn't kept", (await q.evaluate(() => sessionStorage.getItem("divvy-recovery-key"))) === null);
   await later.close();
+
+  // Making a passkey on the screen after joining, and using it from an invite
+  // to sign back in. Chromium's pretend fingerprint reader stands in for a phone.
+  const withReader = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const r = await withReader.newPage();
+  r.on("pageerror", (error) => errors.push(error.message));
+  const cdp = await withReader.newCDPSession(r);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: { protocol: "ctap2", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+  });
+  await r.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await r.getByRole("button", { name: /new to Divvy/ }).click();
+  await r.getByPlaceholder("Priya").fill("Pia Passkey");
+  await r.getByRole("button", { name: /^Join / }).click();
+  await r.getByRole("button", { name: "Use Face ID or fingerprint" }).click({ timeout: 15000 });
+  await r.getByRole("tab", { name: "Expenses" }).waitFor({ timeout: 10000 }).catch(() => {});
+  check("a passkey can be made straight after joining", await r.getByRole("tab", { name: "Expenses" }).isVisible());
+  const pia = await r.evaluate(async () => (await (await fetch("/api/identity")).json()).me.id);
+  await r.goto(BASE, { waitUntil: "networkidle" });
+  await r.waitForTimeout(1200);
+  check("and Home doesn't ask for a backup", !/Back up your account/.test(await r.locator("body").innerText()));
+
+  await withReader.clearCookies();
+  await r.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await r.getByRole("button", { name: "I already have Divvy" }).click();
+  await r.getByRole("button", { name: "Sign in with fingerprint or face" }).click();
+  await r.getByText("Joining as").waitFor({ timeout: 10000 }).catch(() => {});
+  check("a passkey signs back in from an invite", /Joining as\s+Pia Passkey/.test(await r.locator("body").innerText()));
+  check("as the same person", (await r.evaluate(async () => (await (await fetch("/api/identity")).json()).me.id)) === pia);
+  await withReader.close();
+}
+
+// Someone with Divvy on their home screen taps a link: it opens in the browser,
+// signed out. Asking only for a name made them a second account.
+console.log("\nAn invite, for someone who already has Divvy");
+{
+  const code = await page.evaluate(
+    async (id) => (await (await fetch(`/api/groups/${id}`)).json()).group.inviteCode,
+    seed.groupId,
+  );
+  const own = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const home = await own.newPage();
+  await home.goto(BASE, { waitUntil: "networkidle" });
+  const account = await home.evaluate(async () => {
+    const response = await fetch("/api/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName: "Sana Existing", defaultCurrency: "EUR" }) });
+    return response.json();
+  });
+
+  const browserTab = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await browserTab.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const b = await browserTab.newPage();
+  b.on("pageerror", (error) => errors.push(error.message));
+  await b.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  const first = await b.locator("body").innerText();
+  check("the page asks before asking for a name", /I already have Divvy/.test(first) && (await b.getByPlaceholder("Priya").count()) === 0);
+  await b.getByRole("button", { name: "I already have Divvy" }).click();
+  check("the code is there to read", (await b.locator("body").innerText()).includes(code));
+  await b.getByRole("button", { name: "Copy code" }).click();
+  await b.getByRole("button", { name: "Copied" }).waitFor({ timeout: 3000 }).catch(() => {});
+  check("Copy code copies just the code", (await b.evaluate(() => navigator.clipboard.readText())) === code);
+
+  // The code it copied works in the app that person is signed in to.
+  await home.goto(BASE, { waitUntil: "networkidle" });
+  await home.getByRole("button", { name: "Join with a code" }).click({ timeout: 8000 });
+  await home.getByPlaceholder("mango-tiger-42").fill(code);
+  await home.getByRole("button", { name: /^Join (?!with a code)/ }).click({ timeout: 8000 });
+  await home.waitForURL(/\/groups\//, { timeout: 10000 }).catch(() => {});
+  check("and joins from the app, as their own account", /\/groups\//.test(home.url()), home.url());
+  await own.close();
+
+  const before = await page.evaluate(async (id) => (await (await fetch(`/api/groups/${id}`)).json()).group.members.length, seed.groupId);
+  await b.getByRole("button", { name: "Sign in with a recovery key" }).click();
+  await b.getByRole("textbox").fill("dvy_this_is_not_a_real_key");
+  await b.getByRole("button", { name: "Sign in", exact: true }).click();
+  await b.waitForTimeout(800);
+  check("a wrong key stays here, signed out", (await b.getByRole("textbox").count()) === 1);
+  await b.getByRole("textbox").fill(account.recoveryKey);
+  await b.getByRole("button", { name: "Sign in", exact: true }).click();
+  await b.getByText("Joining as").waitFor({ timeout: 10000 }).catch(() => {});
+  check("the right key signs in on the page", /Joining as\s+Sana Existing/.test(await b.locator("body").innerText()));
+  check("Join has the focus, one tap away", await b.getByRole("button", { name: /^Join / }).evaluate((el) => el === document.activeElement));
+  await b.getByRole("button", { name: /^Join / }).click();
+  await b.waitForURL(/\/groups\//, { timeout: 10000 }).catch(() => {});
+  check("and lands in the group", /\/groups\//.test(b.url()), b.url());
+  const who = await b.evaluate(async () => (await (await fetch("/api/identity")).json()).me);
+  check("as the same account, not a second one", who.id === account.me.id, who.id);
+  const after = await page.evaluate(async (id) => (await (await fetch(`/api/groups/${id}`)).json()).group.members.length, seed.groupId);
+  check("already a member, so nobody was added twice", after === before, `${before} then ${after}`);
+  await browserTab.close();
+
+  // Changing your mind, and nothing about a home-screen app to copy into.
+  const change = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const c = await change.newPage();
+  await c.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await c.getByRole("button", { name: "I already have Divvy" }).click();
+  await c.getByRole("button", { name: /new to Divvy/ }).click();
+  check("you can change your mind", await c.getByPlaceholder("Priya").isVisible());
+  await c.getByRole("button", { name: "I already have Divvy" }).click();
+  check("either way", await c.getByRole("button", { name: "Copy code" }).isVisible());
+  await change.close();
+
+  const installed = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await installed.addInitScript(() => Object.defineProperty(navigator, "standalone", { get: () => true }));
+  const i = await installed.newPage();
+  await i.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await i.getByRole("button", { name: "I already have Divvy" }).click();
+  check("in the home-screen app, it doesn't send you to the app", (await i.getByRole("button", { name: "Copy code" }).count()) === 0 && (await i.getByRole("button", { name: "Sign in with a recovery key" }).isVisible()));
+  await installed.close();
 }
 
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));

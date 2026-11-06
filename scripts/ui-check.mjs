@@ -1556,6 +1556,12 @@ console.log("\nAn invite on a small phone");
   const fresh = await browser.newContext({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
   const p = await fresh.newPage();
   await p.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  const inView = async (name) => {
+    const box = await p.getByRole("button", { name }).boundingBox();
+    return Boolean(box) && box.y >= 0 && box.y + box.height <= 667;
+  };
+  check("both first choices are on the first screen", (await inView(/new to Divvy/)) && (await inView("I already have Divvy")));
+  await p.getByRole("button", { name: /new to Divvy/ }).click();
   const join = p.getByRole("button", { name: /^Join / });
   await join.waitFor({ timeout: 10000 }).catch(() => {});
   const box = await join.boundingBox();
