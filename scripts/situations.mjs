@@ -251,6 +251,7 @@ console.log("\nA browser inside another app");
 
   const { ctx, page } = await fresh({ userAgent: whatsApp }, limited);
   await page.goto(`${BASE}/join/${invite}`, { waitUntil: "networkidle" });
+  check("it says whose browser this is, and what to do", /You’re in WhatsApp’s browser.*Open in browser/.test(await text(page)), (await text(page)).slice(0, 200));
   await button(page, "I already have Divvy").click();
   await page.waitForTimeout(500);
   check("no passkey button that can't work", (await button(page, "Sign in with fingerprint or face").count()) === 0);
@@ -267,6 +268,8 @@ console.log("\nA browser inside another app");
   await existing.ctx.close();
 
   const newcomer = await fresh({ userAgent: whatsApp }, limited);
+  await newcomer.page.goto(BASE, { waitUntil: "networkidle" });
+  check("the welcome screen says so too", /You’re in WhatsApp’s browser/.test(await text(newcomer.page)));
   await newcomer.page.goto(`${BASE}/join/${invite}`, { waitUntil: "networkidle" });
   await button(newcomer.page, /new to Divvy/).click();
   await newcomer.page.getByPlaceholder("Priya").fill("Wren");
@@ -276,6 +279,17 @@ console.log("\nA browser inside another app");
   check("without offering a passkey it can't make", (await button(newcomer.page, "Use Face ID or fingerprint").count()) === 0);
   await newcomer.ctx.close();
   await owner.ctx.close();
+}
+
+{
+  const { ctx, page } = await fresh({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1" });
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  check("in Safari itself it says nothing", !/browser, and Divvy may not/.test(await text(page)));
+  await ctx.close();
+  const installed = await fresh({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148" }, homeScreen);
+  await installed.page.goto(BASE, { waitUntil: "networkidle" });
+  check("nor in the home-screen app, which doesn't call itself Safari either", !/browser, and Divvy may not/.test(await text(installed.page)));
+  await installed.ctx.close();
 }
 
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));
