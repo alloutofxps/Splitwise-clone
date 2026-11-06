@@ -55,9 +55,9 @@ export function StickyBar({
       <div
         ref={bar}
         className={cn(
-          "sticky top-[env(safe-area-inset-top)] z-20 transition-shadow duration-150",
+          "sticky top-[var(--top-safe)] z-20 transition-shadow duration-150",
           stuck &&
-            "shadow-raised before:absolute before:inset-x-0 before:bottom-full before:h-[env(safe-area-inset-top)] before:bg-inherit",
+            "shadow-raised before:absolute before:inset-x-0 before:bottom-full before:h-[var(--top-safe)] before:bg-inherit",
           className,
         )}
       >

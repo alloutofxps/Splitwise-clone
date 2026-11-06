@@ -199,7 +199,7 @@ export default function JoinPage() {
   }
 
   const pageClass =
-    "mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pt-[max(2.5rem,env(safe-area-inset-top))]";
+    "mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pt-[max(2.5rem,var(--top-safe))]";
 
   const invitedTo = (
     <>

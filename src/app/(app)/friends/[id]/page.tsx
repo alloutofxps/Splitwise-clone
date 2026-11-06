@@ -106,7 +106,7 @@ export default function FriendPage() {
   const settleLedgers = ledgers.filter((ledger) => ledger.currency === settleCurrency);
 
   return (
-    <div ref={screen} className="pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div ref={screen} className="pt-[max(0.5rem,var(--top-safe))]">
       <header className="-mx-1 flex items-center gap-1 py-2">
         <button
           onClick={() => {

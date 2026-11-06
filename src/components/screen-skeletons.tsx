@@ -46,7 +46,7 @@ export function WelcomeSkeleton() {
   return (
     <div
       aria-hidden
-      className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
+      className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,var(--top-safe))]"
     >
       <div className="flex flex-1 flex-col justify-center py-4">
         <span className="mb-2 flex items-center gap-2">
@@ -98,7 +98,7 @@ function HomeSkeleton({
     </>
   );
   return (
-    <div aria-hidden className={cn("pt-[max(1rem,env(safe-area-inset-top))]", late && "appear-late")}>
+    <div aria-hidden className={cn("pt-[max(1rem,var(--top-safe))]", late && "appear-late")}>
       <div className="mb-5 flex h-10 items-center justify-between">
         {opening ? (
           <span className="flex items-center gap-2 lg:invisible">
@@ -142,7 +142,7 @@ function HomeSkeleton({
 
 export function GroupSkeleton({ late }: { late?: boolean }) {
   return (
-    <div aria-hidden className={cn("pt-[max(0.5rem,env(safe-area-inset-top))]", late && "appear-late")}>
+    <div aria-hidden className={cn("pt-[max(0.5rem,var(--top-safe))]", late && "appear-late")}>
       <div className="-mx-1 flex h-14 items-center gap-2">
         <span className="flex size-10 items-center justify-center text-subtle">
           <ChevronLeft className="size-6" strokeWidth={1.75} />
@@ -169,7 +169,7 @@ export function GroupSkeleton({ late }: { late?: boolean }) {
 
 export function FriendSkeleton({ name, late }: { name?: string; late?: boolean }) {
   return (
-    <div aria-hidden className={cn("pt-[max(0.5rem,env(safe-area-inset-top))]", late && "appear-late")}>
+    <div aria-hidden className={cn("pt-[max(0.5rem,var(--top-safe))]", late && "appear-late")}>
       <div className="-mx-1 flex h-14 items-center gap-2">
         <span className="flex size-10 items-center justify-center text-subtle">
           <ChevronLeft className="size-6" />
@@ -198,7 +198,7 @@ export function FriendSkeleton({ name, late }: { name?: string; late?: boolean }
 
 function ListSkeleton({ late, title = true }: { late?: boolean; title?: boolean }) {
   return (
-    <div aria-hidden className={cn("pt-[max(1.5rem,env(safe-area-inset-top))]", late && "appear-late")}>
+    <div aria-hidden className={cn("pt-[max(1.5rem,var(--top-safe))]", late && "appear-late")}>
       {title ? <Skeleton className="mb-6 h-8 w-32" /> : null}
       <Rows count={5} avatar="round" />
     </div>

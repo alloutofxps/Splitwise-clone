@@ -4,7 +4,7 @@ import Link from "next/link";
 /** The privacy and terms pages: one column, with the date they last changed. */
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-[640px] px-6 pb-12 pt-[max(3rem,env(safe-area-inset-top))] text-body-lg leading-relaxed text-text">
+    <main className="mx-auto w-full max-w-[640px] px-6 pb-12 pt-[max(3rem,var(--top-safe))] text-body-lg leading-relaxed text-text">
       <h1 className="text-display-sm font-semibold tracking-[-0.03em]">{title}</h1>
       <p className="mt-2 text-muted">Last updated {updated}</p>
       {children}

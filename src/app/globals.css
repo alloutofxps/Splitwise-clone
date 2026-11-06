@@ -512,6 +512,18 @@
 }
 
 /*
+ * Where a screen's content starts below the top of the screen. An app that
+ * runs under the status bar gets a blur from iOS 26, over the top of the app
+ * and a little way below the clock, which no style can turn off. Divvy did
+ * until November 2026, and iOS keeps that for as long as the app stays on
+ * someone's home screen, so those phones start the content 2rem lower, out
+ * of the blur. Anywhere else the inset is 0, and min() adds nothing.
+ */
+:root {
+  --top-safe: calc(env(safe-area-inset-top, 0px) + min(2rem, env(safe-area-inset-top, 0px)));
+}
+
+/*
  * Press feedback (MOTION-SPEC 4, touch). A row, card or button gives under
  * your finger straight away, before anything else happens: it shrinks a
  * little and sinks one level. Down in 100ms, back in 150ms. Small text links

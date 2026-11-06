@@ -84,7 +84,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
-    <KeyboardPage className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+    <KeyboardPage className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,var(--top-safe))]">
       <AnimatePresence mode="wait">
         {step === "welcome" ? (
           <StepShell key="welcome">

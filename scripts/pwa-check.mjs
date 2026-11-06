@@ -79,6 +79,10 @@ const reg = await page.evaluate(async () => {
     hasActive: Boolean(r.active),
   };
 });
+// Running under the status bar is what makes iOS 26 blur the top of the app.
+const statusBar = await page.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.content);
+check("the app doesn't run under the status bar", statusBar !== "black-translucent", statusBar);
+
 check("a worker is registered", Boolean(reg), JSON.stringify(reg));
 check("registered with a build id in the URL", /\/sw\.js\?v=[^&]+$/.test(reg?.scriptURL ?? ""), reg?.scriptURL);
 check("the worker reached active", reg?.hasActive === true);
