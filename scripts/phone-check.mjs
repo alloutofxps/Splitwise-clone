@@ -125,6 +125,8 @@ const screensFor = (data, empty) => [
   // [name, path, state, setup]
   ["welcome", "/", null],
   ["join-invite-fresh", `/join/${data.invite}`, null],
+  ["join-invite-new", `/join/${data.invite}`, null, async (p) => { await p.getByRole("button", { name: /new to Divvy/ }).click(); }],
+  ["join-invite-existing", `/join/${data.invite}`, null, async (p) => { await p.getByRole("button", { name: "I already have Divvy" }).click(); }],
   ["privacy", "/privacy", null],
   ["terms", "/terms", null],
   ["home-empty", "/", empty],
@@ -374,7 +376,8 @@ const panels = (data) => {
 
 const forms = (data) => [
   ["welcome", "/", false, async (p) => { await p.getByRole("button", { name: /Get started/ }).first().click(); }],
-  ["invite", `/join/${data.invite}`, false, null],
+  ["invite", `/join/${data.invite}`, false, async (p) => { await p.getByRole("button", { name: /new to Divvy/ }).click(); }],
+  ["invite, recovery key", `/join/${data.invite}`, false, async (p) => { await p.getByRole("button", { name: "I already have Divvy" }).click(); await p.getByRole("button", { name: "Sign in with a recovery key" }).click(); }],
   ["add an expense", `/groups/${data.tripId}`, true, async (p) => { await p.getByRole("button", { name: /Add an expense/ }).first().click(); }],
   ["settle up", `/groups/${data.tripId}`, true, async (p) => { await p.getByRole("button", { name: /Settle up/ }).first().click(); }],
   ["new group", "/", true, async (p) => { await p.getByRole("button", { name: /New group/ }).first().click(); }],

@@ -14,6 +14,7 @@ import {
   browserSupportsWebAuthn,
 } from "@simplewebauthn/browser";
 import { api } from "@/lib/client/api";
+import type { MeDto } from "@/lib/types";
 
 export function passkeysSupported(): boolean {
   try {
@@ -92,7 +93,7 @@ export async function provePasskey(): Promise<Parameters<typeof api.post>[1]> {
   }
 }
 
-export async function signInWithPasskey(): Promise<void> {
+export async function signInWithPasskey(): Promise<MeDto> {
   const { options } = await api.get<{ options: Parameters<typeof startAuthentication>[0]["optionsJSON"] }>(
     "/api/identity/passkeys/auth",
   );
@@ -104,5 +105,6 @@ export async function signInWithPasskey(): Promise<void> {
     rethrow(error);
   }
 
-  await api.post("/api/identity/passkeys/auth", { response });
+  const { me } = await api.post<{ me: MeDto }>("/api/identity/passkeys/auth", { response });
+  return me;
 }
