@@ -24,6 +24,7 @@ import { keys } from "@/lib/client/queries";
 import { openedFromHomeScreen } from "@/lib/client/home-screen";
 import { LOST_KEY_HELP, SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
 import { wasSignedInHere } from "@/lib/client/returning";
+import { InAppBrowserNotice } from "./in-app-browser-notice";
 import {
   clearRecoveryPending,
   clearAskHowToProtectFirst,
@@ -219,6 +220,7 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center py-4">
         <Wordmark className="mb-2" />
+        <InAppBrowserNotice className="my-3" />
 
         {/* The product in three seconds: who owes whom, untangled. Someone
             signing back in knows, and it pushed their buttons off a small phone. */}
