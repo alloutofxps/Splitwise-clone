@@ -141,7 +141,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1.5rem,var(--top-safe))]">
       <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">You</h1>
 
       {/* Profile ----------------------------------------------------------- */}

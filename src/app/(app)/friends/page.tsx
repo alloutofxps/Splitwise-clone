@@ -69,7 +69,7 @@ export default function FriendsPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <div className="pt-[max(1.5rem,var(--top-safe))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Friends</h1>
         <div className="ring-inside divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2].map((index) => (
@@ -116,7 +116,7 @@ export default function FriendsPage() {
   }, 0n);
 
   return (
-    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1.5rem,var(--top-safe))]">
       {/* The buttons go under the heading when they don't fit beside it
           (the largest text pushed Add off the edge). */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
