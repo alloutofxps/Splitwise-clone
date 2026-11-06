@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { UserCheck } from "lucide-react";
+import { ClipboardPaste, UserCheck } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Avatar } from "../ui/avatar";
 import { Button, Skeleton, cn, haptic } from "../ui/primitives";
 import { useToast } from "../ui/toast";
 import { api, ApiError } from "@/lib/client/api";
-import { normalizeInviteCode } from "@/lib/invite-code";
+import { codeFromText, inviteCodeIn, normalizeInviteCode } from "@/lib/invite-code";
 import type { PersonDto } from "@/lib/types";
 import { useResetOnOpen } from "../ui/use-reset-on-open";
 import { ScanCodeButton } from "../ui/qr-scanner";
@@ -65,6 +65,12 @@ export function JoinSheet({
   const [result, setResult] = React.useState<{ code: string; preview: Preview | null } | null>(null);
   const [joining, setJoining] = React.useState(false);
   const [claimId, setClaimId] = React.useState<string | null>(null);
+  const field = React.useRef<HTMLInputElement>(null);
+  const canPaste = React.useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator.clipboard?.readText === "function",
+    () => false,
+  );
 
   useResetOnOpen(open, () => {
     setCode(initialCode ?? "");
@@ -104,6 +110,23 @@ export function JoinSheet({
       clearTimeout(timer);
     };
   }, [lookup]);
+
+  // Only a code goes in the box, and so to the server: what's been copied could
+  // be anything.
+  const paste = async () => {
+    haptic();
+    try {
+      const found = inviteCodeIn(await navigator.clipboard.readText());
+      if (found) {
+        setCode(found);
+      } else {
+        toast({ tone: "error", title: "No invite code copied", description: "Copy the code or the whole invite, then try again." });
+      }
+    } catch {
+      field.current?.focus();
+      toast({ tone: "error", title: "Couldn't paste", description: "Press and hold in the box, then choose Paste." });
+    }
+  };
 
   const join = async () => {
     if (!preview) return;
@@ -154,7 +177,13 @@ export function JoinSheet({
       <div className="px-5 pb-6">
         <input
           value={code}
-          onChange={(event) => setCode(event.target.value)}
+          ref={field}
+          // A whole link or invite pasted in comes down to its code.
+          onChange={(event) => {
+            const typed = event.target.value;
+            const found = codeFromText(typed);
+            setCode(found === typed.trim() ? typed : found);
+          }}
           placeholder="mango-tiger-42"
           autoFocus
           autoCapitalize="none"
@@ -164,8 +193,19 @@ export function JoinSheet({
           className="h-14 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-center font-mono text-title-lg font-medium text-text outline-none transition placeholder:font-medium placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
         />
 
+        {canPaste ? (
+          <button
+            type="button"
+            onClick={() => void paste()}
+            className="tap-44 relative mx-auto mt-3 flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-body font-medium text-text transition active:opacity-70"
+          >
+            <ClipboardPaste className="size-4" strokeWidth={1.75} />
+            Paste
+          </button>
+        ) : null}
+
         <p className="mt-2 text-center text-caption text-subtle">
-          Ask the person who made the group for the code.
+          Paste the code or the whole invite. Ask the person who invited you if you don&rsquo;t have it.
         </p>
         <ScanCodeButton onCode={setCode} />
 

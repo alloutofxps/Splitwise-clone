@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, Copy, MessageCircle, RefreshCw, Share2 } from "lucide-react";
+import { inviteMessage } from "@/lib/invite-code";
 import { Sheet } from "../ui/sheet";
 import { useMirror } from "../ui/state-hooks";
 import { Button, haptic } from "../ui/primitives";
@@ -41,7 +42,7 @@ export function InviteSheet({
   const url =
     typeof window !== "undefined" ? `${window.location.origin}/join/${code}` : "";
 
-  const message = `Join "${group.name}" on Divvy so we can split costs.\n\nCode: ${code}\n${url}`;
+  const message = inviteMessage(`Join "${group.name}" on Divvy so we can split costs.`, url, code);
 
   const share = async () => {
     haptic();

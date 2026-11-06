@@ -266,6 +266,63 @@ await page.getByRole("button", { name: /^(Invite|Invite people)$/ }).first().cli
 await page.waitForTimeout(1200);
 const qr = await sheet().locator('[role="img"] svg').count();
 check("the invite shows a QR code", qr > 0);
+
+// Someone copies the whole invite, or just the link, into Join with a code.
+console.log("\nPasting an invite into Join with a code");
+{
+  await page.evaluate(() => {
+    navigator.share = (shared) => {
+      window.__shared = shared.text;
+      return Promise.resolve();
+    };
+  });
+  await page.getByRole("button", { name: "Share invite" }).click();
+  const message = await page.evaluate(() => window.__shared);
+  const invite = /\/join\/(\S+)/.exec(message)?.[1];
+  check("the invite tells people who already have Divvy what to do", /Already have Divvy\? Open it, tap Join and enter this code\./.test(message), message);
+  check("with the link first and the code last", message.indexOf("/join/") < message.lastIndexOf(invite) && message.trim().endsWith(invite), message);
+
+  const other = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await other.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const p = await other.newPage();
+  p.on("pageerror", (error) => errors.push(error.message));
+  await p.goto(BASE, { waitUntil: "networkidle" });
+  await p.evaluate(() => fetch("/api/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName: "Pasting Person", defaultCurrency: "EUR" }) }));
+  await p.goto(BASE, { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: "Join with a code" }).click({ timeout: 8000 });
+  const box = p.getByPlaceholder("mango-tiger-42");
+  const joinButton = p.getByRole("button", { name: /^Join (?!with a code)/ });
+
+  await box.fill(message);
+  check("the whole message comes down to the code", (await box.inputValue()) === invite, await box.inputValue());
+  await joinButton.waitFor({ timeout: 5000 }).catch(() => {});
+  check("and finds the group", await joinButton.isVisible());
+  await box.fill(`${BASE}/join/${invite}`);
+  check("so does just the link", (await box.inputValue()) === invite, await box.inputValue());
+  await box.fill("mango-tiger-");
+  check("and typing a code is left alone", (await box.inputValue()) === "mango-tiger-");
+
+  const asked = [];
+  p.on("request", (request) => {
+    if (request.url().includes("/api/invite/")) asked.push(request.url());
+  });
+  await box.fill("");
+  await p.evaluate(() => navigator.clipboard.writeText("my secret password"));
+  await p.getByRole("button", { name: "Paste", exact: true }).click();
+  await p.getByText("No invite code copied").waitFor({ timeout: 3000 }).catch(() => {});
+  await p.waitForTimeout(600);
+  check("Paste says when what's copied isn't an invite", await p.getByText("No invite code copied").first().isVisible());
+  check("and sends none of it anywhere", asked.length === 0 && (await box.inputValue()) === "", asked.join(" "));
+
+  await p.evaluate((text) => navigator.clipboard.writeText(text), message);
+  await p.getByRole("button", { name: "Paste", exact: true }).click();
+  await joinButton.waitFor({ timeout: 5000 }).catch(() => {});
+  check("Paste takes the code from a whole invite", (await box.inputValue()) === invite, await box.inputValue());
+  await joinButton.click();
+  await p.waitForURL(/\/groups\//, { timeout: 10000 }).catch(() => {});
+  check("and joins", /\/groups\//.test(p.url()), p.url());
+  await other.close();
+}
 await page.keyboard.press("Escape");
 await page.waitForTimeout(500);
 

@@ -4,7 +4,7 @@ import * as React from "react";
 import { ScanLine } from "lucide-react";
 import { Sheet } from "./sheet";
 import { haptic } from "./primitives";
-import { codeFromScan } from "@/lib/invite-code";
+import { codeFromText } from "@/lib/invite-code";
 
 interface DetectedBarcode {
   rawValue: string;
@@ -55,7 +55,7 @@ export function ScanCodeButton({ onCode }: { onCode: (code: string) => void }) {
             const found = await reader.detect(video.current);
             if (found[0]?.rawValue) {
               haptic([10, 40, 10]);
-              onCode(codeFromScan(found[0].rawValue));
+              onCode(codeFromText(found[0].rawValue));
               setOpen(false);
               return;
             }
