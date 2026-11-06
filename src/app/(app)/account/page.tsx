@@ -3,30 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  ChevronRight,
-  Copy,
-  Database,
-  Download,
-  EyeOff,
-  FileText,
-  Bell,
-  Coins,
-  Heart,
-  KeyRound,
-  LogOut,
-  Monitor,
-  Moon,
-  MonitorSmartphone,
-  Plus,
-  Sun,
-  Target,
-  Trash2,
-  TriangleAlert,
-  Wallet,
-  X,
-} from "lucide-react";
+import { Bell, Check, ChevronRight, Coins, Copy, Database, Download, EyeOff, FileText, GitMerge, Heart, KeyRound, LogOut, Monitor, MonitorSmartphone, Moon, Plus, Sun, Target, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, Segmented, Skeleton, Switch, cn, haptic } from "@/components/ui/primitives";
@@ -35,6 +12,7 @@ import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
+import { CombineSheet } from "@/components/identity/combine-sheet";
 import { ConfirmDeleteSheet } from "@/components/identity/confirm-delete";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { backupConfirmed, clearRecoveryPending, confirmBackup, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
@@ -68,6 +46,7 @@ export default function AccountPage() {
   const [payments, setPayments] = React.useState(false);
   const [budgetsOpen, setBudgets] = React.useState(false);
   const [devicesOpen, setDevices] = React.useState(false);
+  const [combining, setCombining] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [discardCount, setDiscardCount] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -312,6 +291,11 @@ export default function AccountPage() {
           value={keyUnsure ? "Check" : keyUnsaved ? "Not saved" : "Manage"}
           onClick={() => setRecovery(true)}
         />
+        <Row
+          icon={<GitMerge className="size-[18px]" strokeWidth={1.75} />}
+          label="Combine two accounts"
+          onClick={() => setCombining(true)}
+        />
       </Group>
 
       {/* Your data ---------------------------------------------------------- */}
@@ -397,6 +381,7 @@ export default function AccountPage() {
       <BudgetsSheet open={budgetsOpen} onClose={() => setBudgets(false)} />
 
       <DevicesSheet open={devicesOpen} onClose={() => setDevices(false)} />
+      {data ? <CombineSheet open={combining} onClose={() => setCombining(false)} me={data.me} /> : null}
 
       <RecoverySheet
         open={recovery}

@@ -537,6 +537,47 @@ console.log("\nAn invite, for someone who already has Divvy");
   await again.close();
   await signedInThere.close();
 
+  // Two accounts become one, from the You tab. The money side of this is tested
+  // much harder in scripts/audit-combine.ts.
+  {
+    const keepCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const otherCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await otherCtx.grantPermissions(["clipboard-read", "clipboard-write"]);
+    const keep = await keepCtx.newPage();
+    const old = await otherCtx.newPage();
+    keep.on("pageerror", (error) => errors.push(error.message));
+    old.on("pageerror", (error) => errors.push(error.message));
+    const sign = (p, displayName) => p.evaluate(async (name) => (await (await fetch("/api/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ displayName: name, defaultCurrency: "EUR" }) })).json()).me.id, displayName);
+    await keep.goto(BASE, { waitUntil: "networkidle" });
+    await old.goto(BASE, { waitUntil: "networkidle" });
+    const keepId = await sign(keep, "Sana New");
+    await sign(old, "Sana Old");
+    await old.evaluate((invite) => fetch(`/api/invite/${invite}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), code);
+
+    await old.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+    await old.getByRole("button", { name: /Your devices/ }).click({ timeout: 8000 });
+    await old.getByRole("button", { name: "Add another device" }).click({ timeout: 8000 });
+    await old.getByRole("button", { name: "Copy sign-in code" }).click({ timeout: 8000 });
+    await old.getByRole("button", { name: "Copied" }).waitFor({ timeout: 3000 }).catch(() => {});
+    const proof = await old.evaluate(() => navigator.clipboard.readText());
+
+    await keep.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+    await keep.getByRole("button", { name: /Combine two accounts/ }).click({ timeout: 8000 });
+    await keep.getByPlaceholder("k7fq-m2xp").fill(proof);
+    await keep.getByRole("button", { name: "Continue" }).click();
+    await keep.getByText("This can").waitFor({ timeout: 8000 }).catch(() => {});
+    const asked = await keep.locator("body").innerText();
+    check("combining says what will happen before doing it", /Move\s+Sana Old\s+into\s+Sana New/.test(asked) && /1 group and 0 expenses/.test(asked) && /can.t be undone/.test(asked), asked.slice(-400));
+    check("and nothing has happened yet", (await old.evaluate(async () => (await (await fetch("/api/identity")).json()).me?.displayName)) === "Sana Old");
+    await keep.getByRole("button", { name: "Combine accounts" }).click();
+    await keep.getByText("This can").waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+    check("the old device stays signed in, as the account that stayed", (await old.evaluate(async () => (await (await fetch("/api/identity")).json()).me?.id)) === keepId);
+    const groups = await keep.evaluate(async () => (await (await fetch("/api/dashboard")).json()).groups.length);
+    check("and the group came across", groups === 1, String(groups));
+    await keepCtx.close();
+    await otherCtx.close();
+  }
+
   // Changing your mind, and nothing about a home-screen app to copy into.
   const change = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const c = await change.newPage();

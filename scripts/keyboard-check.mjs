@@ -155,6 +155,7 @@ await panel("Default currency", "/account", () => btn(/Default currency/));
 await panel("Budgets", "/account", () => btn(/^Budgets/));
 await panel("Your devices", "/account", () => btn(/Your devices/));
 await panel("Recovery key", "/account", () => btn(/Recovery key/));
+await panel("Combine two accounts", "/account", () => btn(/Combine two accounts/));
 await panel("Delete my account", "/account", () => btn("Delete my account"));
 
 // Adding an expense with keys only.
