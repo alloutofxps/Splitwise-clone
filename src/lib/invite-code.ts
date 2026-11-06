@@ -70,6 +70,28 @@ export function codeFromText(raw: string): string {
 }
 
 /**
+ * A sign-in code as typed or pasted: "K7FQ-M2XP", "k7fq m2xp" and "k7fqm2xp" are
+ * the same code. The older long kind, "dvy_...", is case-sensitive and left as
+ * it is.
+ */
+export function normalizeSignInCode(input: string): string {
+  const code = input.trim();
+  if (code.startsWith("dvy_")) return code;
+  return code.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** The code in a whole sign-in link, or in what was typed. */
+export function signInCodeIn(text: string): string {
+  const link = /\/link\/([^/?#\s]+)/.exec(text)?.[1];
+  return normalizeSignInCode(link ?? text);
+}
+
+/** For reading on a screen: "k7fq-m2xp". */
+export function formatSignInCode(code: string): string {
+  return (code.match(/.{1,4}/g) ?? []).join("-");
+}
+
+/**
  * The words shared with an invite. Links open in the browser even with Divvy on
  * the home screen, so it also says how to use the code from inside the app.
  */

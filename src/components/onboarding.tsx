@@ -22,6 +22,7 @@ import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
 import { openedFromHomeScreen } from "@/lib/client/home-screen";
+import { SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
 import {
   clearRecoveryPending,
   clearAskHowToProtectFirst,
@@ -60,7 +61,7 @@ import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page"
  * too late.
  */
 
-type Step = "welcome" | "profile" | "protect" | "recovery" | "restore";
+type Step = "welcome" | "profile" | "protect" | "recovery" | "restore" | "code";
 
 
 export function Onboarding({ onFinished }: { onFinished: () => void }) {
@@ -88,7 +89,7 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
       <AnimatePresence mode="wait">
         {step === "welcome" ? (
           <StepShell key="welcome">
-            <Welcome onStart={() => setStep("profile")} onRestore={() => setStep("restore")} />
+            <Welcome onStart={() => setStep("profile")} onRestore={() => setStep("restore")} onCode={() => setStep("code")} />
           </StepShell>
         ) : null}
 
@@ -128,6 +129,12 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
             <RestoreStep onBack={() => setStep("welcome")} onFinished={onFinished} />
           </StepShell>
         ) : null}
+
+        {step === "code" ? (
+          <StepShell key="code">
+            <CodeStep onBack={() => setStep("welcome")} onFinished={onFinished} />
+          </StepShell>
+        ) : null}
       </AnimatePresence>
     </KeyboardPage>
   );
@@ -152,7 +159,7 @@ function StepShell({ children }: { children: React.ReactNode }) {
 /** How a page is opened doesn't change while it's open. */
 const noChanges = () => () => {};
 
-function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () => void }) {
+function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestore: () => void; onCode: () => void }) {
   const toast = useToast();
   const client = useQueryClient();
   const [passkeyReady, setPasskeyReady] = React.useState(false);
@@ -235,6 +242,9 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
           <Button variant={passkeyReady ? "secondary" : "primary"} size="lg" fullWidth onClick={onRestore}>
             Sign in with a recovery key
           </Button>
+          <Button variant="secondary" size="lg" fullWidth onClick={onCode}>
+            Sign in with a code
+          </Button>
           <Button variant="ghost" size="md" fullWidth onClick={onStart}>
             I&rsquo;m new to Divvy
           </Button>
@@ -260,6 +270,9 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
             ) : null}
             <Button variant="secondary" size="lg" fullWidth onClick={onRestore}>
               Sign in with a recovery key
+            </Button>
+            <Button variant="secondary" size="lg" fullWidth onClick={onCode}>
+              Sign in with a code
             </Button>
           </>
         ) : (
@@ -720,6 +733,77 @@ function RecoveryStep({
 }
 
 // ---------------------------------------------------------------------------
+
+function CodeStep({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const client = useQueryClient();
+  const [code, setCode] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  const submit = async () => {
+    if (!code.trim() || busy) return;
+    setBusy(true);
+    try {
+      await claimSignInCode(code);
+      await client.invalidateQueries();
+      haptic([10, 40, 10]);
+      toast({ tone: "success", title: "Welcome back" });
+      router.refresh();
+      onFinished();
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "That code didn't work",
+        description: error instanceof ApiError ? error.message : "Check it and try again.",
+      });
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <button
+        onClick={onBack}
+        className="tap-44 relative -ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
+      >
+        Back
+      </button>
+
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
+        Enter your sign-in code
+      </h1>
+      <p className="mt-2 text-subhead leading-relaxed text-muted">{SIGN_IN_CODE_HELP}</p>
+
+      <input
+        value={code}
+        onChange={(event) => setCode(event.target.value)}
+        onKeyDown={(event) => void (event.key === "Enter" && submit())}
+        placeholder="k7fq-m2xp"
+        aria-label="Your sign-in code"
+        autoFocus
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="go"
+        className="mt-7 h-14 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-center font-mono text-title-lg font-medium text-text outline-none transition placeholder:font-medium placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+      />
+
+      <KeyboardPageFooter className="mt-auto pt-8">
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={busy}
+          disabled={!code.trim()}
+          onClick={() => void submit()}
+        >
+          Sign in
+        </Button>
+      </KeyboardPageFooter>
+    </div>
+  );
+}
 
 function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) {
   const router = useRouter();

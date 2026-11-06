@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Laptop, Loader2, MonitorSmartphone, Smartphone, Tablet, Trash2, TriangleAlert } from "lucide-react";
+import { Check, Copy, KeyRound, Laptop, Loader2, MonitorSmartphone, Smartphone, Tablet, Trash2, TriangleAlert } from "lucide-react";
 import { loadQrLibrary } from "@/components/ui/qr-code";
 import { Sheet } from "@/components/ui/sheet";
 import { useResetOnOpen } from "@/components/ui/use-reset-on-open";
 import { Button, cn, haptic } from "@/components/ui/primitives";
+import { formatSignInCode } from "@/lib/invite-code";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/client/api";
 import { PasskeyCancelled, passkeysSupported, registerPasskey } from "./passkey";
@@ -277,7 +278,8 @@ function Row({
 function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
   const [png, setPng] = React.useState<string | null>(null);
-  const [url, setUrl] = React.useState<string | null>(null);
+  const [code, setCode] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
   const [expired, setExpired] = React.useState(false);
 
   const create = useMutation({
@@ -285,7 +287,7 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     // other and a library that can't arrive fails here, with the request.
     mutationFn: async () => {
       const [data, QRCode] = await Promise.all([
-        api.post<{ path: string; expiresInSeconds: number }>("/api/identity/link"),
+        api.post<{ code: string; path: string; expiresInSeconds: number }>("/api/identity/link"),
         loadQrLibrary(),
       ]);
       const absolute = `${window.location.origin}${data.path}`;
@@ -294,10 +296,10 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         margin: 1,
         errorCorrectionLevel: "M",
       });
-      return { absolute, png, expiresInSeconds: data.expiresInSeconds };
+      return { code: data.code, png, expiresInSeconds: data.expiresInSeconds };
     },
-    onSuccess: ({ absolute, png, expiresInSeconds }) => {
-      setUrl(absolute);
+    onSuccess: ({ code, png, expiresInSeconds }) => {
+      setCode(code);
       setExpired(false);
       setPng(png);
       window.setTimeout(() => setExpired(true), expiresInSeconds * 1000);
@@ -314,9 +316,22 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   // paints the previous code for a frame — see `useResetOnOpen`.
   useResetOnOpen(open, () => {
     setPng(null);
-    setUrl(null);
+    setCode(null);
+    setCopied(false);
     setExpired(false);
   });
+
+  const copy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      haptic([8, 30, 8]);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Some in-app browsers block the clipboard. The code is on screen.
+      toast({ tone: "error", title: "Couldn't copy", description: "Please copy the code by hand." });
+    }
+  };
 
   const start = create.mutate;
   React.useEffect(() => {
@@ -331,7 +346,7 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
           you in there, with nothing to type.
         </p>
 
-        <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-line bg-white p-4">
+        <div className="mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-line bg-white p-4">
           {create.isPending || (!png && !expired) ? (
             <Loader2 className="size-8 animate-spin text-subtle" />
           ) : expired ? (
@@ -347,13 +362,35 @@ function LinkSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
           ) : null}
         </div>
 
-        {url && !expired ? (
-          <p className="break-all text-center text-caption text-subtle">{url}</p>
+        {code && !expired ? (
+          <div>
+            <p className="text-body-lg font-semibold text-text">Or use a sign-in code</p>
+            <p className="mt-1 text-body leading-relaxed text-muted">
+              For this same phone, between its browser and the home-screen app, or a computer with
+              no camera. Choose &ldquo;Sign in with a code&rdquo; there and enter this.
+            </p>
+            <p
+              className="mt-3 select-all rounded-[var(--radius-md)] bg-surface-2 px-4 py-3 text-center font-mono text-title font-medium text-text"
+              style={{ userSelect: "all", WebkitUserSelect: "all" }}
+            >
+              {formatSignInCode(code)}
+            </p>
+            <Button
+              variant={copied ? "positive" : "secondary"}
+              size="lg"
+              fullWidth
+              className="mt-2"
+              onClick={() => void copy(formatSignInCode(code))}
+              icon={copied ? <Check className="size-[18px]" /> : <Copy className="size-[18px]" />}
+            >
+              {copied ? "Copied" : "Copy sign-in code"}
+            </Button>
+          </div>
         ) : null}
 
         <p className="text-caption leading-relaxed text-subtle">
-          The code works once and stops working after five minutes. Anyone who scans it can get
-          into your account, so only scan it with your own device.
+          The picture and the code work once and stop working after five minutes. Anyone who gets
+          either can get into your account, so only use them on your own device.
         </p>
       </div>
     </Sheet>
