@@ -11,6 +11,7 @@ import { Wordmark } from "@/components/app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { colorForName, hueVar, initials } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/invite-code";
+import { askHowToProtectFirst, markRecoveryPending, stashRecoveryKey } from "@/lib/client/recovery";
 import type { MeDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
 import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page";
@@ -132,10 +133,19 @@ export default function JoinPage() {
     if (!name.trim()) return;
     setJoining(true);
     try {
-      await api.post("/api/identity", {
+      const created = await api.post<{ me: MeDto; recoveryKey: string }>("/api/identity", {
         displayName: name.trim(),
         avatarColor: colorForName(name),
       });
+      // The account exists from here on, and this key is the only copy. Kept
+      // for the next screen, which the app shows on arriving in the group:
+      // how to get back in if this browser forgets you. Home's reminder stays
+      // until that's done.
+      markRecoveryPending();
+      stashRecoveryKey(created.recoveryKey);
+      askHowToProtectFirst();
+      // If joining fails below, trying again must not make a second account.
+      setMe(created.me);
       // Claiming a placeholder happens on the join itself, which checks the
       // invite code is still live; the placeholder's history is merged into
       // the account that was just created.
@@ -307,8 +317,8 @@ export default function JoinPage() {
               </div>
             </label>
             <p className="mt-2 text-caption leading-relaxed text-subtle">
-              No email or password needed. Next you&rsquo;ll get a recovery key. Save
-              it, because it&rsquo;s the only way back in if you change phones.
+              No email or password needed. Next you&rsquo;ll choose how to get back in
+              if you change phones.
             </p>
           </div>
         ) : null}

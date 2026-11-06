@@ -290,6 +290,53 @@ console.log("\nProtecting a new account");
   await fresh.close();
 }
 
+// Joining from an invite link is how most people arrive. Their account needs a
+// way back in as much as anyone's: it used to get none, and no warning.
+console.log("\nJoining from an invite link");
+{
+  const code = await page.evaluate(
+    async (id) => (await (await fetch(`/api/groups/${id}`)).json()).group.inviteCode,
+    seed.groupId,
+  );
+  const heading = (p, name) => p.getByRole("heading", { name });
+  const fresh = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await fresh.newPage();
+  p.on("pageerror", (error) => errors.push(error.message));
+  await p.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await p.getByPlaceholder("Priya").fill("Noor Invite");
+  await p.getByRole("button", { name: /^Join / }).click();
+  await heading(p, "Protect your account").waitFor({ timeout: 15000 }).catch(() => {});
+  check("you're asked how to get back in", await heading(p, "Protect your account").isVisible());
+  check("in the group you joined", /\/groups\//.test(p.url()), p.url());
+  await p.getByRole("button", { name: "Save a recovery key instead" }).click();
+  await heading(p, "Save your recovery key").waitFor({ timeout: 5000 }).catch(() => {});
+  check("the key is there to save", await heading(p, "Save your recovery key").isVisible());
+  await p.reload({ waitUntil: "networkidle" });
+  await heading(p, "Save your recovery key").waitFor({ timeout: 8000 }).catch(() => {});
+  check("a reload comes back to the key", await heading(p, "Save your recovery key").isVisible());
+  await p.locator("input[type=checkbox]").check();
+  await p.getByRole("button", { name: "Start using Divvy" }).click();
+  await p.getByRole("tab", { name: "Expenses" }).waitFor({ timeout: 8000 }).catch(() => {});
+  check("saving it lands in the group", /\/groups\//.test(p.url()) && (await p.getByRole("tab", { name: "Expenses" }).isVisible()), p.url());
+  await fresh.close();
+
+  const later = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const q = await later.newPage();
+  q.on("pageerror", (error) => errors.push(error.message));
+  await q.goto(`${BASE}/join/${code}`, { waitUntil: "networkidle" });
+  await q.getByPlaceholder("Priya").fill("Leo Invite");
+  await q.getByRole("button", { name: /^Join / }).click();
+  await q.getByRole("button", { name: "Not now" }).click({ timeout: 15000 });
+  await q.waitForTimeout(2000);
+  const group = await q.locator("body").innerText();
+  check("Not now shows the group", /Expenses/.test(group) && !/Protect your account/.test(group), group.slice(0, 100).replace(/\n/g, " "));
+  await q.goto(BASE, { waitUntil: "networkidle" });
+  await q.waitForTimeout(1500);
+  check("and Home asks you to back up later", /Back up your account/.test(await q.locator("body").innerText()));
+  check("the unseen key isn't kept", (await q.evaluate(() => sessionStorage.getItem("divvy-recovery-key"))) === null);
+  await later.close();
+}
+
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));
 console.log(`\n${passed} passed, ${failed} failed`);
 await browser.close();

@@ -23,10 +23,12 @@ import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
 import {
   clearRecoveryPending,
+  clearAskHowToProtectFirst,
   clearStashedRecoveryKey,
   markRecoveryPending,
   saveRecoveryKeyFile,
   stashRecoveryKey,
+  shouldAskHowToProtectFirst,
   stashedRecoveryKey,
 } from "@/lib/client/recovery";
 import { EmojiPicker } from "./ui/emoji-picker";
@@ -70,9 +72,14 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
    * recovery screen rather than to the welcome screen — which was the worse
    * outcome twice over: the key was unrecoverable, and the obvious next move
    * was to sign up again and end up with a second, empty account.
+   *
+   * Someone who has just joined from an invite link hasn't been asked yet, so
+   * they start one step earlier, on the choice.
    */
   const resumed = typeof window === "undefined" ? null : stashedRecoveryKey();
-  const [step, setStep] = React.useState<Step>(resumed ? "recovery" : "welcome");
+  const [step, setStep] = React.useState<Step>(() =>
+    !resumed ? "welcome" : shouldAskHowToProtectFirst() ? "protect" : "recovery",
+  );
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
@@ -100,7 +107,10 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
         {step === "protect" ? (
           <StepShell key="protect">
             <ProtectStep
-              onRecoveryKey={() => setStep("recovery")}
+              onRecoveryKey={() => {
+                clearAskHowToProtectFirst();
+                setStep("recovery");
+              }}
               onFinished={onFinished}
             />
           </StepShell>
