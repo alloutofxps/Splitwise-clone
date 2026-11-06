@@ -34,7 +34,7 @@ import { FlowBar } from "@/components/flow/flow-bar";
 import { GroupMark } from "@/components/group/group-mark";
 import { activityEffect, describeActivity, timeAgo } from "@/components/activity/describe";
 import { abs, formatMoney } from "@/lib/money";
-import { recoveryPending } from "@/lib/client/recovery";
+import { backupNeeded } from "@/lib/client/recovery";
 import type { DashboardPayload } from "@/lib/client/queries";
 import type { ActivityDto, GroupSummaryDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
@@ -131,7 +131,7 @@ export default function HomePage() {
         <div className="min-w-0 lg:order-1">
           {firstRun ? (
             <>
-            <BackupNotice />
+            <BackupNotice unconfirmed={data.backupUnconfirmed} />
             <FlowDoodle play="start" className="-ml-2 mb-2 mt-6" />
             <Section title="Get started">
               <Rows>
@@ -290,7 +290,7 @@ function ThisMonth() {
 function NeedsYou({ data }: { data: DashboardPayload }) {
   const { data: activity, isLoading } = useActivity();
   const { data: budgets } = useBudgets();
-  const [backup] = React.useState(() => recoveryPending());
+  const [backup] = React.useState(() => backupNeeded(data.backupUnconfirmed));
   const people = React.useMemo(
     () => new Map(data.people.map((person) => [person.id, person])),
     [data.people],
@@ -427,8 +427,8 @@ function NeedsYou({ data }: { data: DashboardPayload }) {
 }
 
 /** A brand-new account sees this above "Get started" until it's backed up. */
-function BackupNotice() {
-  const [backup] = React.useState(() => recoveryPending());
+function BackupNotice({ unconfirmed }: { unconfirmed: boolean | undefined }) {
+  const [backup] = React.useState(() => backupNeeded(unconfirmed));
   if (!backup) return null;
   return (
     <Section title="Needs you">
