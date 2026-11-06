@@ -180,7 +180,7 @@ animation engine, no player to download.
 
 | Piece | States | The app sends |
 |---|---|---|
-| Welcome untangle | tangled, untangling, untangled | Progress through the welcome, 0 to 1 |
+| Welcome untangle | tangled, untangling, untangled. Only for someone new: not drawn on a device that has been signed in before, or in the home-screen app | Progress through the welcome, 0 to 1 |
 | Empty states (3) | arrive (an empty list), start (a new account), settled (nobody owes); a tap makes the three hop | Which one, and a tap |
 | Paid | hidden, paying, paid, done: a jade disc pops over the payee, a tick draws, six sparks burst out bright then drift, shrink and fade, then it all fades (1.2s) | "paid" when a debt reaches zero |
 | Pull to refresh | resting, pulling (the doodle draws as far as you've pulled), loading (the three take turns to hop), done ("Up to date") | Pull distance 0 to 1, then "loading", "done" |

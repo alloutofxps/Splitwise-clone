@@ -22,7 +22,8 @@ import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
 import { openedFromHomeScreen } from "@/lib/client/home-screen";
-import { SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
+import { LOST_KEY_HELP, SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
+import { wasSignedInHere } from "@/lib/client/returning";
 import {
   clearRecoveryPending,
   clearAskHowToProtectFirst,
@@ -170,7 +171,11 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
   // app once, when it's added, and a known iOS 17 fault can drop it later;
   // "Get started" then made them a second, empty account. So signing back in
   // comes first there (findings item 34).
+  // The same goes for a device that has been signed in before, wherever it's
+  // opened: 180 days unused signs a phone out.
   const fromHomeScreen = React.useSyncExternalStore(noChanges, openedFromHomeScreen, () => false);
+  const signedInBefore = React.useSyncExternalStore(noChanges, wasSignedInHere, () => false);
+  const signInFirst = fromHomeScreen || signedInBefore;
 
   /*
    * The passkey button appears only once the device says it actually holds
@@ -192,6 +197,7 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
     setSigningIn(true);
     try {
       await signInWithPasskey();
+      clearRecoveryPending();
       await client.invalidateQueries();
     } catch (error) {
       if (!(error instanceof PasskeyCancelled)) {
@@ -214,8 +220,9 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
       <div className="flex flex-1 flex-col justify-center py-4">
         <Wordmark className="mb-2" />
 
-        {/* The product in three seconds: who owes whom, untangled. */}
-        <WelcomeFlow />
+        {/* The product in three seconds: who owes whom, untangled. Someone
+            signing back in knows, and it pushed their buttons off a small phone. */}
+        {signInFirst ? null : <WelcomeFlow />}
 
         <h1 className="mt-2 text-display font-semibold leading-[1.1] tracking-[-0.03em] text-text">
           Split costs with friends.
@@ -231,7 +238,7 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
         </ul>
       </div>
 
-      {fromHomeScreen ? (
+      {signInFirst ? (
         <div className="space-y-2">
           <p className="pb-1 text-center text-body text-muted">Already use Divvy? Sign back in.</p>
           {passkeyReady ? (
@@ -817,6 +824,8 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
     setBusy(true);
     try {
       await api.post("/api/identity/restore", { recoveryKey: key.trim() });
+      // They have their key, whatever this device remembers from before.
+      clearRecoveryPending();
       await client.invalidateQueries();
       haptic([10, 40, 10]);
       toast({ tone: "success", title: "Welcome back" });
@@ -861,6 +870,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         spellCheck={false}
         className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-field-edge bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
       />
+      <p className="mt-2 text-caption leading-relaxed text-subtle">{LOST_KEY_HELP}</p>
 
       <KeyboardPageFooter className="mt-auto pt-8">
         <Button

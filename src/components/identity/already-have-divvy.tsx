@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { KeyboardPageFooter } from "@/components/ui/keyboard-page";
 import { api, ApiError } from "@/lib/client/api";
 import { openedFromHomeScreen } from "@/lib/client/home-screen";
-import { SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
+import { LOST_KEY_HELP, SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
 import { clearRecoveryPending } from "@/lib/client/recovery";
 import type { MeDto } from "@/lib/types";
 
@@ -195,6 +195,7 @@ export function AlreadyHaveDivvy({
               className="w-full resize-none rounded-[var(--radius-md)] border border-field-edge bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
             />
           </label>
+          <p className="mt-2 text-caption leading-relaxed text-subtle">{LOST_KEY_HELP}</p>
         </div>
         <KeyboardPageFooter className="pt-5" pinned>
           <Button
