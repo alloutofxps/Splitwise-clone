@@ -16,6 +16,7 @@ import type { MeDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
 import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page";
 import { AlreadyHaveDivvy } from "@/components/identity/already-have-divvy";
+import { InAppBrowserNotice } from "@/components/in-app-browser-notice";
 
 interface GroupPreview {
   kind: "group";
@@ -203,6 +204,7 @@ export default function JoinPage() {
 
   const invitedTo = (
     <>
+      {me ? null : <InAppBrowserNotice className="mb-5" />}
       <p className="text-body font-medium text-subtle">
         You&rsquo;ve been invited to
       </p>
