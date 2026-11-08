@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { LoadFailed } from "@/components/error-screen";
 import { setBadge } from "@/lib/client/badge";
 import { stashedRecoveryKey } from "@/lib/client/recovery";
+import { rememberSignedInHere } from "@/lib/client/returning";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import type { ExpenseDto } from "@/lib/types";
 
@@ -102,6 +103,11 @@ export function AppGate({
   React.useEffect(() => {
     if (data) setBadge(data.unreadActivityCount);
   }, [data]);
+
+  const signedInNow = Boolean(data);
+  React.useEffect(() => {
+    if (signedInNow) rememberSignedInHere();
+  }, [signedInNow]);
 
   /**
    * A launch that meant "add an expense" — the app shortcut, or a receipt

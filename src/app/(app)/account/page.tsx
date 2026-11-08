@@ -21,6 +21,7 @@ import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/q
 import { api, ApiError } from "@/lib/client/api";
 import { pending } from "@/lib/client/outbox";
 import { wipeLocalData } from "@/lib/client/wipe";
+import { forgetSignedInHere } from "@/lib/client/returning";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
 import { useClientValue, useMirror, useResetOnClose } from "@/components/ui/state-hooks";
 import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
@@ -114,6 +115,7 @@ export default function AccountPage() {
   // (ConfirmDeleteSheet); this is what follows once it's done.
   const accountDeleted = async () => {
     await wipeLocalData(client);
+    forgetSignedInHere();
     setConfirmDelete(false);
     toast({ tone: "success", title: "Your account is deleted" });
     router.refresh();
