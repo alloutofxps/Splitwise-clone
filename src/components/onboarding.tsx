@@ -25,6 +25,7 @@ import { openedFromHomeScreen } from "@/lib/client/home-screen";
 import { LOST_KEY_HELP, SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
 import { wasSignedInHere } from "@/lib/client/returning";
 import { InAppBrowserNotice } from "./in-app-browser-notice";
+import { ReportSheet } from "./report-sheet";
 import {
   clearRecoveryPending,
   clearAskHowToProtectFirst,
@@ -167,6 +168,7 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
   const [passkeyReady, setPasskeyReady] = React.useState(false);
   const [signingIn, setSigningIn] = React.useState(false);
   const [returning, setReturning] = React.useState(false);
+  const [reporting, setReporting] = React.useState(false);
   // Opened from the home screen with nobody signed in: almost always someone
   // who already uses Divvy. iPhone copies Safari's sign-in to a home-screen
   // app once, when it's added, and a known iOS 17 fault can drop it later;
@@ -291,6 +293,15 @@ function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestor
         )}
       </div>
       )}
+      {/* Not being able to get in is often what's wrong, so it's here too. */}
+      <button
+        type="button"
+        onClick={() => setReporting(true)}
+        className="tap-44 relative mx-auto mt-3 py-1 text-body font-medium text-muted underline-offset-2 hover:underline"
+      >
+        Something wrong? Tell us
+      </button>
+      <ReportSheet open={reporting} onClose={() => setReporting(false)} />
     </div>
   );
 }

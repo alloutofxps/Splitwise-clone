@@ -306,6 +306,26 @@ async function deliver(sub: Subscription, message: PushMessage, type: string): P
   }
 }
 
+/** What the person who reads reports sees on their phone when one arrives. */
+export function messageForReport(report: { id: string; text: string; signedIn: boolean }): PushMessage {
+  const text = report.text.replace(/\s+/g, " ").trim();
+  return {
+    title: report.signedIn ? "Someone sent a report" : "Someone not signed in sent a report",
+    body: text.length > 120 ? `${text.slice(0, 119)}\u2026` : text,
+    url: "/reports",
+    tag: `report-${report.id}`,
+  };
+}
+
+/** Sends a new report to every device of the person who reads them. */
+export async function notifyReport(ownerId: string, report: { id: string; text: string; signedIn: boolean }): Promise<number> {
+  if (!ensureConfigured()) return 0;
+  const subscriptions = await prisma.pushSubscription.findMany({ where: { personId: ownerId } });
+  let delivered = 0;
+  for (const sub of subscriptions) if (await deliver(sub, messageForReport(report), "report.sent")) delivered++;
+  return delivered;
+}
+
 /**
  * Tells a person's other devices that a new one has just signed in to their
  * account (OWASP ASVS 2.2.3; the owner chose this on 28 October 2026).

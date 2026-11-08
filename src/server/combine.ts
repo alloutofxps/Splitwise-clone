@@ -155,6 +155,7 @@ export async function combineAccounts(
     await tx.credential.updateMany({ where: { personId: otherId }, data: { personId: keepId } });
     await tx.session.updateMany({ where: { personId: otherId }, data: { personId: keepId } });
     await tx.pushSubscription.updateMany({ where: { personId: otherId }, data: { personId: keepId } });
+    await tx.report.updateMany({ where: { personId: otherId }, data: { personId: keepId } });
     await tx.deviceLink.deleteMany({ where: { personId: otherId } });
     await tx.expense.updateMany({ where: { lastEditedById: otherId }, data: { lastEditedById: keepId } });
     await tx.person.updateMany({ where: { createdByPersonId: otherId }, data: { createdByPersonId: keepId } });

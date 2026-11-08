@@ -24,6 +24,7 @@ import { mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { prisma, isSqlite } from "@/lib/db";
 import { SESSION_IDLE_DAYS } from "@/lib/identity";
+import { REPORT_KEEP_DAYS } from "@/server/reports";
 import { log } from "@/lib/log";
 import { refreshAllBases } from "./rates";
 import { runDueRecurrences } from "./recurrence";
@@ -98,18 +99,20 @@ export async function withJobLock<T>(
 
 async function housekeeping(): Promise<void> {
   const now = Date.now();
-  const [links, challenges, sessions] = await prisma.$transaction([
+  const [links, challenges, sessions, reports] = await prisma.$transaction([
     prisma.deviceLink.deleteMany({ where: { expiresAt: { lt: new Date(now - 86_400_000) } } }),
     prisma.webAuthnChallenge.deleteMany({ where: { expiresAt: { lt: new Date(now) } } }),
     prisma.session.deleteMany({
       where: { lastSeenAt: { lt: new Date(now - SESSION_IDLE_DAYS * 86_400_000) } },
     }),
+    prisma.report.deleteMany({ where: { createdAt: { lt: new Date(now - REPORT_KEEP_DAYS * 86_400_000) } } }),
   ]);
-  if (links.count + challenges.count + sessions.count > 0) {
+  if (links.count + challenges.count + sessions.count + reports.count > 0) {
     log.info("housekeeping", {
       deviceLinks: links.count,
       challenges: challenges.count,
       sessions: sessions.count,
+      reports: reports.count,
     });
   }
 }

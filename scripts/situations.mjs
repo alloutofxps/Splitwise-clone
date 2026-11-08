@@ -292,6 +292,55 @@ console.log("\nA browser inside another app");
   await installed.ctx.close();
 }
 
+// ---------------------------------------------------------------------------
+console.log("\nSomething wrong? Tell us");
+{
+  // Signed out, from the welcome screen: not getting in is often the problem.
+  const { ctx, page } = await fresh();
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  await button(page, "Something wrong? Tell us").click();
+  await page.getByPlaceholder("I tapped the invite link and…").fill("I can't find my recovery key");
+  await button(page, "Send").click();
+  await page.getByText("Sent. Thank you.").first().waitFor({ timeout: 5000 }).catch(() => {});
+  check("someone signed out can send one", (await page.getByText("Sent. Thank you.").count()) > 0);
+  await ctx.close();
+
+  const sender = await account("Xan");
+  await sender.page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await button(sender.page, /Something wrong\?/).click({ timeout: 8000 });
+  await sender.page.getByPlaceholder("I tapped the invite link and…").fill("The total on Home looks wrong");
+  await button(sender.page, "Send").click();
+  await sender.page.getByText("Sent. Thank you.").first().waitFor({ timeout: 5000 }).catch(() => {});
+  check("so can someone signed in, from the You tab", (await sender.page.getByText("Sent. Thank you.").count()) > 0);
+  const empty = await sender.page.evaluate(async () => (await fetch("/api/reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "  ", path: "/" }) })).status);
+  check("an empty one is refused", empty === 422, String(empty));
+  const peek = await sender.page.evaluate(async () => (await fetch("/api/reports")).status);
+  check("and nobody but the reader can read them", peek === 403, String(peek));
+
+  const reader = process.env.DIVVY_REPORTS_TO;
+  if (reader && /localhost|127\.0\.0\.1/.test(BASE) && process.env.DATABASE_URL) {
+    const require = createRequire(path.join(process.cwd(), "package.json"));
+    const Database = require("better-sqlite3");
+    let file = process.env.DATABASE_URL.replace(/^file:/, "").split("?")[0];
+    if (!file.startsWith("/") && !/^[A-Za-z]:/.test(file)) file = path.join("prisma", file);
+    const owner = await account("Owner");
+    const db = new Database(file);
+    db.prepare('UPDATE "Person" SET "inviteCode" = ? WHERE "id" = ?').run(reader, owner.id);
+    db.close();
+    await owner.page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+    await owner.page.getByText("Reports people sent").click({ timeout: 8000 });
+    await owner.page.getByText("The total on Home looks wrong").waitFor({ timeout: 8000 }).catch(() => {});
+    const list = await text(owner.page);
+    check("the reader sees them, newest first", list.indexOf("The total on Home looks wrong") > -1 && list.indexOf("The total on Home looks wrong") < list.indexOf("I can't find my recovery key"), list.slice(0, 300));
+    check("with who sent it, or that they weren't signed in", list.includes("Xan") && list.includes("Someone not signed in"));
+    check("and which screen it came from", list.includes("/account"));
+    await owner.ctx.close();
+  } else {
+    console.log("    the reader's view skipped: needs DIVVY_REPORTS_TO, a local server and DATABASE_URL");
+  }
+  await sender.ctx.close();
+}
+
 check("no errors in the browser console", errors.length === 0, errors.slice(0, 3).join(" / "));
 console.log(`\n${passed} passed, ${failed} failed`);
 await browser.close();

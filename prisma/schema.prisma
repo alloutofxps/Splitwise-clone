@@ -80,8 +80,31 @@ model Person {
   deviceLinks        DeviceLink[]
   sessions           Session[]
   pushSubscriptions  PushSubscription[]
+  reports            Report[]
 
   // inviteCode needs no index of its own: @unique already makes one.
+}
+
+/// What someone wrote with "Something wrong?", for whoever runs Divvy
+/// (DIVVY_REPORTS_TO). Deleted after 90 days (server/jobs.ts), and with the
+/// account of whoever sent it.
+model Report {
+  id       String  @id @default(cuid())
+  /// Who sent it, when they were signed in. Many reports come from people who
+  /// can't sign in, which is often what's wrong.
+  personId String?
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  text   String
+  /// The screen it was sent from, the version of Divvy, and the phone or
+  /// browser type, so a report can be acted on without a conversation.
+  path   String
+  build  String
+  device String
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 /// One phone or browser that has agreed to show notifications.

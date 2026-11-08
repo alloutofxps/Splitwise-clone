@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { readsReports } from "./reports";
 import type {
   DashboardDto,
   FriendDto,
@@ -41,6 +42,7 @@ export async function meDto(person: Person): Promise<MeDto> {
       value: m.value,
       sortOrder: m.sortOrder,
     })),
+    ...(readsReports(person) ? { readsReports: true } : {}),
   };
 }
 
