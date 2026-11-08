@@ -120,7 +120,7 @@ async function assertMayMerge(actorId: string, ghostId: string, intoId: string):
  * looking at it knows which. Guessing here would move a balance silently, so
  * the merge stops and says what to fix.
  */
-async function assertNoSelfPayment(tx: Tx, ghostId: string, intoId: string): Promise<void> {
+export async function assertNoSelfPayment(tx: Tx | typeof prisma, ghostId: string, intoId: string): Promise<void> {
   const between = await tx.settlement.count({
     where: {
       deletedAt: null,
@@ -261,18 +261,43 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
       await tx.membership.findMany({ where: { personId: ghostId }, select: { groupId: true } })
     ).map((row) => row.groupId);
 
-    const moved = {
-      memberships: 0,
-      payers: 0,
-      splits: 0,
-      itemShares: 0,
-      settlements: 0,
-      comments: 0,
-      activities: 0,
-      expensesCreated: 0,
-      recurrences: 0,
-    };
+    const moved = await moveRows(tx, ghostId, intoPersonId, ghostGroupIds);
 
+    await bumpLedger(tx, ghostGroupIds);
+
+    await tx.person.delete({ where: { id: ghostId } });
+
+    return { personId: intoPersonId, moved };
+  });
+}
+
+/**
+ * Moves every row about money and history from one person to another. The
+ * transaction, the checks and removing the empty person are the caller's.
+ *
+ * `direct` also rewrites repeating bills outside any group. A placeholder can't
+ * have those, so claiming one doesn't read them; a real account can.
+ */
+export async function moveRows(
+  tx: Tx,
+  ghostId: string,
+  intoPersonId: string,
+  ghostGroupIds: string[],
+  { direct = false }: { direct?: boolean } = {},
+): Promise<MergeResult["moved"]> {
+  const moved = {
+    memberships: 0,
+    payers: 0,
+    splits: 0,
+    itemShares: 0,
+    settlements: 0,
+    comments: 0,
+    activities: 0,
+    expensesCreated: 0,
+    recurrences: 0,
+  };
+
+  {
     moved.memberships = await moveMemberships(tx, ghostId, intoPersonId);
     moved.payers = await movePayers(tx, ghostId, intoPersonId);
     moved.splits = await moveSplits(tx, ghostId, intoPersonId);
@@ -320,7 +345,7 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
       where: { createdByPersonId: ghostId },
       data: { createdByPersonId: intoPersonId },
     });
-    moved.recurrences = await moveRecurrenceTemplates(tx, ghostId, intoPersonId, ghostGroupIds);
+    moved.recurrences = await moveRecurrenceTemplates(tx, ghostId, intoPersonId, ghostGroupIds, direct);
 
     // A placeholder has no budgets or payment methods of its own — it has never
     // signed in — but the rows are person-owned and cheap to carry across,
@@ -332,13 +357,9 @@ export async function absorbGhost(ghostId: string, intoPersonId: string): Promis
     });
 
     await moveFriendships(tx, ghostId, intoPersonId);
+  }
 
-    await bumpLedger(tx, ghostGroupIds);
-
-    await tx.person.delete({ where: { id: ghostId } });
-
-    return { personId: intoPersonId, moved };
-  });
+  return moved;
 }
 
 /**
@@ -379,12 +400,18 @@ async function moveMemberships(tx: Tx, ghostId: string, intoId: string): Promise
       continue;
     }
 
-    if (row.joinedAt < existing.joinedAt || (existing.leftAt !== null && row.leftAt === null)) {
+    if (
+      row.joinedAt < existing.joinedAt ||
+      (existing.leftAt !== null && row.leftAt === null) ||
+      (row.role === "owner" && existing.role !== "owner")
+    ) {
       await tx.membership.update({
         where: { id: existing.id },
         data: {
           joinedAt: row.joinedAt < existing.joinedAt ? row.joinedAt : existing.joinedAt,
           leftAt: row.leftAt === null ? null : existing.leftAt,
+          // Someone who owned the group under either name still does.
+          role: row.role === "owner" ? "owner" : existing.role,
         },
       });
     }
@@ -526,10 +553,18 @@ async function moveRecurrenceTemplates(
   ghostId: string,
   intoId: string,
   groupIds: string[],
+  direct: boolean,
 ): Promise<number> {
-  if (groupIds.length === 0) return 0;
+  if (groupIds.length === 0 && !direct) return 0;
   const rows = await tx.recurrence.findMany({
-    where: { groupId: { in: groupIds } },
+    where: {
+      OR: [
+        { groupId: { in: groupIds } },
+        ...(direct
+          ? [{ groupId: null, OR: [{ payersJson: { contains: ghostId } }, { splitsJson: { contains: ghostId } }] }]
+          : []),
+      ],
+    },
     select: { id: true, payersJson: true, splitsJson: true },
   });
   let touched = 0;

@@ -2,7 +2,8 @@ import { after } from "next/server";
 import { json, route } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { hashSecret, normalizeSignInCode } from "@/lib/codes";
-import { NotFoundError, ValidationError, describeDevice, startSession } from "@/lib/identity";
+import { ValidationError, describeDevice, startSession } from "@/lib/identity";
+import { liveDeviceLink } from "@/server/device-link";
 import { notifyNewDevice } from "@/server/push";
 import { limitByAddress } from "@/server/rate-limit";
 import { meDto } from "@/server/me";
@@ -23,17 +24,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const { code } = await params;
   limitByAddress(request, "device-link-claim", { limit: 20, windowSeconds: 60 * 10 });
 
-  const link = await prisma.deviceLink.findUnique({
-    where: { codeHash: hashSecret(normalizeSignInCode(code)) },
-    include: { person: true },
-  });
-  if (!link || link.person.deletedAt) {
-    throw new NotFoundError("That link doesn't work. Ask for a new code.");
-  }
-  if (link.usedAt) throw new ValidationError("That code has already been used. Ask for a new one.");
-  if (link.expiresAt.getTime() < Date.now()) {
-    throw new ValidationError("That code has run out. Ask for a new one.");
-  }
+  const link = await liveDeviceLink(hashSecret(normalizeSignInCode(code)));
 
   const claimed = await prisma.deviceLink.updateMany({
     where: { id: link.id, usedAt: null },

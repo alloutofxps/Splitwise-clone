@@ -226,6 +226,7 @@ jobs:
           npx tsx scripts/audit-invariants.ts http://localhost:3000
           npx tsx scripts/audit-edges.ts http://localhost:3000
           npx tsx scripts/audit-features.ts http://localhost:3000
+          npx tsx scripts/audit-combine.ts http://localhost:3000
 
       - name: Install browsers
         run: npx playwright install --with-deps chromium webkit
