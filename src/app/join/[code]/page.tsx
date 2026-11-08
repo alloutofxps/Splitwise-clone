@@ -11,9 +11,12 @@ import { Wordmark } from "@/components/app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { colorForName, hueVar, initials } from "@/lib/avatar";
 import { normalizeInviteCode } from "@/lib/invite-code";
+import { askHowToProtectFirst, markRecoveryPending, stashRecoveryKey } from "@/lib/client/recovery";
 import type { MeDto, PersonDto } from "@/lib/types";
 import { isolate } from "@/lib/bidi";
 import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page";
+import { AlreadyHaveDivvy } from "@/components/identity/already-have-divvy";
+import { InAppBrowserNotice } from "@/components/in-app-browser-notice";
 
 interface GroupPreview {
   kind: "group";
@@ -42,6 +45,10 @@ interface PersonPreview {
  * without a redirect, and shows what they are joining *before* asking for
  * anything. Seeing "Lisbon 2026 · 4 people · 23 expenses" first is what makes
  * typing your name feel reasonable rather than like a sign-up wall.
+ *
+ * Someone not signed in here may still have an account: a link opens in the
+ * browser even with Divvy on the home screen. So they're asked which they are
+ * before being asked for a name, which is how a second account got made.
  */
 export default function JoinPage() {
   const params = useParams<{ code: string }>();
@@ -58,6 +65,10 @@ export default function JoinPage() {
   const [joining, setJoining] = React.useState(false);
   const [name, setName] = React.useState("");
   const nameField = React.useRef<HTMLInputElement>(null);
+  // For someone not signed in: which they said they are, once they've said.
+  const [arrival, setArrival] = React.useState<"new" | "existing" | null>(null);
+  const [signedInHere, setSignedInHere] = React.useState(false);
+  const joinButton = React.useRef<HTMLButtonElement>(null);
 
   // Load the invite and the viewer's identity together: which of the two paths
   // this page takes depends on both.
@@ -93,15 +104,20 @@ export default function JoinPage() {
   }, [code]);
 
   /*
-   * Ready to type a name on arrival, without scrolling to it: the page shows
-   * what you're joining first. Not when there are names to pick from, which
-   * come before typing one (picking one fills it in).
+   * Ready to type a name once they've said they're new, without scrolling to
+   * it. Not when there are names to pick from, which come before typing one
+   * (picking one fills it in).
    */
   const pickFirst = preview?.kind === "group" && preview.group.unclaimedMembers.length > 0;
-  const typeFirst = Boolean(preview) && me === null && !pickFirst;
+  const typeFirst = Boolean(preview) && me === null && arrival === "new" && !pickFirst;
   React.useEffect(() => {
     if (typeFirst) nameField.current?.focus({ preventScroll: true });
   }, [typeFirst]);
+
+  // Signing in took away the button they tapped: Join is what's next.
+  React.useEffect(() => {
+    if (signedInHere) joinButton.current?.focus({ preventScroll: true });
+  }, [signedInHere]);
 
   const join = async (claim?: string | null) => {
     setJoining(true);
@@ -132,10 +148,19 @@ export default function JoinPage() {
     if (!name.trim()) return;
     setJoining(true);
     try {
-      await api.post("/api/identity", {
+      const created = await api.post<{ me: MeDto; recoveryKey: string }>("/api/identity", {
         displayName: name.trim(),
         avatarColor: colorForName(name),
       });
+      // The account exists from here on, and this key is the only copy. Kept
+      // for the next screen, which the app shows on arriving in the group:
+      // how to get back in if this browser forgets you. Home's reminder stays
+      // until that's done.
+      markRecoveryPending();
+      stashRecoveryKey(created.recoveryKey);
+      askHowToProtectFirst();
+      // If joining fails below, trying again must not make a second account.
+      setMe(created.me);
       // Claiming a placeholder happens on the join itself, which checks the
       // invite code is still live; the placeholder's history is merged into
       // the account that was just created.
@@ -174,29 +199,31 @@ export default function JoinPage() {
     );
   }
 
-  return (
-    <KeyboardPage className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pt-[max(2.5rem,env(safe-area-inset-top))]">
-      <Wordmark className="mb-8" />
+  const pageClass =
+    "mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pt-[max(2.5rem,var(--top-safe))]";
 
-      <div className="flex flex-1 flex-col">
-        <p className="text-body font-medium text-subtle">
-          You&rsquo;ve been invited to
-        </p>
+  const invitedTo = (
+    <>
+      {me ? null : <InAppBrowserNotice className="mb-5" />}
+      <p className="text-body font-medium text-subtle">
+        You&rsquo;ve been invited to
+      </p>
 
-        {preview.kind === "group" ? (
-          <>
-            <h1 className="mt-2 flex items-center gap-2.5 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
-              <span>{preview.group.emoji}</span>
-              <span dir="auto" className="min-w-0 break-words text-left">{preview.group.name}</span>
-            </h1>
-            <p className="mt-2 text-subhead text-muted">
-              {preview.group.memberCount}{" "}
-              {preview.group.memberCount === 1 ? "person" : "people"} ·{" "}
-              {preview.group.expenseCount}{" "}
-              {preview.group.expenseCount === 1 ? "expense" : "expenses"} · uses{" "}
-              {preview.group.currency}
-            </p>
+      {preview.kind === "group" ? (
+        <>
+          <h1 className="mt-2 flex items-center gap-2.5 text-display font-semibold leading-tight tracking-[-0.03em] text-text">
+            <span>{preview.group.emoji}</span>
+            <span dir="auto" className="min-w-0 break-words text-left">{preview.group.name}</span>
+          </h1>
+          <p className="mt-2 text-subhead text-muted">
+            {preview.group.memberCount}{" "}
+            {preview.group.memberCount === 1 ? "person" : "people"} ·{" "}
+            {preview.group.expenseCount}{" "}
+            {preview.group.expenseCount === 1 ? "expense" : "expenses"} · uses{" "}
+            {preview.group.currency}
+          </p>
 
+          {me || arrival !== "existing" ? (
             <ul className="mt-5 flex flex-wrap gap-2">
               {preview.group.members.map((member) => (
                 <li
@@ -210,23 +237,53 @@ export default function JoinPage() {
                 </li>
               ))}
             </ul>
-          </>
-        ) : (
-          <>
-            <h1 dir="auto" className="mt-2 text-left text-display font-semibold leading-tight tracking-[-0.03em] text-text">
-              {preview.person.displayName}
-            </h1>
-            <p className="mt-2 text-subhead text-muted">
-              Add them to split things between just the two of you.
-            </p>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <h1 dir="auto" className="mt-2 text-left text-display font-semibold leading-tight tracking-[-0.03em] text-text">
+            {preview.person.displayName}
+          </h1>
+          <p className="mt-2 text-subhead text-muted">
+            Add them to split things between just the two of you.
+          </p>
+          {me || arrival !== "existing" ? (
             <div className="mt-5">
               <Avatar person={preview.person} size="xl" />
             </div>
-          </>
-        )}
+          ) : null}
+        </>
+      )}
+    </>
+  );
+
+  if (!me && arrival === "existing") {
+    return (
+      <KeyboardPage className={pageClass}>
+        <Wordmark className="mb-8" />
+        <AlreadyHaveDivvy
+          code={code}
+          onNew={() => setArrival("new")}
+          onSignedIn={(signedIn) => {
+            setMe(signedIn);
+            setSignedInHere(true);
+          }}
+        >
+          {invitedTo}
+        </AlreadyHaveDivvy>
+      </KeyboardPage>
+    );
+  }
+
+  return (
+    <KeyboardPage className={pageClass}>
+      <Wordmark className="mb-8" />
+
+      <div className="flex flex-1 flex-col">
+        {invitedTo}
 
         {/* Placeholder claiming ------------------------------------------- */}
-        {preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
+        {(me || arrival === "new") && preview.kind === "group" && preview.group.unclaimedMembers.length > 0 ? (
           <div className="mt-7 rounded-[var(--radius-lg)] border border-[var(--card-border)] bg-surface shadow-card p-4">
             <p className="flex items-center gap-1.5 text-body-lg font-semibold text-text">
               <UserCheck className="size-4 text-brand" />
@@ -281,7 +338,7 @@ export default function JoinPage() {
         ) : null}
 
         {/* Name, only for a brand-new arrival ------------------------------ */}
-        {!me ? (
+        {!me && arrival === "new" ? (
           <div className="mt-7">
             <label className="block">
               <span className="mb-1.5 block text-body font-semibold text-muted">
@@ -307,9 +364,12 @@ export default function JoinPage() {
               </div>
             </label>
             <p className="mt-2 text-caption leading-relaxed text-subtle">
-              No email or password needed. Next you&rsquo;ll get a recovery key. Save
-              it, because it&rsquo;s the only way back in if you change phones.
+              No email or password needed. Next you&rsquo;ll choose how to get back in
+              if you change phones.
             </p>
+            <Button variant="ghost" size="md" fullWidth className="mt-2" onClick={() => setArrival("existing")}>
+              I already have Divvy
+            </Button>
           </div>
         ) : null}
       </div>
@@ -317,7 +377,19 @@ export default function JoinPage() {
       {/* Pinned: the button is what this page is for, and a list of names to
           claim can push it below the first screen. */}
       <KeyboardPageFooter className="pt-5" pinned>
+        {!me && arrival === null ? (
+          <div className="space-y-2">
+            <p className="pb-1 text-center text-body text-muted">Have you used Divvy before?</p>
+            <Button variant="primary" size="lg" fullWidth onClick={() => setArrival("new")}>
+              I&rsquo;m new to Divvy
+            </Button>
+            <Button variant="secondary" size="lg" fullWidth onClick={() => setArrival("existing")}>
+              I already have Divvy
+            </Button>
+          </div>
+        ) : (
         <Button
+          ref={joinButton}
           variant="primary"
           size="lg"
           fullWidth
@@ -332,6 +404,7 @@ export default function JoinPage() {
             : `Add ${isolate(preview.person.displayName)}`}
           <ArrowRight className="size-[18px]" />
         </Button>
+        )}
 
         {me ? (
           <p className="mt-3 text-center text-caption text-subtle">

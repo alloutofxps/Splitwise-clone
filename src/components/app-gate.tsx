@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
-import { ExpenseComposer } from "@/components/expense/composer-after-load";
+import { ComposerRehearsal, ExpenseComposer } from "@/components/expense/composer-after-load";
 import { keys, useDashboard, usePrefetch, type DashboardPayload } from "@/lib/client/queries";
 import { SidebarFrame, SkeletonFor, TabBarFrame, WelcomeSkeleton } from "@/components/screen-skeletons";
 import { ApiError } from "@/lib/client/api";
@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { LoadFailed } from "@/components/error-screen";
 import { setBadge } from "@/lib/client/badge";
 import { stashedRecoveryKey } from "@/lib/client/recovery";
+import { rememberSignedInHere } from "@/lib/client/returning";
 import type { PendingAttachment } from "@/lib/client/attachments";
 import type { ExpenseDto } from "@/lib/types";
 
@@ -103,6 +104,11 @@ export function AppGate({
     if (data) setBadge(data.unreadActivityCount);
   }, [data]);
 
+  const signedInNow = Boolean(data);
+  React.useEffect(() => {
+    if (signedInNow) rememberSignedInHere();
+  }, [signedInNow]);
+
   /**
    * A launch that meant "add an expense" — the app shortcut, or a receipt
    * shared in from the camera roll.
@@ -130,6 +136,9 @@ export function AppGate({
    */
   const unauthorized = error instanceof ApiError && error.isUnauthorized;
   const [setupOpen, setSetupOpen] = React.useState(false);
+  // A setup resumed from the stash never latched that flag, so clearing it
+  // changes nothing: this is what redraws the app once setup is done.
+  const [, setupFinished] = React.useReducer((count: number) => count + 1, 0);
   const mounted = useMounted();
 
   // Latched during render, so onboarding is up on the first frame.
@@ -198,7 +207,16 @@ export function AppGate({
   }
 
   if (needsSetup) {
-    if (setup.Screen) return <setup.Screen onFinished={() => setSetupOpen(false)} />;
+    if (setup.Screen) {
+      return (
+        <setup.Screen
+          onFinished={() => {
+            setSetupOpen(false);
+            setupFinished();
+          }}
+        />
+      );
+    }
     // Never the app instead: an interrupted setup must show its recovery key.
     return <Unreachable offline={!navigator.onLine} />;
   }
@@ -235,6 +253,7 @@ export function AppGate({
         template={composer.template}
         onClose={() => setComposer({ open: false })}
       />
+      <ComposerRehearsal />
     </ComposerContext.Provider>
   );
 }

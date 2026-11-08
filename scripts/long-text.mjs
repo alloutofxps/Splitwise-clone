@@ -5,9 +5,9 @@
 //
 //   node scripts/long-text.mjs <base-url> <out-dir>
 //
-// The automatic flags are a starting point: a number that rolls into place
-// or a sliding tab can be flagged while looking fine, so read them with the
-// screenshots.
+// Read the flags with the screenshots. Motion is reduced, so a number that
+// counts into place or a sliding tab is checked where it ends up. STRICT=1 (as
+// CI runs it) fails on any flag, or on a screen it couldn't reach.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { client as makeClient, eq, launchOptions, signIn } from "./check-accounts.mjs";
@@ -83,10 +83,11 @@ for (const width of [390, 320, 1280]) {
           if (/(auto|scroll)/.test(s.overflowX) && n.scrollWidth > n.clientWidth) { scroller = true; break; }
         }
         if (!scroller && (r.right > vw + 1 || r.left < -1)) out.push(`off screen (${Math.round(r.left)}..${Math.round(r.right)}): "${text}"`);
+        // Screen-reader-only text is 1px wide on purpose.
+        if (el.clientWidth <= 1) continue;
         if (el.scrollWidth > el.clientWidth + 1 && cs.textOverflow !== "ellipsis" && !/(auto|scroll)/.test(cs.overflowX) && cs.overflowX !== "visible")
           out.push(`cut off without "…": "${text}"`);
-        // Screen-reader-only text is 1px wide on purpose.
-        if (el.clientWidth > 1 && el.scrollWidth > el.clientWidth + 1 && cs.overflowX === "visible" && cs.whiteSpace === "nowrap")
+        if (el.scrollWidth > el.clientWidth + 1 && cs.overflowX === "visible" && cs.whiteSpace === "nowrap")
           out.push(`spills past its box: "${text}" (${el.scrollWidth} > ${el.clientWidth})`);
       }
       return [...new Set(out)].slice(0, 25);
@@ -142,4 +143,8 @@ for (const width of [390, 320, 1280]) {
 }
 writeFileSync(`${OUT}/report.md`, report.join("\n\n") + "\n");
 await browser.close();
-console.log("done");
+const flagged = report.filter((r) => / ERROR /.test(r) || !r.endsWith("- nothing flagged"));
+console.log(flagged.length ? `Flagged:\n\n${flagged.join("\n\n")}` : "Nothing flagged");
+// STRICT=1 (as CI runs it) fails on anything flagged, or a screen that
+// couldn't be reached.
+if (process.env.STRICT === "1" && flagged.length) process.exit(1);

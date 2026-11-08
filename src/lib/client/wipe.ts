@@ -2,7 +2,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { clear as clearOutbox, discardAllRejected } from "./outbox";
-import { clearRecoveryPending, clearStashedRecoveryKey } from "./recovery";
+import { clearBackupConfirmed, clearRecoveryPending, clearStashedRecoveryKey } from "./recovery";
 
 /**
  * Removes everything this device holds about the signed-in person.
@@ -23,6 +23,7 @@ export async function wipeLocalData(client: QueryClient): Promise<void> {
   await discardAllRejected().catch(() => {});
   clearRecoveryPending();
   clearStashedRecoveryKey();
+  clearBackupConfirmed();
 
   if (typeof caches !== "undefined") {
     try {

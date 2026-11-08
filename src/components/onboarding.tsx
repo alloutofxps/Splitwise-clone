@@ -21,12 +21,19 @@ import { useToast } from "./ui/toast";
 import { Wordmark } from "./app-shell";
 import { api, ApiError } from "@/lib/client/api";
 import { keys } from "@/lib/client/queries";
+import { openedFromHomeScreen } from "@/lib/client/home-screen";
+import { LOST_KEY_HELP, SIGN_IN_CODE_HELP, claimSignInCode } from "@/lib/client/sign-in-code";
+import { wasSignedInHere } from "@/lib/client/returning";
+import { InAppBrowserNotice } from "./in-app-browser-notice";
+import { ReportSheet } from "./report-sheet";
 import {
   clearRecoveryPending,
+  clearAskHowToProtectFirst,
   clearStashedRecoveryKey,
   markRecoveryPending,
   saveRecoveryKeyFile,
   stashRecoveryKey,
+  shouldAskHowToProtectFirst,
   stashedRecoveryKey,
 } from "@/lib/client/recovery";
 import { EmojiPicker } from "./ui/emoji-picker";
@@ -57,7 +64,7 @@ import { KeyboardPage, KeyboardPageFooter } from "@/components/ui/keyboard-page"
  * too late.
  */
 
-type Step = "welcome" | "profile" | "protect" | "recovery" | "restore";
+type Step = "welcome" | "profile" | "protect" | "recovery" | "restore" | "code";
 
 
 export function Onboarding({ onFinished }: { onFinished: () => void }) {
@@ -70,17 +77,22 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
    * recovery screen rather than to the welcome screen — which was the worse
    * outcome twice over: the key was unrecoverable, and the obvious next move
    * was to sign up again and end up with a second, empty account.
+   *
+   * Someone who has just joined from an invite link hasn't been asked yet, so
+   * they start one step earlier, on the choice.
    */
   const resumed = typeof window === "undefined" ? null : stashedRecoveryKey();
-  const [step, setStep] = React.useState<Step>(resumed ? "recovery" : "welcome");
+  const [step, setStep] = React.useState<Step>(() =>
+    !resumed ? "welcome" : shouldAskHowToProtectFirst() ? "protect" : "recovery",
+  );
   const [recoveryKey, setRecoveryKey] = React.useState<string | null>(resumed);
 
   return (
-    <KeyboardPage className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+    <KeyboardPage className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,var(--top-safe))]">
       <AnimatePresence mode="wait">
         {step === "welcome" ? (
           <StepShell key="welcome">
-            <Welcome onStart={() => setStep("profile")} onRestore={() => setStep("restore")} />
+            <Welcome onStart={() => setStep("profile")} onRestore={() => setStep("restore")} onCode={() => setStep("code")} />
           </StepShell>
         ) : null}
 
@@ -100,7 +112,10 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
         {step === "protect" ? (
           <StepShell key="protect">
             <ProtectStep
-              onRecoveryKey={() => setStep("recovery")}
+              onRecoveryKey={() => {
+                clearAskHowToProtectFirst();
+                setStep("recovery");
+              }}
               onFinished={onFinished}
             />
           </StepShell>
@@ -115,6 +130,12 @@ export function Onboarding({ onFinished }: { onFinished: () => void }) {
         {step === "restore" ? (
           <StepShell key="restore">
             <RestoreStep onBack={() => setStep("welcome")} onFinished={onFinished} />
+          </StepShell>
+        ) : null}
+
+        {step === "code" ? (
+          <StepShell key="code">
+            <CodeStep onBack={() => setStep("welcome")} onFinished={onFinished} />
           </StepShell>
         ) : null}
       </AnimatePresence>
@@ -138,29 +159,26 @@ function StepShell({ children }: { children: React.ReactNode }) {
 
 // ---------------------------------------------------------------------------
 
-/** Opened as the home-screen app rather than in a browser tab. */
-function openedFromHomeScreen(): boolean {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
-
 /** How a page is opened doesn't change while it's open. */
 const noChanges = () => () => {};
 
-function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () => void }) {
+function Welcome({ onStart, onRestore, onCode }: { onStart: () => void; onRestore: () => void; onCode: () => void }) {
   const toast = useToast();
   const client = useQueryClient();
   const [passkeyReady, setPasskeyReady] = React.useState(false);
   const [signingIn, setSigningIn] = React.useState(false);
   const [returning, setReturning] = React.useState(false);
+  const [reporting, setReporting] = React.useState(false);
   // Opened from the home screen with nobody signed in: almost always someone
   // who already uses Divvy. iPhone copies Safari's sign-in to a home-screen
   // app once, when it's added, and a known iOS 17 fault can drop it later;
   // "Get started" then made them a second, empty account. So signing back in
   // comes first there (findings item 34).
+  // The same goes for a device that has been signed in before, wherever it's
+  // opened: 180 days unused signs a phone out.
   const fromHomeScreen = React.useSyncExternalStore(noChanges, openedFromHomeScreen, () => false);
+  const signedInBefore = React.useSyncExternalStore(noChanges, wasSignedInHere, () => false);
+  const signInFirst = fromHomeScreen || signedInBefore;
 
   /*
    * The passkey button appears only once the device says it actually holds
@@ -182,6 +200,7 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
     setSigningIn(true);
     try {
       await signInWithPasskey();
+      clearRecoveryPending();
       await client.invalidateQueries();
     } catch (error) {
       if (!(error instanceof PasskeyCancelled)) {
@@ -203,9 +222,11 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center py-4">
         <Wordmark className="mb-2" />
+        <InAppBrowserNotice className="my-3" />
 
-        {/* The product in three seconds: who owes whom, untangled. */}
-        <WelcomeFlow />
+        {/* The product in three seconds: who owes whom, untangled. Someone
+            signing back in knows, and it pushed their buttons off a small phone. */}
+        {signInFirst ? null : <WelcomeFlow />}
 
         <h1 className="mt-2 text-display font-semibold leading-[1.1] tracking-[-0.03em] text-text">
           Split costs with friends.
@@ -221,7 +242,7 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
         </ul>
       </div>
 
-      {fromHomeScreen ? (
+      {signInFirst ? (
         <div className="space-y-2">
           <p className="pb-1 text-center text-body text-muted">Already use Divvy? Sign back in.</p>
           {passkeyReady ? (
@@ -231,6 +252,9 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
           ) : null}
           <Button variant={passkeyReady ? "secondary" : "primary"} size="lg" fullWidth onClick={onRestore}>
             Sign in with a recovery key
+          </Button>
+          <Button variant="secondary" size="lg" fullWidth onClick={onCode}>
+            Sign in with a code
           </Button>
           <Button variant="ghost" size="md" fullWidth onClick={onStart}>
             I&rsquo;m new to Divvy
@@ -258,6 +282,9 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
             <Button variant="secondary" size="lg" fullWidth onClick={onRestore}>
               Sign in with a recovery key
             </Button>
+            <Button variant="secondary" size="lg" fullWidth onClick={onCode}>
+              Sign in with a code
+            </Button>
           </>
         ) : (
           <Button variant="ghost" size="md" fullWidth onClick={() => setReturning(true)}>
@@ -266,6 +293,15 @@ function Welcome({ onStart, onRestore }: { onStart: () => void; onRestore: () =>
         )}
       </div>
       )}
+      {/* Not being able to get in is often what's wrong, so it's here too. */}
+      <button
+        type="button"
+        onClick={() => setReporting(true)}
+        className="tap-44 relative mx-auto mt-3 py-1 text-body font-medium text-muted underline-offset-2 hover:underline"
+      >
+        Something wrong? Tell us
+      </button>
+      <ReportSheet open={reporting} onClose={() => setReporting(false)} />
     </div>
   );
 }
@@ -718,6 +754,77 @@ function RecoveryStep({
 
 // ---------------------------------------------------------------------------
 
+function CodeStep({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const client = useQueryClient();
+  const [code, setCode] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  const submit = async () => {
+    if (!code.trim() || busy) return;
+    setBusy(true);
+    try {
+      await claimSignInCode(code);
+      await client.invalidateQueries();
+      haptic([10, 40, 10]);
+      toast({ tone: "success", title: "Welcome back" });
+      router.refresh();
+      onFinished();
+    } catch (error) {
+      toast({
+        tone: "error",
+        title: "That code didn't work",
+        description: error instanceof ApiError ? error.message : "Check it and try again.",
+      });
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <button
+        onClick={onBack}
+        className="tap-44 relative -ml-1 mb-8 self-start py-2 text-body-lg font-semibold text-muted"
+      >
+        Back
+      </button>
+
+      <h1 className="text-display-sm font-semibold tracking-[-0.03em] text-text">
+        Enter your sign-in code
+      </h1>
+      <p className="mt-2 text-subhead leading-relaxed text-muted">{SIGN_IN_CODE_HELP}</p>
+
+      <input
+        value={code}
+        onChange={(event) => setCode(event.target.value)}
+        onKeyDown={(event) => void (event.key === "Enter" && submit())}
+        placeholder="k7fq-m2xp"
+        aria-label="Your sign-in code"
+        autoFocus
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="go"
+        className="mt-7 h-14 w-full rounded-[var(--radius-md)] border border-field-edge bg-surface-2 px-4 text-center font-mono text-title-lg font-medium text-text outline-none transition placeholder:font-medium placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
+      />
+
+      <KeyboardPageFooter className="mt-auto pt-8">
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={busy}
+          disabled={!code.trim()}
+          onClick={() => void submit()}
+        >
+          Sign in
+        </Button>
+      </KeyboardPageFooter>
+    </div>
+  );
+}
+
 function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: () => void }) {
   const router = useRouter();
   const toast = useToast();
@@ -730,6 +837,8 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
     setBusy(true);
     try {
       await api.post("/api/identity/restore", { recoveryKey: key.trim() });
+      // They have their key, whatever this device remembers from before.
+      clearRecoveryPending();
       await client.invalidateQueries();
       haptic([10, 40, 10]);
       toast({ tone: "success", title: "Welcome back" });
@@ -774,6 +883,7 @@ function RestoreStep({ onBack, onFinished }: { onBack: () => void; onFinished: (
         spellCheck={false}
         className="mt-7 w-full resize-none rounded-[var(--radius-md)] border border-field-edge bg-surface-2 p-4 font-mono text-input text-text outline-none transition placeholder:text-subtle focus:ring-[1.5px] focus:ring-text"
       />
+      <p className="mt-2 text-caption leading-relaxed text-subtle">{LOST_KEY_HELP}</p>
 
       <KeyboardPageFooter className="mt-auto pt-8">
         <Button

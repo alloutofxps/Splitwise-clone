@@ -9,9 +9,9 @@
 //
 // For each device and theme it opens the app signed in, holds the dashboard
 // request back so the opening outline stays up, tells the browser the
-// device's notch and home-bar sizes (Apple's published safe areas), freezes
-// every animation at its first frame and takes the picture at the device's
-// exact pixel size. Writes public/launch/*.png and src/app/launch-screens.ts,
+// device's home-bar size and leaves room for its status bar (Apple's published
+// safe areas), freezes every animation at its first frame and takes the
+// picture at the device's exact pixel size. Writes public/launch/*.png and src/app/launch-screens.ts,
 // the list the root layout puts in every page's head. Run it against a
 // production build after anything changes Home's outline, the tab bar or the
 // colours.
@@ -101,9 +101,13 @@ for (const device of DEVICES) {
       });
       const cdp = await context.newCDPSession(page);
       await cdp.send("Emulation.setSafeAreaInsetsOverride", {
-        insets: { top: device.top, bottom: device.bottom, left: 0, right: 0 },
+        // The app starts below the status bar, so it sees no top inset. A
+        // launch image fills the whole screen, so the status bar's height is
+        // added back above the page below.
+        insets: { top: 0, bottom: device.bottom, left: 0, right: 0 },
       });
       await page.goto(BASE, { waitUntil: "load" });
+      await page.addStyleTag({ content: `body { padding-top: ${device.top}px; }` });
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(300);
       // The first frame: every animation (the logo drawing itself) at its start.

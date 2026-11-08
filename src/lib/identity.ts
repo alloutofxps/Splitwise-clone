@@ -147,8 +147,16 @@ export async function getSession(): Promise<Session | null> {
     where: { secretHash: hash },
     include: { person: true },
   });
-  if (session && session.personId === decoded.personId) {
+  if (session) {
     if (session.person.deletedAt) return null;
+
+    // The session is the truth, and its secret is what proves it. Combining two
+    // accounts moves a device's session to the one that stays, and the cookie
+    // that device holds still names the other: it's brought up to date, rather
+    // than signing out someone who has only tidied up.
+    if (session.personId !== decoded.personId) {
+      await setIdentityCookie(session.personId, decoded.secret).catch(() => {});
+    }
 
     // An abandoned device. Removed rather than merely refused, so it also
     // disappears from the owner's device list.
@@ -278,6 +286,18 @@ export async function recoveryKeyMatches(personId: string, input: string): Promi
     select: { personId: true, kind: true },
   });
   return credential?.kind === "recovery" && credential.personId === personId;
+}
+
+/** Whose recovery key this is, without signing anyone in or marking it used. */
+export async function personForRecoveryKey(input: string): Promise<Person> {
+  const credential = await prisma.credential.findUnique({
+    where: { secretHash: hashSecret(normalizeSecret(input)) },
+    include: { person: true },
+  });
+  if (!credential || credential.kind !== "recovery" || credential.person.deletedAt) {
+    throw new NotFoundError("That recovery key doesn't match any account.");
+  }
+  return credential.person;
 }
 
 /** Signs in an existing identity from a recovery key. */

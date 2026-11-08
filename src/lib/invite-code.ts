@@ -13,9 +13,9 @@
 /**
  * Cleans up a code as typed or pasted.
  *
- * People paste "MANGO-TIGER-42", type "mango tiger 42", or copy a whole URL
- * with a trailing slash. All three should reach the same group, so casing,
- * spacing and stray punctuation are all normalised away.
+ * People paste "MANGO-TIGER-42" or type "mango tiger 42". Both should reach the
+ * same group, so casing, spacing and stray punctuation are normalised away. A
+ * whole link or invite message needs `codeFromText` first.
  */
 export function normalizeInviteCode(input: string): string {
   return input
@@ -40,14 +40,61 @@ export function formatRecoveryKey(secret: string): string {
 }
 
 /**
- * The code inside a scanned invite: the last part of a /join/ link, or the
- * text itself if the QR code held just a code.
+ * Looks like a code on its own: "mango-tiger-42-k7fq", the older "mango-tiger-42",
+ * or a person's "me-calm-otter-x7k2pq". The edges mean one still being typed
+ * ("mango-tiger-42-") isn't taken for a finished one.
  */
-export function codeFromScan(raw: string): string {
-  const match = /\/join\/([^/?#\s]+)/.exec(raw);
-  try {
-    return decodeURIComponent(match ? match[1] : raw.trim());
-  } catch {
-    return match ? match[1] : raw.trim();
+const CODE_SHAPED =
+  /(?<![a-z0-9-])(?:me-[a-z]+-[a-z]+-[a-z0-9]+|[a-z]+-[a-z]+-\d+(?:-[a-z0-9]+)?)(?![a-z0-9-])/i;
+
+/**
+ * The code inside a link, a QR code, or a whole invite message, or null if
+ * there isn't one. The last link counts: the invite's own comes after the
+ * group's name, which can hold anything.
+ */
+export function inviteCodeIn(text: string): string | null {
+  const link = [...text.matchAll(/\/join\/([^/?#\s]+)/g)].at(-1)?.[1];
+  if (link) {
+    try {
+      return decodeURIComponent(link);
+    } catch {
+      return link;
+    }
   }
+  return CODE_SHAPED.exec(text)?.[0] ?? null;
+}
+
+/** What someone typed, pasted or scanned, down to the code if one's in there. */
+export function codeFromText(raw: string): string {
+  return inviteCodeIn(raw) ?? raw.trim();
+}
+
+/**
+ * A sign-in code as typed or pasted: "K7FQ-M2XP", "k7fq m2xp" and "k7fqm2xp" are
+ * the same code. The older long kind, "dvy_...", is case-sensitive and left as
+ * it is.
+ */
+export function normalizeSignInCode(input: string): string {
+  const code = input.trim();
+  if (code.startsWith("dvy_")) return code;
+  return code.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** The code in a whole sign-in link, or in what was typed. */
+export function signInCodeIn(text: string): string {
+  const link = /\/link\/([^/?#\s]+)/.exec(text)?.[1];
+  return normalizeSignInCode(link ?? text);
+}
+
+/** For reading on a screen: "k7fq-m2xp". */
+export function formatSignInCode(code: string): string {
+  return (code.match(/.{1,4}/g) ?? []).join("-");
+}
+
+/**
+ * The words shared with an invite. Links open in the browser even with Divvy on
+ * the home screen, so it also says how to use the code from inside the app.
+ */
+export function inviteMessage(opening: string, url: string, code: string): string {
+  return `${opening}\n\n${url}\n\nAlready have Divvy? Open it, tap Join and enter this code.\n${code}`;
 }

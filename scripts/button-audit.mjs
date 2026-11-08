@@ -138,6 +138,9 @@ async function controls(scope) {
     const seen = new Map();
     for (const el of root.querySelectorAll('button, a[href], [role="button"], [role="tab"], [role="switch"], [role="radio"], summary')) {
       if (!scopeSelector && el.closest('[role="dialog"]')) continue;
+      // Hidden from screen readers and the keyboard until something reveals
+      // it, like a row's Delete until the row is swiped (ui-check swipes it).
+      if (el.closest('[aria-hidden="true"]')) continue;
       const rect = el.getBoundingClientRect();
       const style = getComputedStyle(el);
       if (rect.width < 2 || rect.height < 2 || style.visibility === "hidden" || style.display === "none") continue;

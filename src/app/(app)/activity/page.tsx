@@ -60,7 +60,7 @@ export default function ActivityPage() {
   if (!data && (!isLoading || activity.errorUpdateCount)) return <LoadFailed query={activity} />;
   if (isLoading || !dashboard) {
     return (
-      <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <div className="pt-[max(1.5rem,var(--top-safe))]">
         <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
         <div className="ring-inside overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface shadow-card appear-late">
           {[0, 1, 2, 3, 4].map((index) => (
@@ -89,7 +89,7 @@ export default function ActivityPage() {
   );
 
   return (
-    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1.5rem,var(--top-safe))]">
       <h1 className="mb-4 text-heading font-semibold tracking-[-0.02em] text-text">Activity</h1>
 
       {groupsInFeed.length > 1 ? (

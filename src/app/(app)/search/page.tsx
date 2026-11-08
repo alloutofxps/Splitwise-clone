@@ -56,7 +56,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1.5rem,var(--top-safe))]">
       <h1 className="mb-4 text-display-sm font-semibold tracking-[-0.03em] text-text">Search</h1>
 
       <StickyBar className="-mx-4 bg-bg px-4 pb-3 lg:-mx-8 lg:px-8">

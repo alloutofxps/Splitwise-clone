@@ -23,6 +23,11 @@ Three layers, and every movement agrees with them.
 | One step in | A group, a friend | Slides in 32px from the right with a fade (300ms). Back reverses it (250ms). The row you tapped carries its icon, name and amount into the new header (400ms). |
 | Panels | Add expense, Settle up, an expense's details, Split | Rise from the bottom over everything (400ms) and leave downwards (250ms). The screen underneath dims and steps back. A panel opened from a panel makes the first one step back too. |
 
+- A screen's arrival is a CSS animation (`components/app-shell.tsx`,
+  `app/globals.css`), so the browser starts it with the new screen's first
+  picture and runs it itself while the app is still setting the screen up.
+  Started from the app's scripts, a group's screen stood still for up to
+  150ms on a mid-range phone before it began to move (PERF-BASELINE 34).
 - The bottom tab bar and the top bar never move during navigation.
 - No blank screens between screens. The old screen stays until the new one is
   ready; past 300ms, a still outline shaped like the coming screen, then a
@@ -175,14 +180,18 @@ animation engine, no player to download.
 
 | Piece | States | The app sends |
 |---|---|---|
-| Welcome untangle | tangled, untangling, untangled | Progress through the welcome, 0 to 1 |
+| Welcome untangle | tangled, untangling, untangled. Only for someone new: not drawn on a device that has been signed in before, or in the home-screen app | Progress through the welcome, 0 to 1 |
 | Empty states (3) | arrive (an empty list), start (a new account), settled (nobody owes); a tap makes the three hop | Which one, and a tap |
 | Paid | hidden, paying, paid, done: a jade disc pops over the payee, a tick draws, six sparks burst out bright then drift, shrink and fade, then it all fades (1.2s) | "paid" when a debt reaches zero |
 | Pull to refresh | resting, pulling (the doodle draws as far as you've pulled), loading (the three take turns to hop), done ("Up to date") | Pull distance 0 to 1, then "loading", "done" |
 | App opening | drawing (the logo draws its line from one person to the other), waiting (the two breathe), ready (Home replaces it) | "ready" the moment data arrives |
 
 The opening needs no script at all, so it moves from the very first frame,
-before the app has even started.
+before the app has even started. Every part of it moves by transform and
+opacity alone, each on a layer of its own (the line is whole under an ink
+cover that slides off it), so the browser keeps it moving while the app is
+busy starting. Drawn by its dash, or inside one SVG, it stopped for 100ms
+and more at a time on a mid-range phone.
 
 On iPhone and iPad, opening from the home screen, iOS first shows a launch
 image (`public/launch/`, made by `node scripts/launch-screens.mjs`). Each is
@@ -267,6 +276,29 @@ drawings.
   once, in the opening flows (01, 08). Decided 3 November 2026: until then
   every flow's count included the app starting, 3 to 7 late frames each
   (PERF-BASELINE 29).
+- The opening flows (01, 08) are judged by what the screen shows: every
+  frame the browser puts on screen while the opening drawing is moving,
+  from its first change to the first screen taking over, under the same
+  2% (`motion-record.mjs <url> <out> seen`; `smoothness.mjs` uses it for
+  those two). Decided 5 November 2026. Starting the app means reading its
+  scripts and building the first screen in single tasks of 100 to 170ms
+  on a mid-range phone, which the page's own count always calls late, and
+  no change to the app's code can split them. What a person sees then is
+  the drawing, so the drawing has to keep moving through them. The page's
+  own count is still shown beside it, and RULES S3 (phone speed) judges
+  how long the start takes. On a cold start the browser holds the page's
+  first picture for about 50ms before the drawing begins; nothing is
+  moving yet, so that wait isn't counted.
+- Opening a group (02, 11) is judged by what the screen shows too: every
+  frame from each new screen's first picture until everything moving for
+  it has stopped (its slide, and the row's pieces travelling into the
+  header, or back into the row), under the same 2%. Decided 5 November
+  2026. Building a group's screen takes the page about 150 to 500ms on a
+  mid-range phone, and the old screen stays still while it does, as
+  section 1 asks; no change to the app's code has shortened it beyond
+  chance (PERF-BASELINE 32). Not counted: that wait, which is reported on
+  its own (`waitMs`). Counted: a new screen that stands still before its
+  slide starts, and any frame held while it moves.
 - Reduce Motion: every flow re-recorded with `REDUCE=1`; nothing slides or scales.
 - Before and after: `scripts/motion-compare.mjs` builds side-by-side videos,
   frame-exact (`scripts/motion-video.mjs`).

@@ -3,30 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  ChevronRight,
-  Copy,
-  Database,
-  Download,
-  EyeOff,
-  FileText,
-  Bell,
-  Coins,
-  Heart,
-  KeyRound,
-  LogOut,
-  Monitor,
-  Moon,
-  MonitorSmartphone,
-  Plus,
-  Sun,
-  Target,
-  Trash2,
-  TriangleAlert,
-  Wallet,
-  X,
-} from "lucide-react";
+import { Bell, Check, ChevronRight, Coins, Copy, Database, Download, EyeOff, FileText, GitMerge, Heart, KeyRound, LifeBuoy, LogOut, MessageCircleWarning, Monitor, MonitorSmartphone, Moon, Plus, Sun, Target, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, Segmented, Skeleton, Switch, cn, haptic } from "@/components/ui/primitives";
@@ -35,14 +12,17 @@ import { CurrencyPicker } from "@/components/expense/currency-picker";
 import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
+import { CombineSheet } from "@/components/identity/combine-sheet";
+import { ReportSheet } from "@/components/report-sheet";
 import { ConfirmDeleteSheet } from "@/components/identity/confirm-delete";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
-import { clearRecoveryPending, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
+import { backupConfirmed, clearRecoveryPending, confirmBackup, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
 import { useTheme } from "@/components/theme";
 import { useBudgets, useDashboard, useUpdateProfile, keys } from "@/lib/client/queries";
 import { api, ApiError } from "@/lib/client/api";
 import { pending } from "@/lib/client/outbox";
 import { wipeLocalData } from "@/lib/client/wipe";
+import { forgetSignedInHere } from "@/lib/client/returning";
 import { usePrivacyScreenSetting } from "@/components/privacy-screen";
 import { useClientValue, useMirror, useResetOnClose } from "@/components/ui/state-hooks";
 import { disablePush, enablePush, pushEnabled, pushSupport, type PushSupport } from "@/lib/client/push";
@@ -68,6 +48,8 @@ export default function AccountPage() {
   const [payments, setPayments] = React.useState(false);
   const [budgetsOpen, setBudgets] = React.useState(false);
   const [devicesOpen, setDevices] = React.useState(false);
+  const [combining, setCombining] = React.useState(false);
+  const [reporting, setReporting] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [discardCount, setDiscardCount] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -75,7 +57,11 @@ export default function AccountPage() {
   // localStorage, so it is read without an effect and hidden once a new one is.
   const keyPending = useClientValue(recoveryPending, false);
   const [keySaved, setKeySaved] = React.useState(false);
-  const keyUnsaved = keyPending && !keySaved;
+  // An older account the server can't tell has a way back in. Unlike a key
+  // known to be unsaved, this one the person can answer themselves.
+  const keyConfirmed = useClientValue(backupConfirmed, false);
+  const keyUnsure = Boolean(data?.backupUnconfirmed) && !keyPending && !keyConfirmed && !keySaved;
+  const keyUnsaved = (keyPending && !keySaved) || keyUnsure;
   const [emojiOpen, setEmojiOpen] = React.useState(false);
 
 
@@ -131,13 +117,14 @@ export default function AccountPage() {
   // (ConfirmDeleteSheet); this is what follows once it's done.
   const accountDeleted = async () => {
     await wipeLocalData(client);
+    forgetSignedInHere();
     setConfirmDelete(false);
     toast({ tone: "success", title: "Your account is deleted" });
     router.refresh();
   };
 
   return (
-    <div className="pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <div className="pt-[max(1.5rem,var(--top-safe))]">
       <h1 className="mb-5 text-heading font-semibold tracking-[-0.02em] text-text">You</h1>
 
       {/* Profile ----------------------------------------------------------- */}
@@ -277,9 +264,23 @@ export default function AccountPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-body-lg font-medium text-text">Back up your account</span>
               <span className="mt-0.5 block text-caption leading-snug text-muted">
-                You haven&rsquo;t saved a recovery key. Without it you can&rsquo;t get back in on a new phone.
+                {keyUnsure
+                  ? "Divvy can\u2019t tell if you saved your recovery key. Without it, or a passkey, you can\u2019t get back in on a new phone."
+                  : "You haven\u2019t saved a recovery key. Without it you can\u2019t get back in on a new phone."}
               </span>
             </span>
+          </button>
+        ) : null}
+        {keyUnsure ? (
+          <button
+            onClick={() => {
+              haptic();
+              confirmBackup();
+              setKeySaved(true);
+            }}
+            className="tap-44 relative w-full px-4 py-2 text-left text-body font-semibold text-muted"
+          >
+            I&rsquo;ve already saved it
           </button>
         ) : null}
         <Row
@@ -291,8 +292,13 @@ export default function AccountPage() {
         <Row
           icon={<KeyRound className="size-[18px]" strokeWidth={1.75} />}
           label="Recovery key"
-          value={keyUnsaved ? "Not saved" : "Manage"}
+          value={keyUnsure ? "Check" : keyUnsaved ? "Not saved" : "Manage"}
           onClick={() => setRecovery(true)}
+        />
+        <Row
+          icon={<GitMerge className="size-[18px]" strokeWidth={1.75} />}
+          label="Combine two accounts"
+          onClick={() => setCombining(true)}
         />
       </Group>
 
@@ -318,6 +324,19 @@ export default function AccountPage() {
 
       {/* About -------------------------------------------------------------- */}
       <Group title="About">
+        <Row
+          icon={<LifeBuoy className="size-[18px]" strokeWidth={1.75} />}
+          label="Something wrong?"
+          value="Tell us"
+          onClick={() => setReporting(true)}
+        />
+        {data?.me.readsReports ? (
+          <a href="/reports" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+            <MessageCircleWarning className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
+            <span className="min-w-0 flex-1 text-body-lg font-medium text-text">Reports people sent</span>
+            <ChevronRight className="size-4 shrink-0 text-subtle" />
+          </a>
+        ) : null}
         <a href="/privacy" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
           <Heart className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
           <span className="min-w-0 flex-1">
@@ -379,11 +398,16 @@ export default function AccountPage() {
       <BudgetsSheet open={budgetsOpen} onClose={() => setBudgets(false)} />
 
       <DevicesSheet open={devicesOpen} onClose={() => setDevices(false)} />
+      {data ? <CombineSheet open={combining} onClose={() => setCombining(false)} me={data.me} /> : null}
+      <ReportSheet open={reporting} onClose={() => setReporting(false)} />
 
       <RecoverySheet
         open={recovery}
         onClose={() => setRecovery(false)}
-        onSaved={() => setKeySaved(true)}
+        onSaved={() => {
+          confirmBackup();
+          setKeySaved(true);
+        }}
       />
 
       <PaymentMethodsSheet

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { readsReports } from "./reports";
 import type {
   DashboardDto,
   FriendDto,
@@ -21,6 +22,7 @@ import type { BalanceSheet } from "@/lib/balances";
 import { getRate } from "./rates";
 import { convert } from "@/lib/money";
 import { biggestFirst } from "@/lib/shared-ledgers";
+import { ASK_ACCOUNTS_MADE_BEFORE, backupUnconfirmed } from "./backup";
 
 export async function meDto(person: Person): Promise<MeDto> {
   const paymentMethods = await prisma.paymentMethod.findMany({
@@ -40,6 +42,7 @@ export async function meDto(person: Person): Promise<MeDto> {
       value: m.value,
       sortOrder: m.sortOrder,
     })),
+    ...(readsReports(person) ? { readsReports: true } : {}),
   };
 }
 
@@ -233,11 +236,17 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
   // reaches the caller through the list that reads them.
   sheets.catch(() => {});
 
-  const [me, groups, friends, directUnread] = await Promise.all([
+  const [me, groups, friends, directUnread, credentials] = await Promise.all([
     meDto(person),
     memberships.then((rows) => groupSummaries(person.id, { memberships: rows, sheets, seenAt })),
     groupIds.then((ids) => friendDtos(person.id, ids, sheets)),
     directUnreadCount(person.id, seenAt),
+    person.createdAt < ASK_ACCOUNTS_MADE_BEFORE
+      ? prisma.credential.findMany({
+          where: { personId: person.id },
+          select: { kind: true, createdAt: true, lastUsedAt: true },
+        })
+      : [],
   ]);
 
   // Roll every group and direct balance into one figure per currency. Groups
@@ -295,6 +304,7 @@ export async function dashboardDto(person: Person): Promise<DashboardDto> {
     groups,
     friends,
     unreadActivityCount,
+    ...(backupUnconfirmed(person.createdAt, credentials) ? { backupUnconfirmed: true } : {}),
   };
 }
 

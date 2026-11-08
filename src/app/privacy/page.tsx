@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
  *   `divvy_id` and `divvy_webauthn` cookies.
  * - IP addresses: only server/rate-limit.ts, in memory.
  * - Error reports: api/client-errors. Notifications: server/push.ts.
+ * - Something wrong? reports: api/reports and server/reports.ts (deleted after
+ *   REPORT_KEEP_DAYS, and with the sender's account).
  * - On the device: lib/client/storage.ts, outbox.ts and the service worker's
  *   copies, all cleared at sign-out (lib/client/wipe.ts).
  * - Exchange rates: server/rates.ts, asked by the server, not the browser.
@@ -35,7 +37,7 @@ export default function PrivacyPage() {
   const contact = process.env.DIVVY_CONTACT || process.env["NEXT_PUBLIC_DIVVY_CONTACT"];
 
   return (
-    <LegalPage title="Privacy Policy" updated="4 November 2026">
+    <LegalPage title="Privacy Policy" updated="8 November 2026">
       <LegalText>
         This policy explains what information Divvy collects, how it is used and shared, how
         long it is kept, and the choices you have. In this policy, &ldquo;we&rdquo; and
@@ -50,6 +52,7 @@ export default function PrivacyPage() {
           <li><strong>Budgets.</strong> Any budgets you set.</li>
           <li><strong>Sign-in information.</strong> A hashed copy of your recovery key, which cannot be turned back into the key; the public key of any passkey; and a list of the devices you are signed in on, described by browser and device type only.</li>
           <li><strong>Notification settings.</strong> If you turn on notifications, the delivery address your phone or browser provides for each device.</li>
+          <li><strong>Reports you send.</strong> If you use <strong>Something wrong?</strong>, what you write, the screen you were on, the version of Divvy, your type of phone or browser, and your name in Divvy if you are signed in. Only the people who run Divvy see them.</li>
           <li><strong>Error reports.</strong> If Divvy fails on your device, the error message, the screen it happened on and the version of Divvy. Error reports do not include your name or anything you have added.</li>
           <li><strong>Technical information.</strong> Like any website, Divvy receives your IP address with each request. We use it only to limit repeated attempts, such as guessing a recovery key, and we do not save it. Our hosting provider keeps standard request logs, which can include IP addresses, for a limited time.</li>
         </LegalList>
@@ -101,7 +104,7 @@ export default function PrivacyPage() {
           <li>The server&rsquo;s daily copies: within about a week, as it keeps the newest seven.</li>
           <li>The copy the server takes each time it starts, which happens with every update to Divvy: it keeps the newest five, so these are replaced as updates come out.</li>
         </LegalList>
-        <LegalText>A device that has not been used for six months is signed out automatically.</LegalText>
+        <LegalText>A device that has not been used for six months is signed out automatically. Reports sent with Something wrong? are deleted after 90 days, or sooner if you delete your account.</LegalText>
       </LegalSection>
 
       <LegalSection title="Your choices and rights">

@@ -512,6 +512,18 @@
 }
 
 /*
+ * Where a screen's content starts below the top of the screen. An app that
+ * runs under the status bar gets a blur from iOS 26, over the top of the app
+ * and a little way below the clock, which no style can turn off. Divvy did
+ * until November 2026, and iOS keeps that for as long as the app stays on
+ * someone's home screen, so those phones start the content 2rem lower, out
+ * of the blur. Anywhere else the inset is 0, and min() adds nothing.
+ */
+:root {
+  --top-safe: calc(env(safe-area-inset-top, 0px) + min(2rem, env(safe-area-inset-top, 0px)));
+}
+
+/*
  * Press feedback (MOTION-SPEC 4, touch). A row, card or button gives under
  * your finger straight away, before anything else happens: it shrinks a
  * little and sinks one level. Down in 100ms, back in 150ms. Small text links
@@ -594,6 +606,40 @@
 }
 
 /*
+ * A screen arriving (MOTION-SPEC 1). The app shell picks one and sets its
+ * length from DURATION. CSS rather than Motion, so the browser starts it with
+ * the new screen's first picture and keeps it moving while the page is still
+ * setting that screen up. Each starts partly visible, never at nothing, and
+ * ends with no transform at all, so nothing is left on a layer of its own.
+ */
+@keyframes divvy-screen-forward {
+  from { opacity: 0.3; transform: translateX(32px); }
+}
+@keyframes divvy-screen-back {
+  from { opacity: 0.3; transform: translateX(-32px); }
+}
+@keyframes divvy-screen-across {
+  from { opacity: 0.4; transform: scale(0.98); }
+}
+@keyframes divvy-screen-fade {
+  from { opacity: 0.4; }
+}
+.screen-forward { animation-name: divvy-screen-forward; animation-timing-function: var(--ease-enter); }
+.screen-back { animation-name: divvy-screen-back; animation-timing-function: var(--ease-enter); }
+.screen-across { animation-name: divvy-screen-across; animation-timing-function: var(--ease-enter); }
+.screen-fade { animation-name: divvy-screen-fade; animation-timing-function: var(--ease-standard); }
+/* The app picks the fade with Reduce Motion on; this holds even before it has read the setting (MOTION-SPEC 6). */
+@media (prefers-reduced-motion: reduce) {
+  .screen-forward,
+  .screen-back,
+  .screen-across {
+    animation-name: divvy-screen-fade;
+    animation-duration: 150ms !important;
+    animation-timing-function: var(--ease-standard);
+  }
+}
+
+/*
  * The drawings (MOTION-SPEC 4, illustrated). The small three-person doodle and
  * the app's mark, drawn in code rather than shipped as animation files. Each
  * plays once when it appears; only the opening and pull to refresh loop, and
@@ -622,15 +668,12 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(0.82); }
 }
-.doodle circle,
-.mark-draw circle {
+.doodle circle {
   transform-box: fill-box;
   transform-origin: center;
 }
 .doodle[data-play] circle,
-.doodle[data-play] path,
-.mark-draw circle,
-.mark-draw path {
+.doodle[data-play] path {
   animation-fill-mode: both;
 }
 
@@ -664,9 +707,21 @@
  * The app opening: the mark draws itself, its line from one person to the
  * other, then breathes until the first screen is ready.
  */
-.mark-draw path { animation: divvy-draw 520ms var(--ease-enter) 120ms both; }
-.mark-draw circle { animation: divvy-pop 380ms var(--ease-standard) both, divvy-breathe 1400ms var(--ease-standard) 900ms infinite; }
-.mark-draw circle:nth-of-type(2) { animation-delay: 420ms, 1100ms; }
+/*
+ * Transform and opacity only, on layers of their own (components/app-mark.tsx),
+ * so the browser keeps it moving while the app is still busy starting. The
+ * cover slides from the line's left end (x 135 of 512) to past its right end
+ * (377): 242 of its own 377 units.
+ */
+@keyframes divvy-uncover {
+  from { transform: translateX(0); }
+  to { transform: translateX(64.2%); }
+}
+.mark-cover { animation: divvy-uncover 520ms var(--ease-enter) 120ms both; }
+.mark-person { animation: divvy-pop 380ms var(--ease-standard) both; }
+.mark-breath { animation: divvy-breathe 1400ms var(--ease-standard) 900ms infinite; }
+.mark-person:last-child { animation-delay: 420ms; }
+.mark-person:last-child .mark-breath { animation-delay: 1100ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .doodle *,

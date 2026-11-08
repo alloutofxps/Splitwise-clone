@@ -126,7 +126,7 @@ export function PullToRefresh({ enabled }: { enabled: boolean }) {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] z-50 flex justify-center"
+      className="pointer-events-none fixed inset-x-0 top-[max(0.5rem,var(--top-safe))] z-50 flex justify-center"
       style={{
         // Rides down with the page, from just above where it rests.
         transform: `translateY(${Math.min(offset, ROOM) - ROOM}px)`,

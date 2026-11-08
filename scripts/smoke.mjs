@@ -1464,6 +1464,7 @@ async function main() {
   {
     const link = await priya.call("/api/identity/link", { method: "POST" });
     check("a signed-in device can mint a link code", link.status === 200, String(link.status));
+    check("short enough to copy by hand", /^[2-9a-kmnp-z]{8}$/.test(link.body.code), link.body.code);
 
     // The whole point: a second device gets in without transcribing anything.
     const newPhone = makeClient();
@@ -1494,6 +1495,23 @@ async function main() {
       allowError: true,
     });
     check("an invented code is refused", stranger.status === 404, String(stranger.status));
+
+    // A sign-in code is short enough to copy by hand, so this limit, with the
+    // five minutes and the single use, is what makes guessing one hopeless. From
+    // its own address, to leave every other section's allowance alone.
+    const codeGuesser = { "X-Forwarded-For": `203.0.113.${1 + Math.floor(Math.random() * 250)}` };
+    let guessesAllowed = 0;
+    let guessRefused = false;
+    for (let attempt = 0; attempt < 40 && !guessRefused; attempt++) {
+      const guess = await makeClient().call(`/api/identity/link/aaaaaa${attempt}/claim`, {
+        method: "POST",
+        allowError: true,
+        headers: codeGuesser,
+      });
+      if (guess.status === 429) guessRefused = true;
+      else guessesAllowed++;
+    }
+    check("guessing sign-in codes is soon refused", guessRefused && guessesAllowed <= 20, String(guessesAllowed));
 
     const devices = await priya.call("/api/identity/devices");
     check("the account lists its devices", devices.status === 200);

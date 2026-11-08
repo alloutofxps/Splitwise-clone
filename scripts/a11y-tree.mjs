@@ -5,6 +5,10 @@
 // Writes, per screen: the accessibility tree as Playwright reads it
 // (<name>.yml), and a summary (<name>.txt): page title, landmarks, headings,
 // live regions, and every control the browser computes no name for.
+//
+// STRICT=1 (as CI runs it) fails when a screen has no title or language, a
+// control, drawing or picture has no name, a panel has no name or leaves the
+// page behind it readable, or saving an expense announces nothing.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { launchOptions, seed, signIn } from "./check-accounts.mjs";
@@ -13,6 +17,7 @@ const BASE = process.argv[2] ?? "http://localhost:3100";
 
 const OUT = process.argv[3] ?? "tree-out";
 mkdirSync(OUT, { recursive: true });
+const problems = [];
 const data = await seed(BASE);
 const browser = await chromium.launch(launchOptions());
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
@@ -57,6 +62,11 @@ async function capture(label) {
     `drawings (svg) exposed without a name: ${info.svgsNoName}; images without alt: ${info.imgsNoAlt}`,
     info.dialogs.length ? `panels: ${info.dialogs.join(" ; ")} | page behind hidden from screen readers: ${info.pageBehindHidden}` : "",
   ].filter(Boolean);
+  if (!info.title || !info.lang) problems.push(`${label}: no title or language`);
+  if (unnamed.length) problems.push(`${label}: controls with no name (${unnamed.join(", ")})`);
+  if (info.svgsNoName || info.imgsNoAlt) problems.push(`${label}: drawings or pictures with no name`);
+  if (info.dialogs.some((d) => d.startsWith('"null" labelledby=null'))) problems.push(`${label}: a panel with no name`);
+  if (info.pageBehindHidden === false) problems.push(`${label}: the page behind the panel is still read out`);
   writeFileSync(`${OUT}/${label}.txt`, lines.join("\n") + "\n");
   summary.push(lines.join("\n"));
   console.log(lines.join("\n"));
@@ -109,6 +119,10 @@ await page.waitForTimeout(3000);
 const announced = await page.evaluate(() => [...new Set(window.__announced)]);
 summary.push(`# after saving an expense, live regions said:\n${announced.join("\n") || "(nothing)"}`);
 console.log("announced after save:", announced);
+if (!announced.length) problems.push("saving an expense announced nothing");
 
+summary.push(problems.length ? `# falls short\n${problems.join("\n")}` : "# nothing falls short");
+console.log(problems.length ? `Falls short:\n${problems.join("\n")}` : "Nothing falls short");
 writeFileSync(`${OUT}/summary.txt`, summary.join("\n\n") + "\n");
 await browser.close();
+if (process.env.STRICT === "1" && problems.length) process.exit(1);

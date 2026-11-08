@@ -28,11 +28,12 @@ export function afterLoad<T>(load: () => Promise<T>): () => Promise<T> {
  * A component fetched with `afterLoad`: a panel or tab nobody sees until they
  * tap something. It draws nothing until its code has arrived, which by the
  * time anyone taps it almost always has; a tap before the page has finished
- * loading asks for it at once, and it appears as soon as it lands.
+ * loading asks for it at once, and it appears as soon as it lands. `load`
+ * says when the code is here, for anything that waits on it.
  */
 export function lazyAfterLoad<P extends object>(
   load: () => Promise<React.ComponentType<P>>,
-): React.ComponentType<P> {
+): React.ComponentType<P> & { load: () => Promise<unknown> } {
   let arrived: React.ComponentType<P> | null = null;
   const get = afterLoad(() => load().then((component) => (arrived = component)));
 
@@ -51,5 +52,5 @@ export function lazyAfterLoad<P extends object>(
     }, [Component]);
     return Component ? <Component {...props} /> : null;
   }
-  return AfterLoad;
+  return Object.assign(AfterLoad, { load: get });
 }

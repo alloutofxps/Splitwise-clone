@@ -1230,3 +1230,136 @@ What Turbopack does differently:
 
 `middleware.ts` is `proxy.ts`, the name Next.js 16 gives it, and runs in the
 server's own Node.js rather than a separate cut-down engine.
+
+## 32. Judging a change by the side-by-side difference (4 November 2026)
+
+Findings items 54 and 55. Six pull requests have now been measured beside
+main on one machine (section 30). What a difference means:
+
+- Main against main (#169) moved no flow by more than 0.4 points.
+- The two startup flows, 01 Opening the app and 08 First time opening,
+  swing further by chance: up to about a point. #173 measured 08 at -0.6
+  and then 0.0, and 01 at +1.1 on its second run, with no change to the
+  code between them. Each is one recording of a page loading, so a single
+  late frame moves it by about half a point.
+- So a change is judged on a second run whenever a flow moves by more than
+  about half a point, or a startup flow by more than a point. #167, #171,
+  #172, #173 and #174 were closed on that basis; #176 and #177 merged.
+
+PR #177 builds the expense form once, out of sight, when the page is quiet
+(item 54). The first tap on +, with the processor slowed 4x, against main:
+
+| | Main | #177 |
+|---|---|---|
+| All work for the tap | 174 to 182 ms | 142 to 160 ms |
+| Turning code into machine code | 28 to 30 ms | 11 to 14 ms |
+| Running the code | about 90 ms | about 70 ms |
+| Slowed phone, first visit (`phone-speed.mjs`) | 208 ms | 200 ms |
+| Slowed phone, next visit | 184 ms | 120 ms |
+
+Styles and layout are still worked out for the first time on the first tap
+(about 28 and 18 ms, against 10 and 3 on the second), because a hidden form
+is never styled. The first visit sits right at the 200 ms limit. Beside main
+on CI (run 41860185984) no flow moved by more than 0.4 points, and 5 of 14
+were over the limit against main's 6.
+
+## 33. The opening, judged by what's seen (5 November 2026)
+
+Opening the app (01) and the first-time run (08) are now judged by the
+frames the screen shows while the opening drawing is moving
+(`motion-record.mjs <url> <out> seen`; MOTION-SPEC 8), and the drawing is
+rebuilt so the browser moves it by itself.
+
+Why: on CI the page's own count for these two was 4.7 to 5.3% and 3.3 to
+3.6% (run 42070428105). Each late frame there is one task: about 150ms
+reading the main framework script (234 KB, React and Next.js's router),
+then 140 to 170ms building the first screen, at 4x. No change to Divvy's
+code can split a script's first run, so that count can't pass while the
+app starts. What a person sees in that time is the drawing, and it stopped
+with the page, because its line was drawn by its dash and its two people
+moved inside one SVG.
+
+Now the line lies whole under an ink cover that slides off it, and each
+person is two plain layers (one pops in, one breathes), all moved by
+transform and opacity. Chrome hands such animations to its compositor,
+except when one element has two transform animations, which is why each
+person is two layers.
+
+Measured on this laptop, main and the change in turns, three rounds, CPU
+4x, late frames on screen while the drawing moves:
+
+| Flow | Main | This change |
+|---|---|---|
+| 01 opening | 18.2%, 16.8%, 17.4% (5 gaps of 29 to 146ms each) | 0, 0, 0 (worst frame 13 to 17ms) |
+| 08 first run | 8.2%, 8.4%, 15.1% | 0, 0, 0 (worst 13ms) |
+| Drawing held while the first screen takes over | 190 to 300ms | 8 to 13ms |
+
+The page's own count for these flows is still shown beside them in CI's
+table, for information. On a cold start the browser holds the page's first picture for
+about 50ms before the drawing's animations begin (both builds); nothing is
+moving yet, so that wait isn't counted.
+
+## 34. Opening a group, judged by what's seen (5 November 2026)
+
+Flows 02 (a "Needs you" row into the group and back) and 11 (the group's
+own row, whose icon, name and amount travel into the header) are now
+judged like the opening flows (MOTION-SPEC 8): every frame on screen from
+each new screen's first picture until everything moving for it has
+stopped. The wait while the page builds the group's screen, about 150 to
+500ms at 4x with the old screen still, isn't counted; it is reported as
+`waitMs`.
+
+Judged that way, main still failed, and showed why: the slide was started
+by Motion from the page's code once the new screen had been set up, and a
+group's screen stood still, faded and 32px to the right, for 2 to 147ms
+(`heldMs`) before it began to move. Nearly every late frame came in the
+first 150ms of the slide into the group.
+
+The screen's arrival is now a CSS animation, which the browser starts with
+the new screen's first picture: `heldMs` is 0 on every run. Same distances,
+fades, durations and curves.
+
+Measured on this laptop, main and the change in turns, five rounds, CPU
+4x, the middle result (each run's figure in brackets):
+
+| Flow | Main | This change |
+|---|---|---|
+| 02 into the group and back | 6.1% (5.6, 9.0, 6.1, 6.1, 3.0) | 3.1% (3.1, 3.1, 6.2, 9.1, 3.1) |
+| 11 the group's row and back | 5.3% (5.3, 5.3, 7.9, 8.1, 5.1) | 5.3% (5.3, 2.5, 8.0, 10.0, 2.6) |
+
+Late frames over the five rounds:
+
+| | Main | This change |
+|---|---|---|
+| 02, into the group | 10 | 5 |
+| 11, into the group | 10 | 6 |
+| 02, back to Home | 0 | 2 |
+| 11, back to Home | 2 | 5 |
+
+Into a group is better; back to Home a little worse, because the slide now
+runs while Home is still being rebuilt rather than after it.
+
+On CI, side by side, five rounds (run 42101645982; Linux, Chromium), all
+14 flows pass, against 1 over on main:
+
+| Flow | Main | This change | The page's own count, this change |
+|---|---|---|---|
+| 02 into the group and back | 3.2% | 0.0% (0 in all five) | 2.3% |
+| 11 the group's row and back | 0.0% | 0.0% (0 in all five) | 2.3% |
+
+So the new rule alone passes 11, and leaves 02 at 3.2% on main; the CSS
+slide takes 02 to 0. By the page's own count both are still just over 2%:
+that count is no longer what they are judged by.
+
+**Not explained: the frame still held on this laptop.** Here (Windows,
+Edge, headless) one frame is still held 29 to 50ms, most often the first
+after the new screen appears, and both flows stay over 2%. One trace shows
+the page's compositor getting no request to draw for about 32ms then, with
+two frames already sent waiting to be shown, and no Divvy code running on
+the display side. A bare page with no app code (300 rows sliding in by CSS,
+with 300ms of work after, or every row rewritten the frame after) never
+held a frame, so the group's own content plays a part. A first reading put
+it down to drawing without a graphics chip, but CI's machines have none
+either and don't hold it, so that isn't the cause on its own. It could be
+this laptop, Edge on Windows, or something else. How a real phone fares
+isn't measured.
