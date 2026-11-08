@@ -26,6 +26,19 @@ export interface MeDto extends PersonDto {
   inviteCode: string;
   createdAt: string;
   paymentMethods: PaymentMethodDto[];
+  /** Whoever runs Divvy, who reads what's sent with "Something wrong?". */
+  readsReports?: boolean;
+}
+
+export interface ReportDto {
+  id: string;
+  text: string;
+  path: string;
+  build: string;
+  device: string;
+  createdAt: string;
+  /** Null when it came from someone not signed in. */
+  from: PersonDto | null;
 }
 
 export interface PaymentMethodDto {

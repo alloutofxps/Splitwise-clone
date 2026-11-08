@@ -183,6 +183,8 @@ jobs:
       # These suites sign up hundreds of people from one address; `verify`
       # already checks the limits themselves.
       DIVVY_RATE_LIMIT_SCALE: "1000"
+      # situations.mjs gives a test account this code, to read the reports.
+      DIVVY_REPORTS_TO: me-test-reads-reports
 
     steps:
       - uses: actions/checkout@v7

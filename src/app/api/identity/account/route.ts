@@ -146,6 +146,7 @@ export const DELETE = route(async (request: Request) => {
     await tx.deviceLink.deleteMany({ where: { personId: me } });
     await tx.paymentMethod.deleteMany({ where: { personId: me } });
     await tx.budget.deleteMany({ where: { personId: me } });
+    await tx.report.deleteMany({ where: { personId: me } });
     await tx.friendship.deleteMany({ where: { OR: [{ personAId: me }, { personBId: me }] } });
     await tx.comment.updateMany({
       where: { personId: me, deletedAt: null },

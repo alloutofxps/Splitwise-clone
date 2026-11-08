@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, ChevronRight, Coins, Copy, Database, Download, EyeOff, FileText, GitMerge, Heart, KeyRound, LogOut, Monitor, MonitorSmartphone, Moon, Plus, Sun, Target, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
+import { Bell, Check, ChevronRight, Coins, Copy, Database, Download, EyeOff, FileText, GitMerge, Heart, KeyRound, LifeBuoy, LogOut, MessageCircleWarning, Monitor, MonitorSmartphone, Moon, Plus, Sun, Target, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, Segmented, Skeleton, Switch, cn, haptic } from "@/components/ui/primitives";
@@ -13,6 +13,7 @@ import { MyCodeSheet } from "@/components/friends/my-code-sheet";
 import { BudgetsSheet } from "@/components/budget/budgets-sheet";
 import { DevicesSheet } from "@/components/identity/devices-sheet";
 import { CombineSheet } from "@/components/identity/combine-sheet";
+import { ReportSheet } from "@/components/report-sheet";
 import { ConfirmDeleteSheet } from "@/components/identity/confirm-delete";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { backupConfirmed, clearRecoveryPending, confirmBackup, recoveryPending, saveRecoveryKeyFile } from "@/lib/client/recovery";
@@ -48,6 +49,7 @@ export default function AccountPage() {
   const [budgetsOpen, setBudgets] = React.useState(false);
   const [devicesOpen, setDevices] = React.useState(false);
   const [combining, setCombining] = React.useState(false);
+  const [reporting, setReporting] = React.useState(false);
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
   const [discardCount, setDiscardCount] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -322,6 +324,19 @@ export default function AccountPage() {
 
       {/* About -------------------------------------------------------------- */}
       <Group title="About">
+        <Row
+          icon={<LifeBuoy className="size-[18px]" strokeWidth={1.75} />}
+          label="Something wrong?"
+          value="Tell us"
+          onClick={() => setReporting(true)}
+        />
+        {data?.me.readsReports ? (
+          <a href="/reports" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+            <MessageCircleWarning className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
+            <span className="min-w-0 flex-1 text-body-lg font-medium text-text">Reports people sent</span>
+            <ChevronRight className="size-4 shrink-0 text-subtle" />
+          </a>
+        ) : null}
         <a href="/privacy" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
           <Heart className="size-[18px] shrink-0 text-muted" strokeWidth={1.75} />
           <span className="min-w-0 flex-1">
@@ -384,6 +399,7 @@ export default function AccountPage() {
 
       <DevicesSheet open={devicesOpen} onClose={() => setDevices(false)} />
       {data ? <CombineSheet open={combining} onClose={() => setCombining(false)} me={data.me} /> : null}
+      <ReportSheet open={reporting} onClose={() => setReporting(false)} />
 
       <RecoverySheet
         open={recovery}

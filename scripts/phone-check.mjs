@@ -375,6 +375,7 @@ const panels = (data) => {
     ["your devices", "/account", (p) => btn(p, /Your devices/)],
     ["recovery key", "/account", (p) => btn(p, /Recovery key/)],
     ["combine two accounts", "/account", (p) => btn(p, /Combine two accounts/)],
+    ["something wrong", "/account", (p) => btn(p, /Something wrong/)],
     ["delete my account", "/account", (p) => btn(p, "Delete my account")],
   ];
 };
