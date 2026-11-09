@@ -59,6 +59,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/web-push": "3.6.4",
+    "@typescript/native": "npm:typescript@7.0.2",
     "apca-w3": "0.1.9",
     "culori": "4.0.2",
     "eslint": "^10.14.0",
@@ -71,7 +72,7 @@
     "railway": "3.16.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
-    "typescript": "5.9.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "^8.72.1",
     "vitest": "5.0.5"
   },
