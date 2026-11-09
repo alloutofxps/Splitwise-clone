@@ -99,6 +99,20 @@ fetches `public/unsupported.js` only when needed). Don't add a
 - A worktree with a `node_modules` junction to a Prisma 6 checkout won't
   build Prisma 7 code. Run `npm ci` in it instead.
 
+## TypeScript 7 beside TypeScript 6
+
+TypeScript 7 has no programming interface yet, so tools that load
+TypeScript (typescript-eslint, Next.js's build check, Prisma, the editor)
+still need 6. `package.json` follows Microsoft's side-by-side setup:
+
+- `typescript` is `npm:@typescript/typescript6` (TypeScript 6, run as `tsc6`).
+- `@typescript/native` is `npm:typescript` (TypeScript 7, run as `tsc`).
+
+So `npx tsc` and `npm run typecheck` use 7. Don't install a plain
+`typescript@7` under the name `typescript`: typescript-eslint refuses it and
+`npm ci` fails. Revisit when typescript-eslint supports TypeScript 7
+(typescript-eslint issue 10940).
+
 ## Checking work
 
 Run from the repo root in Git Bash. `HANDOFF.md` section 6 has the full
